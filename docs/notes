@@ -1,0 +1,13 @@
+--Notes on constructors --
+
+What if a class A does not provide constructor but a super B provides?  What
+if they have different names?
+
+Say we do a send "A.new". "new" is gotten from Object.new.  but B.create is
+the actual parent constructor. "Object.new" does nothing, it just returns the
+instance. Thus, B instance won't be initialized. So, some safety belt could be
+interesting: like requiering that for any A < B, if B has constructor then so
+must A. And A constructors must explicit call a B constructor.
+
+Maybe some defaults can be implicit (say, if all constructors have 0 arity and
+there is only one constructor for each, we may be able to callup them all).
