@@ -11,3 +11,20 @@ must A. And A constructors must explicit call a B constructor.
 
 Maybe some defaults can be implicit (say, if all constructors have 0 arity and
 there is only one constructor for each, we may be able to callup them all).
+
+== Module syntax idea ==
+
+module foo(platform)
+  MyIO = "http://myio"
+  mio  = "http://io" < MyIO #import http://io and extend it with MyIO. the result is mio
+  bla <= platform or "http://bla"
+  blo = platform.blo < bla
+public:
+  fun main() {
+  }
+private:
+  fun bla()
+  }
+//eof
+
+--
