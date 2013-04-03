@@ -23,6 +23,7 @@ import sys
 from parser import MemeParser
 from loader import Loader
 from evaluator import Eval
+from prim import *
 from pprint import pprint
 from pdb import set_trace as br
 
@@ -62,7 +63,7 @@ CompiledFunctionBehavior = {"_vt": Behavior,
 CompiledFunction = {"_vt":CompiledFunctionBehavior,
                     "_delegate": None,
                     "parent": Object,
-                    "size": 12, #delegate, body, env_table, env_table_skel, fun_literals, is_ctor, is_prim, name, params, prim_name, uses_env, outter_cfun
+                    "size": 13, #delegate, body, env_table, env_table_skel, fun_literals, is_ctor, is_prim, name, params, prim_name, uses_env, outter_cfun, owner
                     "dict": {},
                     "@tag":"CompiledFunction"}
 
@@ -128,22 +129,6 @@ CompiledClass = {"_vt": CompiledClassBehavior,
                  "dict": {}, #name,superclass, fields,methods
                  "@tag": "CompiledClass"}
 
-_new_compiled_fun = {"_vt": CompiledFunction,
-                     "_delegate": None,
-                     "name": "new",
-                     "params": [],
-                     "body": [["return-this"]],
-                     "is_prim": False,
-                     "prim_name": '',
-                     "is_ctor": True,
-                     "env_table":{},
-                     "env_table_skel": None,
-                     "fun_literals":{},
-                     "uses_env": False,
-                     "outter_cfun":None,
-                     "@tag": "'new' compiled function"}
-ObjectBehavior["dict"]["new"] = _new_compiled_fun
-
 def _create_compiled_module(data):
     template = {"_vt":CompiledModule,
                 "_delegate": None,
@@ -161,14 +146,15 @@ def _create_compiled_function(data):
                 "name": "",
                 "params": [],
                 "body": None,
-                "is_prim": False,
-                "prim_name": "",
+                "is_prim": False, # not currently in use
+                "prim_name": '',  # not currently in use
                 "uses_env": False,
                 "fun_literals":{},
                 "env_table":{},
                 "env_table_skel": None,
                 "fun_literals":{},
                 "outter_cfun":None,
+                "owner":None,
                 "is_ctor": False}
     return dict(template.items() + data.items())
 
@@ -233,8 +219,23 @@ def _compiled_functions_to_functions(cfuns, imodule):
         funs[name] = _function_from_cfunction(fun, imodule)
     return funs
 
-
-
+_kernel_imodule = _create_kernel_module_instance()
+_new_compiled_fun = {"_vt": CompiledFunction,
+                     "_delegate": None,
+                     "name": "new",
+                     "params": [],
+                     "body": [["return-this"]],
+                     "is_prim": False, # not currently in use
+                     "prim_name": '',  # not currently in use
+                     "is_ctor": True,
+                     "env_table":{},
+                     "env_table_skel": None,
+                     "fun_literals":{},
+                     "uses_env": False,
+                     "outter_cfun":None,
+                     "owner": _kernel_imodule,
+                     "@tag": "'new' compiled function"}
+ObjectBehavior["dict"]["new"] = _function_from_cfunction(_new_compiled_fun, _kernel_imodule)
 
 def _instantiate_module(compiled_module, args, parent_module):
     #creates the Module object and its instance
@@ -332,28 +333,6 @@ def _instantiate_module(compiled_module, args, parent_module):
     return imodule
 
 #######################################################
-## Primitives
-#######################################################
-
-def _prim_basic_new(i):
-    def create_instances(klass):
-        p = None
-        if klass["parent"] != None:
-            p = create_instances(klass["parent"])
-        fields = klass["compiled_class"]["fields"]
-        name = klass["compiled_class"]["name"]
-        return dict({"_vt": klass, "_delegate":p, "@tag": name + " instance"}.items() + [(x,None) for x in fields])
-
-    return create_instances(i.r_rp)
-
-def _prim_import(i):
-    compiled_module = i.module_loader.load(i.stack[-1]["mname"])
-    args = dict(zip(compiled_module["params"],i.stack[-1]["margs"]))
-    imodule = _instantiate_module(compiled_module, args, _create_kernel_module_instance())
-    return imodule
-
-
-#######################################################
 ## Loading
 #######################################################
 
@@ -435,8 +414,10 @@ class ModuleLoader():
                 self.current_class["own_methods"][fname] = function
             else:
                 self.current_class["methods"][fname] = function
+            function['owner'] = self.current_class
         else:
             self.current_module["compiled_functions"][fname] = function
+            function['owner'] = self.current_module
 
 
     def l_enter_literal_fun(self):
@@ -492,7 +473,7 @@ class Interpreter():
 
     def start(self, main_script):
         compiled_module = self.module_loader.load(main_script)
-        imodule = _instantiate_module(compiled_module, {}, _create_kernel_module_instance())
+        imodule = _instantiate_module(compiled_module, {}, _kernel_imodule)
         self.run_module(imodule)
 
     def run_module(self, module):
@@ -521,22 +502,32 @@ class Interpreter():
                 delegate = None
             return self._lookup(delegate, parent, selector)
 
+    # get the right rdp for ctors
+    def ctor_rdp_for(self, rp, fun):
+        if rp == None:
+            raise Exception("No rdp for ctor. Probably a bug")
+
+        klass = rp['_vt']['compiled_class']
+        if klass == fun['compiled_function']['owner']:
+            return rp
+        else:
+            return self.ctor_rdp_for(rp['_delegate'], fun)
+        #if rp['_vt'] == fun
+
     def run_fun(self, fun, should_allocate):
         if should_allocate and fun["compiled_function"]['is_ctor']:
             #allocate new instance and make it the receiver
-            self.r_rp =  self.r_rdp = _prim_basic_new(self)
+            self.r_rp = prim_basic_new(self)
+            # rdp will be the instance associated to the class of fun
+            self.r_rdp = self.ctor_rdp_for(self.r_rp, fun)
             #...fun will be executed with this new r_rp, below
 
-        if fun["compiled_function"]['is_prim']:
-            print "TODO: primitives"
-            br()
-        else:
-            self.evaluator = Eval([fun["compiled_function"]["body"]])
-            self.evaluator.i = self
-            try:
-                ret = self.evaluator.apply("exec_fun")[0]
-            except ReturnException as e:
-                ret = e.val
+        self.evaluator = Eval([fun["compiled_function"]["body"]])
+        self.evaluator.i = self
+        try:
+            ret = self.evaluator.apply("exec_fun")[0]
+        except ReturnException as e:
+            ret = e.val
         self.tear_fun()
         return ret
 
@@ -546,6 +537,8 @@ class Interpreter():
         self.r_rp = frame["r_rp"]
         self.r_rdp = frame["r_rdp"]
         self.r_ep  = frame["r_ep"]
+        if self.r_cp: #if we are exiting main, this will be null
+            self.r_mp = self.r_cp["module"]
 
     def setup_and_run_fun(self, recv, drecv, method, args, should_allocate):
         if len(method["compiled_function"]["params"]) != len(args):
@@ -612,7 +605,7 @@ class Interpreter():
     ##### eval routines
 
     def eval_prim(self, prim_name):
-        return globals()['_prim_'+prim_name](self)
+        return globals()['prim_'+prim_name](self)
 
     def eval_do_field_attr(self, field, rhs):
         if not field in self.r_rdp:
