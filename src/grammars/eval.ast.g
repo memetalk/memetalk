@@ -47,9 +47,9 @@ atom = ['literal-string' :x]      -> x
     |  ['literal-number' :x]      -> x
     |  ['literal-symbol' :x]      -> self.i.todo32()
     |  ['literal' 'this']         -> self.i.eval_access_this()
-    |  ['literal' 'null']         -> self.i.todo34()
-    |  ['literal' 'true']         -> self.i.todo35()
-    |  ['literal' 'false']        -> self.i.todo36()
-    |  ['literal' 'current']      -> self.i.todo37()
+    |  ['literal' 'null']         -> None
+    |  ['literal' 'true']         -> True
+    |  ['literal' 'false']        -> False
+    |  ['literal' 'module']       -> self.i.eval_access_module()
     |  ['id' :x]                  -> self.i.eval_access_var(x)
     |  ['field' :x]               -> self.i.eval_access_field(x)

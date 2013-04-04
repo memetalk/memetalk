@@ -10,7 +10,7 @@ letter_or_digit_string = (letter | '_'):x (letterOrDigit|'_')*:xs -> x+''.join(x
 
 space = comment | anything:c ?(c.isspace())
 comment = "/*"  (~"*/" anything)* "*/"
-        | "//" (~vspace anything)* vspace
+        | "//" (~"\n" anything)* "\n"
 
 spaces = space*
 
@@ -162,11 +162,11 @@ expr_list = expr:x (token(",") expr)*:xs -> [x]+xs
 literal = lit_number
         | lit_string
         | lit_symbol
+        | token("thisModule")-> ['literal', 'module']
         | token("this")   -> ['literal', 'this']
         | token("null")   -> ['literal', 'null']
         | token("true")   -> ['literal', 'true']
         | token("false")  -> ['literal', 'false']
-        | token("current")-> ['literal', 'current']
         | funliteral
 
 funliteral = token("fun") params:p token("{")
@@ -179,7 +179,7 @@ funliteral_body = stmt:x stmts:xs -> [x]+xs
                 | expr:e          -> [e]
                 |                 -> [['literal', 'null']]
 
-
+as_eval = token("{") funliteral_body:body token("}") -> body
 
 lit_symbol = token(":") alpha_name:xs
            -> ["literal-symbol", xs]

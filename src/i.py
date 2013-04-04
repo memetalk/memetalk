@@ -32,7 +32,7 @@ def P(obj, depth=1):
         depth = None
     pprint(obj, None, 1, 80, depth)
 
-Behavior = {"_vt":"*replace-me*",
+Behavior = {"_vt":"*replace-me*", # with myself
             "parent": None,
             "dict": [],
             "@tag":"Behavior"}
@@ -40,32 +40,58 @@ Behavior["_vt"] = Behavior
 
 ObjectBehavior = {"_vt": Behavior,
                   "parent":None,
-                  "dict":{"new": "*replace-me*"},
+                  "dict":{"new": "*replace-me*"}, #with the 'new' method
                   "@tag":"ObjectBehavior"}
 
 Object = {"_vt": ObjectBehavior,
           "parent":None,
           "size":0, "dict": {},
-          "compiled_class": {"_vt": "*CompiledClass*", #dummy placeholder til we self describe
-                             "_delegate": None,       #so far we just need 'fields' for basic_new
+          "compiled_class": {"_vt": "*replace-me*",       # with CompiledClass
+                             "_delegate": None,
                              "name": "Object",
                              "super_class_name":"",
                              "fields": [],
                              "methods": {},
-                             "own_methods":{}},
+                             "own_methods":{}}, #actually it has new
           "@tag": "Object"}
+
+
+CompiledClassBehavior = {"_vt": Behavior,
+                         "parent": ObjectBehavior,
+                         "dict": {},
+                         "@tag": "CompiledClassBehavior"}
+
+
+CompiledClass = {"_vt": CompiledClassBehavior,
+                 "_delegate": None,
+                 "parent": Object,
+                 "size": 5,
+                 "dict": {}, #name,superclass, fields,methods
+                 "@tag": "CompiledClass"}
+
+Object["compiled_class"]["_vt"] = CompiledClass
 
 CompiledFunctionBehavior = {"_vt": Behavior,
                             "parent": ObjectBehavior,
-                            "dict": {},
+                            "dict": {'new':"*replace-me*"}, # with its prim new
                             "@tag": "CompiledFunctionBehavior"}
+
+CompiledFunction_CompiledClass = {"_vt": CompiledClass,
+                                       "_delegate": None,
+                                       "name": "CompiledFunction",
+                                       "super_class_name":"Object",
+                                       "fields": [],
+                                       "methods": {},  #actually it has new
+                                       "own_methods":{}}
 
 CompiledFunction = {"_vt":CompiledFunctionBehavior,
                     "_delegate": None,
                     "parent": Object,
                     "size": 13, #delegate, body, env_table, env_table_skel, fun_literals, is_ctor, is_prim, name, params, prim_name, uses_env, outter_cfun, owner
-                    "dict": {},
+                    "dict": {"instantiate":"*replace-me*"}, # with the function prim_cfun_instantiate
+                    "compiled_class": CompiledFunction_CompiledClass,
                     "@tag":"CompiledFunction"}
+
 
 FunctionBehavior = {"_vt": Behavior,
                     "parent": ObjectBehavior,
@@ -74,7 +100,8 @@ FunctionBehavior = {"_vt": Behavior,
 
 Function = {"_vt": FunctionBehavior,
             "_delegate": Object,
-            "dict": {},
+            "parent": Object,
+            "dict": {'apply': "*replace-me*"},
             "size": 3, #compiled_function, module, delegate
             "@tag": "Function"}
 
@@ -102,32 +129,32 @@ CompiledModule = {"_vt": CompiledModuleBehavior,
 
 ModuleBehavior = {"_vt": Behavior,
                   "parent": ObjectBehavior,
-                  "dict": {"compiled_module": "*replace-me*"},
+                  "dict": {"compiled_module": "*replace-me*"}, #with the getter
                   "@tag": "ModuleBehavior"}
 
 KernelModule = {"_vt": ModuleBehavior,
                 "_delegate": None,
                 "parent": Object,
                 "size": 2, #delegate, Object
-                "dict": {"Object": "*replace-me*"},
+                "dict": {"Object": "*replace-me*"}, #with the getter
                 "@tag": "KernelModule"}
 
 # kernel_module_instance_template = {"_vt": KernelModule,
 #                                    "Object": Object} #Array,String, Number...
 
+## Basic types
 
-CompiledClassBehavior = {"_vt": Behavior,
-                         "parent": ObjectBehavior,
-                         "dict": {},
-                         "@tag": "CompiledClassBehavior"}
+StringBehavior = {"_vt": Behavior,
+                  "parent": ObjectBehavior,
+                  "dict": {},
+                  "@tag": "StringBehavior"}
 
-
-CompiledClass = {"_vt": CompiledClassBehavior,
-                 "_delegate": None,
-                 "parent": Object,
-                 "size": 5,
-                 "dict": {}, #name,superclass, fields,methods
-                 "@tag": "CompiledClass"}
+String = {"_vt": StringBehavior,
+          "_delegate": None,
+          "parent": Object,
+          "size": 1,
+          "dict": {},
+          "@tag": "String"}
 
 def _create_compiled_module(data):
     template = {"_vt":CompiledModule,
@@ -152,10 +179,10 @@ def _create_compiled_function(data):
                 "fun_literals":{},
                 "env_table":{},
                 "env_table_skel": None,
-                "fun_literals":{},
                 "outter_cfun":None,
                 "owner":None,
-                "is_ctor": False}
+                "is_ctor": False,
+                "@tag": "a CompiledFunction"}
     return dict(template.items() + data.items())
 
 def _create_compiled_class(data):
@@ -219,23 +246,51 @@ def _compiled_functions_to_functions(cfuns, imodule):
         funs[name] = _function_from_cfunction(fun, imodule)
     return funs
 
+def _create_instance(klass, data):
+    template = {"_vt": klass,
+                "_delegate": None}
+    return dict(template.items() + data.items())
+
+
 _kernel_imodule = _create_kernel_module_instance()
-_new_compiled_fun = {"_vt": CompiledFunction,
-                     "_delegate": None,
-                     "name": "new",
-                     "params": [],
-                     "body": [["return-this"]],
-                     "is_prim": False, # not currently in use
-                     "prim_name": '',  # not currently in use
-                     "is_ctor": True,
-                     "env_table":{},
-                     "env_table_skel": None,
-                     "fun_literals":{},
-                     "uses_env": False,
-                     "outter_cfun":None,
-                     "owner": _kernel_imodule,
-                     "@tag": "'new' compiled function"}
-ObjectBehavior["dict"]["new"] = _function_from_cfunction(_new_compiled_fun, _kernel_imodule)
+_Object_new_compiled_fun = _create_compiled_function({
+        "name": "new",
+        "body": [["return-this"]],
+        "is_ctor": True,
+        "owner": Object,
+        "@tag": "Object.new compiled function"})
+
+ObjectBehavior["dict"]["new"] = _function_from_cfunction(_Object_new_compiled_fun, _kernel_imodule)
+
+_CompiledFunction_new_compiled_fun = _create_compiled_function({
+    "name": "new",
+    "params": ['text', 'parameters', 'module'],
+    "body": ["primitive", ['literal-string', "compiled_function_new"]],
+    "is_ctor": True,
+    "owner": CompiledFunction_CompiledClass, #the CompiledClass for CompiledFunction class
+    "@tag": "CompiledFunction.new compiled function"})
+
+CompiledFunctionBehavior["dict"]["new"] = _function_from_cfunction(_CompiledFunction_new_compiled_fun, _kernel_imodule)
+
+CompiledFunction['dict']['instantiate'] = _function_from_cfunction(
+    _create_compiled_function({
+            "name": "instantiate",
+            "params": ['imodule'],
+            "body": ["primitive", ['literal-string', "compiled_function_instantiate"]],
+            "is_ctor": False,
+            "owner": CompiledFunction_CompiledClass, #the CompiledClass for CompiledFunction class
+            "@tag": "<CompiledFunction>.instantiate compiled function"}),
+    _kernel_imodule)
+
+Function['dict']['apply'] = _function_from_cfunction(
+    _create_compiled_function({
+            "name": "apply",
+            "params": ['args'],
+            "body": ["primitive", ['literal-string', "function_apply"]],
+            "is_ctor": False,
+            "owner": CompiledFunction_CompiledClass, #the CompiledClass for CompiledFunction class
+            "@tag": "<Function>.apply compiled function"}),
+    _kernel_imodule)
 
 def _instantiate_module(compiled_module, args, parent_module):
     #creates the Module object and its instance
@@ -299,7 +354,7 @@ def _instantiate_module(compiled_module, args, parent_module):
         else:
             # FooClassBehavior
             cbehavior = {"_vt": Behavior,
-                         "parent": "*replace-me*",
+                         "parent": "*replace-me*", #latter below
                          "dict": _compiled_functions_to_functions(c["own_methods"],imodule),
                          "@tag":c["name"]+" Behavior"}
 
@@ -471,6 +526,53 @@ class Interpreter():
         self.r_rdp = None  # receiver data pointer
         self.r_ep  = None  # environment pointer
 
+    def instantiate_module(self, compiled_module, args, imodule):
+        return _instantiate_module(compiled_module, args, imodule)
+
+    def kernel_module_instance(self):
+        return _kernel_imodule
+
+    def alloc(self, klass, data):
+        return _create_instance(klass, data)
+
+    # puff...
+    def get_class(self, name):
+        return globals()[name]
+
+    def create_compiled_function(self, data):
+        return _create_compiled_function(data)
+
+    def create_function_from_cfunction(self, cfun, imodule):
+        return _function_from_cfunction(cfun, imodule)
+
+    def do_eval(self, text):
+        parser = MemeParser("{"+text+"}")
+        try:
+            ast,err = parser.apply("as_eval")
+            return True, ast
+        except Exception as err:
+            print(err.formatError(''.join(parser.input.data)))
+            return False, err.formatError(''.join(parser.input.data))
+
+    # object routines
+    # -dealing with nulls, booleans, integers, etc...
+
+    def get_vt(self, obj):
+        if obj == None:
+            return Object
+        elif isinstance(obj, basestring):
+            return String
+        else:
+            return obj["_vt"]
+
+    def has_slot(self, obj, name):
+        if obj == None:
+            return False
+        else:
+            return name in obj
+
+    # execution
+
     def start(self, main_script):
         compiled_module = self.module_loader.load(main_script)
         imodule = _instantiate_module(compiled_module, {}, _kernel_imodule)
@@ -496,7 +598,7 @@ class Interpreter():
             return drecv, vt["dict"][selector]
         else:
             parent = vt["parent"]
-            if "_delegate" in drecv:
+            if self.has_slot(drecv, "_delegate"):
                 delegate = drecv["_delegate"]
             else:
                 delegate = None
@@ -507,7 +609,7 @@ class Interpreter():
         if rp == None:
             raise Exception("No rdp for ctor. Probably a bug")
 
-        klass = rp['_vt']['compiled_class']
+        klass = self.get_vt(rp)['compiled_class']
         if klass == fun['compiled_function']['owner']:
             return rp
         else:
@@ -556,15 +658,15 @@ class Interpreter():
         self.r_cp  = method
         self.r_mp = method["module"]
         self.r_ep = None
-        if method["_vt"] != Context:
+        if self.get_vt(method) != Context:
             self.r_rp  = recv
             self.r_rdp = drecv
-            if not method["compiled_function"]["uses_env"] and method["_vt"] == Function:
+            if not method["compiled_function"]["uses_env"] and self.get_vt(method) == Function:
                 # normal fun, put args in the stack
                 for k,v in zip(method["compiled_function"]["params"],args):
                     self.stack[-1][k] = v
             # normal fun using env, initialize one
-            elif method["compiled_function"]["uses_env"] and method["_vt"] == Function:
+            elif method["compiled_function"]["uses_env"] and self.get_vt(method) == Function:
                 self.r_ep = dict(method["compiled_function"]['env_table_skel'])
                 self.r_ep["r_rp"] = self.r_rp
                 self.r_ep["r_rdp"] = self.r_rdp # usually receivers are on stack.
@@ -613,6 +715,12 @@ class Interpreter():
         else:
             self.r_rdp[field] = rhs
 
+    def eval_do_local_attr(self, name,expr):
+        if self.r_ep:
+            self.env_set_value(name, expr)
+        else:
+            self.stack[-1][name] = expr
+
     def eval_do_var_def(self, name, expr):
         if self.r_ep:
             self.env_set_value(name, expr)
@@ -628,6 +736,9 @@ class Interpreter():
             return self.r_rdp[field]
         else:
             raise Exception("object has no field " + field)
+
+    def eval_access_module(self):
+        return self.r_mp
 
     def eval_access_this(self):
         return self.r_rp
@@ -662,11 +773,12 @@ class Interpreter():
             raise Exception("Cannot use super.m() outside ctor");
 
         instance = self.r_rdp
-        klass = instance["_vt"]
+        klass = self.get_vt(instance)
         pklass = klass["parent"]
         receiver = instance["_delegate"]
 
-        drecv, method = self._lookup(receiver, pklass["_vt"], selector)
+        drecv, method = self._lookup(receiver, self.get_vt(pklass), selector)
+
         if not method:
             raise Exception("DoesNotUnderstand: " + selector)
         elif not method["compiled_function"]["is_ctor"]:
@@ -675,7 +787,7 @@ class Interpreter():
             return self.setup_and_run_fun(receiver, drecv, method, args, False)
 
     def eval_do_send(self, receiver, selector, args):
-        drecv, method = self._lookup(receiver, receiver["_vt"], selector)
+        drecv, method = self._lookup(receiver, self.get_vt(receiver), selector)
         if not method:
             raise Exception("DoesNotUnderstand: " + selector)
         else:
