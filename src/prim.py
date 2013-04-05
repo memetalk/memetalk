@@ -41,7 +41,7 @@ def prim_basic_new(i):
     return create_instances(i.r_rp)
 
 def prim_import(i):
-    compiled_module = i.module_loader.load(i.stack[-1]["mname"])
+    compiled_module = i.module_loader.load_module(i.stack[-1]["mname"])
     args = dict(zip(compiled_module["params"],i.stack[-1]["margs"]))
     imodule = i.instantiate_module(compiled_module, args, i.kernel_module_instance())
     return imodule
