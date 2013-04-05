@@ -24,7 +24,7 @@ from parser import MemeParser
 from loader import Loader
 from evaluator import Eval
 from prim import *
-from pprint import pprint
+from pprint import pprint, pformat
 from pdb import set_trace as br
 
 def P(obj, depth=1):
@@ -930,7 +930,7 @@ class Interpreter():
         drecv, method = self._lookup(receiver, self.get_vt(pklass), selector)
 
         if not method:
-            raise Exception("DoesNotUnderstand: " + selector)
+            raise Exception("DoesNotUnderstand: " + selector + " -- " + pformat(instance,1,80,1))
         elif not method["compiled_function"]["is_ctor"]:
             raise Exception("Method is not constructor: " + selector)
         else:
@@ -939,7 +939,7 @@ class Interpreter():
     def eval_do_bin_send(self, selector, receiver, arg):
         drecv, method = self._lookup(receiver, self.get_vt(receiver), selector)
         if not method:
-            raise Exception("DoesNotUnderstand: " + selector)
+            raise Exception("DoesNotUnderstand: " + selector + " -- " + pformat(receiver,1,80,1))
         else:
             return self.setup_and_run_fun(receiver, drecv, method, [arg], True)
 
@@ -947,7 +947,7 @@ class Interpreter():
     def eval_do_send(self, receiver, selector, args):
         drecv, method = self._lookup(receiver, self.get_vt(receiver), selector)
         if not method:
-            raise Exception("DoesNotUnderstand: " + selector)
+            raise Exception("DoesNotUnderstand: " + selector  + " -- " + pformat(receiver,1,80,1))
         else:
             return self.setup_and_run_fun(receiver, drecv, method, args, True)
 
