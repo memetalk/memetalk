@@ -73,23 +73,26 @@ module qt() {
     fun textCursor() {
       <primitive "qt_qplaintextedit_text_cursor">
     }
+    fun setTextCursor(cursor) {
+      <primitive "qt_qplaintextedit_set_text_cursor">
+    }
   }
 
   class QTextCursor {
     fun selectedText() {
       <primitive "qt_qtextcursor_selected_text">
     }
-    /* fun selectionEnd() { */
-    /*   <primitive "qt_qtextcursor_selection_end"> */
-    /* } */
-    /* fun setPosition(pos) { */
-    /*   <primitive "qt_qtextcursor_set_position"> */
-    /* } */
-    /* fun insertText(text) { */
-    /*   <primitive "qt_qtextcursor_insert_text"> */
-    /* } */
-    /* fun dragRight(len) { */
-    /*   <primitive "qt_qtextcursor_drag_right"> */
-    /* } */
+    fun selectionEnd() {
+      <primitive "qt_qtextcursor_selection_end">
+    }
+    fun setPosition(pos) {
+      <primitive "qt_qtextcursor_set_position">
+    }
+    fun insertText(text) {
+      <primitive "qt_qtextcursor_insert_text">
+    }
+    fun dragRight(len) {
+      <primitive "qt_qtextcursor_drag_right">
+    }
   }
 }

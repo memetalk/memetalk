@@ -26,15 +26,24 @@ module idez(qt, QMainWindow, QPlainTextEdit) {
       var cmod = get_current_compiled_module();
       var cfun = CompiledFunction.new(selection, [], cmod, @variables);
       var fn = cfun.asContext(thisModule, @variables);
-      var ret =  fn.apply([]);
-      @variables = fn.getEnv() + @variables; 
+      var res =  fn.apply([]);
+      @variables = fn.getEnv() + @variables;
+      return res;
     }
     fun selectedText() {
       return this.textCursor().selectedText();
     }
     fun printIt() {
       var res = this.doIt();
-      print(res.toString());
+      this.insertSelectedText(res.toString());
+    }
+    fun insertSelectedText(text) {
+      var cursor = this.textCursor();
+      var pos = cursor.selectionEnd();
+      cursor.setPosition(pos);
+      cursor.insertText(text);
+      cursor.dragRight(text.size());
+      this.setTextCursor(cursor);
     }
   }
 

@@ -215,6 +215,13 @@ def prim_qt_qplaintextedit_text_cursor(i):
     QTextCursorClass = i.r_mp["QTextCursor"]
     return i.alloc(QTextCursorClass, {'self':qt_cursor})
 
+def prim_qt_qplaintextedit_set_text_cursor(i):
+    qtobj = _lookup_field(i.r_rp, 'self')
+    cursor = _lookup_field(i.stack[-1]['cursor'], 'self')
+    qtobj.setTextCursor(cursor)
+    return i.r_rp
+
+
 # QMenuBar
 # Warning! QMenuBar inherits QWidget!
 # however we did not create the QWidget instance delegate
@@ -257,3 +264,27 @@ def prim_qt_qtextcursor_selected_text(i):
     qtobj = _lookup_field(i.r_rp, 'self')
     string = str(qtobj.selectedText())
     return string
+
+def prim_qt_qtextcursor_selection_end(i):
+    qtobj = _lookup_field(i.r_rp, 'self')
+    return qtobj.selectionEnd()
+
+def prim_qt_qtextcursor_set_position(i):
+    pos = i.stack[-1]['pos']
+    qtobj = _lookup_field(i.r_rp, 'self')
+    qtobj.setPosition(pos)
+    return i.r_rp
+
+def prim_qt_qtextcursor_insert_text(i):
+    text = i.stack[-1]['text']
+    string = text.decode('string_escape')
+    qtobj = _lookup_field(i.r_rp, 'self')
+    qtobj.insertText(string)
+    return i.r_rp
+
+def prim_qt_qtextcursor_drag_right(i):
+    length = i.stack[-1]['len']
+    qtobj = _lookup_field(i.r_rp, 'self')
+    res = qtobj.movePosition(
+        QtGui.QTextCursor.Left, QtGui.QTextCursor.KeepAnchor, length)
+    return True if res else False
