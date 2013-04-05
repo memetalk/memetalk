@@ -179,7 +179,7 @@ NumberBehavior = {"_vt": Behavior,
 
 Number = {"_vt": NumberBehavior,
           "_delegate": None,
-          "parent":None,
+          "parent":Object,
           "size": 0,
           "dict": {"+": "*replace-me*"},
           "@tag": "Number"}
