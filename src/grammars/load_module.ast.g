@@ -1,6 +1,9 @@
-load = ['module' :name params:p
-        !(self.i.l_module(name, p))
-       module_definitions]
+load_module = ['module' :name params:p
+               !(self.i.l_module(name, p))
+               module_definitions]
+
+load_body = body
+
 
 module_definitions = ['defs' []]
                    | ['defs' [definition+]]

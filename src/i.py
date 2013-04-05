@@ -403,9 +403,82 @@ def _instantiate_module(compiled_module, args, parent_module):
 ## Loading
 #######################################################
 
+class FunctionLoader(): # for eval
+    def load_body(self, code, params, owner, env):
+        self.parser = MemeParser("{"+code+"}")
+        try:
+            ast,err = self.parser.apply("as_eval")
+            print "--EVAL AST"
+            print ast
+            print "//--EVAL AST"
+        except Exception as err:
+            print(err.formatError(''.join(parser.input.data)))
+            raise err
+
+        uses_env = env != {}
+
+        # given env
+        _env1 = dict(zip(range(0,len(env.keys())), env.keys()))
+        self.env_idx = len(env.keys())
+
+        # parameters env
+        _env2 = dict(zip(range(self.env_idx,self.env_idx+len(params)),params))
+        self.env_idx = self.env_idx+len(params)
+
+        self.env_id_table = [dict(_env1.items() + _env2.items())]
+
+        self.functions = []
+        self.functions.append(_create_compiled_function({"name":"<anonymous>",
+                                                         "outter_cfun": None,
+                                                         "params": params,
+                                                         "body": ast,
+                                                         'env_table': self.env_id_table[0],
+                                                         'uses_env': uses_env,
+                                                         'env_table_skel': dict(zip(range(0,self.env_idx),[None]*self.env_idx)),
+                                                         'owner': owner,
+                                                         "@tag":"a compiled literal function"}))
+
+        loader = Loader([ast])
+        loader.i = self
+        loader.apply("load_body")
+        return self.functions[0]
+
+    def l_enter_literal_fun(self):
+        self.env_id_table.append({})
+        self.functions[0]["uses_env"] = True # root Function using env
+        self.functions.append(
+            _create_compiled_function({"name":"<anonymous>",
+                                       "outter_cfun": self.functions[-1],
+                                       "@tag":"a compiled literal function"}))
+
+    def l_set_fun_literal_parameters(self, params):
+        self.env_id_table[-1] = dict(zip(range(self.env_idx,self.env_idx+len(params)),params))
+        self.env_idx = self.env_idx + len(params)
+
+        self.functions[-1]["params"] = params
+
+    def l_literal_fun_body(self, body):
+        self.functions[-1]["body"] = body
+
+    def l_done_literal_function(self):
+        function = self.functions.pop()
+
+        body = function["body"]
+
+        function['env_table'] = self.env_id_table.pop()
+
+        #hack to identify the literal function when executing it
+        #body[0]: the first instruction. The body changes id, unfortunately
+        #literal is in the parent fun, so it can be easily fetched during execution
+        self.functions[-1]["fun_literals"][id(body[0])] = function
+
+    def l_var_def(self, name):
+        self.env_id_table[-1][self.env_idx] = name
+        self.env_idx = self.env_idx + 1
+
 
 class ModuleLoader():
-    def load(self, script):
+    def load_module(self, script):
         src = open(script).read()
         parser = MemeParser(src)
         try:
@@ -431,7 +504,7 @@ class ModuleLoader():
 
         loader = Loader([ast])
         loader.i = self
-        loader.apply("load")
+        loader.apply("load_module")
         return self.current_module
 
     def l_module(self, name, p):
@@ -527,6 +600,7 @@ class ReturnException(Exception):
 class Interpreter():
     def __init__(self):
         self.module_loader = ModuleLoader()
+        self.fun_loader = FunctionLoader()
 
         self.compiled_modules = {}
 
@@ -559,17 +633,8 @@ class Interpreter():
     def compiled_function_to_context(self, cfun, env, imodule):
         return _compiled_function_to_context(cfun, env, imodule)
 
-    def do_eval(self, text):
-        parser = MemeParser("{"+text+"}")
-        try:
-            ast,err = parser.apply("as_eval")
-            print "--EVAL AST"
-            print ast
-            print "//--EVAL AST"
-            return True, ast
-        except Exception as err:
-            print(err.formatError(''.join(parser.input.data)))
-            return False, err.formatError(''.join(parser.input.data))
+    def compile_code(self, text, params, owner, env):
+        return self.fun_loader.load_body(text, params, owner, env)
 
     # object routines
     # -dealing with nulls, booleans, integers, etc...
@@ -591,7 +656,7 @@ class Interpreter():
     # execution
 
     def start(self, main_script):
-        compiled_module = self.module_loader.load(main_script)
+        compiled_module = self.module_loader.load_module(main_script)
         imodule = _instantiate_module(compiled_module, {}, _kernel_imodule)
         self.run_module(imodule)
 
