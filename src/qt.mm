@@ -27,6 +27,9 @@ module qt() {
     fun addAction(action) {
       <primitive "qt_qwidget_add_action">
     }
+    fun setMaximumWidth(w) {
+      <primitive "qt_qwidget_set_maximum_width">
+    }
   }
 
   class QMenuBar < QWidget {
@@ -93,6 +96,74 @@ module qt() {
     }
     fun dragRight(len) {
       <primitive "qt_qtextcursor_drag_right">
+    }
+  }
+
+  class QLayout {
+    fields: self;
+    fun addWidget(widget) {
+      <primitive "qt_qlayout_add_widget">
+    }
+  }
+  class QVBoxLayout < QLayout {
+    init new(parent) {
+      <primitive "qt_qvboxlayout_new">
+    }
+    fun addLayout(layout) {
+      <primitive "qt_qvboxlayout_add_layout">
+    }
+  }
+
+  class QHBoxLayout < QLayout {
+    init new(parent) {
+      <primitive "qt_qhboxlayout_new">
+    }
+    fun addLayout(layout) {
+      <primitive "qt_qhboxlayout_add_layout">
+    }
+  }
+
+
+  class QListWidget < QWidget {
+    init new(parent) {
+      <primitive "qt_qlistwidget_new">
+    }
+    fun connect(signal, slot) {
+      <primitive "qt_qlistwidget_connect">
+    }
+    fun addItem(string) {
+      <primitive "qt_qlistwidget_add_item">
+    }
+    fun clear() {
+      <primitive "qt_qlistwidget_clear">
+    }
+    fun clearSelection() {
+      <primitive "qt_qlistwidget_clear_selection">
+    }
+    fun selectedItems() {
+      <primitive "qt_qlistwidget_selected_items">
+    }
+    fun removeItemWidget(item) {
+      <primitive "qt_qlistwidget_remove_item_widget">
+    }
+  }
+
+  /* QListWidgetItem { */
+  /*   fields: self; */
+  /*   init new(text, parent) { */
+  /*     <primitive "qt_qlistwidgetitem_new"> */
+  /*   } */
+  /*   fun text() { */
+  /*     <primitive "qt_qlistwidgetitem_text"> */
+  /*   } */
+  /* } */
+
+  class QLineEdit < QWidget {
+    init new(parent) {
+      <primitive "qt_qlineedit_new">
+    }
+    fun setFocus() {
+      <primitive "qt_qlineedit_set_focus">
     }
   }
 }

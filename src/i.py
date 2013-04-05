@@ -40,7 +40,8 @@ Behavior["_vt"] = Behavior
 
 ObjectBehavior = {"_vt": Behavior,
                   "parent":None,
-                  "dict":{"new": "*replace-me*"}, #with the 'new' method
+                  "dict":{"new": "*replace-me", #with the 'new' method
+                          "toString":"*replace-me"}, #with the 'toString' method
                   "@tag":"ObjectBehavior"}
 
 Object = {"_vt": ObjectBehavior,
@@ -354,6 +355,8 @@ Object['dict']['toString'] = _function_from_cfunction(
 #            "owner": Number_CompiledClass, #the CompiledClass for CompiledFunction class
             "@tag": "<Object>.+ compiled function"}),
     _kernel_imodule)
+
+ObjectBehavior['dict']['toString'] = Object['dict']['toString']
 
 Number['dict']['+'] = _function_from_cfunction(
     _create_compiled_function({
@@ -804,7 +807,7 @@ class Interpreter():
 
     def setup_and_run_fun(self, recv, drecv, method, args, should_allocate):
         if len(method["compiled_function"]["params"]) != len(args):
-            raise Exception("arity error")
+            raise Exception("arity error: " + method['compiled_function']['name'] + "::"+pformat(args,1,80,2))
 
         #backup frame
         self.stack.append({
@@ -959,6 +962,7 @@ class Interpreter():
         drecv, method = self._lookup(receiver, self.get_vt(receiver), selector)
         if not method:
             raise Exception("DoesNotUnderstand: " + selector  + " -- " + pformat(receiver,1,80,1))
+
         else:
             return self.setup_and_run_fun(receiver, drecv, method, args, True)
 

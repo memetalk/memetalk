@@ -22,6 +22,7 @@ from PyQt4 import QtGui
 import sys
 import re
 from pdb import set_trace as br
+from pprint import pprint, pformat
 
 def P(obj, depth=1):
     if depth > 5:
@@ -56,7 +57,7 @@ def prim_object_to_string(i):
     elif isinstance(obj, basestring):
         return obj
     else:
-        return str(obj)
+        return pformat(obj,1,80,1) #dirt and limited, str does inifinite loop
 
 # def prim_string_replace(i):
 #     return re.sub(i.stack[-1]['what'],i.stack[-1]['for'],i.r_rp)
@@ -174,6 +175,11 @@ def prim_qt_qwidget_add_action(i):
     qtobj.addAction(qt_action)
     return i.r_rp
 
+def prim_qt_qwidget_set_maximum_width(i):
+    qtobj = _lookup_field(i.r_rp, 'self')
+    qtobj.setMaximumWidth(i.stack[-1]['w'])
+    return i.r_rp
+
 # QMainWindow
 def prim_qt_qmainwindow_new(i):
     i.r_rdp['self'] = QtGui.QMainWindow()
@@ -288,3 +294,66 @@ def prim_qt_qtextcursor_drag_right(i):
     res = qtobj.movePosition(
         QtGui.QTextCursor.Left, QtGui.QTextCursor.KeepAnchor, length)
     return True if res else False
+
+#QLayout
+
+def prim_qt_qlayout_add_widget(i):
+    qtobj = _lookup_field(i.r_rp, 'self')
+    parent = _lookup_field(i.stack[-1]['widget'], 'self')
+    qtobj.addWidget(parent)
+    return i.r_rp
+
+# QVBoxLayout
+def prim_qt_qvboxlayout_new(i):
+    parent = i.stack[-1]['parent']
+    if parent != None:
+        qtobj = _lookup_field(parent, 'self')
+        i.r_rdp['self'] = QtGui.QVBoxLayout(qtobj)
+    else:
+        i.r_rdp['self'] = QtGui.QVBoxLayout()
+    return i.r_rp
+
+def prim_qt_qvboxlayout_add_layout(i):
+    qtobj = _lookup_field(i.r_rp, 'self')
+    parent = _lookup_field(i.stack[-1]['layout'], 'self')
+    qtobj.addLayout(parent)
+    return i.r_rp
+
+
+
+# QHBoxLayout
+def prim_qt_qhboxlayout_new(i):
+    parent = i.stack[-1]['parent']
+    if parent != None:
+        qtobj = _lookup_field(parent, 'self')
+        i.r_rdp['self'] = QtGui.QHBoxLayout(qtobj)
+    else:
+        i.r_rdp['self'] = QtGui.QHBoxLayout()
+    return i.r_rp
+
+
+# QListWidget
+def prim_qt_qlistwidget_new(i):
+    parent = i.stack[-1]['parent']
+    if parent != None:
+        qtobj = _lookup_field(parent, 'self')
+        i.r_rdp['self'] = QtGui.QListWidget(qtobj)
+    else:
+        i.r_rdp['self'] = QtGui.QListWidget()
+    return i.r_rp
+
+
+#QLineEdit
+def prim_qt_qlineedit_new(i):
+    parent = i.stack[-1]['parent']
+    if parent != None:
+        qtobj = _lookup_field(parent, 'self')
+        i.r_rdp['self'] = QtGui.QLineEdit(qtobj)
+    else:
+        i.r_rdp['self'] = QtGui.QLineEdit()
+    return i.r_rp
+
+def prim_qt_qlineedit_set_focus(i):
+    qtobj = _lookup_field(i.r_rp, 'self')
+    qtobj.setFocus()
+    return i.r_rp
