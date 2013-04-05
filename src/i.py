@@ -88,7 +88,7 @@ CompiledFunction = {"_vt":CompiledFunctionBehavior,
                     "_delegate": None,
                     "parent": Object,
                     "size": 13, #delegate, body, env_table, env_table_skel, fun_literals, is_ctor, is_prim, name, params, prim_name, uses_env, outter_cfun, owner
-                    "dict": {"instantiate":"*replace-me*"}, # with the function prim_cfun_instantiate
+                    "dict": {"asContext":"*replace-me*"}, # with the function prim_cfun_as_context
                     "compiled_class": CompiledFunction_CompiledClass,
                     "@tag":"CompiledFunction"}
 
@@ -101,7 +101,7 @@ FunctionBehavior = {"_vt": Behavior,
 Function = {"_vt": FunctionBehavior,
             "_delegate": Object,
             "parent": Object,
-            "dict": {'apply': "*replace-me*"},
+            "dict": {},
             "size": 3, #compiled_function, module, delegate
             "@tag": "Function"}
 
@@ -112,7 +112,8 @@ ContextBehavior = {"_vt":Behavior,
 
 Context = {"_vt": ContextBehavior,
            "_delegate": Object,
-           "dict": {},
+           "parent": Object,
+           "dict": {'apply': "*replace-me*"},
            "size": 4} # delegate, compiled_fun, module, env
 
 CompiledModuleBehavior = {"_vt": Behavior,
@@ -152,8 +153,8 @@ StringBehavior = {"_vt": Behavior,
 String = {"_vt": StringBehavior,
           "_delegate": None,
           "parent": Object,
-          "size": 1,
-          "dict": {},
+          "size": 0,
+          "dict": {'replace':"*replace-me*"},
           "@tag": "String"}
 
 def _create_compiled_module(data):
@@ -264,7 +265,7 @@ ObjectBehavior["dict"]["new"] = _function_from_cfunction(_Object_new_compiled_fu
 
 _CompiledFunction_new_compiled_fun = _create_compiled_function({
     "name": "new",
-    "params": ['text', 'parameters', 'module'],
+    "params": ['text', 'parameters', 'module', 'env'],
     "body": ["primitive", ['literal-string', "compiled_function_new"]],
     "is_ctor": True,
     "owner": CompiledFunction_CompiledClass, #the CompiledClass for CompiledFunction class
@@ -272,25 +273,36 @@ _CompiledFunction_new_compiled_fun = _create_compiled_function({
 
 CompiledFunctionBehavior["dict"]["new"] = _function_from_cfunction(_CompiledFunction_new_compiled_fun, _kernel_imodule)
 
-CompiledFunction['dict']['instantiate'] = _function_from_cfunction(
+CompiledFunction['dict']['asContext'] = _function_from_cfunction(
     _create_compiled_function({
-            "name": "instantiate",
-            "params": ['imodule'],
-            "body": ["primitive", ['literal-string', "compiled_function_instantiate"]],
+            "name": "asContext",
+            "params": ['imodule', 'env'],
+            "body": ["primitive", ['literal-string', "compiled_function_as_context"]],
             "is_ctor": False,
-            "owner": CompiledFunction_CompiledClass, #the CompiledClass for CompiledFunction class
-            "@tag": "<CompiledFunction>.instantiate compiled function"}),
+            #"owner": CompiledFunction_CompiledClass, #the CompiledClass for CompiledFunction class. So far, only used on ctor/rdp lookup
+            "@tag": "<CompiledFunction>.asContext compiled function"}),
     _kernel_imodule)
 
-Function['dict']['apply'] = _function_from_cfunction(
+Context['dict']['apply'] = _function_from_cfunction(
     _create_compiled_function({
             "name": "apply",
             "params": ['args'],
-            "body": ["primitive", ['literal-string', "function_apply"]],
+            "body": ["primitive", ['literal-string', "context_apply"]],
             "is_ctor": False,
-            "owner": CompiledFunction_CompiledClass, #the CompiledClass for CompiledFunction class
+            #"owner": Context_CompiledClass, #the CompiledContextClass for Context. So far, only used on ctors/rdp lookup
             "@tag": "<Function>.apply compiled function"}),
     _kernel_imodule)
+
+# String['dict']['replace'] = _function_from_cfunction(
+#     _create_compiled_function({
+#             "name": "replace",
+#             "params": ['what','for'],
+#             "body": ["primitive", ['literal-string', "string_replace"]],
+#             "is_ctor": False,
+#             "owner": CompiledFunction_CompiledClass, #the CompiledClass for CompiledFunction class
+#             "@tag": "<String>.replace compiled function"}),
+#     _kernel_imodule)
+
 
 def _instantiate_module(compiled_module, args, parent_module):
     #creates the Module object and its instance
@@ -405,7 +417,6 @@ class ModuleLoader():
         print "---- AST ----"
         print ast
         print "//---- AST ----"
-
         self.current_module = _create_compiled_module({"filepath": script,
                                                        "ast": ast,
                                                        "parent_module":"memetalk/kernel",
@@ -545,10 +556,16 @@ class Interpreter():
     def create_function_from_cfunction(self, cfun, imodule):
         return _function_from_cfunction(cfun, imodule)
 
+    def compiled_function_to_context(self, cfun, env, imodule):
+        return _compiled_function_to_context(cfun, env, imodule)
+
     def do_eval(self, text):
         parser = MemeParser("{"+text+"}")
         try:
             ast,err = parser.apply("as_eval")
+            print "--EVAL AST"
+            print ast
+            print "//--EVAL AST"
             return True, ast
         except Exception as err:
             print(err.formatError(''.join(parser.input.data)))
@@ -627,7 +644,7 @@ class Interpreter():
         self.evaluator = Eval([fun["compiled_function"]["body"]])
         self.evaluator.i = self
         try:
-            ret = self.evaluator.apply("exec_fun")[0]
+            ret,err = self.evaluator.apply("exec_fun")
         except ReturnException as e:
             ret = e.val
         self.tear_fun()
@@ -677,8 +694,10 @@ class Interpreter():
                     self.env_set_value(k,v) # cp should be set already
         else:
             self.r_ep = method["env"]
-            self.r_rp = self.r_ep['r_rp']
-            self.r_rdp = self.r_ep['r_rdp']
+            if 'r_rp' in self.r_ep:
+                self.r_rp = self.r_ep['r_rp']
+            if 'r_rdp' in self.r_ep:
+                self.r_rdp = self.r_ep['r_rdp']
             # put args in the env
             for k,v in zip(method["compiled_function"]["params"],args):
                 self.env_set_value(k, v)
@@ -716,13 +735,15 @@ class Interpreter():
             self.r_rdp[field] = rhs
 
     def eval_do_local_attr(self, name,expr):
-        if self.r_ep:
+        if self.r_ep != None:
             self.env_set_value(name, expr)
-        else:
+        elif name in self.stack[-1]:
             self.stack[-1][name] = expr
+        else:
+            raise Exception("Undeclared variable: " + name)
 
     def eval_do_var_def(self, name, expr):
-        if self.r_ep:
+        if self.r_ep != None:
             self.env_set_value(name, expr)
         else:
             self.stack[-1][name] = expr
@@ -745,7 +766,7 @@ class Interpreter():
 
     def eval_access_var(self, name):
         #-local
-        if self.r_ep: # env
+        if self.r_ep != None: # env
             idx = self.env_lookup(name)
             if idx != None:
                 return self.r_ep[idx]
@@ -757,7 +778,7 @@ class Interpreter():
         if name in self.r_mp:
             return self.r_mp[name]
         else:
-            raise Exception("undeclared var: " + name)
+            raise Exception("Undeclared var: " + name)
 
     def eval_do_add(self, x, y):
         return x + y

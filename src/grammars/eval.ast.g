@@ -5,7 +5,7 @@ primitive = ['primitive' ['literal-string' :x] (:ignore)*] -> x
 
 exprlist = [(expr:x)+] -> x
 
-pair = ['pair' expr:key expr:val]
+pair = ['pair' expr:key expr:val] -> (key,val)
 
 expr = ['super-ctor-send' :s args:a]         -> self.i.eval_do_super_ctor_send(s,a)
      | ['var-def' :id expr:e]                -> self.i.eval_do_var_def(id,e)
@@ -26,7 +26,7 @@ expr = ['super-ctor-send' :s args:a]         -> self.i.eval_do_super_ctor_send(s
      | ['if' expr:c [expr*:yes] [expr+:no]]  -> self.i.todo19()
      | ['while' expr:c [expr*:yes]]          -> self.i.todo20()
      | ['literal-array'  expr*:r]            -> r
-     | ['literal-dict'  pair*:r]             -> self.i.todo22()
+     | ['literal-dict'  pair*:r]             -> dict(r)
      | ['fun-literal'  ['params' :p]
           ['body' :b]]                       -> self.i.eval_do_fun_lit(p,b)
      | ['return-this']                       -> self.i.eval_do_return(self.i.r_rp)

@@ -154,6 +154,8 @@ prim_expr = token("(") expr:e token(")") -> e
           | alpha_name:x -> ["id", x]
 
 pair_list = pair:x (token(",") pair)*:xs -> [x]+xs
+          | -> []
+
 pair = expr:key token(":") expr:val -> ['pair', key, val]
 
 expr_list = expr:x (token(",") expr)*:xs -> [x]+xs

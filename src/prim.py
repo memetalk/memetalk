@@ -20,6 +20,7 @@
 
 from PyQt4 import QtGui
 import sys
+import re
 from pdb import set_trace as br
 
 def P(obj, depth=1):
@@ -48,31 +49,54 @@ def prim_import(i):
 def prim_print(i):
     print(i.stack[-1]["arg"])
 
+def prim_string_replace(i):
+    return re.sub(i.stack[-1]['what'],i.stack[-1]['for'],i.r_rp)
+
 def prim_class_compiled_function(i):
     return i.get_class("CompiledFunction")
 
 def prim_compiled_function_new(i):
-    #init new(text, parameters, module)
+    #init new(text, parameters, module, env_idx_table_or_somethin')
+    #  --we are only interested in the names of the env slots here
     res, val = i.do_eval(i.stack[-1]['text'])
+    env = i.stack[-1]['env']
+    if env != {}:
+        uses_env = True
+        env_table = dict(zip(range(0,len(env.keys())), env.keys()))
+    else:
+        uses_env = False
+        env_table = None
     if not res:
         return i.create_compiled_function({
                 'text': i.stack[-1]['text'],
                 'params': i.stack[-1]['parameters'],
                 'owner': i.stack[-1]['module'],
                 'body': None,
-                'errormsg': val})
+                'uses_env': uses_env,
+                'env_table': env_table,
+                'errormsg': val}) #puff
     else:
         return i.create_compiled_function({
                 'text': i.stack[-1]['text'],
                 'params': i.stack[-1]['parameters'],
                 'owner': i.stack[-1]['module'],
+                'uses_env': uses_env,
+                'env_table': env_table,
                 'body': val})
 
-def prim_compiled_function_instantiate(i):
-    return i.create_function_from_cfunction(i.r_rp, i.stack[-1]['imodule'])
+def prim_compiled_function_as_context(i):
+    #asContext(imodule, env)
+    # -- now we want the names and values of the env
+    env = i.stack[-1]['env']
+    if env != {}:
+        env = dict(zip(range(0,len(env.keys())), env.values()))
+    else:
+        env = None
+    ret = i.compiled_function_to_context(i.r_rp, env, i.stack[-1]['imodule'])
+    return ret
 
-def prim_function_apply(i):
-    # fn.apply([...])
+def prim_context_apply(i):
+    # fn.apply([...], {...})
     args = i.stack[-1]['args']
     return i.setup_and_run_fun(None, None, i.r_rp, args, True)
 
