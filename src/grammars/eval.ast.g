@@ -12,7 +12,7 @@ expr = ['super-ctor-send' :s args:a]         -> self.i.eval_do_super_ctor_send(s
      | ['return' expr:x]                     -> self.i.eval_do_return(x)
      | ['not' expr:x]                        -> self.i.todo5()
      | ['++' expr:x expr:y]                  -> self.i.todo6()
-     | ['+' expr:x expr:y]                   -> self.i.eval_do_add(x,y)
+     | ['+' expr:x expr:y]                   -> self.i.eval_do_bin_send('+',x,y)
      | ['*' expr:x expr:y]                   -> self.i.todo8()
      | ['<' expr:x expr:y]                   -> self.i.todo9()
      | ['==' expr:x expr:y]                  -> self.i.todo10()

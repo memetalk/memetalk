@@ -76,9 +76,24 @@ def prim_compiled_function_as_context(i):
     return ret
 
 def prim_context_apply(i):
-    # fn.apply([...], {...})
+    # fn.apply([...args...])
     args = i.stack[-1]['args']
-    return i.setup_and_run_fun(None, None, i.r_rp, args, True)
+    return i.setup_and_run_fun(None, None, i.r_rdp, args, True)
+
+def prim_context_get_env(i):
+    #warning 1: no checking if the env idexes are ordered. we assume so.
+    #warning 2: only the outter env is returned (closures declaring variables
+    #                                            are not contemplated. its
+    #                                            a TODO).
+    env = i.r_rdp['env']
+    env_table = i.r_rdp['compiled_function']['env_table']
+    return dict(zip(env_table.values(),env.values()))
+
+def prim_number_plus(i):
+    return i.r_rp + i.stack[-1]['arg']
+
+def prim_dictionary_plus(i):
+    return dict(i.r_rp.items() + i.stack[-1]['arg'].items())
 
 def prim_get_current_compiled_module(i):
     return i.get_vt(i.r_mp)['compiled_module']

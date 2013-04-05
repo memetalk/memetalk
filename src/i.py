@@ -113,7 +113,8 @@ ContextBehavior = {"_vt":Behavior,
 Context = {"_vt": ContextBehavior,
            "_delegate": Object,
            "parent": Object,
-           "dict": {'apply': "*replace-me*"},
+           "dict": {'apply': "*replace-me*",
+                    "getEnv": '*replace-me*'},
            "size": 4} # delegate, compiled_fun, module, env
 
 CompiledModuleBehavior = {"_vt": Behavior,
@@ -154,8 +155,38 @@ String = {"_vt": StringBehavior,
           "_delegate": None,
           "parent": Object,
           "size": 0,
-          "dict": {'replace':"*replace-me*"},
+          "dict": {},
           "@tag": "String"}
+
+DictionaryBehavior = {"_vt": Behavior,
+                      "parent": ObjectBehavior,
+                      "dict": {},
+                      "@tag": "DictionaryBehavior"}
+
+
+Dictionary = {"_vt": DictionaryBehavior,
+              "_delegate": None,
+              "parent": Object,
+              "size": 0,
+              "dict": {"+": "*replace-me*"},
+              "@tag": "Dictionary"}
+
+NumberBehavior = {"_vt": Behavior,
+                  "parent": ObjectBehavior,
+                  "dict": {},
+                  "@tag": "NumberBehavior"}
+
+Number = {"_vt": NumberBehavior,
+          "_delegate": None,
+          "parent":None,
+          "size": 0,
+          "dict": {"+": "*replace-me*"},
+          "@tag": "Number"}
+
+
+##############################################
+
+
 
 def _create_compiled_module(data):
     template = {"_vt":CompiledModule,
@@ -293,6 +324,16 @@ Context['dict']['apply'] = _function_from_cfunction(
             "@tag": "<Function>.apply compiled function"}),
     _kernel_imodule)
 
+Context['dict']['getEnv'] = _function_from_cfunction(
+    _create_compiled_function({
+            "name": "getEnv",
+            "params": [],
+            "body": ["primitive", ['literal-string', "context_get_env"]],
+            "is_ctor": False,
+            #"owner": Context_CompiledClass, #the CompiledContextClass for Context. So far, only used on ctors/rdp lookup
+            "@tag": "<Function>.getEnv compiled function"}),
+    _kernel_imodule)
+
 # String['dict']['replace'] = _function_from_cfunction(
 #     _create_compiled_function({
 #             "name": "replace",
@@ -302,6 +343,26 @@ Context['dict']['apply'] = _function_from_cfunction(
 #             "owner": CompiledFunction_CompiledClass, #the CompiledClass for CompiledFunction class
 #             "@tag": "<String>.replace compiled function"}),
 #     _kernel_imodule)
+
+Number['dict']['+'] = _function_from_cfunction(
+    _create_compiled_function({
+            "name": "+",
+            "params": ['arg'],
+            "body": ["primitive", ['literal-string', "number_plus"]],
+            "is_ctor": False,
+#            "owner": Number_CompiledClass, #the CompiledClass for CompiledFunction class
+            "@tag": "<Number>.+ compiled function"}),
+    _kernel_imodule)
+
+Dictionary['dict']['+'] = _function_from_cfunction(
+    _create_compiled_function({
+            "name": "+",
+            "params": ['arg'],
+            "body": ["primitive", ['literal-string', "dictionary_plus"]],
+            "is_ctor": False,
+#            "owner": Dictionary_CompiledClass, #the CompiledClass for CompiledFunction class
+            "@tag": "<Dictionary>.+ compiled function"}),
+    _kernel_imodule)
 
 
 def _instantiate_module(compiled_module, args, parent_module):
@@ -412,7 +473,7 @@ class FunctionLoader(): # for eval
             print ast
             print "//--EVAL AST"
         except Exception as err:
-            print(err.formatError(''.join(parser.input.data)))
+            print(err.formatError(''.join(self.parser.input.data)))
             raise err
 
         uses_env = env != {}
@@ -644,14 +705,20 @@ class Interpreter():
             return Object
         elif isinstance(obj, basestring):
             return String
+        elif isinstance(obj, dict) and '_vt' not in obj:
+            return Dictionary
+        elif isinstance(obj, int) or isinstance(obj, long):
+            return Number
         else:
             return obj["_vt"]
 
     def has_slot(self, obj, name):
         if obj == None:
             return False
-        else:
+        elif hasattr(obj, '__iter__'):
             return name in obj
+        else:
+            return False
 
     # execution
 
@@ -845,9 +912,6 @@ class Interpreter():
         else:
             raise Exception("Undeclared var: " + name)
 
-    def eval_do_add(self, x, y):
-        return x + y
-
     def eval_do_return(self, value):
         raise ReturnException(value)
 
@@ -871,6 +935,14 @@ class Interpreter():
             raise Exception("Method is not constructor: " + selector)
         else:
             return self.setup_and_run_fun(receiver, drecv, method, args, False)
+
+    def eval_do_bin_send(self, selector, receiver, arg):
+        drecv, method = self._lookup(receiver, self.get_vt(receiver), selector)
+        if not method:
+            raise Exception("DoesNotUnderstand: " + selector)
+        else:
+            return self.setup_and_run_fun(receiver, drecv, method, [arg], True)
+
 
     def eval_do_send(self, receiver, selector, args):
         drecv, method = self._lookup(receiver, self.get_vt(receiver), selector)
