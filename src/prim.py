@@ -49,8 +49,20 @@ def prim_import(i):
 def prim_print(i):
     print(i.stack[-1]["arg"])
 
-def prim_string_replace(i):
-    return re.sub(i.stack[-1]['what'],i.stack[-1]['for'],i.r_rp)
+def prim_object_to_string(i):
+    obj = i.r_rp
+    if obj == None:
+        return "null"
+    elif isinstance(obj, basestring):
+        return obj
+    else:
+        return str(obj)
+
+# def prim_string_replace(i):
+#     return re.sub(i.stack[-1]['what'],i.stack[-1]['for'],i.r_rp)
+
+def prim_string_size(i):
+    return len(i.r_rp)
 
 def prim_class_compiled_function(i):
     return i.get_class("CompiledFunction")

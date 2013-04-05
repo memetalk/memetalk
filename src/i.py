@@ -45,7 +45,8 @@ ObjectBehavior = {"_vt": Behavior,
 
 Object = {"_vt": ObjectBehavior,
           "parent":None,
-          "size":0, "dict": {},
+          "size":0,
+          "dict": {"toString":"*replace-me"},
           "compiled_class": {"_vt": "*replace-me*",       # with CompiledClass
                              "_delegate": None,
                              "name": "Object",
@@ -155,7 +156,7 @@ String = {"_vt": StringBehavior,
           "_delegate": None,
           "parent": Object,
           "size": 0,
-          "dict": {},
+          "dict": {'size': '*replace-me*'},
           "@tag": "String"}
 
 DictionaryBehavior = {"_vt": Behavior,
@@ -334,15 +335,25 @@ Context['dict']['getEnv'] = _function_from_cfunction(
             "@tag": "<Function>.getEnv compiled function"}),
     _kernel_imodule)
 
-# String['dict']['replace'] = _function_from_cfunction(
-#     _create_compiled_function({
-#             "name": "replace",
-#             "params": ['what','for'],
-#             "body": ["primitive", ['literal-string', "string_replace"]],
-#             "is_ctor": False,
-#             "owner": CompiledFunction_CompiledClass, #the CompiledClass for CompiledFunction class
-#             "@tag": "<String>.replace compiled function"}),
-#     _kernel_imodule)
+String['dict']['size'] = _function_from_cfunction(
+    _create_compiled_function({
+            "name": "replace",
+            "params": [],
+            "body": ["primitive", ['literal-string', "string_size"]],
+            "is_ctor": False,
+#            "owner": CompiledFunction_CompiledClass, #the CompiledClass for CompiledFunction class
+            "@tag": "<String>.size compiled function"}),
+    _kernel_imodule)
+
+Object['dict']['toString'] = _function_from_cfunction(
+    _create_compiled_function({
+            "name": "toString",
+            "params": [],
+            "body": ["primitive", ['literal-string', "object_to_string"]],
+            "is_ctor": False,
+#            "owner": Number_CompiledClass, #the CompiledClass for CompiledFunction class
+            "@tag": "<Object>.+ compiled function"}),
+    _kernel_imodule)
 
 Number['dict']['+'] = _function_from_cfunction(
     _create_compiled_function({
