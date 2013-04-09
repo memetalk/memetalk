@@ -48,7 +48,7 @@ def prim_import(i):
     return imodule
 
 def prim_print(i):
-    print(i.stack[-1]["arg"])
+    P(i.stack[-1]["arg"],2)
 
 def prim_object_to_string(i):
     obj = i.r_rp

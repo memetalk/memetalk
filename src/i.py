@@ -1034,7 +1034,7 @@ class Interpreter():
         if name in self.r_mp:
             return self.r_mp[name]
         else:
-            raise Exception("Undeclared var: " + name)
+            raise Exception("Undeclared var: " + name + pformat(self.r_cp['compiled_function'],1,80,1))
 
     def eval_do_return(self, value):
         raise ReturnException(value)
