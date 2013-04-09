@@ -609,6 +609,7 @@ class ModuleLoader():
         self.env_idx = self.env_idx + 1
 
     def l_set_function_parameters(self, params):
+        self.env_idx = 0
         self.env_id_table[-1] = dict(zip(range(self.env_idx,self.env_idx+len(params)),params))
         self.env_idx = len(params)
         self.functions[-1]["params"] = params
