@@ -890,6 +890,11 @@ class Interpreter():
             self.r_rp = prim_basic_new(self)
             # rdp will be the instance associated to the class of fun
             self.r_rdp = self.ctor_rdp_for(self.r_rp, fun)
+            #...updating env if exist
+            if self.r_ep != None:
+                self.r_ep["r_rp"] = self.r_rp
+                self.r_ep["r_rdp"] = self.r_rdp
+
             #...fun will be executed with this new r_rp, below
 
         self.evaluator = Eval([fun["compiled_function"]["body"]])
