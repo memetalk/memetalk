@@ -59,6 +59,9 @@ def prim_object_to_string(i):
     else:
         return pformat(obj,1,80,1) #dirt and limited, str does inifinite loop
 
+def prim_object_to_source(i):
+    return pformat(i.r_rp, 1,80,2)
+
 # def prim_string_replace(i):
 #     return re.sub(i.stack[-1]['what'],i.stack[-1]['for'],i.r_rp)
 
@@ -112,6 +115,31 @@ def prim_get_current_compiled_module(i):
     return i.get_vt(i.r_mp)['compiled_module']
 
 
+
+def prim_get_mirror_class(i):
+    return i.get_class("Mirror")
+
+def prim_mirror_new(i):
+    i.r_rdp["mirrored"] = i.stack[-1]['mirrored']
+    return i.r_rp
+
+def prim_mirror_fields(i):
+    mirrored = i.r_rdp['mirrored']
+    if hasattr(mirrored, '__iter__'):
+        return mirrored.keys()
+    else:
+        return []
+
+def prim_mirror_value_for(i):
+    return i.r_rdp['mirrored'][i.stack[-1]['name']]
+
+def prim_list_each(i):
+    for x in i.r_rdp:
+        i.setup_and_run_fun(None, None, i.stack[-1]['fn'], [x], True)
+
+###
+
+
 # lookup the inner handle of the actual binding object
 # which is set -- this is because a hierarchy of delegates
 # will have the same field (say, QMainWindow < QWidget both
@@ -133,6 +161,25 @@ def _lookup_field(mobj, name):
 #     else:
 #         _set_field(mobj['_delegate'], name, value)
 ### Qt
+
+## return a meme instance given something from pyqt
+def _meme_instance(i, obj):
+    mapping = {
+        QtGui.QListWidgetItem: i.r_mp["QListWidgetItem"]}
+
+    if obj == None:
+        return obj
+    elif isinstance(obj, basestring):
+        return obj# {"_vt":i.get_class("String"), 'self':obj}
+    elif isinstance(obj, dict) and '_vt' not in obj:
+        return obj#{"_vt":i.get_class("Dictionary"), 'self':obj}
+    elif isinstance(obj, int) or isinstance(obj, long):
+        return obj#{"_vt":i.get_class("Number"), 'self':obj}
+    elif isinstance(obj, list):
+        return obj#{"_vt":i.get_class("List"), 'self':obj}
+    else: #should be a qt instance
+        return {"_vt":mapping[obj.__class__], 'self':obj}
+
 
 # QWidget
 def prim_qt_qapplication_new(i):
@@ -178,6 +225,20 @@ def prim_qt_qwidget_add_action(i):
 def prim_qt_qwidget_set_maximum_width(i):
     qtobj = _lookup_field(i.r_rp, 'self')
     qtobj.setMaximumWidth(i.stack[-1]['w'])
+    return i.r_rp
+
+def prim_qt_qwidget_connect(i):
+    qtobj = _lookup_field(i.r_rp, 'self')
+    signal = i.stack[-1]['signal']
+    slot = i.stack[-1]['slot']
+    def callback(*rest):
+        P(rest)
+        args = []
+        for arg in rest:
+            args.append(_meme_instance(i,arg))
+
+        i.setup_and_run_fun(None, None, slot, args, True)
+    getattr(qtobj,signal).connect(callback)
     return i.r_rp
 
 # QMainWindow
@@ -227,6 +288,10 @@ def prim_qt_qplaintextedit_set_text_cursor(i):
     qtobj.setTextCursor(cursor)
     return i.r_rp
 
+def prim_qt_qplaintextedit_set_plain_text(i):
+    qtobj = _lookup_field(i.r_rp, 'self')
+    qtobj.setPlainText(i.stack[-1]['text'])
+    return i.r_rp
 
 # QMenuBar
 # Warning! QMenuBar inherits QWidget!
@@ -341,6 +406,18 @@ def prim_qt_qlistwidget_new(i):
     else:
         i.r_rdp['self'] = QtGui.QListWidget()
     return i.r_rp
+
+# QListWidgetItem
+def prim_qt_qlistwidgetitem_new(i):
+    txt = i.stack[-1]['text']
+    parent = i.stack[-1]['parent']
+    qtparent = None if parent == None else _lookup_field(parent, 'self')
+    i.r_rdp['self'] = QtGui.QListWidgetItem(txt,qtparent)
+    return i.r_rp
+
+def prim_qt_qlistwidgetitem_text(i):
+    qtobj = _lookup_field(i.r_rp, 'self')
+    return str(qtobj.text())
 
 
 #QLineEdit

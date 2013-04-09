@@ -8,6 +8,10 @@ module idez(qt, QWidget, QMainWindow, QPlainTextEdit) {
     <primitive "get_current_compiled_module">
   }
 
+  fun get_mirror_class() {
+    <primitive "get_mirror_class">
+  }
+
   fun print(arg) {
     <primitive "print">
   }
@@ -87,10 +91,13 @@ module idez(qt, QWidget, QMainWindow, QPlainTextEdit) {
   }
 
   class Inspector  < QMainWindow {
-    fields: inspectee, fieldList, textArea, lineEdit;
+    fields: inspectee, mirror, fieldList, textArea, lineEdit;
     init new(inspectee) {
       super.new();
+
       @inspectee = inspectee;
+      var Mirror = get_mirror_class();
+      @mirror = Mirror.new(@inspectee);
 
       this.resize(300,250);
       this.setWindowTitle("Inspector");
@@ -109,9 +116,33 @@ module idez(qt, QWidget, QMainWindow, QPlainTextEdit) {
       mainLayout.addLayout(hbox);
 
       @lineEdit = qt.QLineEdit.new(centralWidget);
+      /* @lineEdit.returnPressed(fun() { */
+      /*     this.doIt(@lineEdit.text()); */
+      /* }); */
       mainLayout.addWidget(@lineEdit);
 
       this.setCentralWidget(centralWidget);
+
+      this.loadValues();
+      @fieldList.connect("currentItemChanged", fun(item, prev) {
+          this.itemSelected(item);
+      });
+    }
+
+    fun loadValues() {
+      qt.QListWidgetItem.new('*self', @fieldList);
+      @mirror.fields().each(fun(name) {
+          qt.QListWidgetItem.new(name, @fieldList);
+      });
+    }
+
+    fun itemSelected(item) { //QListWidgetItem, curr from the signal
+      if (item.text() == '*self') {
+        @textArea.setPlainText(@inspectee.toSource());
+      } else {
+        var value = @mirror.valueFor(item.text());
+        @textArea.setPlainText(value.toSource());
+      }
     }
   }
 

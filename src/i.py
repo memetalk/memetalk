@@ -34,20 +34,22 @@ def P(obj, depth=1):
 
 Behavior = {"_vt":"*replace-me*", # with myself
             "parent": None,
-            "dict": [],
+            "dict": {"toSource":"*replace-me*"},
             "@tag":"Behavior"}
 Behavior["_vt"] = Behavior
 
 ObjectBehavior = {"_vt": Behavior,
                   "parent":None,
                   "dict":{"new": "*replace-me", #with the 'new' method
-                          "toString":"*replace-me"}, #with the 'toString' method
+                          "toString":"*replace-me*", #with the 'toString' method
+                          "toSource":"*replace-me*"}, #with toSource
                   "@tag":"ObjectBehavior"}
 
 Object = {"_vt": ObjectBehavior,
           "parent":None,
           "size":0,
-          "dict": {"toString":"*replace-me"},
+          "dict": {"toString":"*replace-me", "toSource":"*replace-me*",
+                   "==":"*replace-me*"},
           "compiled_class": {"_vt": "*replace-me*",       # with CompiledClass
                              "_delegate": None,
                              "name": "Object",
@@ -173,6 +175,20 @@ Dictionary = {"_vt": DictionaryBehavior,
               "dict": {"+": "*replace-me*"},
               "@tag": "Dictionary"}
 
+
+ListBehavior = {"_vt": Behavior,
+                      "parent": ObjectBehavior,
+                      "dict": {},
+                      "@tag": "ListBehavior"}
+
+
+List = {"_vt": ListBehavior,
+        "_delegate": None,
+        "parent": Object,
+        "size": 0,
+        "dict": {"each": "*replace-me*"},
+        "@tag": "List"}
+
 NumberBehavior = {"_vt": Behavior,
                   "parent": ObjectBehavior,
                   "dict": {},
@@ -185,6 +201,26 @@ Number = {"_vt": NumberBehavior,
           "dict": {"+": "*replace-me*"},
           "@tag": "Number"}
 
+MirrorBehavior = {"_vt": Behavior,
+                  "parent": ObjectBehavior,
+                  'dict':{'new':'*replace-me*'},
+                  "@tag": "MirrorBehavior"}
+
+
+Mirror = {"_vt": MirrorBehavior,
+          "_delegate": None,
+          "compiled_class": {"_vt": CompiledClass,
+                             "_delegate": None,
+                             "name": "Mirror",
+                             "super_class_name":"Object",
+                             "fields": ['mirrored'],
+                             "methods": {},
+                             "own_methods":{}},
+          "parent": Object,
+          "size": 0,
+          "dict": {'fields': '*replace-me*',
+                   'valueFor': '*replace-me*'},
+          "@tag": "Mirror"}
 
 ##############################################
 
@@ -353,10 +389,33 @@ Object['dict']['toString'] = _function_from_cfunction(
             "body": ["primitive", ['literal-string', "object_to_string"]],
             "is_ctor": False,
 #            "owner": Number_CompiledClass, #the CompiledClass for CompiledFunction class
-            "@tag": "<Object>.+ compiled function"}),
+            "@tag": "<Object>.toString compiled function"}),
     _kernel_imodule)
 
-ObjectBehavior['dict']['toString'] = Object['dict']['toString']
+ObjectBehavior['dict']['toString'] = Object['dict']['toString'] #puff
+Behavior['dict']['toSource'] = Object['dict']['toString'] #puff
+
+Object['dict']['toSource'] = _function_from_cfunction(
+    _create_compiled_function({
+            "name": "toSource",
+            "params": [],
+            "body": ["primitive", ['literal-string', "object_to_source"]],
+            "is_ctor": False,
+#            "owner": Number_CompiledClass, #the CompiledClass for CompiledFunction class
+            "@tag": "<Object>.toSource compiled function"}),
+    _kernel_imodule)
+
+ObjectBehavior['dict']['toSource'] = Object['dict']['toSource'] #puff
+
+Object['dict']['=='] = _function_from_cfunction(
+    _create_compiled_function({
+            "name": "==",
+            "params": ['other'],
+            "body": ["primitive", ['literal-string', "object_equal"]],
+            "is_ctor": False,
+#            "owner": Number_CompiledClass, #the CompiledClass for CompiledFunction class
+            "@tag": "<Object>.== compiled function"}),
+    _kernel_imodule)
 
 Number['dict']['+'] = _function_from_cfunction(
     _create_compiled_function({
@@ -376,6 +435,49 @@ Dictionary['dict']['+'] = _function_from_cfunction(
             "is_ctor": False,
 #            "owner": Dictionary_CompiledClass, #the CompiledClass for CompiledFunction class
             "@tag": "<Dictionary>.+ compiled function"}),
+    _kernel_imodule)
+
+
+List['dict']['each'] = _function_from_cfunction(
+    _create_compiled_function({
+            "name": "each",
+            "params": ['fn'],
+            "body": ["primitive", ['literal-string', "list_each"]],
+            "is_ctor": False,
+#            "owner": Dictionary_CompiledClass, #the CompiledClass for CompiledFunction class
+            "@tag": "<List>.each compiled function"}),
+    _kernel_imodule)
+
+
+MirrorBehavior['dict']['new'] = _function_from_cfunction(
+    _create_compiled_function({
+            "name": "new",
+            "params": ['mirrored'],
+            "body": ["primitive", ['literal-string', "mirror_new"]],
+            "is_ctor": True,
+            "owner": Mirror['compiled_class'], #the CompiledClass for CompiledFunction class
+            "@tag": "Mirror.new compiled function"}),
+    _kernel_imodule)
+
+Mirror['dict']['fields'] = _function_from_cfunction(
+    _create_compiled_function({
+            "name": "fields",
+            "params": [],
+            "body": ["primitive", ['literal-string', "mirror_fields"]],
+            "is_ctor": False,
+#            "owner": Dictionary_CompiledClass, #the CompiledClass for CompiledFunction class
+            "@tag": "<Mirror>.fields compiled function"}),
+    _kernel_imodule)
+
+
+Mirror['dict']['valueFor'] = _function_from_cfunction(
+    _create_compiled_function({
+            "name": "valueFor",
+            "params": ['name'],
+            "body": ["primitive", ['literal-string', "mirror_value_for"]],
+            "is_ctor": False,
+#            "owner": Dictionary_CompiledClass, #the CompiledClass for CompiledFunction class
+            "@tag": "<Mirror>.valueFor compiled function"}),
     _kernel_imodule)
 
 
@@ -724,6 +826,8 @@ class Interpreter():
             return Dictionary
         elif isinstance(obj, int) or isinstance(obj, long):
             return Number
+        elif isinstance(obj, list):
+            return List
         else:
             return obj["_vt"]
 

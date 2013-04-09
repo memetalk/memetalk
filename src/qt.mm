@@ -30,6 +30,9 @@ module qt() {
     fun setMaximumWidth(w) {
       <primitive "qt_qwidget_set_maximum_width">
     }
+    fun connect(signal, slot) {
+      <primitive "qt_qwidget_connect">
+    }
   }
 
   class QMenuBar < QWidget {
@@ -78,6 +81,9 @@ module qt() {
     }
     fun setTextCursor(cursor) {
       <primitive "qt_qplaintextedit_set_text_cursor">
+    }
+    fun setPlainText(text) {
+      <primitive "qt_qplaintextedit_set_plain_text">
     }
   }
 
@@ -128,9 +134,6 @@ module qt() {
     init new(parent) {
       <primitive "qt_qlistwidget_new">
     }
-    fun connect(signal, slot) {
-      <primitive "qt_qlistwidget_connect">
-    }
     fun addItem(string) {
       <primitive "qt_qlistwidget_add_item">
     }
@@ -148,15 +151,15 @@ module qt() {
     }
   }
 
-  /* QListWidgetItem { */
-  /*   fields: self; */
-  /*   init new(text, parent) { */
-  /*     <primitive "qt_qlistwidgetitem_new"> */
-  /*   } */
-  /*   fun text() { */
-  /*     <primitive "qt_qlistwidgetitem_text"> */
-  /*   } */
-  /* } */
+  class QListWidgetItem {
+    fields: self;
+    init new(text, parent) {
+      <primitive "qt_qlistwidgetitem_new">
+    }
+    fun text() {
+      <primitive "qt_qlistwidgetitem_text">
+    }
+  }
 
   class QLineEdit < QWidget {
     init new(parent) {
