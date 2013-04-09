@@ -62,6 +62,10 @@ def prim_object_to_string(i):
 def prim_object_to_source(i):
     return pformat(i.r_rp, 1,80,2)
 
+
+def prim_object_equal(i):
+    return i.r_rp == i.stack[-1]['other']
+
 # def prim_string_replace(i):
 #     return re.sub(i.stack[-1]['what'],i.stack[-1]['for'],i.r_rp)
 

@@ -1094,6 +1094,16 @@ class Interpreter():
 
         raise Exception("Undeclared function: " + name)
 
+    def eval_do_if(self, cond, yes):
+        if cond != False:
+            self.evaluator.apply("exprlist", yes)
+
+    def eval_do_if_else(self, cond, yes, no):
+        if cond != False:
+            self.evaluator.apply("exprlist", yes)
+        else:
+            self.evaluator.apply("exprlist", no)
+
 if len(sys.argv) == 1:
     print "i.py <source.mm>"
     sys.exit(0)
