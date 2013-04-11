@@ -16,6 +16,7 @@ module idez(qt, QWidget, QMainWindow, QPlainTextEdit) {
     <primitive "print">
   }
 
+
   class Editor < QPlainTextEdit {
     fields: variables;
     init new(parent) {
@@ -29,7 +30,7 @@ module idez(qt, QWidget, QMainWindow, QPlainTextEdit) {
       var CompiledFunction = getClass_CompiledFunction();
       var cmod = get_current_compiled_module();
       var cfun = CompiledFunction.new(selection, [], cmod, @variables);
-      var fn = cfun.asContext(thisModule, @variables);
+      var fn = cfun.asContext(thisModule, null, @variables);
       var res =  fn.apply([]);
       @variables = fn.getEnv() + @variables;
       return res;
@@ -116,9 +117,9 @@ module idez(qt, QWidget, QMainWindow, QPlainTextEdit) {
       mainLayout.addLayout(hbox);
 
       @lineEdit = qt.QLineEdit.new(centralWidget);
-      /* @lineEdit.returnPressed(fun() { */
-      /*     this.doIt(@lineEdit.text()); */
-      /* }); */
+      @lineEdit.connect("returnPressed", fun() {
+          this.doIt(@lineEdit.text());
+      });
       mainLayout.addWidget(@lineEdit);
 
       this.setCentralWidget(centralWidget);
@@ -143,6 +144,13 @@ module idez(qt, QWidget, QMainWindow, QPlainTextEdit) {
         var value = @mirror.valueFor(item.text());
         @textArea.setPlainText(value.toSource());
       }
+    }
+    fun doIt(text) {
+      var CompiledFunction = getClass_CompiledFunction();
+      var cmod = get_current_compiled_module();
+      var cfun = CompiledFunction.new(text, [], cmod, {});
+      var fn = cfun.asContext(thisModule, @inspectee, {});
+      fn.apply([]);
     }
   }
 

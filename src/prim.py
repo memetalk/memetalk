@@ -88,10 +88,14 @@ def prim_compiled_function_as_context(i):
     #asContext(imodule, env)
     # -- now we want the names and values of the env
     env = i.stack[-1]['env']
+    this = i.stack[-1]['self']
     if env != None:
         env = dict(zip(range(0,len(env.keys())), env.values()))
-    else:
+        env['r_rdp'] = env['r_rp'] = this
+    elif this == None:
         env = None
+    else:
+        env = {'r_rdp': this, 'r_rp': this}
     ret = i.compiled_function_to_context(i.r_rp, env, i.stack[-1]['imodule'])
     return ret
 
@@ -438,3 +442,7 @@ def prim_qt_qlineedit_set_focus(i):
     qtobj = _lookup_field(i.r_rp, 'self')
     qtobj.setFocus()
     return i.r_rp
+
+def prim_qt_qlineedit_text(i):
+    qtobj = _lookup_field(i.r_rp, 'self')
+    return str(qtobj.text())

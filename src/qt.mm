@@ -168,5 +168,8 @@ module qt() {
     fun setFocus() {
       <primitive "qt_qlineedit_set_focus">
     }
+    fun text() {
+      <primitive "qt_qlineedit_text">
+    }
   }
 }

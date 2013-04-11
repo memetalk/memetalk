@@ -345,7 +345,7 @@ CompiledFunctionBehavior["dict"]["new"] = _function_from_cfunction(_CompiledFunc
 CompiledFunction['dict']['asContext'] = _function_from_cfunction(
     _create_compiled_function({
             "name": "asContext",
-            "params": ['imodule', 'env'],
+            "params": ['imodule', 'self', 'env'],
             "body": ["primitive", ['literal-string', "compiled_function_as_context"]],
             "is_ctor": False,
             #"owner": CompiledFunction_CompiledClass, #the CompiledClass for CompiledFunction class. So far, only used on ctor/rdp lookup
