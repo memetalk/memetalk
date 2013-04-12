@@ -85,6 +85,9 @@ module qt() {
     fun setPlainText(text) {
       <primitive "qt_qplaintextedit_set_plain_text">
     }
+    fun toPlainText() {
+      <primitive "qt_qplaintextedit_to_plain_text">
+    }
   }
 
   class QTextCursor {
@@ -134,20 +137,8 @@ module qt() {
     init new(parent) {
       <primitive "qt_qlistwidget_new">
     }
-    fun addItem(string) {
-      <primitive "qt_qlistwidget_add_item">
-    }
-    fun clear() {
-      <primitive "qt_qlistwidget_clear">
-    }
-    fun clearSelection() {
-      <primitive "qt_qlistwidget_clear_selection">
-    }
-    fun selectedItems() {
-      <primitive "qt_qlistwidget_selected_items">
-    }
-    fun removeItemWidget(item) {
-      <primitive "qt_qlistwidget_remove_item_widget">
+    fun currentItem() {
+      <primitive "qt_qlistwidget_current_item">
     }
   }
 

@@ -118,7 +118,7 @@ module idez(qt, QWidget, QMainWindow, QPlainTextEdit) {
 
       @lineEdit = qt.QLineEdit.new(centralWidget);
       @lineEdit.connect("returnPressed", fun() {
-          this.doIt(@lineEdit.text());
+          this.lineEditDoIt(@lineEdit.text());
       });
       mainLayout.addWidget(@lineEdit);
 
@@ -128,6 +128,39 @@ module idez(qt, QWidget, QMainWindow, QPlainTextEdit) {
       @fieldList.connect("currentItemChanged", fun(item, prev) {
           this.itemSelected(item);
       });
+      @fieldList.connect("itemActivated", fun(item) {
+          this.itemActivated(item);
+      });
+
+      var execMenu = this.menuBar().addMenu("&Execution");
+      var action = qt.QAction.new("&Do it", execMenu);
+      action.setShortcut("ctrl+d");
+      action.connect("triggered", fun() {
+          @textArea.doIt();
+      });
+      execMenu.addAction(action);
+
+      action = qt.QAction.new("&Print it", execMenu);
+      action.setShortcut("ctrl+p");
+      action.connect("triggered", fun() {
+          @textArea.printIt();
+      });
+      execMenu.addAction(action);
+
+      action = qt.QAction.new("&Inspect it", execMenu);
+      action.setShortcut("ctrl+i");
+      action.connect("triggered", fun() {
+          @textArea.inspectIt();
+      });
+      execMenu.addAction(action);
+
+      action = qt.QAction.new("Accept it", execMenu);
+      action.setShortcut("ctrl+s");
+      action.connect("triggered", fun() {
+          this.acceptIt();
+      });
+      execMenu.addAction(action);
+
     }
 
     fun loadValues() {
@@ -145,12 +178,30 @@ module idez(qt, QWidget, QMainWindow, QPlainTextEdit) {
         @textArea.setPlainText(value.toSource());
       }
     }
-    fun doIt(text) {
+
+    fun itemActivated(item) {
+      if (item.text() != '*self') {
+        var value = @mirror.valueFor(item.text());
+        Inspector.new(value).show();
+      }
+    }
+
+    fun lineEditDoIt(text) {
       var CompiledFunction = getClass_CompiledFunction();
       var cmod = get_current_compiled_module();
       var cfun = CompiledFunction.new(text, [], cmod, {});
       var fn = cfun.asContext(thisModule, @inspectee, {});
       fn.apply([]);
+    }
+
+    fun acceptIt() {
+      var CompiledFunction = getClass_CompiledFunction();
+      var cmod = get_current_compiled_module();
+      var cfun = CompiledFunction.new(@textArea.toPlainText(), [], cmod, {});
+      var fn = cfun.asContext(thisModule, @inspectee, {});
+      var new_value = fn.apply([]);
+      var slot = @fieldList.currentItem().text();
+      @mirror.setValueFor(slot, new_value);
     }
   }
 

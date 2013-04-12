@@ -49,7 +49,8 @@ Object = {"_vt": ObjectBehavior,
           "parent":None,
           "size":0,
           "dict": {"toString":"*replace-me", "toSource":"*replace-me*",
-                   "==":"*replace-me*"},
+                   "==":"*replace-me*",
+                   "!=":"*replace-me*"},
           "compiled_class": {"_vt": "*replace-me*",       # with CompiledClass
                              "_delegate": None,
                              "name": "Object",
@@ -219,7 +220,8 @@ Mirror = {"_vt": MirrorBehavior,
           "parent": Object,
           "size": 0,
           "dict": {'fields': '*replace-me*',
-                   'valueFor': '*replace-me*'},
+                   'valueFor': '*replace-me*',
+                   'setValueFor':'*replace-me*'},
           "@tag": "Mirror"}
 
 ##############################################
@@ -417,6 +419,16 @@ Object['dict']['=='] = _function_from_cfunction(
             "@tag": "<Object>.== compiled function"}),
     _kernel_imodule)
 
+Object['dict']['!='] = _function_from_cfunction(
+    _create_compiled_function({
+            "name": "==",
+            "params": ['other'],
+            "body": ["primitive", ['literal-string', "object_not_equal"]],
+            "is_ctor": False,
+#            "owner": Number_CompiledClass, #the CompiledClass for CompiledFunction class
+            "@tag": "<Object>.== compiled function"}),
+    _kernel_imodule)
+
 Number['dict']['+'] = _function_from_cfunction(
     _create_compiled_function({
             "name": "+",
@@ -480,6 +492,15 @@ Mirror['dict']['valueFor'] = _function_from_cfunction(
             "@tag": "<Mirror>.valueFor compiled function"}),
     _kernel_imodule)
 
+Mirror['dict']['setValueFor'] = _function_from_cfunction(
+    _create_compiled_function({
+            "name": "valueFor",
+            "params": ['name','value'],
+            "body": ["primitive", ['literal-string', "mirror_set_value_for"]],
+            "is_ctor": False,
+#            "owner": Dictionary_CompiledClass, #the CompiledClass for CompiledFunction class
+            "@tag": "<Mirror>.setValueFor compiled function"}),
+    _kernel_imodule)
 
 def _instantiate_module(compiled_module, args, parent_module):
     #creates the Module object and its instance

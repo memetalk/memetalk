@@ -66,6 +66,9 @@ def prim_object_to_source(i):
 def prim_object_equal(i):
     return i.r_rp == i.stack[-1]['other']
 
+def prim_object_not_equal(i):
+    return i.r_rp != i.stack[-1]['other']
+
 # def prim_string_replace(i):
 #     return re.sub(i.stack[-1]['what'],i.stack[-1]['for'],i.r_rp)
 
@@ -140,6 +143,9 @@ def prim_mirror_fields(i):
 
 def prim_mirror_value_for(i):
     return i.r_rdp['mirrored'][i.stack[-1]['name']]
+
+def prim_mirror_set_value_for(i):
+    i.r_rdp['mirrored'][i.stack[-1]['name']] = i.stack[-1]['value']
 
 def prim_list_each(i):
     for x in i.r_rdp:
@@ -240,7 +246,6 @@ def prim_qt_qwidget_connect(i):
     signal = i.stack[-1]['signal']
     slot = i.stack[-1]['slot']
     def callback(*rest):
-        P(rest)
         args = []
         for arg in rest:
             args.append(_meme_instance(i,arg))
@@ -300,6 +305,13 @@ def prim_qt_qplaintextedit_set_plain_text(i):
     qtobj = _lookup_field(i.r_rp, 'self')
     qtobj.setPlainText(i.stack[-1]['text'])
     return i.r_rp
+
+
+def prim_qt_qplaintextedit_to_plain_text(i):
+    qtobj = _lookup_field(i.r_rp, 'self')
+    return str(qtobj.toPlainText())
+
+
 
 # QMenuBar
 # Warning! QMenuBar inherits QWidget!
@@ -414,6 +426,10 @@ def prim_qt_qlistwidget_new(i):
     else:
         i.r_rdp['self'] = QtGui.QListWidget()
     return i.r_rp
+
+def prim_qt_qlistwidget_current_item(i):
+    qtobj = _lookup_field(i.r_rp, 'self')
+    return _meme_instance(i,qtobj.currentItem())
 
 # QListWidgetItem
 def prim_qt_qlistwidgetitem_new(i):
