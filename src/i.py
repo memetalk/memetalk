@@ -796,19 +796,19 @@ class ReturnException(Exception):
     def __init__(self, val):
         self.val = val
 
+
 class Interpreter():
     def __init__(self):
+        self.compiled_modules = {}
+        self.processes = [Process(self)]
+
         self.module_loader = ModuleLoader()
         self.fun_loader = FunctionLoader()
 
-        self.compiled_modules = {}
-
-        # registers
-        self.r_mp  = None  # module pointer
-        self.r_cp  = None  # context pointer
-        self.r_rp  = None  # receiver pointer
-        self.r_rdp = None  # receiver data pointer
-        self.r_ep  = None  # environment pointer
+    def start(self, main_script):
+        compiled_module = self.module_loader.load_module(main_script)
+        imodule = _instantiate_module(compiled_module, {}, _kernel_imodule)
+        self.processes[0].run_module(imodule)
 
     def instantiate_module(self, compiled_module, args, imodule):
         return _instantiate_module(compiled_module, args, imodule)
@@ -816,10 +816,6 @@ class Interpreter():
     def kernel_module_instance(self):
         return _kernel_imodule
 
-    def alloc(self, klass, data):
-        return _create_instance(klass, data)
-
-    # puff...
     def get_class(self, name):
         return globals()[name]
 
@@ -834,6 +830,25 @@ class Interpreter():
 
     def compile_code(self, text, params, owner, env):
         return self.fun_loader.load_body(text, params, owner, env)
+
+class Process():
+    def __init__(self, interpreter):
+        self.interpreter = interpreter
+
+        # registers
+        self.r_mp  = None  # module pointer
+        self.r_cp  = None  # context pointer
+        self.r_rp  = None  # receiver pointer
+        self.r_rdp = None  # receiver data pointer
+        self.r_ep  = None  # environment pointer
+
+        self.stack = None
+
+    def alloc(self, klass, data):
+        return _create_instance(klass, data)
+
+    # puff...
+
 
     # object routines
     # -dealing with nulls, booleans, integers, etc...
@@ -861,11 +876,6 @@ class Interpreter():
             return False
 
     # execution
-
-    def start(self, main_script):
-        compiled_module = self.module_loader.load_module(main_script)
-        imodule = _instantiate_module(compiled_module, {}, _kernel_imodule)
-        self.run_module(imodule)
 
     def run_module(self, module):
         fun = module["main"]
