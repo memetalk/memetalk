@@ -1,4 +1,4 @@
-module main() {
+module idez_entry() {
 
   fun import(mname, margs) {
     <primitive "import">

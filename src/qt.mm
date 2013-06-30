@@ -10,6 +10,16 @@ module qt() {
     }
   }
 
+  class QEventLoop {
+    fields: self;
+    init new() {
+      <primitive "qt_qeventloop_new">
+    }
+    fun exec() {
+      <primitive "qt_qeventloop_exec">
+    }
+  }
+
   class QWidget {
     fields: self;
     init new(parent) {
@@ -161,6 +171,65 @@ module qt() {
     }
     fun text() {
       <primitive "qt_qlineedit_text">
+    }
+  }
+
+  class QComboBox < QWidget {
+    init new(parent) {
+        <primitive "qt_qcombobox_new">
+    }
+    fun addItem(item) {
+      <primitive "qt_qcombobox_add_item">
+    }
+    fun setCurrentIndex(i) {
+      <primitive "qt_qcombobox_set_current_index">
+    }
+    fun clear() {
+      <primitive "qt_qcombobox_clear">
+    }
+  }
+
+  class QHeaderView {
+    fields: self;
+    fun hide() {
+      <primitive "qt_qheaderview_hide">
+    }
+    fun setStretchLastSection(val) {
+      <primitive "qt_qheaderview_set_stretch_last_section">
+    }
+  }
+
+  class QTableWidget < QWidget { //actually inherits qtableview
+    init new(rows, cols, parent) {
+        <primitive "qt_qtablewidget_new">
+    }
+    fun setHorizontalHeaderLabels(labels) {
+      <primitive "qt_qtablewidget_set_horizontal_header_labels">
+    }
+    fun verticalHeader() {
+      <primitive "qt_qtablewidget_vertical_header">
+    }
+    fun setSelectionMode(mode) {
+      <primitive "qt_qtablewidget_set_selection_mode">
+    }
+    fun horizontalHeader() {
+      <primitive "qt_qtablewidget_horizontal_header">
+    }
+    fun setItem(line,col,item) {
+      <primitive "qt_qtablewidget_set_item">
+    }
+    fun setSortingEnabled(val) {
+      <primitive "qt_qtablewidget_set_sorting_enabled">
+    }
+  }
+
+  class QTableWidgetItem {
+    fields: self;
+    init new(label) {
+      <primitive "qt_qtablewidgetitem_new">
+    }
+    fun setFlags(flags) {
+      <primitive "qt_qtablewidgetitem_set_flags">
     }
   }
 }
