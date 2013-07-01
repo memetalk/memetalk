@@ -178,9 +178,20 @@ module debugger(QWidget, QComboBox, QTableWidget, QMainWindow, qt) {
         this.stepInto()
       });
       execMenu.addAction(action);
+
+      var action = qt.QAction.new("Step &Over", execMenu);
+      action.setShortcut("F7");
+      action.connect("triggered", fun() {
+        this.stepOver()
+      });
+      execMenu.addAction(action);
     }
     fun stepInto() {
       @process.stepInto();
+      @stackCombo.updateInfo();
+    }
+    fun stepOver() {
+      @process.stepOver();
       @stackCombo.updateInfo();
     }
   }

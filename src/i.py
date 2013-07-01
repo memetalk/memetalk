@@ -1156,13 +1156,11 @@ class Interpreter():
     def debug_process(self, target_process):
         compiled_module = self.compile_module('debugger-entry.mm')
         imodule = _instantiate_module(compiled_module, {}, _kernel_imodule)
-        dbg_process = Process(self)
-        self.processes.append(dbg_process)
+        target_process.debugger_process = Process(self)
+        self.processes.append(target_process.debugger_process)
 
         mmprocess = self.alloc(VMProcess, {'self':target_process})
-        target_process.debugger_process, cmd = dbg_process.switch('run_module', imodule, [mmprocess])
-        print("co-routine is back")
-        return cmd
+        return target_process.debugger_process.switch('run_module', imodule, [mmprocess])
 
     def compile_module(self, filename):
         return ModuleLoader().compile_module(filename)
@@ -1292,14 +1290,21 @@ class Process(greenlet):
 
             #...fun will be executed with this new r_rp, below
 
-        self.evaluator = Eval([fun["compiled_function"]["body"]])
-        self.evaluator.i = self
-        try:
-            ret,err = self.evaluator.apply("exec_fun")
-        except ReturnException as e:
-            ret = e.val
-        self.tear_fun()
-        return ret
+        def evaluate(skip):
+            if skip == True:
+                self.state = 'running'
+            self.evaluator = Eval([fun["compiled_function"]["body"]])
+            self.evaluator.i = self
+            try:
+                ret,err = self.evaluator.apply("exec_fun")
+            except ReturnException as e:
+                ret = e.val
+            self.tear_fun()
+            print("--Returned: " + str(self.state))
+            if skip:
+                self.state = 'paused'
+            return ret
+        return evaluate(self.state == 'next')
 
     def tear_fun(self):
         frame = self.stack.pop()
@@ -1471,14 +1476,18 @@ class Process(greenlet):
         else:
             return self.setup_and_run_fun(receiver, drecv, method, args, False)
 
-    def eval_do_bin_send(self, selector, receiver, arg):
+    def eval_do_bin_send(self, selector, receiver, arg, ast):
+        self.r_ip = ast
+        #self.dbg_control()
         drecv, method = self._lookup(receiver, self.interpreter.get_vt(receiver), selector)
         if not method:
             raise Exception("DoesNotUnderstand: " + selector + " -- " + pformat(receiver,1,80,1))
         else:
             return self.setup_and_run_fun(receiver, drecv, method, [arg], True)
 
-    def eval_do_un_not(self, value):
+    def eval_do_un_not(self, value, ast):
+        self.r_ip = ast
+        self.dbg_control()
         return not value
 
     def eval_do_send(self, receiver, selector, args, ast):
@@ -1530,27 +1539,27 @@ class Process(greenlet):
 
     def eval_do_debug(self,ast):
         self.r_ip = ast
-        cmd = self.interpreter.debug_process(self)
+        self.dbg_cmd(self.interpreter.debug_process(self))
+
+    ## debugger
+
+    def dbg_cmd(self, cmd):
+        print "received cmd: " + str(cmd)
         if cmd == 'step_into':
             print("process:: changed state to paused")
             self.state = 'paused'
+        if cmd == 'step_over':
+            print("process:: changed state to over")
+            self.state = 'next'
 
     def dbg_control(self):
-        if self.state == 'paused':
+        print("dbg:control self.state = " + self.state)
+        if self.state == 'paused' or self.state == 'next':
             print("switching back to debugger")
-            self.debugger_process.switch()
-
-    #self.dbg_proc, self.state = proc.interpreter.debug_process(proc)
-        # then, on every statement (eval_do_*), check for self.state
-        #  if self.state == 'break'
-        #    self.state = self.dbg_proc.switch()
-        #
-        # send_or_call:
-        #  if self.state == 'next':
-        #    skip = True
-        #    self.state = 'run'
-        #  <do send>
-        #  if skip:  self.state = 'break'
+            self.dbg_cmd(self.debugger_process.switch())
+        # if self.state == 'single':
+        #     self.state = 'paused'
+        #     self.dbg_cmd(self.debugger_process.switch())
 
 if len(sys.argv) == 1:
     print "i.py <source.mm>"

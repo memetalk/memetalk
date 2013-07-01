@@ -80,7 +80,11 @@ def prim_vmstackframe_instruction_pointer(proc):
 
 def prim_vmprocess_step_into(proc):
     _proc = _lookup_field(proc.r_rp, 'self')
-    _proc.switch(proc,"step_into")
+    _proc.switch("step_into")
+
+def prim_vmprocess_step_over(proc):
+    _proc = _lookup_field(proc.r_rp, 'self')
+    _proc.switch("step_over")
 
 # convenience
 def prim_vmstackframe_module_pointer(proc):
@@ -238,7 +242,6 @@ def prim_list_each(proc):
         proc.setup_and_run_fun(None, None, proc.locals['fn'], [x], True)
 
 def prim_list_get(proc):
-    print("********** GET:"+str(proc.locals['n']))#+"::"+str(proc.r_rdp))
     return proc.r_rdp[proc.locals['n']]
 
 def prim_list_size(proc):
