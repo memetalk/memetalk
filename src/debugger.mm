@@ -185,6 +185,13 @@ module debugger(QWidget, QComboBox, QTableWidget, QMainWindow, qt) {
         this.stepOver()
       });
       execMenu.addAction(action);
+
+      var action = qt.QAction.new("&Continue", execMenu);
+      action.setShortcut("F5");
+      action.connect("triggered", fun() {
+        this.continue()
+      });
+      execMenu.addAction(action);
     }
     fun stepInto() {
       @process.stepInto();
@@ -192,6 +199,10 @@ module debugger(QWidget, QComboBox, QTableWidget, QMainWindow, qt) {
     }
     fun stepOver() {
       @process.stepOver();
+      @stackCombo.updateInfo();
+    }
+    fun continue() {
+      @process.continue();
       @stackCombo.updateInfo();
     }
   }

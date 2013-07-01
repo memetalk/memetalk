@@ -86,6 +86,10 @@ def prim_vmprocess_step_over(proc):
     _proc = _lookup_field(proc.r_rp, 'self')
     _proc.switch("step_over")
 
+def prim_vmprocess_continue(proc):
+    _proc = _lookup_field(proc.r_rp, 'self')
+    _proc.switch("continue")
+
 # convenience
 def prim_vmstackframe_module_pointer(proc):
     frame = _lookup_field(proc.r_rp, 'self')

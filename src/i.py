@@ -1300,7 +1300,6 @@ class Process(greenlet):
             except ReturnException as e:
                 ret = e.val
             self.tear_fun()
-            print("--Returned: " + str(self.state))
             if skip:
                 self.state = 'paused'
             return ret
@@ -1544,22 +1543,20 @@ class Process(greenlet):
     ## debugger
 
     def dbg_cmd(self, cmd):
-        print "received cmd: " + str(cmd)
         if cmd == 'step_into':
             print("process:: changed state to paused")
             self.state = 'paused'
         if cmd == 'step_over':
-            print("process:: changed state to over")
+            print("process:: changed state to next")
             self.state = 'next'
+        if cmd == 'continue':
+            print("process:: changed state to continue")
+            self.state = 'running'
 
     def dbg_control(self):
-        print("dbg:control self.state = " + self.state)
         if self.state == 'paused' or self.state == 'next':
             print("switching back to debugger")
             self.dbg_cmd(self.debugger_process.switch())
-        # if self.state == 'single':
-        #     self.state = 'paused'
-        #     self.dbg_cmd(self.debugger_process.switch())
 
 if len(sys.argv) == 1:
     print "i.py <source.mm>"
