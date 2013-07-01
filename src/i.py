@@ -1389,7 +1389,11 @@ class Process(greenlet):
     ##### eval routines
 
     def eval_prim(self, prim_name):
-        return globals()['prim_'+prim_name](self)
+        try:
+            return globals()['prim_'+prim_name](self)
+        except KeyError as e:
+            traceback.print_exc()
+            sys.exit(0)
 
     def eval_do_field_attr(self, field, rhs, ast):
         self.r_ip = ast
