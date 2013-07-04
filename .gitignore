@@ -1,0 +1,4 @@
+*.pyc
+src/evaluator.py
+src/loader.py
+src/parser.py
