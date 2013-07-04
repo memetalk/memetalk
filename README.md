@@ -17,8 +17,8 @@ Installing & Building
 
 Running
 -------
-For now, the entry-point for memetalk's interpreter is `i.py`. From the `memetalk` dir, run `python src/i.py {{source.mm}}`. For example
+For now, the entry-point for memetalk's interpreter is `i.py`. From the `memetalk` dir, run `python src/i.py {{source.mm}}`. For example:
 
 ```
-python src/i.py tests/closures1.mm`
+python src/i.py tests/closures1.mm
 ```
