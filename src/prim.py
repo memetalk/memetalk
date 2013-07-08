@@ -225,9 +225,12 @@ def prim_context_get_env(proc):
     #warning 2: only the outter env is returned (closures declaring variables
     #                                            are not contemplated. its
     #                                            a TODO).
-    env = proc.r_rdp['env']
-    env_table = proc.r_rdp['compiled_function']['env_table']
-    return dict(zip(env_table.values(),env.values()))
+    env = dict(proc.r_rdp['env'])
+    env_table = dict(proc.r_rdp['compiled_function']['env_table'])
+    ret = {}
+    for k,v in env_table.items():
+        ret[v] = env[k]
+    return ret
 
 def prim_number_plus(proc):
     return proc.r_rp + proc.locals['arg']
