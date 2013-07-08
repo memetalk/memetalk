@@ -11,7 +11,7 @@ module foo() {
   fun main() {
     var CompiledFunction = getClass_CompiledFunction();
     var cmod = get_current_compiled_module();
-    var cfun = CompiledFunction.new("x + 1", ['x'], cmod);
+    var cfun = CompiledFunction.new("x + 1", ['x'], cmod, {});
     var fn = cfun.instantiate(thisModule);
     return fn.apply([2]);
   }

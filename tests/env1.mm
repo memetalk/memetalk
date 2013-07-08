@@ -17,7 +17,7 @@ module foo() {
     var cmod = get_current_compiled_module();
     var env = {"a": 1};
     var cfun = CompiledFunction.new("fun(x) { a = a + x; }", [], cmod, env);
-    var fn = cfun.asContext(thisModule, env);
+    var fn = cfun.asContext(thisModule, null, env);
     var f = fn.apply([]);
     var ret = f(20);
     var env_new = fn.getEnv();

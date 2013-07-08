@@ -25,15 +25,15 @@ constructor = ['ctor' :name
                !(self.i.l_begin_function(name, True))
                  params:p
                !(self.i.l_set_function_parameters(p))
-                ['body' body:b]]
-                 -> self.i.l_end_function(b)
+                ['body' body:b]]:f
+                 -> self.i.l_end_function(b,f)
 
 function_definition = ['fun' :name
                          !(self.i.l_begin_function(name, False))
                       params:p
                          !(self.i.l_set_function_parameters(p))
-                      ['body' body:b]]
-                       -> self.i.l_end_function(b)
+                      ['body' body:b]]:f
+                       -> self.i.l_end_function(b,f)
 
 params = ['params' []]  -> []
        | ['params' :xs] -> xs

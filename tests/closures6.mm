@@ -13,7 +13,7 @@ module foo() {
     var cmod = get_current_compiled_module();
     var env = {"a": 10,'b':0};
     var cfun = CompiledFunction.new("return a + b;", ['b'], cmod, env);
-    var fn = cfun.asContext(thisModule, env);
+    var fn = cfun.asContext(thisModule, null, env);
     var res = fn.apply([20]);
     return res; // 30
   }
