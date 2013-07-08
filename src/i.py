@@ -99,6 +99,7 @@ CompiledFunction = {"_vt":CompiledFunctionBehavior,
                              "name": "*replace-me*",
                              "parameters":"*replace-me*",
                              "text":"*replace-me*",
+                             "setCode":"*replace-me*",
                              "ast":"*replace-me*"},
                     "compiled_class": CompiledFunction_CompiledClass,
                     "@tag":"CompiledFunction"}
@@ -138,7 +139,7 @@ CompiledModule = {"_vt": CompiledModuleBehavior,
                   "_delegate": None,
                   "parent": Object,
                   "size": 7, #name, filepath, params, ast, funs, classes
-                  "dict": {},
+                  "dict": {'params':'*replace-me*'},
                   "@tag": "CompiledModule"}
 
 ModuleBehavior = {"_vt": Behavior,
@@ -186,7 +187,8 @@ Dictionary = {"_vt": DictionaryBehavior,
               "_delegate": None,
               "parent": Object,
               "size": 0,
-              "dict": {"+": "*replace-me*"},
+              "dict": {"+": "*replace-me*",
+                       "each":"*replace-me*"},
               "@tag": "Dictionary"}
 
 
@@ -260,21 +262,12 @@ VMProcess = {"_vt": VMProcessBehavior,
                       "stepOver": "*replace-me*",
                       "stepOut": "*replace-me*",
                       "continue": "*replace-me*",
+                      "rewind": "*replace-me*",
+                      "modulePointer": "*replace-me*",
                       "contextPointer": "*replace-me*",
-                      "instructionPointer":"*replace-me*"},
+                      "instructionPointer":"*replace-me*",
+                      'localVars':"*replace-me*"},
              "@tag": "VMProcess"}
-
-# VMStackBehavior = {"_vt": Behavior,
-#                    "parent": ObjectBehavior,
-#                    "dict": {},
-#                    "@tag": "VMStackBehavior"}
-
-# VMStack = {"_vt": VMStackBehavior,
-#            "_delegate": None,
-#            "parent": Object,
-#            "size": 1, #self
-#            "dict": {"},
-#            "@tag": "VMStack"}
 
 VMStackFrameBehavior = {"_vt": Behavior,
                         "parent": ObjectBehavior,
@@ -406,6 +399,16 @@ _Object_new_compiled_fun = _create_compiled_function({
 
 ObjectBehavior["dict"]["new"] = _function_from_cfunction(_Object_new_compiled_fun, _kernel_imodule)
 
+CompiledModule['dict']['params'] = _function_from_cfunction(
+    _create_compiled_function({
+            "name": "params",
+            "params": [],
+            "body": ["primitive", ['literal-string', "compiled_module_params"]],
+            "is_ctor": False,
+            #"owner": CompiledFunction_CompiledClass, #the CompiledClass for CompiledFunction class. So far, only used on ctor/rdp lookup
+            "@tag": "<CompiledModule>.params compiled function"}),
+    _kernel_imodule)
+
 _CompiledFunction_new_compiled_fun = _create_compiled_function({
     "name": "new",
     "params": ['text', 'parameters', 'module', 'env'],
@@ -455,6 +458,16 @@ CompiledFunction['dict']['text'] = _function_from_cfunction(
             "is_ctor": False,
             #"owner": CompiledFunction_CompiledClass, #the CompiledClass for CompiledFunction class. So far, only used on ctor/rdp lookup
             "@tag": "<CompiledFunction>.text compiled function"}),
+    _kernel_imodule)
+
+CompiledFunction['dict']['setCode'] = _function_from_cfunction(
+    _create_compiled_function({
+            "name": "setCode",
+            "params": ['code'],
+            "body": ["primitive", ['literal-string', "compiled_function_set_code"]],
+            "is_ctor": False,
+            #"owner": CompiledFunction_CompiledClass, #the CompiledClass for CompiledFunction class. So far, only used on ctor/rdp lookup
+            "@tag": "<CompiledFunction>.code compiled function"}),
     _kernel_imodule)
 
 
@@ -614,6 +627,16 @@ Dictionary['dict']['+'] = _function_from_cfunction(
             "@tag": "<Dictionary>.+ compiled function"}),
     _kernel_imodule)
 
+Dictionary['dict']['each'] = _function_from_cfunction(
+    _create_compiled_function({
+            "name": "each",
+            "params": ['fn'],
+            "body": ["primitive", ['literal-string', "dictionary_each"]],
+            "is_ctor": False,
+#            "owner": Dictionary_CompiledClass, #the CompiledClass for CompiledFunction class
+            "@tag": "<Dictionary>.each compiled function"}),
+    _kernel_imodule)
+
 
 List['dict']['each'] = _function_from_cfunction(
     _create_compiled_function({
@@ -744,6 +767,21 @@ VMProcess['dict']["continue"] = _function_from_cfunction(
             'body': ['primitive', ['literal-string', 'vmprocess_continue']],
             '@tag': '<VMProcess>.continue compiled function'}),
     _kernel_imodule)
+VMProcess['dict']["rewind"] = _function_from_cfunction(
+    _create_compiled_function({
+            'name': 'rewind',
+            'params': [],
+            'body': ['primitive', ['literal-string', 'vmprocess_rewind']],
+            '@tag': '<VMProcess>.rewind compiled function'}),
+    _kernel_imodule)
+VMProcess['dict']["localVars"] = _function_from_cfunction(
+    _create_compiled_function({
+            'name': 'localVars',
+            'params': [],
+            'body': ['primitive', ['literal-string', 'vmprocess_local_vars']],
+            '@tag': '<VMProcess>.localVars compiled function'}),
+    _kernel_imodule)
+
 VMProcess['dict']["contextPointer"] = _function_from_cfunction(
     _create_compiled_function({
             'name': 'contextPointer',
@@ -757,6 +795,13 @@ VMProcess['dict']["instructionPointer"] = _function_from_cfunction(
             'params': [],
             'body': ['primitive', ['literal-string', 'vmprocess_instruction_pointer']],
             '@tag': '<VMProcess>.instructionPointer compiled function'}),
+    _kernel_imodule)
+VMProcess['dict']["modulePointer"] = _function_from_cfunction(
+    _create_compiled_function({
+            'name': 'modulePointer',
+            'params': [],
+            'body': ['primitive', ['literal-string', 'vmprocess_module_pointer']],
+            '@tag': '<VMProcess>.modulePointer compiled function'}),
     _kernel_imodule)
 
 VMStackFrame['dict']["modulePointer"] = _function_from_cfunction(
@@ -822,7 +867,14 @@ def _instantiate_module(compiled_module, args, parent_module):
         len(compiled_module["compiled_classes"])+\
         len(compiled_module["compiled_functions"])
 
-    imod_dictionary = {}
+    # puff
+    imod_dictionary = {"_compiledModule":_function_from_cfunction(
+            _create_compiled_function({
+                    'name':'_compiledModule',
+                    'params':[],
+                    'body': ['primitive', ['literal-string', 'module_instance_compiled_module']],
+                    '@tag': '<Module>._compiledModule compiled function'}),
+            _kernel_imodule)}
 
     # Module
     module = _create_module({"_vt": ModuleBehavior,
@@ -920,7 +972,7 @@ class ASTBuilder:
         end = self.parser.input.position
         full = ''.join(self.parser.input.data)
         text = full[begin:end]
-        line = full[:begin].count("\n")
+        line = full[:begin].count("\n") + self.line_offset
         node = ASTNode(ast, self.filename, text, line+1)
         return node
 
@@ -932,7 +984,40 @@ class ASTNode(list):
         self.line = line
 
 class FunctionLoader(ASTBuilder): # for eval
+    def load_fun(self, cfun, code):
+        self.line_offset = cfun['line']
+        self.filename = "?"
+        self.parser = MemeParser(code)
+        self.parser.i = self
+        try:
+            ast,err = self.parser.apply("top_level_fun")
+            #print "--F AST"
+            #print ast
+            #print "//--F AST"
+        except Exception as err:
+            if hasattr(err,'formatError'):
+                print(err.formatError(''.join(self.parser.input.data)))
+            else:
+                traceback.print_exc()
+            raise err
+
+        self.env_idx = 0
+        self.env_id_table = []
+        self.functions = []
+
+        loader = Loader([ast])
+        loader.i = self
+        loader.apply("function_definition")
+
+        for k,v in cfun.iteritems():
+            cfun[k]  = self.functions[0][k]
+
+        #P(cfun, 4)
+        return cfun
+
+
     def load_body(self, code, params, owner, env):
+        self.line_offset = 0
         self.filename = "<eval>"
         self.parser = MemeParser("{"+code+"}")
         self.parser.i = self
@@ -976,6 +1061,13 @@ class FunctionLoader(ASTBuilder): # for eval
         loader.apply("load_body")
         return self.functions[0]
 
+
+    def l_begin_function(self, name, is_ctor):
+        self.env_id_table.append({})
+        self.functions.append(_create_compiled_function({"name":name,
+                                                         "is_ctor": is_ctor,
+                                                         "@tag":"a compiled function"}))
+
     def l_enter_literal_fun(self):
         self.env_id_table.append({})
         self.functions[0]["uses_env"] = True # root Function using env
@@ -1009,8 +1101,27 @@ class FunctionLoader(ASTBuilder): # for eval
         self.env_id_table[-1][self.env_idx] = name
         self.env_idx = self.env_idx + 1
 
+
+    def l_set_function_parameters(self, params):
+        self.env_idx = 0
+        self.env_id_table[-1] = dict(zip(range(self.env_idx,self.env_idx+len(params)),params))
+        self.env_idx = len(params)
+        self.functions[-1]["params"] = params
+
+    def l_end_function(self, body,ast):
+        function = self.functions[-1]
+        function['body'] = body
+        function['text'] = ast.text
+        function['line'] = ast.line
+
+        env_table = self.env_id_table.pop()
+        if function["uses_env"]:
+            function['env_table'] = env_table
+            function['env_table_skel'] =  dict(zip(range(0,self.env_idx),[None]*self.env_idx))
+
 class ModuleLoader(ASTBuilder):
     def compile_module(self, filename):
+        self.line_offset = 0
         self.pos_stack = []
         #self.function_line_offset = 0
         self.filename = filename
@@ -1140,6 +1251,9 @@ class ReturnException(Exception):
     def __init__(self, val):
         self.val = val
 
+class RewindException(Exception):
+    def __init__(self, count):
+        self.count = count
 
 class Interpreter():
     def __init__(self):
@@ -1185,6 +1299,9 @@ class Interpreter():
 
     def compile_code(self, text, params, owner, env):
         return FunctionLoader().load_body(text, params, owner, env)
+
+    def recompile_fun(self, cfun, code):
+        return FunctionLoader().load_fun(cfun, code)
 
     # object routines
     # -dealing with nulls, booleans, integers, etc...
@@ -1248,7 +1365,7 @@ class Process(greenlet):
 
         self.state = 'running' # process state
 
-        ret = self.setup_and_run_fun(module, module, module['main'], args, True)
+        ret = self.setup_and_run_fun(module, module, 'main', module['main'], args, True)
         print "RETVAL: " + str(ret)
 
     def _lookup(self, drecv, vt, selector):
@@ -1277,7 +1394,8 @@ class Process(greenlet):
             return self.ctor_rdp_for(rp['_delegate'], fun)
         #if rp['_vt'] == fun
 
-    def run_fun(self, fun, should_allocate):
+    def run_fun(self, recv, drecv, fun, args, should_allocate):
+        self.setup_parameters_and_registers(recv, drecv, fun, args)
         if should_allocate and fun["compiled_function"]['is_ctor']:
             #allocate new instance and make it the receiver
             self.r_rp = prim_basic_new(self)
@@ -1299,6 +1417,15 @@ class Process(greenlet):
                 ret,err = self.evaluator.apply("exec_fun")
             except ReturnException as e:
                 ret = e.val
+            except RewindException as e:
+                #print("Caugh rewind: " + str(e.count))
+                if e.count > 1:
+                    e.count = e.count - 1
+                    #print("rewind more than one; tearing up and raising again")
+                    self.tear_fun()
+                    raise e
+                #print("Rewind: NO tear up stack; just resume")
+                return self.run_fun(recv, drecv, fun, args, should_allocate)
             self.tear_fun()
             if skip:
                 self.state = 'paused'
@@ -1316,8 +1443,14 @@ class Process(greenlet):
         if self.r_cp: #if we are exiting main, this will be null
             self.r_mp = self.r_cp["module"]
 
-    def setup_and_run_fun(self, recv, drecv, method, args, should_allocate):
+    def setup_and_run_fun(self, recv, drecv, name, method, args, should_allocate):
+        if type(method) == str:
+            traceback.print_exc()
+            #print("function '" + name + "' lacks implementation. Receiver:");
+            #P(recv)
+            sys.exit(1)
         if len(method["compiled_function"]["params"]) != len(args):
+            #P(method,3)
             raise Exception("arity error: " + method['compiled_function']['name'] +\
                                 ", expecting " + str(len(method["compiled_function"]["params"])) +\
                                 ", got " + str(len(args)) + " -- "+pformat(args,1,80,2))
@@ -1331,11 +1464,15 @@ class Process(greenlet):
                 'r_ip' : self.r_ip,
                 'locals':self.locals})
                 # no need to backup mp, it can be infered from current fun
-        self.locals = {}
-        # binding up arguments to parameters
+
+        return self.run_fun(recv, drecv, method, args, should_allocate)
+
+    def setup_parameters_and_registers(self, recv, drecv, method, args):
         self.r_cp  = method
         self.r_mp = method["module"]
         self.r_ep = None
+        self.locals = {}
+        # binding up arguments to parameters
         if self.interpreter.get_vt(method) != Context:
             self.r_rp  = recv
             self.r_rdp = drecv
@@ -1365,8 +1502,6 @@ class Process(greenlet):
             for k,v in zip(method["compiled_function"]["params"],args):
                 self.env_set_value(k, v)
 
-        return self.run_fun(method, should_allocate)
-
     ## env auxiliary
     def env_lookup(self, name):
         #the idx of name in self.r_ep or None
@@ -1393,7 +1528,7 @@ class Process(greenlet):
             return globals()['prim_'+prim_name](self)
         except KeyError as e:
             traceback.print_exc()
-            sys.exit(0)
+            sys.exit(1)
 
     def eval_do_field_attr(self, field, rhs, ast):
         self.r_ip = ast
@@ -1473,20 +1608,24 @@ class Process(greenlet):
         drecv, method = self._lookup(receiver, self.interpreter.get_vt(pklass), selector)
 
         if not method:
-            raise Exception("DoesNotUnderstand: " + selector + " -- " + pformat(instance,1,80,1))
+            traceback.print_exc()
+            print("DoesNotUnderstand: " + selector + " -- " + pformat(instance,1,80,1))
+            sys.exit(1)
         elif not method["compiled_function"]["is_ctor"]:
             raise Exception("Method is not constructor: " + selector)
         else:
-            return self.setup_and_run_fun(receiver, drecv, method, args, False)
+            return self.setup_and_run_fun(receiver, drecv, selector, method, args, False)
 
     def eval_do_bin_send(self, selector, receiver, arg, ast):
         self.r_ip = ast
         #self.dbg_control()
         drecv, method = self._lookup(receiver, self.interpreter.get_vt(receiver), selector)
         if not method:
-            raise Exception("DoesNotUnderstand: " + selector + " -- " + pformat(receiver,1,80,1))
+            traceback.print_exc()
+            print("DoesNotUnderstand: " + selector + " -- " + pformat(receiver,1,80,1))
+            sys.exit(1)
         else:
-            return self.setup_and_run_fun(receiver, drecv, method, [arg], True)
+            return self.setup_and_run_fun(receiver, drecv, selector, method, [arg], True)
 
     def eval_do_un_not(self, value, ast):
         self.r_ip = ast
@@ -1498,15 +1637,17 @@ class Process(greenlet):
         self.dbg_control()
         drecv, method = self._lookup(receiver, self.interpreter.get_vt(receiver), selector)
         if not method:
-            raise Exception("DoesNotUnderstand: " + selector  + " -- " + pformat(receiver,1,80,1))
+            traceback.print_exc()
+            print("DoesNotUnderstand: " + selector + " -- " + pformat(receiver,1,80,1))
+            sys.exit(1)
 
         else:
-            return self.setup_and_run_fun(receiver, drecv, method, args, True)
+            return self.setup_and_run_fun(receiver, drecv, selector, method, args, True)
 
     def eval_do_call(self, fun, args):
         self.r_ip = ast
         self.dbg_control()
-        return self.setup_and_run_fun(self.r_rp, self.r_rdp, fun, args, True)
+        return self.setup_and_run_fun(self.r_rp, self.r_rdp, '<?>', fun, args, True)
 
 
     def eval_do_send_or_call(self, name, args,ast):
@@ -1522,11 +1663,11 @@ class Process(greenlet):
             fn = self.locals[name]
 
         if fn:
-            return self.setup_and_run_fun(self.r_rp, self.r_rdp, fn, args, True)
+            return self.setup_and_run_fun(self.r_rp, self.r_rdp, name, fn, args, True)
 
         if name in self.r_mp:            # shared
             fn = self.r_mp[name]
-            return self.setup_and_run_fun(self.r_mp, self.r_mp, fn, args, True)
+            return self.setup_and_run_fun(self.r_mp, self.r_mp, name, fn, args, True)
 
         raise Exception("Undeclared function: " + name)
 
@@ -1548,18 +1689,21 @@ class Process(greenlet):
 
     def dbg_cmd(self, cmd):
         if cmd == 'step_into':
-            print("process:: changed state to paused")
+            #print("process:: changed state to paused")
             self.state = 'paused'
         if cmd == 'step_over':
-            print("process:: changed state to next")
+            #print("process:: changed state to next")
             self.state = 'next'
         if cmd == 'continue':
-            print("process:: changed state to continue")
+            #print("process:: changed state to continue")
             self.state = 'running'
+        if cmd == 'rewind':
+            #print("process: rewinding 1")
+            raise RewindException(1)
 
     def dbg_control(self):
         if self.state == 'paused' or self.state == 'next':
-            print("switching back to debugger")
+            #print("switching back to debugger")
             self.dbg_cmd(self.debugger_process.switch())
 
 if len(sys.argv) == 1:

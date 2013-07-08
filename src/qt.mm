@@ -221,6 +221,9 @@ module qt() {
     fun setSortingEnabled(val) {
       <primitive "qt_qtablewidget_set_sorting_enabled">
     }
+    fun clear() {
+      <primitive "qt_qtablewidget_clear">
+    }
   }
 
   class QTableWidgetItem {

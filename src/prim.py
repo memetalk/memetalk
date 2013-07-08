@@ -71,12 +71,9 @@ def prim_vmprocess_instruction_pointer(proc):
     _proc = _lookup_field(proc.r_rp, 'self')
     return _proc.r_ip.line - _proc.r_cp['compiled_function']['line']+1
 
-def prim_vmstackframe_instruction_pointer(proc):
-    frame = _lookup_field(proc.r_rp, 'self')
-    if frame['r_ip'] != None: #first frame is none
-        return frame['r_ip'].line - frame['r_cp']['compiled_function']['line']+1
-    else:
-        return None
+def prim_vmprocess_instruction_pointer(proc):
+    _proc = _lookup_field(proc.r_rp, 'self')
+    return _proc.r_ip.line - _proc.r_cp['compiled_function']['line']+1
 
 def prim_vmprocess_step_into(proc):
     _proc = _lookup_field(proc.r_rp, 'self')
@@ -90,7 +87,29 @@ def prim_vmprocess_continue(proc):
     _proc = _lookup_field(proc.r_rp, 'self')
     _proc.switch("continue")
 
+def prim_vmprocess_rewind(proc):
+    _proc = _lookup_field(proc.r_rp, 'self')
+    _proc.switch("rewind")
+
+def prim_vmprocess_local_vars(proc):
+    _proc = _lookup_field(proc.r_rp, 'self')
+    return _proc.locals
+
+def prim_vmprocess_module_pointer(proc):
+    _proc = _lookup_field(proc.r_rp, 'self')
+    if _proc.r_cp != None: #first frame is none
+        return _proc.r_cp['module']
+    else:
+        return None
+
 # convenience
+def prim_vmstackframe_instruction_pointer(proc):
+    frame = _lookup_field(proc.r_rp, 'self')
+    if frame['r_ip'] != None: #first frame is none
+        return frame['r_ip'].line - frame['r_cp']['compiled_function']['line']+1
+    else:
+        return None
+
 def prim_vmstackframe_module_pointer(proc):
     frame = _lookup_field(proc.r_rp, 'self')
     if frame['r_cp'] != None: #first frame is none
@@ -145,6 +164,12 @@ def prim_object_not_equal(proc):
 def prim_string_size(proc):
     return len(proc.r_rp)
 
+def prim_module_instance_compiled_module(proc):
+    return proc.r_rdp['_vt']['compiled_module']
+
+def prim_compiled_module_params(proc):
+    return proc.r_rdp['params']
+
 def prim_class_compiled_function(proc):
     return proc.interpreter.get_class("CompiledFunction")
 
@@ -172,6 +197,9 @@ def prim_compiled_function_text(proc):
 def prim_compiled_function_ast(proc):
     return proc.r_rdp['body']
 
+def prim_compiled_function_set_code(proc):
+    return proc.interpreter.recompile_fun(proc.r_rdp, proc.locals['code'])
+
 def prim_compiled_function_as_context(proc):
     #asContext(imodule, env)
     # -- now we want the names and values of the env
@@ -190,7 +218,7 @@ def prim_compiled_function_as_context(proc):
 def prim_context_apply(proc):
     # fn.apply([...args...])
     args = proc.locals['args']
-    return proc.setup_and_run_fun(None, None, proc.r_rdp, args, True)
+    return proc.setup_and_run_fun(None, None, "<?>", proc.r_rdp, args, True)
 
 def prim_context_get_env(proc):
     #warning 1: no checking if the env idexes are ordered. we assume so.
@@ -215,6 +243,10 @@ def prim_number_lsteq(proc):
 
 def prim_dictionary_plus(proc):
     return dict(proc.r_rp.items() + proc.locals['arg'].items())
+
+def prim_dictionary_each(proc):
+    for key,val in proc.r_rdp.iteritems():
+        proc.setup_and_run_fun(None, None, 'fn', proc.locals['fn'], [key,val], True)
 
 def prim_get_current_compiled_module(proc):
     return proc.interpreter.get_vt(proc.r_mp)['compiled_module']
@@ -243,7 +275,7 @@ def prim_mirror_set_value_for(proc):
 
 def prim_list_each(proc):
     for x in proc.r_rdp:
-        proc.setup_and_run_fun(None, None, proc.locals['fn'], [x], True)
+        proc.setup_and_run_fun(None, None, 'fn', proc.locals['fn'], [x], True)
 
 def prim_list_get(proc):
     return proc.r_rdp[proc.locals['n']]
@@ -253,7 +285,7 @@ def prim_list_size(proc):
     return len(proc.r_rdp)
 
 def prim_list_map(proc):
-    return [proc.setup_and_run_fun(None, None, proc.locals['fn'], [x], True) for x in proc.r_rdp]
+    return [proc.setup_and_run_fun(None, None, 'fn', proc.locals['fn'], [x], True) for x in proc.r_rdp]
 
 def prim_list_plus(proc):
     return list(proc.r_rp + proc.locals['arg'])
@@ -369,7 +401,7 @@ def prim_qt_qwidget_connect(proc):
         for arg in rest:
             args.append(_meme_instance(proc,arg))
 
-        proc.setup_and_run_fun(None, None, slot, args, True)
+        proc.setup_and_run_fun(None, None, '<?>', slot, args, True)
     getattr(qtobj,signal).connect(callback)
     return proc.r_rp
 
@@ -459,7 +491,7 @@ def prim_qt_qaction_connect(proc):
     signal = proc.locals["signal"]
     slot = proc.locals["slot"]
     def callback(*rest):
-        proc.setup_and_run_fun(None, None, slot, [], True)
+        proc.setup_and_run_fun(None, None, '<?>', slot, [], True)
 
     getattr(qtobj,signal).connect(callback)
     return proc.r_rp
@@ -664,6 +696,11 @@ def prim_qt_qtablewidget_set_sorting_enabled(proc):
     qtobj.setSortingEnabled(proc.locals['val'])
     return proc.r_rp
 
+def prim_qt_qtablewidget_clear(proc):
+    qtobj = _lookup_field(proc.r_rp, 'self')
+    qtobj.clear()
+    return proc.r_rp
+
 # QTableWidgetItem
 
 def prim_qt_qtablewidgetitem_new(proc):
@@ -688,6 +725,10 @@ def prim_qt_scintilla_editor_set_text(proc):
     qtobj = _lookup_field(proc.r_rp, 'self')
     qtobj.setText(proc.locals['text'])
     return proc.r_rp
+
+def prim_qt_scintilla_text(proc):
+    qtobj = _lookup_field(proc.r_rp, 'self')
+    return str(qtobj.text())
 
 def prim_qt_scintilla_paused_at_line(proc):
     qtobj = _lookup_field(proc.r_rp, 'self')

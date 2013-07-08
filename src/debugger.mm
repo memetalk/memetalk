@@ -58,6 +58,9 @@ module debugger(QWidget, QComboBox, QTableWidget, QMainWindow, qt) {
     fun pausedAtLine(line) {
         <primitive "qt_scintilla_paused_at_line">
     }
+    fun text() {
+        <primitive "qt_scintilla_text">
+    }
   }
 
   class StackCombo < QComboBox {
@@ -95,6 +98,26 @@ module debugger(QWidget, QComboBox, QTableWidget, QMainWindow, qt) {
         return @vmproc.contextPointer().compiledFunction().text();
       }
     }
+    fun localsFor(i) {
+      if (i < @vmproc.stackFrames().size()) {
+        return @vmproc.stackFrames().get(i).localVars();
+      } else {
+        return @vmproc.localVars();
+      }
+    }
+    fun moduleVarsFor(i) {
+      // var pnames = null;
+      // if (i < @vmproc.stackFrames().size()) {
+      //   pnames = @vmproc.stackFrames().get(i).modulePointer()._compiledModule().params();
+      // } else {
+      //   pnames = @vmproc.modulePointer()._compiledModule().params();
+      // }
+      // var ret = {};
+      // pnames.each(fun(name) {
+      //   ret[name] = @vmproc.modulePointer.entry(name);
+      // });
+      return {};
+    }
     fun currentLineFor(i) {
       if (i < @vmproc.stackFrames().size()) {
         return @vmproc.stackFrames().get(i).instructionPointer();
@@ -108,30 +131,30 @@ module debugger(QWidget, QComboBox, QTableWidget, QMainWindow, qt) {
   }
 
   class VariableListWidget < QTableWidget {
+    fields: variables;
     init new(parent) {
       super.new(2, 2, parent);
-      this.setHorizontalHeaderLabels(['Name', 'Value']);
       this.verticalHeader().hide();
       this.setSelectionMode(1);
       var header = this.horizontalHeader();
       header.setStretchLastSection(true);
-
-      var n1 = qt.QTableWidgetItem.new("field 1");
-      var n2 = qt.QTableWidgetItem.new("field 2");
-
-      var v1 = qt.QTableWidgetItem.new("val 1");
-      var v2 = qt.QTableWidgetItem.new("val 2");
-
-      this.setItem(0, 0, n1);
-      this.setItem(1, 0, n2);
-      this.setItem(0, 1, v1);
-      this.setItem(1, 1, v2);
-      this.setSortingEnabled(true);
+      this.setSortingEnabled(false);
+    }
+    fun setVariables(vars) {
+      @variables = vars;
+      this.clear();
+      this.setHorizontalHeaderLabels(['Name', 'Value']);
+      var i = 0;
+      vars.each(fun(name,value) {
+        this.setItem(i, 0, qt.QTableWidgetItem.new(name));
+        this.setItem(i, 1, qt.QTableWidgetItem.new(value.toString()));
+        i = i + 1;
+      });
     }
   }
 
   class DebuggerUI < QMainWindow {
-    fields: eventloop, process, execFrames, stackCombo, editor, localsList, attrsList, scopedList;
+    fields: eventloop, process, execFrames, stackCombo, editor, localVarList, moduleVarList;
     init new(eventloop, process) {
       super.new();
       @eventloop = eventloop;
@@ -154,19 +177,17 @@ module debugger(QWidget, QComboBox, QTableWidget, QMainWindow, qt) {
         if (0 <= i) {
           @editor.setText(@execFrames.codeFor(i));
           @editor.pausedAtLine(@execFrames.currentLineFor(i));
+          @localVarList.setVariables(@execFrames.localsFor(i));
+          @moduleVarList.setVariables(@execFrames.moduleVarsFor(i));
         }
       });
-      @stackCombo.updateInfo();
 
       var hbox = qt.QHBoxLayout.new(null);
-      @localsList = VariableListWidget.new(centralWidget);
-      hbox.addWidget(@localsList);
+      @localVarList = VariableListWidget.new(centralWidget);
+      hbox.addWidget(@localVarList);
 
-      @attrsList = VariableListWidget.new(centralWidget);
-      hbox.addWidget(@attrsList);
-
-      @scopedList = VariableListWidget.new(centralWidget);
-      hbox.addWidget(@scopedList);
+      @moduleVarList = VariableListWidget.new(centralWidget);
+      hbox.addWidget(@moduleVarList);
 
       mainLayout.addLayout(hbox);
       this.setCentralWidget(centralWidget);
@@ -192,6 +213,22 @@ module debugger(QWidget, QComboBox, QTableWidget, QMainWindow, qt) {
         this.continue()
       });
       execMenu.addAction(action);
+
+      var action = qt.QAction.new("Compile and &Rewind", execMenu);
+      action.setShortcut("ctrl+s");
+      action.connect("triggered", fun() {
+        this.compileAndRewind()
+      });
+      execMenu.addAction(action);
+
+      var action = qt.QAction.new("Leave context", execMenu);
+      action.setShortcut("ctrl+o");
+      action.connect("triggered", fun() {
+        //this.leaveContext(); //drop stack frame
+      });
+      execMenu.addAction(action);
+
+      @stackCombo.updateInfo();
     }
     fun stepInto() {
       @process.stepInto();
@@ -203,6 +240,12 @@ module debugger(QWidget, QComboBox, QTableWidget, QMainWindow, qt) {
     }
     fun continue() {
       @process.continue();
+      @stackCombo.updateInfo();
+    }
+    fun compileAndRewind() {
+      var text = @editor.text();
+      @process.contextPointer().compiledFunction().setCode(text);
+      @process.rewind();
       @stackCombo.updateInfo();
     }
   }
