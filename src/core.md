@@ -30,7 +30,7 @@ module core() {
   }
 
   object Object_CompiledClass {
-    _vt: CompiledClass;
+    _vt: CompiledClass; //declared below
     _delegate: null;
     name: "Object";
     super_class_name: "";
