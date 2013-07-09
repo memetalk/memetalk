@@ -1644,7 +1644,7 @@ class Process(greenlet):
         else:
             return self.setup_and_run_fun(receiver, drecv, selector, method, args, True)
 
-    def eval_do_call(self, fun, args):
+    def eval_do_call(self, fun, args, ast):
         self.r_ip = ast
         self.dbg_control()
         return self.setup_and_run_fun(self.r_rp, self.r_rdp, '<?>', fun, args, True)
