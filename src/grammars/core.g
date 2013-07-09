@@ -16,13 +16,25 @@ spaces = space*
 
 
 start = token("module") id:name module_params:p token("{")
-           module_decl*:d
+           module_decl+:d
          token("}") -> ["module", name, ["params", p], ["defs", d]]
 
 module_params = params
               | -> []
 
-module_decl = class_decl | top_level_fun
+module_decl = obj_decl | class_decl | top_level_fun
+
+obj_decl = token("object") id:name token("{")
+             object_slot+:s
+             obj_fun:f
+           token("}")  -> ["object", name, s, f]
+
+obj_fun =  token("functions") token("{")
+              (constructor|top_level_fun)+:f
+           token("}") -> f
+        | -> []
+
+object_slot = id:name  token(":") (literal|id):value token(";") -> ['slot', name, value]
 
 class_decl = token("class") id:name (token("<") id | token("<") token("null") | -> "Object"):parent token("{")
                 fields:f

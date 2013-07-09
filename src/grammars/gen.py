@@ -36,3 +36,15 @@ fp = open(os.path.dirname(__file__) + '/../evaluator.py', 'wb')
 ometa_grammar = grammar.OMetaGrammar(open(os.path.dirname(__file__)+"/eval.ast.g").read())
 tree = ometa_grammar.parseGrammar('Eval', builder.TreeBuilder)
 fp.write(builder.writeBoot(tree))
+
+
+fp = open(os.path.dirname(__file__) + '/../coreparser.py', 'wb')
+ometa_grammar = grammar.OMetaGrammar(open(os.path.dirname(__file__)+"/core.g").read())
+tree = ometa_grammar.parseGrammar('CoreParser', builder.TreeBuilder)
+fp.write(builder.writeBoot(tree))
+
+
+fp = open(os.path.dirname(__file__) + '/../coretr.py', 'wb')
+ometa_grammar = grammar.OMetaGrammar(open(os.path.dirname(__file__)+"/core_tr.g").read())
+tree = ometa_grammar.parseGrammar('CoreTr', builder.TreeBuilder)
+fp.write(builder.writeBoot(tree))

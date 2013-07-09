@@ -43,7 +43,8 @@ def prim_basic_new(proc):
             p = create_instances(klass["parent"])
         fields = klass["compiled_class"]["fields"]
         name = klass["compiled_class"]["name"]
-        return dict({"_vt": klass, "_delegate":p, "@tag": name + " instance"}.items() + [(x,None) for x in fields])
+        res = dict([(x,None) for x in fields] + {"_vt": klass, "_delegate":p, "@tag": name + " instance"}.items() )
+        return res
 
     return create_instances(proc.r_rp)
 
@@ -167,9 +168,6 @@ def prim_string_size(proc):
 def prim_module_instance_compiled_module(proc):
     return proc.r_rdp['_vt']['compiled_module']
 
-def prim_compiled_module_params(proc):
-    return proc.r_rdp['params']
-
 def prim_class_compiled_function(proc):
     return proc.interpreter.get_class("CompiledFunction")
 
@@ -182,20 +180,6 @@ def prim_compiled_function_new(proc):
                                          proc.locals['env'])
     return cfun
 
-def prim_function_compiled_function(proc):
-    return proc.r_rdp['compiled_function']
-
-def prim_compiled_function_name(proc):
-    return proc.r_rdp['name']
-
-def prim_compiled_function_parameters(proc):
-    return proc.r_rdp['params']
-
-def prim_compiled_function_text(proc):
-    return proc.r_rdp['text']
-
-def prim_compiled_function_ast(proc):
-    return proc.r_rdp['body']
 
 def prim_compiled_function_set_code(proc):
     return proc.interpreter.recompile_fun(proc.r_rdp, proc.locals['code'])
@@ -258,10 +242,6 @@ def prim_get_current_compiled_module(proc):
 
 def prim_get_mirror_class(proc):
     return proc.interpreter.get_class("Mirror")
-
-def prim_mirror_new(proc):
-    proc.r_rdp["mirrored"] = proc.locals['mirrored']
-    return proc.r_rp
 
 def prim_mirror_fields(proc):
     mirrored = proc.r_rdp['mirrored']

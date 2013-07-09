@@ -25,275 +25,35 @@ from parser import MemeParser
 from loader import Loader
 from evaluator import Eval
 from prim import *
+import core_module as core
 from pprint import pprint, pformat
 from pdb import set_trace as br
 import traceback
+
 
 def P(obj, depth=1):
     if depth > 5:
         depth = None
     pprint(obj, None, 1, 80, depth)
 
-Behavior = {"_vt":"*replace-me*", # with myself
-            "parent": None,
-            "dict": {"toSource":"*replace-me*"},
-            "@tag":"Behavior"}
-Behavior["_vt"] = Behavior
 
-ObjectBehavior = {"_vt": Behavior,
-                  "parent":None,
-                  "dict":{"new": "*replace-me", #with the 'new' method
-                          "toString":"*replace-me*", #with the 'toString' method
-                          "toSource":"*replace-me*"}, #with toSource
-                  "@tag":"ObjectBehavior"}
+# KernelModule = {"_vt": ModuleBehavior,
+#                 "_delegate": None,
+#                 "parent": Object,
+#                 "size": 2, #delegate, Object
+#                 "dict": {"Object": "*replace-me*"}, #with the getter
+#                 "@tag": "KernelModule"}
+# _kernel_imodule = _create_kernel_module_instance()
 
-Object = {"_vt": ObjectBehavior,
-          "parent":None,
-          "size":0,
-          "dict": {"toString":"*replace-me", "toSource":"*replace-me*",
-                   "==":"*replace-me*",
-                   "!=":"*replace-me*"},
-          "compiled_class": {"_vt": "*replace-me*",       # with CompiledClass
-                             "_delegate": None,
-                             "name": "Object",
-                             "super_class_name":"",
-                             "fields": [],
-                             "methods": {},
-                             "own_methods":{}}, #actually it has new
-          "@tag": "Object"}
-
-
-CompiledClassBehavior = {"_vt": Behavior,
-                         "parent": ObjectBehavior,
-                         "dict": {},
-                         "@tag": "CompiledClassBehavior"}
-
-
-CompiledClass = {"_vt": CompiledClassBehavior,
-                 "_delegate": None,
-                 "parent": Object,
-                 "size": 5,
-                 "dict": {}, #name,superclass, fields,methods
-                 "@tag": "CompiledClass"}
-
-Object["compiled_class"]["_vt"] = CompiledClass
-
-CompiledFunctionBehavior = {"_vt": Behavior,
-                            "parent": ObjectBehavior,
-                            "dict": {'new':"*replace-me*"}, # with its prim new
-                            "@tag": "CompiledFunctionBehavior"}
-
-CompiledFunction_CompiledClass = {"_vt": CompiledClass,
-                                       "_delegate": None,
-                                       "name": "CompiledFunction",
-                                       "super_class_name":"Object",
-                                       "fields": [],
-                                       "methods": {},  #actually it has new
-                                       "own_methods":{}}
-
-CompiledFunction = {"_vt":CompiledFunctionBehavior,
-                    "_delegate": None,
-                    "parent": Object,
-                    "size": 13, #delegate, body, env_table, env_table_skel, fun_literals, is_ctor, is_prim, name, params, prim_name, uses_env, outter_cfun, owner
-                    "dict": {"asContext":"*replace-me*", # with the function prim_cfun_as_context
-                             "name": "*replace-me*",
-                             "parameters":"*replace-me*",
-                             "text":"*replace-me*",
-                             "setCode":"*replace-me*",
-                             "ast":"*replace-me*"},
-                    "compiled_class": CompiledFunction_CompiledClass,
-                    "@tag":"CompiledFunction"}
-
-
-FunctionBehavior = {"_vt": Behavior,
-                    "parent": ObjectBehavior,
-                    "dict": {},
-                    "@tag": "FunctionBehavior"}
-
-Function = {"_vt": FunctionBehavior,
-            "_delegate": Object,
-            "parent": Object,
-            "dict": {'compiledFunction':'*replace-me*'},
-            "size": 3, #compiled_function, module, delegate
-            "@tag": "Function"}
-
-ContextBehavior = {"_vt":Behavior,
-                   "parent": ObjectBehavior,
-                   "dict": {},
-                   "@tag": "ContextBehavior"}
-
-Context = {"_vt": ContextBehavior,
-           "_delegate": Object,
-           "parent": Object,
-           "dict": {'apply': "*replace-me*",
-                    "getEnv": '*replace-me*',
-                    "compiledFunction":"*replace-me*"},
-           "size": 4} # delegate, compiled_fun, module, env
-
-CompiledModuleBehavior = {"_vt": Behavior,
-                          "parent": ObjectBehavior,
-                          "dict": {},
-                          "@tag": "CompiledModuleBehavior"}
-
-CompiledModule = {"_vt": CompiledModuleBehavior,
-                  "_delegate": None,
-                  "parent": Object,
-                  "size": 7, #name, filepath, params, ast, funs, classes
-                  "dict": {'params':'*replace-me*'},
-                  "@tag": "CompiledModule"}
-
-ModuleBehavior = {"_vt": Behavior,
-                  "parent": ObjectBehavior,
-                  "dict": {"compiledModule": "*replace-me*"}, #with the getter
-                  "@tag": "ModuleBehavior"}
-
-KernelModule = {"_vt": ModuleBehavior,
-                "_delegate": None,
-                "parent": Object,
-                "size": 2, #delegate, Object
-                "dict": {"Object": "*replace-me*"}, #with the getter
-                "@tag": "KernelModule"}
-
-# kernel_module_instance_template = {"_vt": KernelModule,
-#                                    "Object": Object} #Array,String, Number...
-
-
-
-
-
-########## Basic types ###########
-
-
-
-StringBehavior = {"_vt": Behavior,
-                  "parent": ObjectBehavior,
-                  "dict": {},
-                  "@tag": "StringBehavior"}
-
-String = {"_vt": StringBehavior,
-          "_delegate": None,
-          "parent": Object,
-          "size": 0,
-          "dict": {'size': '*replace-me*'},
-          "@tag": "String"}
-
-DictionaryBehavior = {"_vt": Behavior,
-                      "parent": ObjectBehavior,
-                      "dict": {},
-                      "@tag": "DictionaryBehavior"}
-
-
-Dictionary = {"_vt": DictionaryBehavior,
-              "_delegate": None,
-              "parent": Object,
-              "size": 0,
-              "dict": {"+": "*replace-me*",
-                       "each":"*replace-me*"},
-              "@tag": "Dictionary"}
-
-
-ListBehavior = {"_vt": Behavior,
-                      "parent": ObjectBehavior,
-                      "dict": {},
-                      "@tag": "ListBehavior"}
-
-
-List = {"_vt": ListBehavior,
-        "_delegate": None,
-        "parent": Object,
-        "size": 0,
-        "dict": {"each": "*replace-me*",
-                 "get":"*replace-me*",
-                 "size":"*replace-me*",
-                 "map":"*replace-me*"},
-        "@tag": "List"}
-
-NumberBehavior = {"_vt": Behavior,
-                  "parent": ObjectBehavior,
-                  "dict": {},
-                  "@tag": "NumberBehavior"}
-
-Number = {"_vt": NumberBehavior,
-          "_delegate": None,
-          "parent":Object,
-          "size": 0,
-          "dict": {"+": "*replace-me*"},
-          "@tag": "Number"}
-
-MirrorBehavior = {"_vt": Behavior,
-                  "parent": ObjectBehavior,
-                  'dict':{'new':'*replace-me*'},
-                  "@tag": "MirrorBehavior"}
-
-
-Mirror = {"_vt": MirrorBehavior,
-          "_delegate": None,
-          "compiled_class": {"_vt": CompiledClass,
-                             "_delegate": None,
-                             "name": "Mirror",
-                             "super_class_name":"Object",
-                             "fields": ['mirrored'],
-                             "methods": {},
-                             "own_methods":{}},
-          "parent": Object,
-          "size": 0,
-          "dict": {'fields': '*replace-me*',
-                   'valueFor': '*replace-me*',
-                   'setValueFor':'*replace-me*'},
-          "@tag": "Mirror"}
-
-
-
-######## VM types #########
-
-
-VMProcessBehavior = {"_vt": Behavior,
-                   "parent": ObjectBehavior,
-                   "dict": {},
-                   "@tag": "VMProcessBehavior"}
-
-
-VMProcess = {"_vt": VMProcessBehavior,
-             "_delegate": None,
-             "parent": Object,
-             "size": 1, #self
-             "dict": {"stackFrames": "*replace-me*",
-                      "stepInto": "*replace-me*",
-                      "stepOver": "*replace-me*",
-                      "stepOut": "*replace-me*",
-                      "continue": "*replace-me*",
-                      "rewind": "*replace-me*",
-                      "modulePointer": "*replace-me*",
-                      "contextPointer": "*replace-me*",
-                      "instructionPointer":"*replace-me*",
-                      'localVars':"*replace-me*"},
-             "@tag": "VMProcess"}
-
-VMStackFrameBehavior = {"_vt": Behavior,
-                        "parent": ObjectBehavior,
-                        "dict": {},
-                        "@tag": "VMStackFrameBehavior"}
-
-
-VMStackFrame = {"_vt": VMStackFrameBehavior,
-                "_delegate": None,
-                "parent": Object,
-                "size": 0,
-                "dict": {"modulePointer": "*replace-me*",
-                         "contextPointer": "*replace-me*",
-                         "receiverPointer": "*replace-me*",
-                         "environmentPointer": "*replace-me*",
-                         "instructionPointer":"*replace-me*",
-                         "localVars": "*replace-me*"},
-                "@tag": "VMStackFrame"}
-
-
-##############################################
-
+# def _create_kernel_module_instance():
+#     return {"_vt": core.KernelModule,
+#             "_delegate": None,
+#             "Object": core.Object,
+#             "@tag":"kernel module instance"} #etc...
 
 
 def _create_compiled_module(data):
-    template = {"_vt":CompiledModule,
+    template = {"_vt": core.CompiledModule,
                 "_delegate": None,
                 "name": "",
                 "filepath":"",
@@ -304,7 +64,7 @@ def _create_compiled_module(data):
     return dict(template.items() + data.items())
 
 def _create_compiled_function(data):
-    template = {"_vt": CompiledFunction,
+    template = {"_vt": core.CompiledFunction,
                 "_delegate": None,
                 "name": "",
                 "params": [],
@@ -323,7 +83,7 @@ def _create_compiled_function(data):
     return dict(template.items() + data.items())
 
 def _create_compiled_class(data):
-    template = {"_vt": CompiledClass,
+    template = {"_vt": core.CompiledClass,
                 "_delegate": None,
                 "name": "",
                 "super_class_name":"",
@@ -333,9 +93,9 @@ def _create_compiled_class(data):
     return dict(template.items() + data.items())
 
 def _create_module(data):
-    template = {"_vt": ModuleBehavior,
+    template = {"_vt": core.ModuleBehavior,
                 "_delegate": None,
-                "parent": Object,
+                "parent": core.Object,
                 "size": 1, #delegate
                 "dict": {},
                 "compiled_module": None}
@@ -350,11 +110,6 @@ def _create_class(data):
                 "compiled_class":None}
     return dict(template.items() + data.items())
 
-def _create_kernel_module_instance():
-    return {"_vt": KernelModule,
-            "_delegate": None,
-            "Object": Object,
-            "@tag":"kernel module instance"} #etc...
 
 def _create_accessor_method(imodule, name):
     cf =  _create_compiled_function({
@@ -363,14 +118,14 @@ def _create_accessor_method(imodule, name):
     return _function_from_cfunction(cf, imodule)
 
 def _function_from_cfunction(cfun, imodule):
-    return {"_vt": Function,
+    return {"_vt": core.Function,
             "_delegate": None,
             "compiled_function": cfun,
             "module": imodule,
             "@tag": "a Function"}
 
 def _compiled_function_to_context(cfun, env, imodule):
-    return {"_vt": Context,
+    return {"_vt": core.Context,
             "_delegate": None,
             "compiled_function": cfun,
             "env":env,
@@ -389,478 +144,6 @@ def _create_instance(klass, data):
     return dict(template.items() + data.items())
 
 
-_kernel_imodule = _create_kernel_module_instance()
-_Object_new_compiled_fun = _create_compiled_function({
-        "name": "new",
-        "body": [["return-this"]],
-        "is_ctor": True,
-        "owner": Object,
-        "@tag": "Object.new compiled function"})
-
-ObjectBehavior["dict"]["new"] = _function_from_cfunction(_Object_new_compiled_fun, _kernel_imodule)
-
-CompiledModule['dict']['params'] = _function_from_cfunction(
-    _create_compiled_function({
-            "name": "params",
-            "params": [],
-            "body": ["primitive", ['literal-string', "compiled_module_params"]],
-            "is_ctor": False,
-            #"owner": CompiledFunction_CompiledClass, #the CompiledClass for CompiledFunction class. So far, only used on ctor/rdp lookup
-            "@tag": "<CompiledModule>.params compiled function"}),
-    _kernel_imodule)
-
-_CompiledFunction_new_compiled_fun = _create_compiled_function({
-    "name": "new",
-    "params": ['text', 'parameters', 'module', 'env'],
-    "body": ["primitive", ['literal-string', "compiled_function_new"]],
-    "is_ctor": True,
-    "owner": CompiledFunction_CompiledClass, #the CompiledClass for CompiledFunction class
-    "@tag": "CompiledFunction.new compiled function"})
-
-CompiledFunctionBehavior["dict"]["new"] = _function_from_cfunction(_CompiledFunction_new_compiled_fun, _kernel_imodule)
-
-CompiledFunction['dict']['asContext'] = _function_from_cfunction(
-    _create_compiled_function({
-            "name": "asContext",
-            "params": ['imodule', 'self', 'env'],
-            "body": ["primitive", ['literal-string', "compiled_function_as_context"]],
-            "is_ctor": False,
-            #"owner": CompiledFunction_CompiledClass, #the CompiledClass for CompiledFunction class. So far, only used on ctor/rdp lookup
-            "@tag": "<CompiledFunction>.asContext compiled function"}),
-    _kernel_imodule)
-
-CompiledFunction['dict']['name'] = _function_from_cfunction(
-    _create_compiled_function({
-            "name": "name",
-            "params": [],
-            "body": ["primitive", ['literal-string', "compiled_function_name"]],
-            "is_ctor": False,
-            #"owner": CompiledFunction_CompiledClass, #the CompiledClass for CompiledFunction class. So far, only used on ctor/rdp lookup
-            "@tag": "<CompiledFunction>.name compiled function"}),
-    _kernel_imodule)
-
-CompiledFunction['dict']['parameters'] = _function_from_cfunction(
-    _create_compiled_function({
-            "name": "parameters",
-            "params": [],
-            "body": ["primitive", ['literal-string', "compiled_function_parameters"]],
-            "is_ctor": False,
-            #"owner": CompiledFunction_CompiledClass, #the CompiledClass for CompiledFunction class. So far, only used on ctor/rdp lookup
-            "@tag": "<CompiledFunction>.parameters compiled function"}),
-    _kernel_imodule)
-
-
-CompiledFunction['dict']['text'] = _function_from_cfunction(
-    _create_compiled_function({
-            "name": "text",
-            "params": [],
-            "body": ["primitive", ['literal-string', "compiled_function_text"]],
-            "is_ctor": False,
-            #"owner": CompiledFunction_CompiledClass, #the CompiledClass for CompiledFunction class. So far, only used on ctor/rdp lookup
-            "@tag": "<CompiledFunction>.text compiled function"}),
-    _kernel_imodule)
-
-CompiledFunction['dict']['setCode'] = _function_from_cfunction(
-    _create_compiled_function({
-            "name": "setCode",
-            "params": ['code'],
-            "body": ["primitive", ['literal-string', "compiled_function_set_code"]],
-            "is_ctor": False,
-            #"owner": CompiledFunction_CompiledClass, #the CompiledClass for CompiledFunction class. So far, only used on ctor/rdp lookup
-            "@tag": "<CompiledFunction>.code compiled function"}),
-    _kernel_imodule)
-
-
-CompiledFunction['dict']['ast'] = _function_from_cfunction(
-    _create_compiled_function({
-            "name": "ast",
-            "params": [],
-            "body": ["primitive", ['literal-string', "compiled_function_ast"]],
-            "is_ctor": False,
-            #"owner": CompiledFunction_CompiledClass, #the CompiledClass for CompiledFunction class. So far, only used on ctor/rdp lookup
-            "@tag": "<CompiledFunction>.ast compiled function"}),
-    _kernel_imodule)
-
-Context['dict']['apply'] = _function_from_cfunction(
-    _create_compiled_function({
-            "name": "apply",
-            "params": ['args'],
-            "body": ["primitive", ['literal-string', "context_apply"]],
-            "is_ctor": False,
-            #"owner": Context_CompiledClass, #the CompiledContextClass for Context. So far, only used on ctors/rdp lookup
-            "@tag": "<Function>.apply compiled function"}),
-    _kernel_imodule)
-
-Context['dict']['getEnv'] = _function_from_cfunction(
-    _create_compiled_function({
-            "name": "getEnv",
-            "params": [],
-            "body": ["primitive", ['literal-string', "context_get_env"]],
-            "is_ctor": False,
-            #"owner": Context_CompiledClass, #the CompiledContextClass for Context. So far, only used on ctors/rdp lookup
-            "@tag": "<Function>.getEnv compiled function"}),
-    _kernel_imodule)
-
-Context['dict']['compiledFunction'] = _function_from_cfunction(
-    _create_compiled_function({
-            "name": "compiledFunction",
-            "params": [],
-            "body": ["primitive", ['literal-string', "function_compiled_function"]],
-            "is_ctor": False,
-            #"owner": CompiledFunction_CompiledClass, #the CompiledClass for CompiledFunction class. So far, only used on ctor/rdp lookup
-            "@tag": "<Context>.compiledFunction compiled function"}),
-    _kernel_imodule)
-
-Function['dict']['compiledFunction'] = _function_from_cfunction(
-    _create_compiled_function({
-            "name": "compiledFunction",
-            "params": [],
-            "body": ["primitive", ['literal-string', "function_compiled_function"]],
-            "is_ctor": False,
-            #"owner": CompiledFunction_CompiledClass, #the CompiledClass for CompiledFunction class. So far, only used on ctor/rdp lookup
-            "@tag": "<Function>.compiledFunction compiled function"}),
-    _kernel_imodule)
-
-String['dict']['size'] = _function_from_cfunction(
-    _create_compiled_function({
-            "name": "replace",
-            "params": [],
-            "body": ["primitive", ['literal-string', "string_size"]],
-            "is_ctor": False,
-#            "owner": CompiledFunction_CompiledClass, #the CompiledClass for CompiledFunction class
-            "@tag": "<String>.size compiled function"}),
-    _kernel_imodule)
-
-Object['dict']['toString'] = _function_from_cfunction(
-    _create_compiled_function({
-            "name": "toString",
-            "params": [],
-            "body": ["primitive", ['literal-string', "object_to_string"]],
-            "is_ctor": False,
-#            "owner": Number_CompiledClass, #the CompiledClass for CompiledFunction class
-            "@tag": "<Object>.toString compiled function"}),
-    _kernel_imodule)
-
-ObjectBehavior['dict']['toString'] = Object['dict']['toString'] #puff
-Behavior['dict']['toSource'] = Object['dict']['toString'] #puff
-
-Object['dict']['toSource'] = _function_from_cfunction(
-    _create_compiled_function({
-            "name": "toSource",
-            "params": [],
-            "body": ["primitive", ['literal-string', "object_to_source"]],
-            "is_ctor": False,
-#            "owner": Number_CompiledClass, #the CompiledClass for CompiledFunction class
-            "@tag": "<Object>.toSource compiled function"}),
-    _kernel_imodule)
-
-ObjectBehavior['dict']['toSource'] = Object['dict']['toSource'] #puff
-
-Object['dict']['=='] = _function_from_cfunction(
-    _create_compiled_function({
-            "name": "==",
-            "params": ['other'],
-            "body": ["primitive", ['literal-string', "object_equal"]],
-            "is_ctor": False,
-#            "owner": Number_CompiledClass, #the CompiledClass for CompiledFunction class
-            "@tag": "<Object>.== compiled function"}),
-    _kernel_imodule)
-
-Object['dict']['!='] = _function_from_cfunction(
-    _create_compiled_function({
-            "name": "!=",
-            "params": ['other'],
-            "body": ["primitive", ['literal-string', "object_not_equal"]],
-            "is_ctor": False,
-#            "owner": Number_CompiledClass, #the CompiledClass for CompiledFunction class
-            "@tag": "<Object>.== compiled function"}),
-    _kernel_imodule)
-
-Number['dict']['+'] = _function_from_cfunction(
-    _create_compiled_function({
-            "name": "+",
-            "params": ['arg'],
-            "body": ["primitive", ['literal-string', "number_plus"]],
-            "is_ctor": False,
-#            "owner": Number_CompiledClass, #the CompiledClass for CompiledFunction class
-            "@tag": "<Number>.+ compiled function"}),
-    _kernel_imodule)
-
-Number['dict']['-'] = _function_from_cfunction(
-    _create_compiled_function({
-            "name": "-",
-            "params": ['arg'],
-            "body": ["primitive", ['literal-string', "number_minus"]],
-            "is_ctor": False,
-#            "owner": Number_CompiledClass, #the CompiledClass for CompiledFunction class
-            "@tag": "<Number>.- compiled function"}),
-    _kernel_imodule)
-
-Number['dict']['<'] = _function_from_cfunction(
-    _create_compiled_function({
-            "name": "<",
-            "params": ['arg'],
-            "body": ["primitive", ['literal-string', "number_lst"]],
-            "is_ctor": False,
-#            "owner": Number_CompiledClass, #the CompiledClass for CompiledFunction class
-            "@tag": "<Number>.< compiled function"}),
-    _kernel_imodule)
-
-Number['dict']['<='] = _function_from_cfunction(
-    _create_compiled_function({
-            "name": "<=",
-            "params": ['arg'],
-            "body": ["primitive", ['literal-string', "number_lsteq"]],
-            "is_ctor": False,
-#            "owner": Number_CompiledClass, #the CompiledClass for CompiledFunction class
-            "@tag": "<Number>.<= compiled function"}),
-    _kernel_imodule)
-
-
-Dictionary['dict']['+'] = _function_from_cfunction(
-    _create_compiled_function({
-            "name": "+",
-            "params": ['arg'],
-            "body": ["primitive", ['literal-string', "dictionary_plus"]],
-            "is_ctor": False,
-#            "owner": Dictionary_CompiledClass, #the CompiledClass for CompiledFunction class
-            "@tag": "<Dictionary>.+ compiled function"}),
-    _kernel_imodule)
-
-Dictionary['dict']['each'] = _function_from_cfunction(
-    _create_compiled_function({
-            "name": "each",
-            "params": ['fn'],
-            "body": ["primitive", ['literal-string', "dictionary_each"]],
-            "is_ctor": False,
-#            "owner": Dictionary_CompiledClass, #the CompiledClass for CompiledFunction class
-            "@tag": "<Dictionary>.each compiled function"}),
-    _kernel_imodule)
-
-
-List['dict']['each'] = _function_from_cfunction(
-    _create_compiled_function({
-            "name": "each",
-            "params": ['fn'],
-            "body": ["primitive", ['literal-string', "list_each"]],
-            "is_ctor": False,
-#            "owner": Dictionary_CompiledClass, #the CompiledClass for CompiledFunction class
-            "@tag": "<List>.each compiled function"}),
-    _kernel_imodule)
-
-List['dict']['get'] = _function_from_cfunction(
-    _create_compiled_function({
-            "name": "get",
-            "params": ['n'],
-            "body": ["primitive", ['literal-string', "list_get"]],
-            "is_ctor": False,
-#            "owner": Dictionary_CompiledClass, #the CompiledClass for CompiledFunction class
-            "@tag": "<List>.get compiled function"}),
-    _kernel_imodule)
-
-List['dict']['size'] = _function_from_cfunction(
-    _create_compiled_function({
-            "name": "size",
-            "params": [],
-            "body": ["primitive", ['literal-string', "list_size"]],
-            "is_ctor": False,
-#            "owner": Dictionary_CompiledClass, #the CompiledClass for CompiledFunction class
-            "@tag": "<List>.size compiled function"}),
-    _kernel_imodule)
-
-List['dict']['map'] = _function_from_cfunction(
-    _create_compiled_function({
-            "name": "map",
-            "params": ['fn'],
-            "body": ["primitive", ['literal-string', "list_map"]],
-            "is_ctor": False,
-#            "owner": Dictionary_CompiledClass, #the CompiledClass for CompiledFunction class
-            "@tag": "<List>.map compiled function"}),
-    _kernel_imodule)
-List['dict']['+'] = _function_from_cfunction(
-    _create_compiled_function({
-            "name": "+",
-            "params": ['arg'],
-            "body": ["primitive", ['literal-string', "list_plus"]],
-            "is_ctor": False,
-#            "owner": Dictionary_CompiledClass, #the CompiledClass for CompiledFunction class
-            "@tag": "<List>.concat compiled function"}),
-    _kernel_imodule)
-
-
-MirrorBehavior['dict']['new'] = _function_from_cfunction(
-    _create_compiled_function({
-            "name": "new",
-            "params": ['mirrored'],
-            "body": ["primitive", ['literal-string', "mirror_new"]],
-            "is_ctor": True,
-            "owner": Mirror['compiled_class'], #the CompiledClass for CompiledFunction class
-            "@tag": "Mirror.new compiled function"}),
-    _kernel_imodule)
-
-Mirror['dict']['fields'] = _function_from_cfunction(
-    _create_compiled_function({
-            "name": "fields",
-            "params": [],
-            "body": ["primitive", ['literal-string', "mirror_fields"]],
-            "is_ctor": False,
-#            "owner": Dictionary_CompiledClass, #the CompiledClass for CompiledFunction class
-            "@tag": "<Mirror>.fields compiled function"}),
-    _kernel_imodule)
-
-
-Mirror['dict']['valueFor'] = _function_from_cfunction(
-    _create_compiled_function({
-            "name": "valueFor",
-            "params": ['name'],
-            "body": ["primitive", ['literal-string', "mirror_value_for"]],
-            "is_ctor": False,
-#            "owner": Dictionary_CompiledClass, #the CompiledClass for CompiledFunction class
-            "@tag": "<Mirror>.valueFor compiled function"}),
-    _kernel_imodule)
-
-Mirror['dict']['setValueFor'] = _function_from_cfunction(
-    _create_compiled_function({
-            "name": "setValueFor",
-            "params": ['name','value'],
-            "body": ["primitive", ['literal-string', "mirror_set_value_for"]],
-            "is_ctor": False,
-#            "owner": Dictionary_CompiledClass, #the CompiledClass for CompiledFunction class
-            "@tag": "<Mirror>.setValueFor compiled function"}),
-    _kernel_imodule)
-
-
-
-VMProcess["dict"]['stackFrames'] = _function_from_cfunction(
-    _create_compiled_function({
-            "name": "stackFrames",
-            "params": [],
-            "body": ["primitive", ['literal-string', "vmprocess_stack_frames"]],
-            "is_ctor": False,
-            "@tag": "<VMProcess>.stackFrames compiled function"}),
-    _kernel_imodule)
-VMProcess['dict']["stepInto"] = _function_from_cfunction(
-    _create_compiled_function({
-            'name': 'stepInto',
-            'params': [],
-            'body': ['primitive', ['literal-string', 'vmprocess_step_into']],
-            '@tag': '<VMProcess>.stepInto compiled function'}),
-    _kernel_imodule)
-VMProcess['dict']["stepOver"] = _function_from_cfunction(
-    _create_compiled_function({
-            'name': 'stepOver',
-            'params': [],
-            'body': ['primitive', ['literal-string', 'vmprocess_step_over']],
-            '@tag': '<VMProcess>.stepOver compiled function'}),
-    _kernel_imodule)
-VMProcess['dict']["stepOut"] = _function_from_cfunction(
-    _create_compiled_function({
-            'name': 'stepOut',
-            'params': [],
-            'body': ['primitive', ['literal-string', 'vmprocess_step_out']],
-            '@tag': '<VMProcess>.stepOut compiled function'}),
-    _kernel_imodule)
-VMProcess['dict']["continue"] = _function_from_cfunction(
-    _create_compiled_function({
-            'name': 'continue',
-            'params': [],
-            'body': ['primitive', ['literal-string', 'vmprocess_continue']],
-            '@tag': '<VMProcess>.continue compiled function'}),
-    _kernel_imodule)
-VMProcess['dict']["rewind"] = _function_from_cfunction(
-    _create_compiled_function({
-            'name': 'rewind',
-            'params': [],
-            'body': ['primitive', ['literal-string', 'vmprocess_rewind']],
-            '@tag': '<VMProcess>.rewind compiled function'}),
-    _kernel_imodule)
-VMProcess['dict']["localVars"] = _function_from_cfunction(
-    _create_compiled_function({
-            'name': 'localVars',
-            'params': [],
-            'body': ['primitive', ['literal-string', 'vmprocess_local_vars']],
-            '@tag': '<VMProcess>.localVars compiled function'}),
-    _kernel_imodule)
-
-VMProcess['dict']["contextPointer"] = _function_from_cfunction(
-    _create_compiled_function({
-            'name': 'contextPointer',
-            'params': [],
-            'body': ['primitive', ['literal-string', 'vmprocess_context_pointer']],
-            '@tag': '<VMProcess>.contextPointer compiled function'}),
-    _kernel_imodule)
-VMProcess['dict']["instructionPointer"] = _function_from_cfunction(
-    _create_compiled_function({
-            'name': 'instructionPointer',
-            'params': [],
-            'body': ['primitive', ['literal-string', 'vmprocess_instruction_pointer']],
-            '@tag': '<VMProcess>.instructionPointer compiled function'}),
-    _kernel_imodule)
-VMProcess['dict']["modulePointer"] = _function_from_cfunction(
-    _create_compiled_function({
-            'name': 'modulePointer',
-            'params': [],
-            'body': ['primitive', ['literal-string', 'vmprocess_module_pointer']],
-            '@tag': '<VMProcess>.modulePointer compiled function'}),
-    _kernel_imodule)
-
-VMStackFrame['dict']["modulePointer"] = _function_from_cfunction(
-    _create_compiled_function({
-            'name':"modulePointer",
-            'params':[],
-            'body': ['primitive', ['literal-string',"vmstackframe_module_pointer"]],
-            '@tag': '<VMStackFrame>modulePointer compiled function'}),
-    _kernel_imodule)
-VMStackFrame['dict']["contextPointer"] = _function_from_cfunction(
-    _create_compiled_function({
-            'name':'contextPointer',
-            'params':[],
-            'body': ['primitive', ['literal-string', 'vmstackframe_context_pointer']],
-            '@tag': '<VMStackFrame>.contextPointer compiled function'}),
-    _kernel_imodule)
-VMStackFrame['dict']["receiverPointer"] = _function_from_cfunction(
-    _create_compiled_function({
-            'name':'receiverPointer',
-            'params':[],
-            'body': ['primitive', ['literal-string', 'vmstackframe_receiver_pointer']],
-            '@tag': '<VMStackFrame>.receiverPointer compiled function'}),
-    _kernel_imodule)
-VMStackFrame['dict']["environmentPointer"] = _function_from_cfunction(
-    _create_compiled_function({
-            'name':'environmentPointer',
-            'params':[],
-            'body': ['primitive', ['literal-string', 'vmstackframe_environment_pointer']],
-            '@tag': '<VMStackFrame>.environmentPointer compiled function'}),
-    _kernel_imodule)
-VMStackFrame['dict']["instructionPointer"] = _function_from_cfunction(
-    _create_compiled_function({
-            'name':'instructionPointer',
-            'params':[],
-            'body': ['primitive', ['literal-string', 'vmstackframe_instruction_pointer']],
-            '@tag': '<VMStackFrame>.instructionPointer compiled function'}),
-    _kernel_imodule)
-VMStackFrame['dict']["localVars"] = _function_from_cfunction(
-    _create_compiled_function({
-            'name':'localVars',
-            'params':[],
-            'body': ['primitive', ['literal-string', 'vmstackframe_local_vars']],
-            '@tag': '<VMStackFrame>.localVars compiled function'}),
-    _kernel_imodule)
-VMStackFrame['dict']["instanceVars"] = _function_from_cfunction(
-    _create_compiled_function({
-            'name':'instanceVars',
-            'params':[],
-            'body': ['primitive', ['literal-string', 'vmstackframe_instance_vars']],
-            '@tag': '<VMStackFrame>.instanceVars compiled function'}),
-    _kernel_imodule)
-VMStackFrame['dict']["moduleVars"] = _function_from_cfunction(
-    _create_compiled_function({
-            'name':'moduleVars',
-            'params':[],
-            'body': ['primitive', ['literal-string', 'vmstackframe_module_vars']],
-            '@tag': '<VMStackFrame>.moduleVars compiled function'}),
-    _kernel_imodule)
-
 def _instantiate_module(compiled_module, args, parent_module):
     #creates the Module object and its instance
     size = len(compiled_module["params"])+\
@@ -874,10 +157,10 @@ def _instantiate_module(compiled_module, args, parent_module):
                     'params':[],
                     'body': ['primitive', ['literal-string', 'module_instance_compiled_module']],
                     '@tag': '<Module>._compiledModule compiled function'}),
-            _kernel_imodule)}
+            core.kernel_imodule)}
 
     # Module
-    module = _create_module({"_vt": ModuleBehavior,
+    module = _create_module({"_vt": core.ModuleBehavior,
                              "size": size+1, #+1 delegate
                              "dict": imod_dictionary,
                              "compiled_module": compiled_module,
@@ -906,7 +189,7 @@ def _instantiate_module(compiled_module, args, parent_module):
         if super_name in args.keys():
             super_class = args[super_name]
         elif super_name in parent_module:
-            super_class = parent_module[super_name] # would be actually a msg send
+            super_class = parent_module[super_name] # TODO: should be actually a msg send
         elif super_name in compiled_module["compiled_classes"]:
             super_later[c["name"]] = super_name
         else:
@@ -915,7 +198,7 @@ def _instantiate_module(compiled_module, args, parent_module):
         # superclass BarClass found
         if super_class:
             # FooClassBehavior
-            cbehavior = {"_vt": Behavior,
+            cbehavior = {"_vt": core.Behavior,
                          "parent": super_class["_vt"],
                          "dict": _compiled_functions_to_functions(c["own_methods"], imodule),
                          "@tag":c["name"]+" Behavior"}
@@ -929,7 +212,7 @@ def _instantiate_module(compiled_module, args, parent_module):
             bclasses[c["name"]] = cbehavior
         else:
             # FooClassBehavior
-            cbehavior = {"_vt": Behavior,
+            cbehavior = {"_vt": core.Behavior,
                          "parent": "*replace-me*", #latter below
                          "dict": _compiled_functions_to_functions(c["own_methods"],imodule),
                          "@tag":c["name"]+" Behavior"}
@@ -1262,18 +545,18 @@ class Interpreter():
 
     def start(self, main_script):
         compiled_module = self.compile_module(main_script)
-        imodule = _instantiate_module(compiled_module, {}, _kernel_imodule)
+        imodule = _instantiate_module(compiled_module, {}, core.kernel_imodule)
         process = Process(self)
         self.processes.append(process)
         process.switch('run_module', imodule, [])
 
     def debug_process(self, target_process):
         compiled_module = self.compile_module('debugger-entry.mm')
-        imodule = _instantiate_module(compiled_module, {}, _kernel_imodule)
+        imodule = _instantiate_module(compiled_module, {}, core.kernel_imodule)
         target_process.debugger_process = Process(self)
         self.processes.append(target_process.debugger_process)
 
-        mmprocess = self.alloc(VMProcess, {'self':target_process})
+        mmprocess = self.alloc(core.VMProcess, {'self':target_process})
         return target_process.debugger_process.switch('run_module', imodule, [mmprocess])
 
     def compile_module(self, filename):
@@ -1283,10 +566,10 @@ class Interpreter():
         return _instantiate_module(compiled_module, args, imodule)
 
     def kernel_module_instance(self):
-        return _kernel_imodule
+        return core.kernel_imodule
 
     def get_class(self, name):
-        return globals()[name]
+        return getattr(core, name)
 
     def create_compiled_function(self, data):
         return _create_compiled_function(data)
@@ -1308,17 +591,17 @@ class Interpreter():
 
     def get_vt(self, obj):
         if obj == None:
-            return Object
+            return core.Object
         elif isinstance(obj, basestring):
-            return String
+            return core.String
         elif isinstance(obj, dict) and '_vt' not in obj:
-            return Dictionary
+            return core.Dictionary
         elif isinstance(obj, int) or isinstance(obj, long):
-            return Number
+            return core.Number
         elif isinstance(obj, list):
-            return List
+            return core.List
         elif isinstance(obj, Process):
-            return VMProcess
+            return core.VMProcess
         else:
             return obj["_vt"]
 
@@ -1473,17 +756,17 @@ class Process(greenlet):
         self.r_ep = None
         self.locals = {}
         # binding up arguments to parameters
-        if self.interpreter.get_vt(method) != Context:
+        if self.interpreter.get_vt(method) != core.Context:
             self.r_rp  = recv
             self.r_rdp = drecv
             if not method["compiled_function"]["uses_env"] and \
-                    self.interpreter.get_vt(method) == Function:
+                    self.interpreter.get_vt(method) == core.Function:
                 # normal fun, put args in the stack
                 for k,v in zip(method["compiled_function"]["params"],args):
                     self.locals[k] = v
             # normal fun using env, initialize one
             elif method["compiled_function"]["uses_env"] and \
-                    self.interpreter.get_vt(method) == Function:
+                    self.interpreter.get_vt(method) == core.Function:
                 self.r_ep = dict(method["compiled_function"]['env_table_skel'])
                 self.r_ep["r_rp"] = self.r_rp
                 self.r_ep["r_rdp"] = self.r_rdp # usually receivers are on stack.
@@ -1706,8 +989,8 @@ class Process(greenlet):
             #print("switching back to debugger")
             self.dbg_cmd(self.debugger_process.switch())
 
-if len(sys.argv) == 1:
-    print "i.py <source.mm>"
-    sys.exit(0)
-
-Interpreter().start(sys.argv[1])
+if __name__ == "__main__":
+    if len(sys.argv) == 1:
+        print "i.py <source.mm>"
+        sys.exit(0)
+    Interpreter().start(sys.argv[1])
