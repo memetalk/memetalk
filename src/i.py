@@ -37,21 +37,6 @@ def P(obj, depth=1):
     pprint(obj, None, 1, 80, depth)
 
 
-# KernelModule = {"_vt": ModuleBehavior,
-#                 "_delegate": None,
-#                 "parent": Object,
-#                 "size": 2, #delegate, Object
-#                 "dict": {"Object": "*replace-me*"}, #with the getter
-#                 "@tag": "KernelModule"}
-# _kernel_imodule = _create_kernel_module_instance()
-
-# def _create_kernel_module_instance():
-#     return {"_vt": core.KernelModule,
-#             "_delegate": None,
-#             "Object": core.Object,
-#             "@tag":"kernel module instance"} #etc...
-
-
 def _create_compiled_module(data):
     template = {"_vt": core.CompiledModule,
                 "_delegate": None,
