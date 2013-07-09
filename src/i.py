@@ -21,6 +21,7 @@
 from greenlet import greenlet
 import parser
 import sys
+import os
 from parser import MemeParser
 from loader import Loader
 from evaluator import Eval
@@ -30,6 +31,7 @@ from pprint import pprint, pformat
 from pdb import set_trace as br
 import traceback
 
+MODULES_PATH=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'memetalk')
 
 def P(obj, depth=1):
     if depth > 5:
@@ -394,7 +396,7 @@ class ModuleLoader(ASTBuilder):
         #self.function_line_offset = 0
         self.filename = filename
 
-        src = open(filename).read()
+        src = open(os.path.join(MODULES_PATH,filename + ".mm")).read()
         self.parser = MemeParser(src)
         self.parser.i = self
         try:
@@ -536,7 +538,7 @@ class Interpreter():
         process.switch('run_module', imodule, [])
 
     def debug_process(self, target_process):
-        compiled_module = self.compile_module('debugger-entry.mm')
+        compiled_module = self.compile_module('debugger-entry')
         imodule = _instantiate_module(compiled_module, {}, core.kernel_imodule)
         target_process.debugger_process = Process(self)
         self.processes.append(target_process.debugger_process)
@@ -976,6 +978,6 @@ class Process(greenlet):
 
 if __name__ == "__main__":
     if len(sys.argv) == 1:
-        print "i.py <source.mm>"
+        print "i.py <module name>"
         sys.exit(0)
     Interpreter().start(sys.argv[1])
