@@ -3,7 +3,9 @@ Memetalk
 
 This is a repository for the Memetalk programming system.
 
-A rationale for this project may be found at the [wiki](https://github.com/thiago-silva/memetalk/wiki).
+A rationale for this project may be found at the [wiki][1]
+
+[1]: https://github.com/thiago-silva/memetalk/wiki
 
 Installing & Building
 --------------------
