@@ -855,6 +855,9 @@ class Process(greenlet):
         else:
             raise Exception("object has no field " + field)
 
+    def eval_do_access_index(self, left, idx, ast):
+        return left[idx]
+
     def eval_access_module(self):
         return self.r_mp
 

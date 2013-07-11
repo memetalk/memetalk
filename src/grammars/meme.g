@@ -132,14 +132,16 @@ expr_unary =   spaces !(self.input.position):begin token("+") prim_expr:a  -> se
             |  spaces !(self.input.position):begin token("-") prim_expr:a  -> self.i.ast(begin, ['negative', a])
             |  spaces !(self.input.position):begin token("!") expr_unary:a -> self.i.ast(begin, ['not', a])
             |  spaces !(self.input.position):begin token("~") expr_unary:a -> self.i.ast(begin, ['bit-neg', a])
-            | send_expr
+            | suffix_expr
 
-send_expr =  spaces !(self.input.position):begin token("super") token(".") alpha_name:sel token("(") expr_list:p  token(")")
+suffix_expr =  spaces !(self.input.position):begin token("super") token(".") alpha_name:sel token("(") expr_list:p  token(")")
             -> self.i.ast(begin, ['super-ctor-send', sel, ['args', p]])
-          |  !(self.input.position):begin send_expr:r token(".") alpha_name:sel token("(") expr_list:p  token(")")
+          |  !(self.input.position):begin suffix_expr:r token(".") alpha_name:sel token("(") expr_list:p  token(")")
             -> self.i.ast(begin, ['send', r, sel, ['args', p]])
-          |  !(self.input.position):begin send_expr:r token(".") alpha_name:sel
+          |  !(self.input.position):begin suffix_expr:r token(".") alpha_name:sel
             -> self.i.ast(begin, ['send', r, sel, ['args', []]])
+          | !(self.input.position):begin suffix_expr:r token("[") expr:i token("]")
+             -> self.i.ast(begin, ['index', r, i])
           | call_expr
 
 call_expr =  !(self.input.position):begin call_expr:r token("(") expr_list:p  token(")")
