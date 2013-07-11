@@ -55,6 +55,7 @@ def _create_compiled_function(data):
                 "name": "",
                 "params": [],
                 "body": None,
+                "line":0,
                 "text": '/* native */',
                 "is_prim": False, # not currently in use
                 "prim_name": '',  # not currently in use
@@ -319,6 +320,8 @@ class FunctionLoader(ASTBuilder): # for eval
                                                          "outter_cfun": None,
                                                          "params": params,
                                                          "body": ast,
+                                                         "text": code,
+                                                         "line":1,
                                                          'env_table': self.env_id_table[0],
                                                          'uses_env': uses_env,
                                                          'env_table_skel': dict(zip(range(0,self.env_idx),[None]*self.env_idx)),
