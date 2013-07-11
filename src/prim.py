@@ -313,9 +313,14 @@ def _meme_instance(proc, obj):
         return obj#{"_vt":i.get_class("Number"), 'self':obj}
     elif isinstance(obj, list):
         return obj#{"_vt":i.get_class("List"), 'self':obj}
+    elif isinstance(obj, QtCore.QUrl):
+        return qstring_to_str(obj.path()) # TODO: currently ignoring QUrl objects
     else: #should be a qt instance
         return {"_vt":mapping[obj.__class__], 'self':obj}
 
+def qstring_to_str(qstring):
+    #return str(qstring.toUtf8()).decode("utf-8")
+    return unicode(qstring.toUtf8(), "utf-8")
 
 def prim_qt_qapplication_new(proc):
     global _app
@@ -443,7 +448,7 @@ def prim_qt_qplaintextedit_set_plain_text(proc):
 
 def prim_qt_qplaintextedit_to_plain_text(proc):
     qtobj = _lookup_field(proc.r_rp, 'self')
-    return str(qtobj.toPlainText())
+    return qstring_to_str(qtobj.toPlainText())
 
 
 
@@ -485,10 +490,10 @@ def prim_qt_qaction_set_shortcut(proc):
     return proc.r_rp
 
 # QTextCursor
+
 def prim_qt_qtextcursor_selected_text(proc):
     qtobj = _lookup_field(proc.r_rp, 'self')
-    string = str(qtobj.selectedText())
-    return string
+    return qstring_to_str(qtobj.selectedText())
 
 def prim_qt_qtextcursor_selection_end(proc):
     qtobj = _lookup_field(proc.r_rp, 'self')
@@ -575,7 +580,7 @@ def prim_qt_qlistwidgetitem_new(proc):
 
 def prim_qt_qlistwidgetitem_text(proc):
     qtobj = _lookup_field(proc.r_rp, 'self')
-    return str(qtobj.text())
+    return qstring_to_str(qtobj.text())
 
 
 #QLineEdit
@@ -595,7 +600,7 @@ def prim_qt_qlineedit_set_focus(proc):
 
 def prim_qt_qlineedit_text(proc):
     qtobj = _lookup_field(proc.r_rp, 'self')
-    return str(qtobj.text())
+    return qstring_to_str(qtobj.text())
 
 
 def prim_qt_qheaderview_hide(proc):
@@ -711,7 +716,7 @@ def prim_qt_scintilla_editor_set_text(proc):
 
 def prim_qt_scintilla_text(proc):
     qtobj = _lookup_field(proc.r_rp, 'self')
-    return str(qtobj.text())
+    return qstring_to_str(qtobj.text())
 
 def prim_qt_scintilla_paused_at_line(proc):
     qtobj = _lookup_field(proc.r_rp, 'self')
