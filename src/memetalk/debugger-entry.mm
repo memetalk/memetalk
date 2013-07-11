@@ -7,8 +7,8 @@ module debugger_entry() {
   fun main(proc) {
     //TODO: set those right: see debugger.mm module params
 
-    var qt = import("qt", []);
-    var dbg = import("debugger", [qt.QWidget,
+    var qt = import("qt.mm", []);
+    var dbg = import("debugger.mm", [qt.QWidget,
                                      qt.QComboBox,
                                      qt.QTableWidget,
                                      qt.QMainWindow, qt]);

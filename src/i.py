@@ -30,8 +30,7 @@ import core_module as core
 from pprint import pprint, pformat
 from pdb import set_trace as br
 import traceback
-
-MODULES_PATH=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'memetalk')
+from config import MODULES_PATH
 
 def P(obj, depth=1):
     if depth > 5:
@@ -390,13 +389,13 @@ class FunctionLoader(ASTBuilder): # for eval
             function['env_table_skel'] =  dict(zip(range(0,self.env_idx),[None]*self.env_idx))
 
 class ModuleLoader(ASTBuilder):
-    def compile_module(self, filename):
+    def compile_module(self, i, filename):
         self.line_offset = 0
         self.pos_stack = []
         #self.function_line_offset = 0
         self.filename = filename
 
-        src = open(os.path.join(MODULES_PATH,filename + ".mm")).read()
+        src = i.open_module_file(filename).read()
         self.parser = MemeParser(src)
         self.parser.i = self
         try:
@@ -530,15 +529,35 @@ class Interpreter():
         self.compiled_modules = {}
         self.processes = []
 
-    def start(self, main_script):
-        compiled_module = self.compile_module(main_script)
+    def open_module_file(self, filename):
+        if os.path.isfile(filename):
+            return open(filename)
+        else:
+            return open(os.path.join(MODULES_PATH, filename))
+
+    # def load_modules(self):
+    #     sources = [f[:-3] for f in os.listdir(MODULES_PATH) \
+    #                    if os.path.isfile(os.path.join(MODULES_PATH,f)) and \
+    #                    f != 'core.md']
+
+    #     for name in sources:
+    #         cm = self.compile_module(name)
+    #         self.compiled_modules[cm['name']] = cm #TODO: should be msg send
+    #     br()
+    #     self.compiled_modules[core.kernel_imodule['name']] = core.kernel_imodule
+
+    def start(self, filename):
+        #self.load_modules()
+        self.compiled_modules[filename] = self.compile_module(filename)
+        compiled_module = self.compiled_modules[filename]
+
         imodule = _instantiate_module(compiled_module, {}, core.kernel_imodule)
         process = Process(self)
         self.processes.append(process)
         process.switch('run_module', imodule, [])
 
     def debug_process(self, target_process):
-        compiled_module = self.compile_module('debugger-entry')
+        compiled_module = self.compile_module('debugger-entry.mm')
         imodule = _instantiate_module(compiled_module, {}, core.kernel_imodule)
         target_process.debugger_process = Process(self)
         self.processes.append(target_process.debugger_process)
@@ -547,7 +566,7 @@ class Interpreter():
         return target_process.debugger_process.switch('run_module', imodule, [mmprocess])
 
     def compile_module(self, filename):
-        return ModuleLoader().compile_module(filename)
+        return ModuleLoader().compile_module(self,filename)
 
     def instantiate_module(self, compiled_module, args, imodule):
         return _instantiate_module(compiled_module, args, imodule)
@@ -978,6 +997,6 @@ class Process(greenlet):
 
 if __name__ == "__main__":
     if len(sys.argv) == 1:
-        print "i.py <module name>"
+        print "i.py filename"
         sys.exit(0)
     Interpreter().start(sys.argv[1])

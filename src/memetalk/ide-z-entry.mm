@@ -5,8 +5,8 @@ module idez_entry() {
   }
 
   fun main() {
-    var qt = import("qt", []);
-    var idez = import("ide-z", [qt,
+    var qt = import("qt.mm", []);
+    var idez = import("ide-z.mm", [qt,
                                    qt.QWidget, //super classes go explict
                                    qt.QMainWindow,
                                    qt.QPlainTextEdit]);

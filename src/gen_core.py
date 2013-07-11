@@ -23,6 +23,8 @@ from coretr import CoreTr
 from pprint import pprint, pformat
 from pdb import set_trace as br
 import traceback
+import os
+from config import MODULES_PATH
 
 
 def P(obj, depth=1):
@@ -68,7 +70,8 @@ class CoreGenerator():
     #     return "globals()["+to_source(x)+"]"
 
     def gen(self):
-        parser = CoreParser(open("core.md").read())
+
+        parser = CoreParser(open(os.path.join(MODULES_PATH,"core.md")).read())
         parser.i = self
         try:
             ast = parser.apply("start")[0]
