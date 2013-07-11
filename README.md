@@ -1,7 +1,7 @@
 Memetalk
 ========
 
-This is a repository for the Memetalk programming system. 
+This is a repository for the Memetalk programming system.
 
 A rationale for this project may be found at:
 http://lists.memetalk.me/pipermail/memetalk-dev/2012-August/000001.html
@@ -14,8 +14,9 @@ Installing & Building
 3. Install greenlet python library.
 3. Install python's qscintilla2 bindings. In debian-like system, `aptitude install python-qscintilla2`
 4. Clone `pymeta` (https://github.com/thiago-silva/pymeta.git), and install it. You may need to run `sudo easy_install .` in the `pymeta` dir after building.
-5. Run `python src/grammars/gen.py`.
-6. Success!
+5. Run `python src/grammars/gen.py` to generate the parsers.
+6. Run `python gen_core.py` to generate the core module.
+7. Success!
 
 Running
 -------
@@ -23,4 +24,10 @@ For now, the entry-point for memetalk's interpreter is `i.py`. From the `memetal
 
 ```
 python src/i.py tests/closures1.mm
+```
+
+The main (super alpha) programming environment can be executed with:
+
+```
+python i.py modules/ide-z-entry.mm
 ```
