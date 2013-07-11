@@ -22,6 +22,40 @@ module idez(qt, QWidget, QMainWindow, QPlainTextEdit) {
     init new(parent) {
       super.new(parent);
       @variables = {};
+
+      this.setTabStopWidth(20);
+
+      var action = qt.QAction.new("&Do it", this);
+      action.setShortcut("ctrl+d");
+      action.connect("triggered", fun() {
+          this.doIt();
+      });
+      action.setShortcutContext(0); //widget context
+      this.addAction(action);
+
+      action = qt.QAction.new("&Print it", this);
+      action.setShortcut("ctrl+p");
+      action.connect("triggered", fun() {
+          this.printIt();
+      });
+      action.setShortcutContext(0); //widget context
+      this.addAction(action);
+
+      action = qt.QAction.new("&Inspect it", this);
+      action.setShortcut("ctrl+i");
+      action.connect("triggered", fun() {
+          this.inspectIt();
+      });
+      action.setShortcutContext(0); //widget context
+      this.addAction(action);
+
+      action = qt.QAction.new("De&bug it", this);
+      action.setShortcut("ctrl+b");
+      action.connect("triggered", fun() {
+          this.debugIt();
+      });
+      action.setShortcutContext(0); //widget context
+      this.addAction(action);
     }
 
     fun doIt() {
@@ -62,32 +96,11 @@ module idez(qt, QWidget, QMainWindow, QPlainTextEdit) {
       super.new();
       this.setWindowTitle("Workspace");
       @editor = Editor.new(this);
-      @editor.setTabStopWidth(20);
       this.setCentralWidget(@editor);
-      this.initActions();
-    }
-    fun initActions() {
       var execMenu = this.menuBar().addMenu("&Execution");
-      var action = qt.QAction.new("&Do it", execMenu);
-      action.setShortcut("ctrl+d");
-      action.connect("triggered", fun() {
-          @editor.doIt();
+      @editor.actions().each(fun(action) {
+        execMenu.addAction(action)
       });
-      execMenu.addAction(action);
-
-      action = qt.QAction.new("&Print it", execMenu);
-      action.setShortcut("ctrl+p");
-      action.connect("triggered", fun() {
-          @editor.printIt();
-      });
-      execMenu.addAction(action);
-
-      action = qt.QAction.new("&Inspect it", execMenu);
-      action.setShortcut("ctrl+i");
-      action.connect("triggered", fun() {
-          @editor.inspectIt();
-      });
-      execMenu.addAction(action);
     }
   }
 
@@ -133,34 +146,13 @@ module idez(qt, QWidget, QMainWindow, QPlainTextEdit) {
       });
 
       var execMenu = this.menuBar().addMenu("&Execution");
-      var action = qt.QAction.new("&Do it", execMenu);
-      action.setShortcut("ctrl+d");
-      action.connect("triggered", fun() {
-          @textArea.doIt();
-      });
-      execMenu.addAction(action);
 
-      action = qt.QAction.new("&Print it", execMenu);
-      action.setShortcut("ctrl+p");
-      action.connect("triggered", fun() {
-          @textArea.printIt();
-      });
-      execMenu.addAction(action);
-
-      action = qt.QAction.new("&Inspect it", execMenu);
-      action.setShortcut("ctrl+i");
-      action.connect("triggered", fun() {
-          @textArea.inspectIt();
-      });
-      execMenu.addAction(action);
-
-      action = qt.QAction.new("Accept it", execMenu);
-      action.setShortcut("ctrl+s");
-      action.connect("triggered", fun() {
-          this.acceptIt();
-      });
-      execMenu.addAction(action);
-
+      // action = qt.QAction.new("Accept it", execMenu);
+      // action.setShortcut("ctrl+s");
+      // action.connect("triggered", fun() {
+      //     this.acceptIt();
+      // });
+      // execMenu.addAction(action);
     }
 
     fun loadValues() {
@@ -205,10 +197,40 @@ module idez(qt, QWidget, QMainWindow, QPlainTextEdit) {
     }
   }
 
+
+  class ModuleExplorer < QMainWindow {
+    fields: webview;
+    init new() {
+      super.new();
+      this.setWindowTitle("Memetalk");
+      @webview = qt.QWebView.new(this);
+      @webview.setUrl("/home/thiago/src/memetalk/src/memetalk/module-explorer/index.html");
+      @webview.page().setLinkDelegationPolicy(2);
+      @webview.page().enablePluginsWith("editor", fun(params) {
+        var e = Editor.new(null);
+        e.setStyleSheet("border-style: outset;");
+        e.setPlainText(params["code"]);
+        return e;
+      });
+      this.setCentralWidget(@webview);
+      this.resize(800,600);
+      @webview.connect('linkClicked', fun(url) {
+        if (url == "/tutorial") {
+          this.show_tutorial();
+        }
+        if (url == "/modules") {
+          this.show_modules();
+        }
+      });
+    }
+    fun show_tutorial() {
+      @webview.setUrl("/home/thiago/src/memetalk/src/memetalk/module-explorer/tutorial.html");
+    }
+  }
+
   fun main() {
     var app = qt.QApplication.new();
-    var main = Workspace.new();
-    main.resize(300,300);
+    var main = ModuleExplorer.new();
     main.show();
     app.exec();
   }

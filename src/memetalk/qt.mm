@@ -43,6 +43,15 @@ module qt() {
     fun connect(signal, slot) {
       <primitive "qt_qwidget_connect">
     }
+    fun actions() {
+      <primitive "qt_qwidget_actions">
+    }
+    fun setStyleSheet(s) {
+      <primitive "qt_qwidget_set_stylesheet">
+    }
+    fun isVisible() {
+      <primitive "qt_qwidget_is_visible">
+    }
   }
 
   class QMenuBar < QWidget {
@@ -65,7 +74,17 @@ module qt() {
     fun setShortcut(shortcut) {
       <primitive "qt_qaction_set_shortcut">
     }
+    fun setShortcutContext(context) {
+      <primitive "qt_qaction_set_shortcut_context">
+    }
   }
+
+  // class QShortcut {
+  //   fields: self;
+  //   init new(keys, parent, fn) {
+  //     <primitive "qt_qshortcut_new">
+  //   }
+  // }
 
   class QMainWindow < QWidget {
     init new() {
@@ -233,6 +252,37 @@ module qt() {
     }
     fun setFlags(flags) {
       <primitive "qt_qtablewidgetitem_set_flags">
+    }
+  }
+
+  class QWebView < QWidget {
+    init new(parent) {
+      <primitive "qt_qwebview_new">
+    }
+    fun setUrl(url) {
+      <primitive "qt_qwebview_set_url">
+    }
+    fun page() {
+      <primitive "qt_qwebview_page">
+    }
+  }
+
+  class QWebPage {
+    fields: self;
+    fun mainFrame() {
+      <primitive "qt_qwebpage_main_frame">
+    }
+    fun setLinkDelegationPolicy(policy) {
+      <primitive "qt_qwebpage_set_link_delegation_policy">
+    }
+    fun enablePluginsWith(name,fn) {
+      <primitive "qt_extra_qwebpage_enable_plugins">
+    }
+  }
+  class QWebFrame {
+    fields: self;
+    fun addToJavaScriptWindowObject(name, obj) {
+      <primitive "qt_qwebframe_add_to_javascript_window_object">
     }
   }
 }

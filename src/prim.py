@@ -18,7 +18,11 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 
-from PyQt4 import QtGui, QtCore
+from PyQt4 import QtGui, QtCore, QtWebKit
+from PyQt4.QtWebKit import *
+from PyQt4.QtGui import *
+from PyQt4.QtCore import *
+
 import sys
 import re
 from pdb import set_trace as br
@@ -301,7 +305,9 @@ def _lookup_field(mobj, name):
 ## return a meme instance given something from pyqt
 def _meme_instance(proc, obj):
     mapping = {
-        QtGui.QListWidgetItem: proc.r_mp["QListWidgetItem"]}
+        QtGui.QListWidgetItem: proc.r_mp["QListWidgetItem"],
+        QtWebKit.QWebPage: proc.r_mp['QWebPage'],
+        QtGui.QAction: proc.r_mp['QAction']}
 
     if obj == None:
         return obj
@@ -392,6 +398,18 @@ def prim_qt_qwidget_connect(proc):
         proc.setup_and_run_fun(None, None, '<?>', slot, args, True)
     getattr(qtobj,signal).connect(callback)
     return proc.r_rp
+
+def prim_qt_qwidget_actions(proc):
+    qtobj = _lookup_field(proc.r_rp, 'self')
+    return [_meme_instance(proc, x) for x in qtobj.actions()]
+
+def prim_qt_qwidget_set_stylesheet(proc):
+    qtobj = _lookup_field(proc.r_rp, 'self')
+    qtobj.setStyleSheet(proc.locals['s'])
+    return proc.r_rp
+
+def prim_qt_qwidget_is_visible(proc):
+    return _lookup_field(proc.r_rp, 'self').isVisible()
 
 # QMainWindow
 def prim_qt_qmainwindow_new(proc):
@@ -488,6 +506,24 @@ def prim_qt_qaction_set_shortcut(proc):
     qtobj = _lookup_field(proc.r_rp, 'self')
     qtobj.setShortcut(proc.locals["shortcut"]);
     return proc.r_rp
+
+def prim_qt_qaction_set_shortcut_context(proc):
+    qtobj = _lookup_field(proc.r_rp, 'self')
+    qtobj.setShortcutContext(proc.locals["context"]);
+    return proc.r_rp
+
+# def prim_qt_qshortcut_new(proc):
+#     keys = proc.locals['keys']
+#     parent = proc.locals['parent']
+#     fn = proc.locals['fn']
+#     qtobj = _lookup_field(parent, 'self')
+
+#     def callback():
+#         proc.setup_and_run_fun(None, None, '<?>', fn, [], True)
+
+#     shortcut = QtGui.QShortcut(QtGui.QKeySequence(keys), qtobj, callback)
+#     shortcut.setContext(QtCore.Qt.WidgetShortcut)
+#     return proc.r_rp
 
 # QTextCursor
 
@@ -700,6 +736,31 @@ def prim_qt_qtablewidgetitem_set_flags(proc):
     qtobj.setFlags(proc.locals['flags'])
     return proc.r_rp
 
+
+def prim_qt_qwebview_new(proc):
+    parent = proc.locals['parent']
+    if parent != None:
+        qtobj = _lookup_field(parent, 'self')
+        proc.r_rdp['self'] = QtWebKit.QWebView(qtobj)
+    else:
+        proc.r_rdp['self'] = QtWebKit.QWebView()
+    return proc.r_rp
+
+def prim_qt_qwebview_set_url(proc):
+    qtobj = _lookup_field(proc.r_rp, 'self')
+    qtobj.setUrl(QtCore.QUrl(proc.locals['url']))
+    return proc.r_rp
+
+def prim_qt_qwebview_page(proc):
+    qtobj = _lookup_field(proc.r_rp, 'self')
+    return _meme_instance(proc,qtobj.page())
+
+def prim_qt_qwebpage_set_link_delegation_policy(proc):
+    qtobj = _lookup_field(proc.r_rp, 'self')
+    qtobj.setLinkDelegationPolicy(proc.locals['policy'])
+    return proc.r_rp
+
+# scintilla
 def prim_qt_scintilla_editor_new(proc):
     parent = proc.locals['parent']
     if parent != None:
@@ -739,3 +800,36 @@ def prim_qt_scintilla_paused_at_line(proc):
 def prim_qapp_running(proc):
     global _qapp_running
     return  _qapp_running
+
+######
+
+
+def prim_qt_extra_qwebpage_enable_plugins(proc):
+    name = proc.locals['name']
+    fn = proc.locals['fn']
+    class WebPluginFactory(QWebPluginFactory):
+        def __init__(self, parent = None):
+            QWebPluginFactory.__init__(self, parent)
+        def create(self, mimeType, url, _names, _values):
+            names = map(str, _names)
+            values =  map(str, _values)
+            if mimeType == "x-pyqt/" + name:
+                mobj = proc.setup_and_run_fun(None, None, '<?>', fn, [dict(zip(names,values))], True)
+                return _lookup_field(mobj, 'self')
+        def plugins(self):
+            plugin = QWebPluginFactory.Plugin()
+            plugin.name = "PyQt Widget"
+            plugin.description = "An example Web plugin written with PyQt."
+            mimeType = QWebPluginFactory.MimeType()
+            mimeType.name = "x-pyqt/widget"
+            mimeType.description = "PyQt widget"
+            mimeType.fileExtensions = []
+            plugin.mimeTypes = [mimeType]
+            return [plugin]
+
+    global _factory # if this is local, webkit segfaults
+    _factory = WebPluginFactory()
+    qtobj = _lookup_field(proc.r_rp, 'self')
+    QWebSettings.globalSettings().setAttribute(QWebSettings.PluginsEnabled, True)
+    qtobj.setPluginFactory(_factory)
+    return proc.r_rp

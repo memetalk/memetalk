@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <style>
+.code {
+ border-style:solid;
+ border-width: 1px;
+}
+    </style>
+  </head>
+  <body>
+    <h1>Memetalk</h1>
+    <hr/>
+
+    <p>Welcome to the Memetalk tutorial. The following walkthrough will guide
+    you on how to execute memetalk code and use the basic tools.
+    </p>
+
+    <h2>Basics</h2>
+
+    <p>Like Smalltalk, the editors in memetalk offer a few commands to execute
+    and operate on the results. Select the following and type CTRL+D.
+    <div class="code">
+      <object type="x-pyqt/editor" width="600">
+        <param name="code" value='print("Hello World")'>
+      </object>
+    </div>
+    <p>The phrase "Hello World" should have appeared in your shell. CTRL+D is
+    tied to the action <strong>Do It</strong>. To get a handle on the result
+    of an expression as text in the same editor, we use <strong>Print
+    It</strong> (CTRL+P). Select the following code and type CTRL+P.</p>
+  <div class="code">
+    <object type="x-pyqt/editor" width="600">
+        <param name="code" value="13+29">
+    </object>
+  </div>
+  <p>Notice the result of the expression is inserted right after the
+  expression and selected. It is also possible to declare variables and use
+  them latter. For example, select each line bellow separatelly and <strong>Do
+  it</strong> -- notice how "w" is remembered between executions.  .</p>
+  <div class="code">
+    <object type="x-pyqt/editor" width="600">
+        <param name="code" value="var w = QWidget.new(null);
+print(w.isVisible());
+w.show();
+print(w.isVisible());">
+    </object>
+  </div>
+
+  <p>Sometimes we want to explore complex objects, its properties and
+  methods. Memetalk offers a Inspector window -- through <strong>Inspect
+  It</strong> action -- that allows us to see the structure of an object,
+  change its properties and send messages to it.  Try it, selecting the
+  following code and typing CTRL+I.</p>
+  <div class="code">
+    <object type="x-pyqt/editor" width="600">
+        <param name="code" value="Workspace.new()">
+    </object>
+  </div>
+  <p>A new instance of the class Workspace should be created with the "new"
+  message and a Inspector window should appear. The Inspector shows the
+  properties of that instance on the left pane, and their values on the right
+  (<i>currently, the cryptic strings appearing as property values are python
+  string representations for memetalk objects. In the future, a more readable
+  representation for them should appear there</i>). Double clicking on a
+  property name opens another Inspector for the object bound to that
+  property. Messages can be sent to the Workspace instance on the line edit at
+  the bottom of the window. The instance is bound to "this" keyword. Try
+  typing "this.show()" on that field and hitting Enter. The Workspace window
+  should appear as response to that message.</p>
+  <p>A Workspace is an editor with all the features discussed above, useful for
+  exploring and executing code.</p>
+  </body>
+
+</html>
