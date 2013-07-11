@@ -197,6 +197,9 @@ module idez(qt, QWidget, QMainWindow, QPlainTextEdit) {
     }
   }
 
+  fun modules_path() {
+    <primitive "modules_path">
+  }
 
   class ModuleExplorer < QMainWindow {
     fields: webview;
@@ -204,7 +207,7 @@ module idez(qt, QWidget, QMainWindow, QPlainTextEdit) {
       super.new();
       this.setWindowTitle("Memetalk");
       @webview = qt.QWebView.new(this);
-      @webview.setUrl("/home/thiago/src/memetalk/src/modules/module-explorer/index.html");
+      @webview.setUrl(modules_path() + "/module-explorer/index.html");
       @webview.page().setLinkDelegationPolicy(2);
       @webview.page().enablePluginsWith("editor", fun(params) {
         var e = Editor.new(null);
@@ -224,7 +227,7 @@ module idez(qt, QWidget, QMainWindow, QPlainTextEdit) {
       });
     }
     fun show_tutorial() {
-      @webview.setUrl("/home/thiago/src/memetalk/src/modules/module-explorer/tutorial.html");
+      @webview.setUrl(modules_path() + "/module-explorer/tutorial.html");
     }
   }
 

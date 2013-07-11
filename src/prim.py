@@ -29,6 +29,7 @@ from pdb import set_trace as br
 from pprint import pprint, pformat
 #import dbgui
 import scintilla_editor
+from config import MODULES_PATH
 
 def P(obj, depth=1):
     if depth > 5:
@@ -39,6 +40,10 @@ def P(obj, depth=1):
 
 _app = None
 _qapp_running = False
+
+def prim_modules_path(proc):
+    return MODULES_PATH
+
 
 def prim_basic_new(proc):
     def create_instances(klass):
@@ -168,6 +173,9 @@ def prim_object_not_equal(proc):
 
 def prim_string_size(proc):
     return len(proc.r_rp)
+
+def prim_string_concat(proc):
+    return proc.r_rp + proc.locals['arg']
 
 def prim_module_instance_compiled_module(proc):
     return proc.r_rdp['_vt']['compiled_module']

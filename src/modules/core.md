@@ -127,6 +127,9 @@ module core() {
     fun size() {
       <primitive "string_size">
     }
+    fun +(arg) {
+      <primitive "string_concat">
+    }
   }
 
   class Dictionary {
