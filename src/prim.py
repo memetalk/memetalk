@@ -537,7 +537,11 @@ def prim_qt_qaction_set_shortcut_context(proc):
 
 def prim_qt_qtextcursor_selected_text(proc):
     qtobj = _lookup_field(proc.r_rp, 'self')
-    return qstring_to_str(qtobj.selectedText())
+
+    # Qt docs say \u2029 is a paragraph, and should be replaced with \n
+    # TODO: make this replace works written in memetalk instead of hardcoded
+    # here.
+    return qstring_to_str(qtobj.selectedText()).replace(u'\u2029', '\n')
 
 def prim_qt_qtextcursor_selection_end(proc):
     qtobj = _lookup_field(proc.r_rp, 'self')

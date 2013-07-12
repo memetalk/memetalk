@@ -194,8 +194,8 @@ lit_symbol = token(":") alpha_name:xs
 lit_number = spaces digit+:ds -> ["literal-number", int(''.join(ds))]
 
 lit_string  = spaces '"' ('\\' '"' | ~'"' :x)*:xs '"'
-               -> ["literal-string", ''.join(xs).decode("string_escape")]
+               -> ["literal-string", unicode(''.join(xs).decode("string_escape"))]
             | spaces '\'' (~'\'' :x)*:xs '\''
-               -> ["literal-string", ''.join(xs).decode("string_escape")]
+               -> ["literal-string", unicode(''.join(xs).decode("string_escape"))]
 
 field_name = spaces '@' letter_or_digit_string:x -> x
