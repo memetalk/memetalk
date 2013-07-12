@@ -239,6 +239,7 @@ module debugger(QWidget, QComboBox, QTableWidget, QMainWindow, qt) {
       @stackCombo.updateInfo();
     }
     fun continue() {
+      this.close();
       @process.continue();
       @stackCombo.updateInfo();
     }

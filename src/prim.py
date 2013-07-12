@@ -419,6 +419,9 @@ def prim_qt_qwidget_set_stylesheet(proc):
 def prim_qt_qwidget_is_visible(proc):
     return _lookup_field(proc.r_rp, 'self').isVisible()
 
+def prim_qt_qwidget_close(proc):
+    return _lookup_field(proc.r_rp, 'self').close()
+
 # QMainWindow
 def prim_qt_qmainwindow_new(proc):
     proc.r_rdp['self'] = QtGui.QMainWindow()

@@ -52,6 +52,9 @@ module qt() {
     fun isVisible() {
       <primitive "qt_qwidget_is_visible">
     }
+    fun close() {
+      <primitive "qt_qwidget_close">
+    }
   }
 
   class QMenuBar < QWidget {
