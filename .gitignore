@@ -2,3 +2,6 @@
 src/evaluator.py
 src/loader.py
 src/parser.py
+src/core_module.py
+src/coreparser.py
+src/coretr.py
