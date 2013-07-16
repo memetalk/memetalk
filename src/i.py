@@ -535,6 +535,7 @@ class Interpreter():
     def __init__(self):
         self.compiled_modules = {}
         self.processes = []
+        self.current_process = None
 
     def open_module_file(self, filename):
         if os.path.isfile(filename):
@@ -555,13 +556,13 @@ class Interpreter():
 
     def start(self, filename):
         #self.load_modules()
-        self.compiled_modules[filename] = self.compile_module(filename)
+        self.compile_module(filename)
         compiled_module = self.compiled_modules[filename]
 
         imodule = _instantiate_module(compiled_module, {}, core.kernel_imodule)
         process = Process(self)
         self.processes.append(process)
-        process.switch('run_module', imodule, [])
+        process.switch('run_module', 'main', imodule, [])
 
     def debug_process(self, target_process):
         compiled_module = self.compile_module('debugger-entry.mm')
@@ -570,10 +571,12 @@ class Interpreter():
         self.processes.append(target_process.debugger_process)
 
         mmprocess = self.alloc(core.VMProcess, {'self':target_process})
-        return target_process.debugger_process.switch('run_module', imodule, [mmprocess])
+        target_process.state = 'paused'
+        target_process.debugger_process.switch('run_module', 'debug', imodule, [mmprocess])
 
     def compile_module(self, filename):
-        return ModuleLoader().compile_module(self,filename)
+        self.compiled_modules[filename] =  ModuleLoader().compile_module(self,filename)
+        return self.compiled_modules[filename]
 
     def instantiate_module(self, compiled_module, args, imodule):
         return _instantiate_module(compiled_module, args, imodule)
@@ -634,15 +637,21 @@ class Process(greenlet):
         super(Process, self).__init__(self.greenlet_entry)
 
         self.interpreter = interpreter
-        self.dbg_proc = None
+        self.debugger_process = None
         self.state = None
+        self.__greenlet_state = None
 
     def greenlet_entry(self, cmd, *rest):
         getattr(self, cmd)(*rest)
 
-    def run_module(self, module, args):
-        fun = module["main"]
+    def switch(self, *rest):
+        if self.interpreter.current_process:
+            self.interpreter.current_process.__greenlet_state = "STOP"
+        self.interpreter.current_process = self
+        self.__greenlet_state = 'RUN'
+        return super(Process,self).switch(*rest)
 
+    def run_module(self, entry_name, module, args):
         # registers
         # self.r_mp  = module
         # self.r_rp  = module # ie. module.main()
@@ -661,7 +670,7 @@ class Process(greenlet):
 
         self.state = 'running' # process state
 
-        ret = self.setup_and_run_fun(module, module, 'main', module['main'], args, True)
+        ret = self.setup_and_run_fun(module, module, entry_name, module[entry_name], args, True)
         print "RETVAL: " + str(ret)
 
     def _lookup(self, drecv, vt, selector):
