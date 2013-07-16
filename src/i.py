@@ -357,8 +357,10 @@ class FunctionLoader(ASTBuilder): # for eval
     def l_literal_fun_body(self, body):
         self.functions[-1]["body"] = body
 
-    def l_done_literal_function(self):
+    def l_done_literal_function(self, ast):
         function = self.functions.pop()
+        function['text'] = ast.text
+        function['line'] = ast.line
 
         body = function["body"]
 
@@ -502,10 +504,12 @@ class ModuleLoader(ASTBuilder):
     def l_literal_fun_body(self, body):
         self.functions[-1]["body"] = body
 
-    def l_done_literal_function(self):
+    def l_done_literal_function(self, ast):
         function = self.functions.pop()
 
         body = function["body"]
+        function['text'] = ast.text
+        function['line'] = ast.line
 
         function['env_table'] = self.env_id_table.pop()
 

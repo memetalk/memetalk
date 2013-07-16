@@ -49,8 +49,7 @@ expr = ['var-def' :id !(self.i.l_var_def(id)) expr]
          !(self.i.l_set_fun_literal_parameters(p))
          ['body' :b
             !(self.i.l_literal_fun_body(b))
-          apply('body' b)]
-            !(self.i.l_done_literal_function())]
+          apply('body' b)]]:f -> self.i.l_done_literal_function(f)
      | ['send' :r :s ['args' [expr+]]]
      | [:tag expr*]
      | :x
