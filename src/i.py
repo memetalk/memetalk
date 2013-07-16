@@ -565,7 +565,10 @@ class Interpreter():
         process.switch('run_module', 'main', imodule, [])
 
     def debug_process(self, target_process):
-        compiled_module = self.compile_module('debugger-entry.mm')
+        if 'ide-z-entry.mm' in self.compiled_modules:
+            compiled_module = self.compiled_modules['ide-z-entry.mm']
+        else:
+            compiled_module = self.compile_module('ide-z-entry.mm')
         imodule = _instantiate_module(compiled_module, {}, core.kernel_imodule)
         target_process.debugger_process = Process(self)
         self.processes.append(target_process.debugger_process)

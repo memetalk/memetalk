@@ -18,6 +18,9 @@ module qt() {
     fun exec() {
       <primitive "qt_qeventloop_exec">
     }
+    fun exit(code) {
+      <primitive "qt_qeventloop_exit">
+    }
   }
 
   class QWidget {

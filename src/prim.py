@@ -93,9 +93,9 @@ def prim_vmprocess_step_over(proc):
     _proc = _lookup_field(proc.r_rp, 'self')
     _proc.switch("step_over")
 
-def prim_vmprocess_continue(proc):
+def prim_vmprocess_change_state(proc):
     _proc = _lookup_field(proc.r_rp, 'self')
-    _proc.switch("continue")
+    _proc.state = proc.locals['state']
 
 def prim_vmprocess_rewind(proc):
     _proc = _lookup_field(proc.r_rp, 'self')
@@ -354,6 +354,9 @@ def prim_qt_qeventloop_new(proc):
 
 def prim_qt_qeventloop_exec(proc):
     return proc.r_rdp['self'].exec_()
+
+def prim_qt_qeventloop_exit(proc):
+    return proc.r_rdp['self'].exit(proc.locals['code'])
 
 # QWidget
 def prim_qt_qwidget_new(proc):
@@ -847,4 +850,10 @@ def prim_qt_extra_qwebpage_enable_plugins(proc):
     qtobj = _lookup_field(proc.r_rp, 'self')
     QWebSettings.globalSettings().setAttribute(QWebSettings.PluginsEnabled, True)
     qtobj.setPluginFactory(_factory)
+    return proc.r_rp
+
+
+def prim_switch_back(proc):
+    if proc.debugger_process:
+        proc.debugger_process.switch()
     return proc.r_rp

@@ -203,8 +203,8 @@ module core() {
     fun stepOut() {
       <primitive "vmprocess_step_out">
     }
-    fun continue() {
-      <primitive "vmprocess_continue">
+    fun changeState(state) {
+      <primitive "vmprocess_change_state">
     }
     fun rewind() {
       <primitive "vmprocess_rewind">
