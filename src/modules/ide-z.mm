@@ -75,7 +75,7 @@ module idez(qt, QWidget, QMainWindow, QPlainTextEdit, QComboBox, QTableWidget) {
       var cfun = CompiledFunction.new(selection, [], cmod, @variables);
       var fn = cfun.asContext(thisModule, null, @variables);
       var res =  fn.apply([]);
-      @variables = fn.getEnv() + @variables;
+      @variables = @variables + fn.getEnv();
       return res;
     }
     fun printIt() {
