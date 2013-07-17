@@ -568,6 +568,8 @@ class Interpreter():
         process.switch('run_module', 'main', imodule, [])
 
     def debug_process(self, target_process):
+        target_process.state = 'paused'
+
         if 'ide-z-entry.mm' in self.compiled_modules:
             compiled_module = self.compiled_modules['ide-z-entry.mm']
         else:
@@ -577,7 +579,6 @@ class Interpreter():
         self.processes.append(target_process.debugger_process)
 
         mmprocess = self.alloc(core.VMProcess, {'self':target_process})
-        target_process.state = 'paused'
         target_process.debugger_process.switch('run_module', 'debug', imodule, [mmprocess])
 
     def compile_module(self, filename):
@@ -645,16 +646,15 @@ class Process(greenlet):
         self.interpreter = interpreter
         self.debugger_process = None
         self.state = None
-        self.__greenlet_state = None
 
     def greenlet_entry(self, cmd, *rest):
         getattr(self, cmd)(*rest)
 
     def switch(self, *rest):
         if self.interpreter.current_process:
-            self.interpreter.current_process.__greenlet_state = "STOP"
+            self.interpreter.current_process.state = 'paused'
         self.interpreter.current_process = self
-        self.__greenlet_state = 'RUN'
+
         return super(Process,self).switch(*rest)
 
     def run_module(self, entry_name, module, args):

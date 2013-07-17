@@ -853,7 +853,3 @@ def prim_qt_extra_qwebpage_enable_plugins(proc):
     return proc.r_rp
 
 
-def prim_switch_back(proc):
-    if proc.debugger_process:
-        proc.debugger_process.switch()
-    return proc.r_rp

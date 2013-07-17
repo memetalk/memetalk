@@ -21,10 +21,6 @@ module idez(qt, QWidget, QMainWindow, QPlainTextEdit, QComboBox, QTableWidget) {
     <primitive "qapp_running">
   }
 
-  fun switch_back() {
-    <primitive "switch_back">
-  }
-
   class Editor < QPlainTextEdit {
     fields: variables;
     init new(parent) {
@@ -37,7 +33,6 @@ module idez(qt, QWidget, QMainWindow, QPlainTextEdit, QComboBox, QTableWidget) {
       action.setShortcut("ctrl+d");
       action.connect("triggered", fun() {
           this.doIt();
-          switch_back();
       });
       action.setShortcutContext(0); //widget context
       this.addAction(action);
@@ -313,10 +308,9 @@ module idez(qt, QWidget, QMainWindow, QPlainTextEdit, QComboBox, QTableWidget) {
   }
 
   class DebuggerUI < QMainWindow {
-    fields: eventloop, process, execFrames, stackCombo, editor, localVarList, moduleVarList;
-    init new(eventloop, process) {
+    fields: process, execFrames, stackCombo, editor, localVarList, moduleVarList;
+    init new(process) {
       super.new();
-      @eventloop = eventloop;
       @process = process;
 
       this.resize(700,250);
@@ -398,12 +392,11 @@ module idez(qt, QWidget, QMainWindow, QPlainTextEdit, QComboBox, QTableWidget) {
       @stackCombo.updateInfo();
     }
     fun done() {
-      @process.changeState('running');
+      @process.continue();
     }
     fun continue() {
       this.close();
-      @process.changeState('running');
-      @eventloop.exit(0);
+      @process.continue();
     }
     fun compileAndRewind() {
       var text = @editor.text();
@@ -461,7 +454,8 @@ module idez(qt, QWidget, QMainWindow, QPlainTextEdit, QComboBox, QTableWidget) {
     } else {
       eventloop = qt.QEventLoop.new();
     }
-    var dbg = DebuggerUI.new(eventloop, process);
+
+    var dbg = DebuggerUI.new(process);
     dbg.show();
     eventloop.exec();
   }
