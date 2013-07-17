@@ -391,11 +391,11 @@ module idez(qt, QWidget, QMainWindow, QPlainTextEdit, QComboBox, QTableWidget) {
       }
     }
     fun stepOver() {
-      @process.stepOver();
-      @stackCombo.updateInfo();
-    }
-    fun done() {
-      @process.continue();
+      if(@process.stepOver()) {
+        @stackCombo.updateInfo();
+      } else {
+        this.close();
+      }
     }
     fun continue() {
       this.close();
