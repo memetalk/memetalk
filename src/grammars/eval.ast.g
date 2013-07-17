@@ -24,8 +24,10 @@ expr = ['super-ctor-send' :s args:a]:ast     -> self.i.eval_do_super_ctor_send(s
      | ['send-or-call' :e args:a]:ast        -> self.i.eval_do_send_or_call(e,a,ast)
      | ['send' expr:r :s args:a]:ast         -> self.i.eval_do_send(r,s,a,ast)
      | ['index' expr:r expr:i]:ast           -> self.i.eval_do_access_index(r,i,ast)
-     | ['if' expr:cond :yes]                 -> self.i.eval_do_if(cond,yes)
-     | ['if' expr:cond :yes :no]             -> self.i.eval_do_if_else(cond,yes,no)
+     | ['if' :c :yes]:ast
+          apply('expr' c):cond               -> self.i.eval_do_if(cond,yes)
+     | ['if' :c :yes :no]:ast
+          apply('expr' c):cond               -> self.i.eval_do_if_else(cond,yes,no)
      | ['while' expr:c [expr*:yes]]          -> self.i.todo20()
      | ['literal-array'  expr*:r]            -> r
      | ['literal-dict'  pair*:r]             -> dict(r)
