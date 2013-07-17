@@ -349,32 +349,32 @@ module idez(qt, QWidget, QMainWindow, QPlainTextEdit, QComboBox, QTableWidget) {
       var action = qt.QAction.new("Step &Into", execMenu);
       action.setShortcut("F6");
       action.connect("triggered", fun() {
-        this.stepInto()
+        this.stepInto();
       });
       execMenu.addAction(action);
 
-      var action = qt.QAction.new("Step &Over", execMenu);
+      action = qt.QAction.new("Step &Over", execMenu);
       action.setShortcut("F7");
       action.connect("triggered", fun() {
         this.stepOver()
       });
       execMenu.addAction(action);
 
-      var action = qt.QAction.new("&Continue", execMenu);
+      action = qt.QAction.new("&Continue", execMenu);
       action.setShortcut("F5");
       action.connect("triggered", fun() {
         this.continue()
       });
       execMenu.addAction(action);
 
-      var action = qt.QAction.new("Compile and &Rewind", execMenu);
+      action = qt.QAction.new("Compile and &Rewind", execMenu);
       action.setShortcut("ctrl+s");
       action.connect("triggered", fun() {
         this.compileAndRewind()
       });
       execMenu.addAction(action);
 
-      var action = qt.QAction.new("Leave context", execMenu);
+      action = qt.QAction.new("Leave context", execMenu);
       action.setShortcut("ctrl+o");
       action.connect("triggered", fun() {
         //this.leaveContext(); //drop stack frame
@@ -384,8 +384,11 @@ module idez(qt, QWidget, QMainWindow, QPlainTextEdit, QComboBox, QTableWidget) {
       @stackCombo.updateInfo();
     }
     fun stepInto() {
-      @process.stepInto();
-      @stackCombo.updateInfo();
+      if(@process.stepInto()) {
+        @stackCombo.updateInfo();
+      } else {
+        this.close();
+      }
     }
     fun stepOver() {
       @process.stepOver();
@@ -458,5 +461,6 @@ module idez(qt, QWidget, QMainWindow, QPlainTextEdit, QComboBox, QTableWidget) {
     var dbg = DebuggerUI.new(process);
     dbg.show();
     eventloop.exec();
+    print("debug:main left loop");
   }
 }

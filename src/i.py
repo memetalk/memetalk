@@ -563,9 +563,9 @@ class Interpreter():
         compiled_module = self.compiled_modules[filename]
 
         imodule = _instantiate_module(compiled_module, {}, core.kernel_imodule)
-        process = Process(self)
-        self.processes.append(process)
-        process.switch('run_module', 'main', imodule, [])
+        self.current_process = Process(self)
+        self.processes.append(self.current_process)
+        self.current_process.switch('run_module', 'main', imodule, [])
 
     def debug_process(self, target_process):
         target_process.state = 'paused'
@@ -579,7 +579,9 @@ class Interpreter():
         self.processes.append(target_process.debugger_process)
 
         mmprocess = self.alloc(core.VMProcess, {'self':target_process})
-        target_process.debugger_process.switch('run_module', 'debug', imodule, [mmprocess])
+        ret = target_process.debugger_process.switch('run_module', 'debug', imodule, [mmprocess])
+        print('debug_process: switch back from debugger_process')
+        return ret
 
     def compile_module(self, filename):
         self.compiled_modules[filename] =  ModuleLoader().compile_module(self,filename)
@@ -651,11 +653,13 @@ class Process(greenlet):
         getattr(self, cmd)(*rest)
 
     def switch(self, *rest):
-        if self.interpreter.current_process:
-            self.interpreter.current_process.state = 'paused'
+        # if self.interpreter.current_process:
+        #     self.interpreter.current_process.state = 'paused'
         self.interpreter.current_process = self
-
-        return super(Process,self).switch(*rest)
+        print "switching..."
+        ret = super(Process,self).switch(*rest)
+        print "switched: " + str(ret)
+        return ret
 
     def run_module(self, entry_name, module, args):
         # registers
@@ -725,7 +729,9 @@ class Process(greenlet):
             self.evaluator = Eval([fun["compiled_function"]["body"]])
             self.evaluator.i = self
             try:
+                #print 'evaluate '+fun['compiled_function']['name']+': ' + str(fun['compiled_function']['body'])
                 ret,err = self.evaluator.apply("exec_fun")
+                #print 'DONE evaluate '+fun['compiled_function']['name']+': ' + str(fun['compiled_function']['body'])
             except ReturnException as e:
                 ret = e.val
             except RewindException as e:
@@ -741,7 +747,11 @@ class Process(greenlet):
             if skip:
                 self.state = 'paused'
             return ret
-        return evaluate(self.state == 'next')
+        ret = evaluate(self.state == 'next')
+        #print 'evaluate '+fun['compiled_function']['name']+' DONE'
+        # print "done fun:"
+        # P(fun["compiled_function"]["body"],5)
+        return ret
 
     def tear_fun(self):
         frame = self.stack.pop()
@@ -843,7 +853,7 @@ class Process(greenlet):
 
     def eval_do_field_attr(self, field, rhs, ast):
         self.r_ip = ast
-        self.dbg_control()
+        self.dbg_control('eval_do_field_attr')
 
         if not field in self.r_rdp:
             raise Exception("object has no field " + field)
@@ -852,7 +862,7 @@ class Process(greenlet):
 
     def eval_do_local_attr(self, name,expr, ast):
         self.r_ip = ast
-        self.dbg_control()
+        self.dbg_control('eval_do_local_attr')
 
         if self.r_ep != None:
             self.env_set_value(name, expr)
@@ -904,7 +914,7 @@ class Process(greenlet):
 
     def eval_do_return(self, value, ast):
         self.r_ip = ast
-        self.dbg_control()
+        self.dbg_control('eval_do_return')
         raise ReturnException(value)
 
     def eval_do_super_ctor_send(self, selector, args):
@@ -943,12 +953,12 @@ class Process(greenlet):
 
     def eval_do_un_not(self, value, ast):
         self.r_ip = ast
-        self.dbg_control()
+        self.dbg_control('eval_do_un_not')
         return not value
 
     def eval_do_send(self, receiver, selector, args, ast):
         self.r_ip = ast
-        self.dbg_control()
+        self.dbg_control('eval_do_send')
         drecv, method = self._lookup(receiver, self.interpreter.get_vt(receiver), selector)
         if not method:
             traceback.print_exc()
@@ -960,13 +970,13 @@ class Process(greenlet):
 
     def eval_do_call(self, fun, args, ast):
         self.r_ip = ast
-        self.dbg_control()
+        self.dbg_control('eval_do_call')
         return self.setup_and_run_fun(self.r_rp, self.r_rdp, '<?>', fun, args, True)
 
 
     def eval_do_send_or_call(self, name, args,ast):
         self.r_ip = ast
-        self.dbg_control()
+        self.dbg_control('eval_do_send_or_call')
         fn = None
         # if name is local...
         if self.r_ep:
@@ -997,11 +1007,12 @@ class Process(greenlet):
 
     def eval_do_debug(self,ast):
         self.r_ip = ast
-        self.dbg_cmd(self.interpreter.debug_process(self))
+        self.state = 'paused'
 
     ## debugger
 
     def dbg_cmd(self, cmd):
+        print 'dbg_cmd received: ' + str(cmd)
         if cmd == 'step_into':
             #print("process:: changed state to paused")
             self.state = 'paused'
@@ -1015,10 +1026,16 @@ class Process(greenlet):
             #print("process: rewinding 1")
             raise RewindException(1)
 
-    def dbg_control(self):
+    def dbg_control(self, name):
         if self.state == 'paused' or self.state == 'next':
-            #print("switching back to debugger")
-            self.dbg_cmd(self.debugger_process.switch())
+            if not self.debugger_process:
+                print 'dbg_control: paused: initiating debugger'
+                cmd = self.interpreter.debug_process(self)
+            else:
+                print 'dbg_control paused: asking debugger for cmd...'
+                cmd = self.debugger_process.switch()
+            print 'dbg_control got: ' + str(cmd)
+            self.dbg_cmd(cmd)
 
 if __name__ == "__main__":
     if len(sys.argv) == 1:

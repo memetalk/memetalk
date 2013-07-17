@@ -86,16 +86,46 @@ def prim_vmprocess_instruction_pointer(proc):
     return _proc.r_ip.line - _proc.r_cp['compiled_function']['line']+1
 
 def prim_vmprocess_step_into(proc):
+    print '+ENTER prim_vmprocess_step_into'
     _proc = _lookup_field(proc.r_rp, 'self')
-    _proc.switch("step_into")
+    print 'vmprocess: sending step_into'
+    ret = _proc.switch("step_into")
+    print 'vmprocess/step_into received: ' + str(ret)
+    if 'done' in ret:
+        print 'done...exiting qevent'
+        eventloop_processes[-1]['qtobj'].exit(0)
+        eventloop_processes[-1]['done'] = True
+        return False
+    print 'vmprocess/step_into DONE'
+    return True
 
 def prim_vmprocess_step_over(proc):
+    print '+ENTER prim_vmprocess_step_over'
     _proc = _lookup_field(proc.r_rp, 'self')
-    _proc.switch("step_over")
+    print 'vmprocess: sending step_over'
+    ret = _proc.switch("step_over")
+    print 'vmprocess/step_over received: ' + str(ret)
+    if 'done' in ret:
+        print 'done...exiting qevent'
+        eventloop_processes[-1]['qtobj'].exit(0)
+        eventloop_processes[-1]['done'] = True
+        return False
+    print 'vmprocess/step_over DONE'
+    return True
 
-def prim_vmprocess_change_state(proc):
+def prim_vmprocess_continue(proc):
+    print '+ENTER prim_vmprocess_continue'
     _proc = _lookup_field(proc.r_rp, 'self')
-    _proc.state = proc.locals['state']
+    print 'vmprocess: sending continue'
+    ret = _proc.switch("continue")
+    print 'vmprocess/continue received: ' + str(ret)
+    if 'done' in ret:
+        print 'done...exiting qevent'
+        eventloop_processes[-1]['qtobj'].exit(0)
+        eventloop_processes[-1]['done'] = True
+        return False
+    print 'vmprocess/continue DONE'
+    return True
 
 def prim_vmprocess_rewind(proc):
     _proc = _lookup_field(proc.r_rp, 'self')
@@ -336,6 +366,8 @@ def qstring_to_str(qstring):
     #return str(qstring.toUtf8()).decode("utf-8")
     return unicode(qstring.toUtf8(), "utf-8")
 
+eventloop_processes = []
+
 def prim_qt_qapplication_new(proc):
     global _app
     _app = QtGui.QApplication(sys.argv)
@@ -345,6 +377,7 @@ def prim_qt_qapplication_new(proc):
 def prim_qt_qapplication_exec(proc):
     global _qapp_running
     _qapp_running = True
+    eventloop_processes.append({'proc':proc, 'qtobj':proc.r_rdp['self'], 'done': False})
     return proc.r_rdp['self'].exec_()
 
 def prim_qt_qeventloop_new(proc):
@@ -353,6 +386,7 @@ def prim_qt_qeventloop_new(proc):
     return proc.r_rp
 
 def prim_qt_qeventloop_exec(proc):
+    eventloop_processes.append({'proc':proc, 'qtobj':proc.r_rdp['self'], 'done': False})
     return proc.r_rdp['self'].exec_()
 
 def prim_qt_qeventloop_exit(proc):
@@ -512,6 +546,20 @@ def prim_qt_qaction_connect(proc):
     slot = proc.locals["slot"]
     def callback(*rest):
         proc.setup_and_run_fun(None, None, '<?>', slot, [], True)
+        print 'callback slot: ' + str(slot['compiled_function']['body'])
+        print 'callback: eventloop proc equal? ' + str(proc == eventloop_processes[-1]['proc'])
+        if proc != eventloop_processes[-1]['proc']:
+            entry = eventloop_processes[-1]
+            #entry['qtobj'].exit(0)
+            entry['proc'].switch('done') # this is were the exit point of the debugger arrives
+            print 'debugger module ended'
+            proc.interpreter.debugger_process = None
+            proc.interpreter.processes.remove(entry['proc'])
+            proc.state = 'running'
+        if eventloop_processes[-1]['done']:
+            print 'POPing eventloop'
+            eventloop_processes.pop()
+        print "END of callback"
 
     getattr(qtobj,signal).connect(callback)
     return proc.r_rp
