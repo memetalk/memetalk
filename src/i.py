@@ -570,10 +570,7 @@ class Interpreter():
     def debug_process(self, target_process):
         target_process.state = 'paused'
 
-        if 'ide-z-entry.mm' in self.compiled_modules:
-            compiled_module = self.compiled_modules['ide-z-entry.mm']
-        else:
-            compiled_module = self.compile_module('ide-z-entry.mm')
+        compiled_module = self.compile_module('ide-z-entry.mm')
         imodule = _instantiate_module(compiled_module, {}, core.kernel_imodule)
         target_process.debugger_process = Process(self)
         self.processes.append(target_process.debugger_process)
@@ -584,7 +581,8 @@ class Interpreter():
         return ret
 
     def compile_module(self, filename):
-        self.compiled_modules[filename] =  ModuleLoader().compile_module(self,filename)
+        if filename not in self.compiled_modules:
+            self.compiled_modules[filename] =  ModuleLoader().compile_module(self,filename)
         return self.compiled_modules[filename]
 
     def instantiate_module(self, compiled_module, args, imodule):
