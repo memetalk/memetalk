@@ -1,5 +1,7 @@
-module idez(qt, QWidget, QMainWindow, QPlainTextEdit, QComboBox, QTableWidget) {
-
+module idez(qt)
+  qt:  memetalk/qt/1.0();
+  [QWidget, QMainWindow, QPlainTextEdit, QComboBox, QTableWidget] <= qt;
+{
 
   fun getClass_CompiledFunction() {
     <primitive "class_compiled_function">

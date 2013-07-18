@@ -603,7 +603,7 @@ class Interpreter():
     def debug_process(self, target_process):
         target_process.state = 'paused'
 
-        compiled_module = self.compile_module_by_filename('ide-z-entry.mm')
+        compiled_module = self.compile_module_by_filename('ide-z.mm')
         imodule = _instantiate_module(self, compiled_module, {}, core.kernel_imodule)
         target_process.debugger_process = Process(self)
         self.processes.append(target_process.debugger_process)
