@@ -36,7 +36,7 @@ library_identifier = id:ns token("/") id:mname token("/") version:v -> [ns, mnam
 version = version:a "." digit+:b -> ''.join(a)+"."+''.join(b)
         | digit+:x -> ''.join(x)
 
-module_decl = class_decl | top_level_fun
+module_decl = class_decl | top_level_fun | top_level_fn
 
 class_decl = token("class") id:name (token("<") id | token("<") token("null") | -> "Object"):parent token("{")
                 fields:f
@@ -54,6 +54,10 @@ constructor = spaces !(self.input.position):begin  token("init") alpha_name:name
                 token("}")
              -> self.i.ast(begin,['ctor', name, ["params", p],
                   ['body', body + [['return-this']]]])
+
+top_level_fn = spaces !(self.input.position):begin token("fn") alpha_name:name
+                  token("=") expr:e token(";") -> self.i.ast(begin,['fun', name, ['params', []],
+                                                                    ['body', [e]]])
 
 top_level_fun = spaces  !(self.input.position):begin token("fun") alpha_name:name params:p token("{")
                   top_fun_body:body
