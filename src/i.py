@@ -44,6 +44,7 @@ def _create_compiled_module(data):
                 "name": "",
                 "filepath":"",
                 "params": [],
+                "default_params": [],
                 "compiled_functions": {},
                 "compiled_classes": {}}
 
@@ -131,7 +132,23 @@ def _create_instance(klass, data):
     return dict(template.items() + data.items())
 
 
-def _instantiate_module(compiled_module, args, parent_module):
+def _instantiate_module(i, compiled_module, _args, parent_module):
+    def setup_module_arguments(_args, compiled_module):
+        args = dict(_args)
+        for mp in compiled_module['default_params']:
+            if mp[1] not in args.keys():
+                if mp[0] == 'lib':
+                    args[mp[1]] = i.compile_module_lib(mp[2])
+                elif mp[0] == 'uri':
+                    args[mp[1]] = i.compile_module_uri(mp[2])
+                else:
+                    raise Exception('Unknown module spec')
+        if args.keys() != compiled_module['params']:
+            raise Exception('arity error (module parameters)')
+        return args
+
+    args = setup_module_arguments(_args, compiled_module)
+
     #creates the Module object and its instance
     size = len(compiled_module["params"])+\
         len(compiled_module["compiled_classes"])+\
@@ -440,10 +457,10 @@ class ModuleLoader(ASTBuilder):
         self.current_module["params"] = p
 
     def l_default_p_lib(self, name, spec, args):
-        pass
+        self.current_module['default_params'].append(("lib", name, spec, args))
 
     def l_default_p_uri(self, name, uri, args):
-        pass
+        self.current_module['default_params'].append(("uri", name, uri, args))
 
     def l_begin_class(self, name, super_class, fields):
         self.loading_class = True
@@ -565,10 +582,10 @@ class Interpreter():
 
     def start(self, filename):
         #self.load_modules()
-        self.compile_module(filename)
+        self.compile_module_by_filename(filename)
         compiled_module = self.compiled_modules[filename]
 
-        imodule = _instantiate_module(compiled_module, {}, core.kernel_imodule)
+        imodule = _instantiate_module(self, compiled_module, {}, core.kernel_imodule)
         self.current_process = Process(self)
         self.processes.append(self.current_process)
         self.current_process.switch('run_module', 'main', imodule, [])
@@ -576,8 +593,8 @@ class Interpreter():
     def debug_process(self, target_process):
         target_process.state = 'paused'
 
-        compiled_module = self.compile_module('ide-z-entry.mm')
-        imodule = _instantiate_module(compiled_module, {}, core.kernel_imodule)
+        compiled_module = self.compile_module_by_filename('ide-z-entry.mm')
+        imodule = _instantiate_module(self, compiled_module, {}, core.kernel_imodule)
         target_process.debugger_process = Process(self)
         self.processes.append(target_process.debugger_process)
 
@@ -586,13 +603,21 @@ class Interpreter():
         print('debug_process: switch back from debugger_process')
         return ret
 
-    def compile_module(self, filename):
+    def compile_module_by_filename(self, filename):
         if filename not in self.compiled_modules:
             self.compiled_modules[filename] =  ModuleLoader().compile_module(self,filename)
         return self.compiled_modules[filename]
 
     def instantiate_module(self, compiled_module, args, imodule):
-        return _instantiate_module(compiled_module, args, imodule)
+        return _instantiate_module(self, compiled_module, args, imodule)
+
+    def compile_module_lib(self, spec):
+        name = spec[1]
+        compiled_module = self.compile_module_by_filename(name + '.mm')
+        return _instantiate_module(self, compiled_module, {}, core.kernel_imodule)
+
+    def compile_module_uri(self, uri):
+        raise Exception('TODO')
 
     def kernel_module_instance(self):
         return core.kernel_imodule

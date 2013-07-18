@@ -58,7 +58,7 @@ def prim_basic_new(proc):
     return create_instances(proc.r_rp)
 
 def prim_import(proc):
-    compiled_module = proc.interpreter.compile_module(proc.locals["mname"])
+    compiled_module = proc.interpreter.compile_module_by_filename(proc.locals["mname"])
     args = dict(zip(compiled_module["params"],proc.locals["margs"]))
     imodule = proc.interpreter.instantiate_module(compiled_module, args, proc.interpreter.kernel_module_instance())
     return imodule
