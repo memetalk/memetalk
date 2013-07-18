@@ -204,7 +204,7 @@ def _instantiate_module(i, compiled_module, _args, parent_module):
         elif super_name in compiled_module["compiled_classes"]:
             super_later[c["name"]] = super_name
         else:
-            raise Exception("super class not found:" + super_name)
+            raise Exception("super class not found: " + super_name)
 
         # superclass BarClass found
         if super_class:
