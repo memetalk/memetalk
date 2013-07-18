@@ -45,6 +45,7 @@ def _create_compiled_module(data):
                 "filepath":"",
                 "params": [],
                 "default_params": [],
+                "aliases": [],
                 "compiled_functions": {},
                 "compiled_classes": {}}
 
@@ -135,6 +136,7 @@ def _create_instance(klass, data):
 def _instantiate_module(i, compiled_module, _args, parent_module):
     def setup_module_arguments(_args, compiled_module):
         args = dict(_args)
+        # module's default argument
         for mp in compiled_module['default_params']:
             if mp[1] not in args.keys():
                 if mp[0] == 'lib':
@@ -145,6 +147,11 @@ def _instantiate_module(i, compiled_module, _args, parent_module):
                     raise Exception('Unknown module spec')
         if args.keys() != compiled_module['params']:
             raise Exception('arity error (module parameters)')
+
+        # module's aliases. dirty: using arg to set it
+        for alias in compiled_module['aliases']:
+            for name in alias[1]:
+                args[name] = args[alias[0]][name]
         return args
 
     args = setup_module_arguments(_args, compiled_module)
@@ -461,6 +468,9 @@ class ModuleLoader(ASTBuilder):
 
     def l_default_p_uri(self, name, uri, args):
         self.current_module['default_params'].append(("uri", name, uri, args))
+
+    def l_module_alias(self, libname, aliases):
+        self.current_module['aliases'].append((libname, aliases))
 
     def l_begin_class(self, name, super_class, fields):
         self.loading_class = True

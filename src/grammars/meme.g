@@ -16,10 +16,11 @@ spaces = space*
 
 start = token("module") id:name module_params:p
            module_preamble*:pre
+           module_alias*:aliases
          token("{")
            module_decl*:d
          token("}") -> ["module", name, ["params", p],
-                        ["default-params", pre], ["defs", d]]
+                        ["default-params", pre], ["aliases", aliases], ["defs", d]]
 
 module_params = params
               | -> []
@@ -35,6 +36,8 @@ library_identifier = id:ns token("/") id:mname token("/") version:v -> [ns, mnam
 
 version = version:a "." digit+:b -> ''.join(a)+"."+''.join(b)
         | digit+:x -> ''.join(x)
+
+module_alias = spaces token("[") idlist:lst token("]") token("<=") id:x token(";") -> ["alias", x, lst]
 
 module_decl = class_decl | top_level_fun | top_level_fn
 
