@@ -14,13 +14,27 @@ comment = "/*"  (~"*/" anything)* "*/"
 
 spaces = space*
 
-
-start = token("module") id:name module_params:p token("{")
+start = token("module") id:name module_params:p
+           module_preamble*:pre
+         token("{")
            module_decl*:d
-         token("}") -> ["module", name, ["params", p], ["defs", d]]
+         token("}") -> ["module", name, ["params", p],
+                        ["default-params", pre], ["defs", d]]
 
 module_params = params
               | -> []
+
+module_preamble = id:name token(":") module_spec:s token(";") -> ["param", name, s]
+
+module_spec = library_identifier:lid params:a -> ["library", lid, a]
+            | uri:uri params:a -> ["uri", uri, a]
+
+uri = spaces (letterOrDigit|'/'|'.'|':')+:rest -> ''.join(rest)
+
+library_identifier = id:ns token("/") id:mname token("/") version:v -> [ns, mname, v]
+
+version = version:a "." digit+:b -> ''.join(a)+"."+''.join(b)
+        | digit+:x -> ''.join(x)
 
 module_decl = class_decl | top_level_fun
 
@@ -134,9 +148,9 @@ expr_unary =   spaces !(self.input.position):begin token("+") prim_expr:a  -> se
             |  spaces !(self.input.position):begin token("~") expr_unary:a -> self.i.ast(begin, ['bit-neg', a])
             | suffix_expr
 
-suffix_expr =  spaces !(self.input.position):begin token("super") token(".") alpha_name:sel token("(") expr_list:p  token(")")
+suffix_expr =  spaces !(self.input.position):begin token("super") token(".") alpha_name:sel args:p
             -> self.i.ast(begin, ['super-ctor-send', sel, ['args', p]])
-          |  !(self.input.position):begin suffix_expr:r token(".") alpha_name:sel token("(") expr_list:p  token(")")
+          |  !(self.input.position):begin suffix_expr:r token(".") alpha_name:sel args:p
             -> self.i.ast(begin, ['send', r, sel, ['args', p]])
           |  !(self.input.position):begin suffix_expr:r token(".") alpha_name:sel
             -> self.i.ast(begin, ['send', r, sel, ['args', []]])
@@ -144,9 +158,9 @@ suffix_expr =  spaces !(self.input.position):begin token("super") token(".") alp
              -> self.i.ast(begin, ['index', r, i])
           | call_expr
 
-call_expr =  !(self.input.position):begin call_expr:r token("(") expr_list:p  token(")")
+call_expr =  !(self.input.position):begin call_expr:r args:p
             -> self.i.ast(begin, ['call', r, ['args', p]])
-          |  spaces !(self.input.position):begin id:r token("(") expr_list:p  token(")")
+          |  spaces !(self.input.position):begin id:r args:p
             -> self.i.ast(begin, ['send-or-call', r, ['args',p]])
           | prim_expr
 
@@ -159,6 +173,8 @@ pair_list = pair:x (token(",") pair)*:xs -> [x]+xs
           | -> []
 
 pair = expr:key token(":") expr:val -> ['pair', key, val]
+
+args = token("(") expr_list:p  token(")") -> p
 
 expr_list = expr:x (token(",") expr)*:xs -> [x]+xs
           | -> []

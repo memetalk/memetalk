@@ -439,6 +439,12 @@ class ModuleLoader(ASTBuilder):
         self.current_module["name"] = name
         self.current_module["params"] = p
 
+    def l_default_p_lib(self, name, spec, args):
+        pass
+
+    def l_default_p_uri(self, name, uri, args):
+        pass
+
     def l_begin_class(self, name, super_class, fields):
         self.loading_class = True
         self.current_class = _create_compiled_class({"name":name,

@@ -1,6 +1,13 @@
-load_module = ['module' :name params:p
+load_module = ['module' :name
+               params:p
                !(self.i.l_module(name, p))
+               default_params
                module_definitions]
+
+default_params = ['default-params' [mparam*]]
+
+mparam = ['param' :name ['library' :spec :args]] -> self.i.l_default_p_lib(name,spec,args)
+       | ['param' :name ['uri' :uri :args]]      -> self.i.l_default_p_uri(name, uri, args)
 
 load_body = body
 
