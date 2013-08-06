@@ -804,7 +804,7 @@ class Process(greenlet):
             self.r_mp = self.r_cp["module"]
 
     def setup_and_run_fun(self, recv, drecv, name, method, args, should_allocate):
-        if type(method) == str:
+        if isinstance(method, basestring):
             traceback.print_exc()
             #print("function '" + name + "' lacks implementation. Receiver:");
             #P(recv)
