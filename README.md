@@ -46,5 +46,5 @@ $ python src/i.py tests/closures1.mm
 The main (super alpha) programming environment can be executed with:
 
 ```
-$ python src/i.py src/modules/ide-z-entry.mm
+$ python src/i.py idez.mm
 ```
