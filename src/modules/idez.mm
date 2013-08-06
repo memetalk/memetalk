@@ -478,7 +478,7 @@ module idez(qt,io)
       });
     }
     fun setupAccept(e, params) {
-      e.onAccept(params["function_name"], fun() {
+      e.onAccept(fun() {
         io.print("setting code:" + params["module_name"] + " :: " + params["function_name"]);
         var cfn = get_module(params["module_name"]).compiled_functions()[params["function_name"]];
         cfn.setCode(e.toPlainText());
