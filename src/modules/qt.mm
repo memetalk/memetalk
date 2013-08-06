@@ -330,4 +330,8 @@ module qt(io)
       <primitive "qt_qwebelement_to_outer_xml">
     }
   }
+
+  fun qapp_running() {
+    <primitive "qapp_running">
+  }
 }

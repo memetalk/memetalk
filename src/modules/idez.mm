@@ -8,10 +8,6 @@ module idez(qt,io)
     <primitive "get_current_compiled_module">
   }
 
-  fun qapp_running() {
-    <primitive "qapp_running">
-  }
-
   class Editor < QPlainTextEdit {
     fields: variables, onAccept;
     init new(parent) {
@@ -523,7 +519,7 @@ module idez(qt,io)
 
   fun debug(process) {
     var eventloop = null;
-    if (!qapp_running()) {
+    if (!qt.qapp_running()) {
       eventloop = qt.QApplication.new();
     } else {
       eventloop = qt.QEventLoop.new();
