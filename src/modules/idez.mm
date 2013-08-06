@@ -21,7 +21,7 @@ module idez(qt,io)
   }
 
   class Editor < QPlainTextEdit {
-    fields: variables;
+    fields: variables, onAccept;
     init new(parent) {
       super.new(parent);
       @variables = {};
@@ -61,6 +61,18 @@ module idez(qt,io)
       this.addAction(action);
     }
 
+    fun onAccept(fn) {
+      if (@onAccept == null) {
+        var action = qt.QAction.new("&Accept it", this);
+        action.setShortcut("ctrl+s");
+        action.connect("triggered", fun() {
+          @onAccept();
+        });
+        action.setShortcutContext(0); //widget context
+        this.addAction(action);
+      }
+      @onAccept = fn;
+    }
     fun doIt() {
       var selection = this.selectedText();
 
@@ -431,7 +443,12 @@ module idez(qt,io)
       @webview.page().enablePluginsWith("editor", fun(params) {
         var e = Editor.new(null);
         e.setStyleSheet("border-style: outset;");
-        e.setPlainText(params["code"]);
+        if (params.has("code")) {
+          e.setPlainText(params["code"]);
+        }
+        if (params.has("module_function")) {
+          this.setupAccept(e, params);
+        }
         return e;
       });
       this.setCentralWidget(@webview);
@@ -458,6 +475,13 @@ module idez(qt,io)
           this.show_module(name);
           return null;
         }
+      });
+    }
+    fun setupAccept(e, params) {
+      e.onAccept(params["function_name"], fun() {
+        io.print("setting code:" + params["module_name"] + " :: " + params["function_name"]);
+        var cfn = get_module(params["module_name"]).compiled_functions()[params["function_name"]];
+        cfn.setCode(e.toPlainText());
       });
     }
     fun show_home() {

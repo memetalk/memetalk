@@ -326,5 +326,8 @@ module qt(io)
     fun setAttribute(name, val) {
       <primitive "qt_qwebelement_set_attribute">
     }
+    fun toOuterXml() {
+      <primitive "qt_qwebelement_to_outer_xml">
+    }
   }
 }

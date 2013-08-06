@@ -908,6 +908,11 @@ def prim_qt_qwebelement_set_attribute(proc):
     qtobj.setAttribute(proc.locals['name'], proc.locals['val'])
     return proc.r_rp
 
+
+def prim_qt_qwebelement_to_outer_xml(proc):
+    qtobj = _lookup_field(proc.r_rp, 'self')
+    return qtobj.toOuterXml()
+
 # scintilla
 def prim_qt_scintilla_editor_new(proc):
     parent = proc.locals['parent']
