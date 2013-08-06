@@ -1,5 +1,6 @@
-module idez(qt)
+module idez(qt,io)
   qt:  memetalk/qt/1.0();
+  io:  memetalk/io/1.0();
   [QWidget, QMainWindow, QPlainTextEdit, QComboBox, QTableWidget] <= qt;
 {
 
@@ -13,10 +14,6 @@ module idez(qt)
 
   fun get_mirror_class() {
     <primitive "get_mirror_class">
-  }
-
-  fun print(arg) {
-    <primitive "print">
   }
 
   fun qapp_running() {
@@ -415,13 +412,21 @@ module idez(qt)
     <primitive "modules_path">
   }
 
+  fun available_modules() {
+    <primitive "available_modules">
+  }
+
+  fun get_module(name) {
+    <primitive "get_module">
+  }
+
   class ModuleExplorer < QMainWindow {
     fields: webview;
     init new() {
       super.new();
       this.setWindowTitle("Memetalk");
       @webview = qt.QWebView.new(this);
-      @webview.setUrl(modules_path() + "/module-explorer/index.html");
+      this.show_home();
       @webview.page().setLinkDelegationPolicy(2);
       @webview.page().enablePluginsWith("editor", fun(params) {
         var e = Editor.new(null);
@@ -432,16 +437,65 @@ module idez(qt)
       this.setCentralWidget(@webview);
       this.resize(800,600);
       @webview.connect('linkClicked', fun(url) {
+        io.print("URL selected: " + url);
+
+        if (url == "/") {
+          this.show_home();
+          return null;
+        }
+
         if (url == "/tutorial") {
           this.show_tutorial();
+          return null;
         }
-        if (url == "/modules") {
+        if (url == "/modules-index") {
           this.show_modules();
+          return null;
+        }
+        var modules = available_modules();
+        var name = url.from(1);
+        if (modules.has(name)) {
+          this.show_module(name);
+          return null;
         }
       });
     }
+    fun show_home() {
+      @webview.setUrl(modules_path() + "/module-explorer/index.html");
+    }
     fun show_tutorial() {
       @webview.setUrl(modules_path() + "/module-explorer/tutorial.html");
+    }
+    fun show_modules() {
+      @webview.loadUrl(modules_path() + "/module-explorer/modules-index.html");
+      var modules = available_modules();
+      var ul = @webview.page().mainFrame().documentElement().findFirst("ul.modules");
+      modules.each(fun(name) {
+        ul.appendInside("<li><a href='/" + name + "'>" + name + "</a></li>")
+      });
+    }
+    fun show_module(name) {
+      @webview.loadUrl(modules_path() + "/module-explorer/module-view.html");
+      var module = get_module(name);
+      var doc = @webview.page().mainFrame().documentElement();
+      doc.findFirst(".module_name").setPlainText(module.name());
+
+      var ul = doc.findFirst(".module_parameters");
+      module.params().each(fun(p) {
+        ul.appendInside("<li>" + p + "</li>");
+      });
+
+      var fns = module.compiled_functions();
+      fns.each(fun(name,cfn) {
+        var div = doc.findFirst(".fun_tpl").clone();
+        div.setStyleProperty("display","block");
+        div.findFirst(".function_name").setPlainText(cfn.name());
+        div.findFirst(".fun_paramslist").setPlainText(cfn.parameters().toString());
+        div.findFirst(".fun_body param[name=module_name]").setAttribute("value",module.name());
+        div.findFirst(".fun_body param[name=function_name]").setAttribute("value",name);
+        div.findFirst(".fun_body param[name=code]").setAttribute("value",cfn.text());
+        doc.findFirst(".functions").appendInside(div);
+      });
     }
   }
 
@@ -463,6 +517,6 @@ module idez(qt)
     var dbg = DebuggerUI.new(process);
     dbg.show();
     eventloop.exec();
-    print("debug:main left loop");
+    io.print("debug:main left loop");
   }
 }

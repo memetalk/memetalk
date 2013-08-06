@@ -592,8 +592,7 @@ class Interpreter():
 
     def start(self, filename):
         #self.load_modules()
-        self.compile_module_by_filename(filename)
-        compiled_module = self.compiled_modules[filename]
+        compiled_module = self.compile_module_by_filename(filename)
 
         imodule = _instantiate_module(self, compiled_module, {}, core.kernel_imodule)
         self.current_process = Process(self)
@@ -614,9 +613,10 @@ class Interpreter():
         return ret
 
     def compile_module_by_filename(self, filename):
+        module_name = filename[:-3]
         if filename not in self.compiled_modules:
-            self.compiled_modules[filename] =  ModuleLoader().compile_module(self,filename)
-        return self.compiled_modules[filename]
+            self.compiled_modules[module_name] =  ModuleLoader().compile_module(self,filename)
+        return self.compiled_modules[module_name]
 
     def instantiate_module(self, compiled_module, args, imodule):
         return _instantiate_module(self, compiled_module, args, imodule)

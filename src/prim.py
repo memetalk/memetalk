@@ -25,6 +25,8 @@ from PyQt4.QtCore import *
 
 import sys
 import re
+from os import listdir
+from os.path import isfile, join
 from pdb import set_trace as br
 from pprint import pprint, pformat
 #import dbgui
@@ -44,6 +46,11 @@ _qapp_running = False
 def prim_modules_path(proc):
     return MODULES_PATH
 
+def prim_available_modules(proc):
+    return [f[:-3] for f in listdir(MODULES_PATH) if isfile(join(MODULES_PATH,f)) and f != "core.md"]
+
+def prim_get_module(proc):
+    return proc.interpreter.compiled_modules[proc.locals['name']]
 
 def prim_basic_new(proc):
     def create_instances(klass):
@@ -173,7 +180,7 @@ def prim_vmstackframe_local_vars(proc):
     frame = _lookup_field(proc.r_rp, 'self')
     return frame['locals']
 
-def prim_print(proc):
+def prim_io_print(proc):
     P(proc.locals["arg"],4)
 
 def prim_ast_line(proc):
@@ -206,6 +213,9 @@ def prim_string_size(proc):
 
 def prim_string_concat(proc):
     return proc.r_rp + proc.locals['arg']
+
+def prim_string_from(proc):
+    return proc.r_rp[proc.locals['idx']:]
 
 def prim_module_instance_compiled_module(proc):
     return proc.r_rdp['_vt']['compiled_module']
@@ -277,6 +287,9 @@ def prim_dictionary_each(proc):
     for key,val in proc.r_rdp.iteritems():
         proc.setup_and_run_fun(None, None, 'fn', proc.locals['fn'], [key,val], True)
 
+def prim_dictionary_has(proc):
+    return proc.locals['key'] in proc.r_rp
+
 def prim_get_current_compiled_module(proc):
     return proc.interpreter.get_vt(proc.r_mp)['compiled_module']
 
@@ -315,6 +328,14 @@ def prim_list_map(proc):
 def prim_list_plus(proc):
     return list(proc.r_rp + proc.locals['arg'])
 
+def prim_list_has(proc):
+    return proc.locals['value'] in proc.r_rp
+
+
+def prim_io_file_contents(proc):
+    return open(proc.locals['path']).read()
+
+
 ###
 
 
@@ -344,7 +365,9 @@ def _lookup_field(mobj, name):
 def _meme_instance(proc, obj):
     mapping = {
         QtGui.QListWidgetItem: proc.r_mp["QListWidgetItem"],
+        QtWebKit.QWebFrame: proc.r_mp['QWebFrame'],
         QtWebKit.QWebPage: proc.r_mp['QWebPage'],
+        QtWebKit.QWebElement: proc.r_mp['QWebElement'],
         QtGui.QAction: proc.r_mp['QAction']}
 
     if obj == None:
@@ -817,6 +840,17 @@ def prim_qt_qwebview_set_url(proc):
     qtobj.setUrl(QtCore.QUrl(proc.locals['url']))
     return proc.r_rp
 
+# note: this is not from Qt
+# def prim_qt_qwebview_load_url(proc):
+#     qtobj = _lookup_field(proc.r_rp, 'self')
+#     qtobj.setHtml(open(proc.locals['url']).read())
+#     return proc.r_rp
+
+def prim_qt_qwebview_set_html(proc):
+    qtobj = _lookup_field(proc.r_rp, 'self')
+    qtobj.setHtml(proc.locals['html'])
+    return proc.r_rp
+
 def prim_qt_qwebview_page(proc):
     qtobj = _lookup_field(proc.r_rp, 'self')
     return _meme_instance(proc,qtobj.page())
@@ -824,6 +858,54 @@ def prim_qt_qwebview_page(proc):
 def prim_qt_qwebpage_set_link_delegation_policy(proc):
     qtobj = _lookup_field(proc.r_rp, 'self')
     qtobj.setLinkDelegationPolicy(proc.locals['policy'])
+    return proc.r_rp
+
+def prim_qt_qwebpage_main_frame(proc):
+    qtobj = _lookup_field(proc.r_rp, 'self')
+    return _meme_instance(proc,qtobj.mainFrame())
+
+def prim_qt_qwebframe_document_element(proc):
+    qtobj = _lookup_field(proc.r_rp, 'self')
+    x = _meme_instance(proc,qtobj.documentElement())
+    return x
+
+def prim_qt_qwebelement_find_first(proc):
+    qtobj = _lookup_field(proc.r_rp, 'self')
+    return _meme_instance(proc,qtobj.findFirst(proc.locals['str']))
+
+def prim_qt_qwebelement_append_outside(proc):
+    qtobj = _lookup_field(proc.r_rp, 'self')
+    if isinstance(proc.locals['val'], basestring):
+        qtobj.appendOutside(proc.locals['val'])
+    else:
+        qtobj.appendOutside(_lookup_field(proc.locals['val'], 'self'))
+    return proc.r_rp
+
+def prim_qt_qwebelement_append_inside(proc):
+    qtobj = _lookup_field(proc.r_rp, 'self')
+    if isinstance(proc.locals['val'], basestring):
+        qtobj.appendInside(proc.locals['val'])
+    else:
+        qtobj.appendInside(_lookup_field(proc.locals['val'], 'self'))
+    return proc.r_rp
+
+def prim_qt_qwebelement_set_plain_text(proc):
+    qtobj = _lookup_field(proc.r_rp, 'self')
+    qtobj.setPlainText(proc.locals['str'])
+    return proc.r_rp
+
+def prim_qt_qwebelement_clone(proc):
+    qtobj = _lookup_field(proc.r_rp, 'self')
+    return _meme_instance(proc,qtobj.clone())
+
+def prim_qt_qwebelement_set_style_property(proc):
+    qtobj = _lookup_field(proc.r_rp, 'self')
+    qtobj.setStyleProperty(proc.locals['name'], proc.locals['val'])
+    return proc.r_rp
+
+def prim_qt_qwebelement_set_attribute(proc):
+    qtobj = _lookup_field(proc.r_rp, 'self')
+    qtobj.setAttribute(proc.locals['name'], proc.locals['val'])
     return proc.r_rp
 
 # scintilla

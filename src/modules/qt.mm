@@ -1,4 +1,6 @@
-module qt() {
+module qt(io)
+  io: memetalk/io/1.0();
+{
 
   class QApplication {
     fields: self;
@@ -268,6 +270,12 @@ module qt() {
     fun setUrl(url) {
       <primitive "qt_qwebview_set_url">
     }
+    fun loadUrl(url) {
+      this.setHtml(io.file_contents(url));
+    }
+    fun setHtml(html) {
+      <primitive "qt_qwebview_set_html">
+    }
     fun page() {
       <primitive "qt_qwebview_page">
     }
@@ -289,6 +297,34 @@ module qt() {
     fields: self;
     fun addToJavaScriptWindowObject(name, obj) {
       <primitive "qt_qwebframe_add_to_javascript_window_object">
+    }
+    fun documentElement() {
+      <primitive "qt_qwebframe_document_element">
+    }
+  }
+
+  class QWebElement {
+    fields: self;
+    fun findFirst(str) {
+      <primitive "qt_qwebelement_find_first">
+    }
+    fun appendInside(val) {
+      <primitive "qt_qwebelement_append_inside">
+    }
+    fun appendOutside(val) {
+      <primitive "qt_qwebelement_append_outside">
+    }
+    fun setPlainText(str) {
+      <primitive "qt_qwebelement_set_plain_text">
+    }
+    fun clone() {
+      <primitive "qt_qwebelement_clone">
+    }
+    fun setStyleProperty(name, val) {
+      <primitive "qt_qwebelement_set_style_property">
+    }
+    fun setAttribute(name, val) {
+      <primitive "qt_qwebelement_set_attribute">
     }
   }
 }

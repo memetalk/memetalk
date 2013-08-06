@@ -112,9 +112,27 @@ module core() {
   }
 
   class CompiledModule {
-    fields: _delegate, name, filepath, params, compiled_functions, compiled_classes;
+    fields: _delegate, name, filepath, params, default_params, aliases, compiled_functions, compiled_classes;
+    fun name() {
+      return @name;
+    }
+    fun filepath() {
+      return @filepath;
+    }
     fun params() {
       return @params;
+    }
+    fun default_params() {
+      return @default_params;
+    }
+    fun aliases() {
+      return @aliases;
+    }
+    fun compiled_functions() {
+      return @compiled_functions;
+    }
+    fun compiled_classes() {
+      return @compiled_classes;
     }
   }
 
@@ -130,6 +148,9 @@ module core() {
     fun +(arg) {
       <primitive "string_concat">
     }
+    fun from(idx) {
+      <primitive "string_from">
+    }
   }
 
   class Dictionary {
@@ -138,6 +159,9 @@ module core() {
     }
     fun each(fn) {
       <primitive "dictionary_each">
+    }
+    fun has(key) {
+      <primitive "dictionary_has">
     }
   }
 
@@ -156,6 +180,9 @@ module core() {
     }
     fun +(arg) {
       <primitive "list_plus">
+    }
+    fun has(value) {
+      <primitive "list_has">
     }
   }
 
