@@ -1032,11 +1032,16 @@ class Process(greenlet):
         if fn:
             return self.setup_and_run_fun(self.r_rp, self.r_rdp, name, fn, args, True)
 
-        if name in self.r_mp:            # shared
-            fn = self.r_mp[name]
-            return self.setup_and_run_fun(self.r_mp, self.r_mp, name, fn, args, True)
-
-        raise Exception("Undeclared function: " + name)
+        #-module params + module entries
+        def lookup_in_modules(name, mp):
+            if name in mp:
+                return mp[name]
+            elif mp['_delegate'] != None:
+                return lookup_in_modules(name, mp['_delegate'])
+            else:
+                raise Exception("Undeclared function: " + name)
+        fn = lookup_in_modules(name, self.r_mp)
+        return self.setup_and_run_fun(self.r_mp, self.r_mp, name, fn, args, True)
 
     def eval_do_if(self, cond, yes):
         if cond: #False/None vs. *

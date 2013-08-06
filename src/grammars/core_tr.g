@@ -4,7 +4,7 @@ module_definitions = ['defs' []]
                    | ['defs' [definition+]]
 
 
-definition = object_definition | class_definition
+definition = object_definition | class_definition | function_definition
 
 object_definition = ['object' :name !(self.i.register_object(name)) [obj_slot+] [obj_function*]]
 
@@ -12,6 +12,9 @@ class_definition = ['class' [:name :parent] !(self.i.register_class(name,parent)
                     ['fields' :fields !(self.i.add_class_fields(fields))]
                     class_constructors
                     [method_definition*]]
+
+function_definition = ['fun' :name  params:p
+                      ['body' body:b]] -> self.i.add_module_function(name, p, b)
 
 class_constructors = ['ctors' [class_constructor*]]
                    | ['ctors' []]
@@ -32,13 +35,13 @@ obj_slot_value =  ['literal-number' :x]       -> str(x)
                |  :x                          -> x
 
 obj_function = constructor
-             | function_definition
+             | obj_function_definition
 
 constructor = ['ctor' :name params:p
                 ['body' body:b]]:f -> self.i.add_fun(name, p, b, True)
 
-function_definition = ['fun' :name  params:p
-                      ['body' body:b]] -> self.i.add_fun(name, p, b, False)
+obj_function_definition = ['fun' :name  params:p
+                           ['body' body:b]] -> self.i.add_fun(name, p, b, False)
 
 params = ['params' []]  -> []
        | ['params' :xs] -> xs

@@ -201,6 +201,8 @@ module core() {
     }
   }
 
+  // temporary home for infrastructure classes
+
   class Mirror {
     fields: mirrored;
     init new(mirrored) {
@@ -275,5 +277,23 @@ module core() {
     fun moduleVars() {
       <primitive "vmstackframe_module_vars">
     }
+  }
+
+  //temporary home for some infrastructure functions
+
+  fun get_compiled_module(module) {
+    <primitive "get_compiled_module">
+  }
+
+  fun modules_path() {
+    <primitive "modules_path">
+  }
+
+  fun available_modules() {
+    <primitive "available_modules">
+  }
+
+  fun get_module(name) {
+    <primitive "get_module">
   }
 }

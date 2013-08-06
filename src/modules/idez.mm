@@ -4,10 +4,6 @@ module idez(qt,io)
   [QWidget, QMainWindow, QPlainTextEdit, QComboBox, QTableWidget] <= qt;
 {
 
-  fun get_current_compiled_module() {
-    <primitive "get_current_compiled_module">
-  }
-
   class Editor < QPlainTextEdit {
     fields: variables, onAccept;
     init new(parent) {
@@ -64,7 +60,7 @@ module idez(qt,io)
     fun doIt() {
       var selection = this.selectedText();
 
-      var cmod = get_current_compiled_module();
+      var cmod = get_compiled_module(thisModule);
       var cfun = CompiledFunction.new(selection, [], cmod, @variables);
       var fn = cfun.asContext(thisModule, null, @variables);
       var res =  fn.apply([]);
@@ -405,18 +401,6 @@ module idez(qt,io)
       @process.rewind();
       @stackCombo.updateInfo();
     }
-  }
-
-  fun modules_path() {
-    <primitive "modules_path">
-  }
-
-  fun available_modules() {
-    <primitive "available_modules">
-  }
-
-  fun get_module(name) {
-    <primitive "get_module">
   }
 
   class ModuleExplorer < QMainWindow {

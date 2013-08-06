@@ -287,8 +287,8 @@ def prim_dictionary_each(proc):
 def prim_dictionary_has(proc):
     return proc.locals['key'] in proc.r_rp
 
-def prim_get_current_compiled_module(proc):
-    return proc.interpreter.get_vt(proc.r_mp)['compiled_module']
+def prim_get_compiled_module(proc):
+    return proc.interpreter.get_vt(proc.locals['module'])['compiled_module']
 
 
 def prim_mirror_fields(proc):

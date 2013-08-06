@@ -48,6 +48,7 @@ class CoreGenerator():
         self.supers = {}
         self.fields = {}
         self.bv_methods = {}
+        self.module_funs = {}
 
     def register_object(self, name):
         self.current = name
@@ -163,6 +164,12 @@ KernelModule = {"_vt": ModuleBehavior,
         for name, val in self.objects.iteritems():
             append("kernel_imodule["+to_source(name)+"] = " + name)
 
+        for k,v in self.module_funs.iteritems():
+            append(k + " = " + v)
+
+        for name, val in self.module_funs.iteritems():
+            append("kernel_imodule["+to_source(name)+"] = " + name)
+
 
         f = open("core_module.py", 'w')
         f.write(self.source)
@@ -179,6 +186,14 @@ KernelModule = {"_vt": ModuleBehavior,
             else:
                 traceback.print_exc()
             exit(1)
+
+    def add_module_function(self, name, params, body):
+        self.module_funs[name] = "_function_from_cfunction("+\
+            "_create_compiled_function({"+\
+                "'name': "+to_source(name)+","+\
+                "'params': "+to_source(params)+","+\
+                "'body': "+to_source(body)+","+\
+                "'@tag': '"+name+" compiled function'}),kernel_imodule)"
 
     def add_fun(self, name, params, body, is_ctor):
         self.funs[self.current][name] = "_function_from_cfunction("+\
