@@ -946,10 +946,14 @@ class Process(greenlet):
                 return self.locals[name]
 
         #-module params + module entries
-        if name in self.r_mp:
-            return self.r_mp[name]
-        else:
-            raise Exception("Undeclared var: " + name + " : "+pformat(self.r_cp['compiled_function'],1,80,1))
+        def lookup_in_modules(name, mp):
+            if name in mp:
+                return mp[name]
+            elif mp['_delegate'] != None:
+                return lookup_in_modules(name, mp['_delegate'])
+            else:
+                raise Exception("Undeclared var: " + name + " : "+pformat(self.r_cp['compiled_function'],1,80,1))
+        return lookup_in_modules(name, self.r_mp)
 
     def eval_do_return(self, value, ast):
         self.r_ip = ast

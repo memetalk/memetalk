@@ -220,9 +220,6 @@ def prim_string_from(proc):
 def prim_module_instance_compiled_module(proc):
     return proc.r_rdp['_vt']['compiled_module']
 
-def prim_class_compiled_function(proc):
-    return proc.interpreter.get_class("CompiledFunction")
-
 def prim_compiled_function_new(proc):
     #init new(text, parameters, module, env_idx_table_or_somethin')
     #  --we are only interested in the names of the env slots here
@@ -293,10 +290,6 @@ def prim_dictionary_has(proc):
 def prim_get_current_compiled_module(proc):
     return proc.interpreter.get_vt(proc.r_mp)['compiled_module']
 
-
-
-def prim_get_mirror_class(proc):
-    return proc.interpreter.get_class("Mirror")
 
 def prim_mirror_fields(proc):
     mirrored = proc.r_rdp['mirrored']
@@ -986,5 +979,3 @@ def prim_qt_extra_qwebpage_enable_plugins(proc):
     QWebSettings.globalSettings().setAttribute(QWebSettings.PluginsEnabled, True)
     qtobj.setPluginFactory(_factory)
     return proc.r_rp
-
-

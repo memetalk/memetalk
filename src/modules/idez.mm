@@ -4,16 +4,8 @@ module idez(qt,io)
   [QWidget, QMainWindow, QPlainTextEdit, QComboBox, QTableWidget] <= qt;
 {
 
-  fun getClass_CompiledFunction() {
-    <primitive "class_compiled_function">
-  }
-
   fun get_current_compiled_module() {
     <primitive "get_current_compiled_module">
-  }
-
-  fun get_mirror_class() {
-    <primitive "get_mirror_class">
   }
 
   fun qapp_running() {
@@ -76,7 +68,6 @@ module idez(qt,io)
     fun doIt() {
       var selection = this.selectedText();
 
-      var CompiledFunction = getClass_CompiledFunction();
       var cmod = get_current_compiled_module();
       var cfun = CompiledFunction.new(selection, [], cmod, @variables);
       var fn = cfun.asContext(thisModule, null, @variables);
