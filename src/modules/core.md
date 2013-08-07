@@ -273,6 +273,9 @@ module core() {
     fun modulePointer() {
       <primitive "vmprocess_module_pointer">
     }
+    func debug(fn, args) {
+      <primitive "vmprocess_debug">
+    }
   }
 
   class VMStackFrame {

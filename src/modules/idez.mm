@@ -4,10 +4,14 @@ module idez(qt,io)
   [QWidget, QMainWindow, QPlainTextEdit, QLineEdit, QComboBox, QTableWidget] <= qt;
 {
 
-  fun eval(text, imodule, vars) {
+  fun evalFn(text, imodule, vars) {
     var cmod = get_compiled_module(imodule);
     var cfun = CompiledFunction.new(text, [], cmod, vars);
-    var fn = cfun.asContext(imodule, null, vars);
+    return cfun.asContext(imodule, null, vars);
+  }
+
+  fun eval(text, imodule, vars) {
+    var fn = evalFn(text, imodule, vars);
     var res =  fn.apply([]);
     vars = vars + fn.getEnv();
     return {"result":res, "env":vars};
@@ -87,6 +91,10 @@ module idez(qt,io)
       } catch(e) {
         this.insertSelectedText(e.value());
       }
+    }
+    fun debugIt() {
+      var r = VMProcess.debug(evalFn(this.selectedText(), thisModule, @variables),[]);
+      @variables = r["env"];
     }
   }
 
@@ -170,6 +178,10 @@ module idez(qt,io)
       } catch(e) {
         this.insertSelectedText(e.value());
       }
+    }
+    fun debugIt() {
+      var r = VMProcess.debug(evalFn(this.selectedText(), thisModule, @variables),[]);
+      @variables = r["env"];
     }
     fun selectedText() {
       return this.textCursor().selectedText();
@@ -323,7 +335,13 @@ module idez(qt,io)
         @textArea.inspectIt();
       }
     }
-
+    fun debugIt() {
+      if (@lineEdit.hasFocus()) {
+        @lineEdit.debugIt();
+      } else {
+        @textArea.debugIt();
+      }
+    }
     fun acceptIt() {
       var cmod = get_compiled_module(thisModule);
       var cfun = CompiledFunction.new(@textArea.toPlainText(), [], cmod, {});

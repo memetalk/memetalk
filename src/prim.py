@@ -142,6 +142,12 @@ def prim_vmprocess_module_pointer(proc):
     else:
         return None
 
+def prim_vmprocess_debug(proc):
+    fn = proc.locals['fn']
+    args = proc.locals['args']
+    proc.state = 'paused'
+    return proc.setup_and_run_fun(None, None, fn['compiled_function']['name'], fn, args, True)
+
 # convenience
 def prim_vmstackframe_instruction_pointer(proc):
     frame = _lookup_field(proc.r_rp, 'self')
