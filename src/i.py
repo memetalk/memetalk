@@ -1029,6 +1029,11 @@ class Process(greenlet):
         self.dbg_control('eval_do_un_not')
         return not value
 
+    def eval_do_un_neg(self, value, ast):
+        self.r_ip = ast
+        self.dbg_control('eval_do_un_neg')
+        return - value
+
     def eval_do_send(self, receiver, selector, args, ast):
         self.r_ip = ast
         self.dbg_control('eval_do_send')
