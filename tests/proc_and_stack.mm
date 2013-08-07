@@ -5,7 +5,7 @@ module foo() {
   }
 
   fun print(arg) {
-    <primitive "print">
+    <primitive "io_print">
   }
 
   fun bla(p) {

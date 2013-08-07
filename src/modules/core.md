@@ -74,6 +74,9 @@ module core() {
     fun asContext(imodule, self, env) {
       <primitive "compiled_function_as_context">
     }
+    fun instantiate(imodule) {
+      <primitive "compiled_function_instantiate">
+    }
     fun name() {
       return @name;
     }
@@ -95,6 +98,9 @@ module core() {
     fields: compiled_function, module, _delegate;
     fun compiledFunction() {
       return @compiled_function;
+    }
+    fun apply(args) {
+      <primitive "function_apply">
     }
   }
 

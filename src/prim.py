@@ -241,10 +241,13 @@ def prim_compiled_function_as_context(proc):
     ret = proc.interpreter.compiled_function_to_context(proc.r_rp, env, proc.locals['imodule'])
     return ret
 
+def prim_compiled_function_instantiate(proc):
+    return proc.interpreter.create_function_from_cfunction(proc.r_rp, proc.locals['imodule'])
+
 def prim_context_apply(proc):
     # fn.apply([...args...])
     args = proc.locals['args']
-    return proc.setup_and_run_fun(None, None, "<?>", proc.r_rdp, args, True)
+    return proc.setup_and_run_fun(None, None, proc.r_rdp['compiled_function']['name'], proc.r_rdp, args, True)
 
 def prim_context_get_env(proc):
     #warning 1: no checking if the env idexes are ordered. we assume so.
@@ -257,6 +260,11 @@ def prim_context_get_env(proc):
     for k,v in env_table.items():
         ret[v] = env[k]
     return ret
+
+def prim_function_apply(proc):
+    # fn.apply([...args...])
+    args = proc.locals['args']
+    return proc.setup_and_run_fun(None, None, proc.r_rdp['compiled_function']['name'], proc.r_rdp, args, True)
 
 def prim_number_plus(proc):
     return proc.r_rp + proc.locals['arg']
