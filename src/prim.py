@@ -313,7 +313,11 @@ def prim_mirror_value_for(proc):
         return proc.r_rdp['mirrored'][proc.locals['name']]
 
 def prim_mirror_set_value_for(proc):
-    proc.r_rdp['mirrored'][proc.locals['name']] = proc.locals['value']
+    if isinstance(proc.r_rdp['mirrored'], list):
+        proc.r_rdp['mirrored'][int(proc.locals['name'])] = proc.locals['value']
+    else:
+        proc.r_rdp['mirrored'][proc.locals['name']] = proc.locals['value']
+    return proc.r_rp
 
 def prim_list_each(proc):
     for x in proc.r_rdp:

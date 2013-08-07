@@ -238,7 +238,7 @@ module core() {
       <primitive "mirror_value_for">
     }
     fun setValueFor(name, value) {
-      <primitive "mirror_set_value">
+      <primitive "mirror_set_value_for">
     }
   }
 
