@@ -189,8 +189,13 @@ def prim_object_to_string(proc):
         return pformat(obj,1,80,1) #dirt and limited, str does inifinite loop
 
 def prim_object_to_source(proc):
-    return pformat(proc.r_rp, 1,80,2)
-
+    obj = proc.r_rp
+    if obj == None:
+        return 'null'
+    elif isinstance(obj, dict) and '@tag' in obj:
+        return  '<' + proc.r_rp['@tag'] + '>'
+    else:
+        return pformat(obj,1,80,1)
 
 def prim_object_equal(proc):
     return proc.r_rp == proc.locals['other']
@@ -294,13 +299,18 @@ def prim_get_compiled_module(proc):
 
 def prim_mirror_fields(proc):
     mirrored = proc.r_rdp['mirrored']
-    if hasattr(mirrored, '__iter__'):
+    if hasattr(mirrored, 'keys'):
         return mirrored.keys()
+    elif isinstance(mirrored, list):
+        return [str(x) for x in range(0,len(mirrored))]
     else:
         return []
 
 def prim_mirror_value_for(proc):
-    return proc.r_rdp['mirrored'][proc.locals['name']]
+    if isinstance(proc.r_rdp['mirrored'], list):
+        return proc.r_rdp['mirrored'][int(proc.locals['name'])]
+    else:
+        return proc.r_rdp['mirrored'][proc.locals['name']]
 
 def prim_mirror_set_value_for(proc):
     proc.r_rdp['mirrored'][proc.locals['name']] = proc.locals['value']
