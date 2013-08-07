@@ -293,7 +293,7 @@ class FunctionLoader(ASTBuilder): # for eval
                 print(err.formatError(''.join(self.parser.input.data)))
             else:
                 traceback.print_exc()
-            raise err
+            raise
 
         self.env_idx = 0
         self.env_id_table = []
@@ -325,7 +325,7 @@ class FunctionLoader(ASTBuilder): # for eval
                 print(err.formatError(''.join(self.parser.input.data)))
             else:
                 traceback.print_exc()
-            raise err
+            raise
 
         uses_env = env != {}
 
@@ -791,9 +791,9 @@ class Process(greenlet):
                     raise e
                 #print("Rewind: NO tear up stack; just resume")
                 return self.run_fun(recv, drecv, fun, args, should_allocate)
-            except Exception as e:
+            except Exception:
                 self.tear_fun()
-                raise e
+                raise
             self.tear_fun()
             if skip:
                 self.state = 'paused'
