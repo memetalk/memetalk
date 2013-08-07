@@ -70,6 +70,8 @@ def prim_import(proc):
     imodule = proc.interpreter.instantiate_module(compiled_module, args, proc.interpreter.kernel_module_instance())
     return imodule
 
+def prim_exception_raise(proc):
+    raise proc.interpreter.memetalk_exception(proc.r_rp)
 
 def prim_vmprocess(proc):
     VMProcessClass = proc.interpreter.get_vt(proc)

@@ -567,6 +567,12 @@ class RewindException(Exception):
     def __init__(self, count):
         self.count = count
 
+class MemetalkException(Exception):
+    def __init__(self, mmobj):
+        self._mmobj = mmobj
+    def mmobj(self):
+        return self._mmobj
+
 class Interpreter():
     def __init__(self):
         self.compiled_modules = {}
@@ -634,6 +640,9 @@ class Interpreter():
 
     def get_class(self, name):
         return getattr(core, name)
+
+    def memetalk_exception(self, mmobj):
+        return MemetalkException(mmobj)
 
     def create_compiled_function(self, data):
         return _create_compiled_function(data)
@@ -782,6 +791,9 @@ class Process(greenlet):
                     raise e
                 #print("Rewind: NO tear up stack; just resume")
                 return self.run_fun(recv, drecv, fun, args, should_allocate)
+            except Exception as e:
+                self.tear_fun()
+                raise e
             self.tear_fun()
             if skip:
                 self.state = 'paused'
@@ -1052,6 +1064,13 @@ class Process(greenlet):
             self.evaluator.apply("exprlist", yes)
         else:
             self.evaluator.apply("exprlist", no)
+
+    def eval_do_try(self, tr, bind, ct):
+        try:
+            return self.evaluator.apply("exprlist", tr)
+        except MemetalkException as e:
+            self.locals[bind] = e.mmobj()
+            return self.evaluator.apply("exprlist", ct)
 
     def eval_do_debug(self,ast):
         self.r_ip = ast

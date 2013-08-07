@@ -105,6 +105,7 @@ lhs = alpha_name:x -> ["id", x]
 
 control_expr = expr_if
              | expr_while
+             | expr_try
 
 expr_if =  spaces !(self.input.position):begin token("if") token("(") expr:e token(")") token("{")
            stmts:xs
@@ -118,6 +119,13 @@ expr_if =  spaces !(self.input.position):begin token("if") token("(") expr:e tok
 expr_while = spaces !(self.input.position):begin token("while") token("(") expr:e token(")") token("{")
              stmts:xs
              token("}") -> self.i.ast(begin,['while', e, xs])
+
+expr_try = spaces !(self.input.position):begin token("try") token("{")
+             stmts:s_try
+           token("}") token("catch") token("(") alpha_name:id token(")") token("{")
+             stmts:s_catch
+           token("}")
+          -> self.i.ast(begin, ['try', s_try, id, s_catch])
 
 expr = expr_or
 

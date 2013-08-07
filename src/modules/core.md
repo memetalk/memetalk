@@ -201,6 +201,23 @@ module core() {
     }
   }
 
+  class Exception {
+    fields: value;
+    init new(value) {
+      @value = value;
+    }
+    func throw(value) {
+      var self = Exception.new(value);
+      self.raise();
+    }
+    fun raise() {
+       <primitive "exception_raise">
+    }
+    fun value() {
+      return @value;
+    }
+  }
+
   // temporary home for infrastructure classes
 
   class Mirror {

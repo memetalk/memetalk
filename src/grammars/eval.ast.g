@@ -29,6 +29,7 @@ expr = ['super-ctor-send' :s args:a]:ast     -> self.i.eval_do_super_ctor_send(s
      | ['if' :c :yes :no]:ast
           apply('expr' c):cond               -> self.i.eval_do_if_else(cond,yes,no)
      | ['while' expr:c [expr*:yes]]          -> self.i.todo20()
+     | ['try' :tr :id :ct]                   -> self.i.eval_do_try(tr,id,ct)
      | ['literal-array'  expr*:r]            -> r
      | ['literal-dict'  pair*:r]             -> dict(r)
      | ['fun-literal'  ['params' :p]
