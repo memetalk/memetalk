@@ -88,9 +88,9 @@ stmt = control_expr
 
 non_control_expr = expr_debug
                  | expr_ret
-                 | expr_decl
                  | expr_attr
                  | expr
+                 | expr_decl
 
 expr_debug = spaces !(self.input.position):begin token("debug") -> self.i.ast(begin,['debug'])
 expr_ret =  spaces !(self.input.position):begin token("return") expr:e -> self.i.ast(begin,['return', e])
