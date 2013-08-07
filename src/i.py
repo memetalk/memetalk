@@ -500,7 +500,7 @@ class ModuleLoader(ASTBuilder):
         self.env_idx = len(params)
         self.functions[-1]["params"] = params
 
-    def l_end_function(self, body,ast):
+    def l_end_function(self, tp, body, ast):
         function = self.functions.pop()
         function['body'] = body
         function['text'] = ast.text
@@ -513,7 +513,7 @@ class ModuleLoader(ASTBuilder):
 
         fname = function["name"]
         if self.loading_class:
-            if function["is_ctor"]:
+            if function["is_ctor"] or tp == 'func':
                 self.current_class["own_methods"][fname] = function
             else:
                 self.current_class["methods"][fname] = function

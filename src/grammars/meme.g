@@ -73,6 +73,11 @@ metho_decl = spaces  !(self.input.position):begin token("fun") alpha_name:name p
                token("}")
                -> self.i.ast(begin,['fun', name, ["params", p],
                     ['body', body + [['return-this']]]])
+           | spaces  !(self.input.position):begin token("func") alpha_name:name params:p token("{")
+                  top_fun_body:body
+               token("}")
+               -> self.i.ast(begin,['func', name, ["params", p],
+                    ['body', body + [['return-this']]]])
 
 params = token("(") idlist:xs token(")") -> xs
 
