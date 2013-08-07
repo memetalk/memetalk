@@ -490,6 +490,10 @@ def prim_qt_qwidget_is_visible(proc):
 def prim_qt_qwidget_close(proc):
     return _lookup_field(proc.r_rp, 'self').close()
 
+def prim_qt_qwidget_has_focus(proc):
+    qtobj = _lookup_field(proc.r_rp, 'self')
+    return qtobj.hasFocus()
+
 # QMainWindow
 def prim_qt_qmainwindow_new(proc):
     proc.r_rdp['self'] = QtGui.QMainWindow()
@@ -735,6 +739,24 @@ def prim_qt_qlineedit_text(proc):
     qtobj = _lookup_field(proc.r_rp, 'self')
     return qstring_to_str(qtobj.text())
 
+def prim_qt_qlineedit_set_text(proc):
+    qtobj = _lookup_field(proc.r_rp, 'self')
+    qtobj.setText(proc.locals['text'])
+    return proc.r_rp
+
+def prim_qt_qlineedit_selected_text(proc):
+    qtobj = _lookup_field(proc.r_rp, 'self')
+    return qstring_to_str(qtobj.selectedText())
+
+def prim_qt_qlineedit_select_all(proc):
+    qtobj = _lookup_field(proc.r_rp, 'self')
+    qtobj.selectAll()
+    return proc.r_rp
+
+def prim_qt_qlineedit_set_selection(proc):
+    qtobj = _lookup_field(proc.r_rp, 'self')
+    qtobj.setSelection(proc.locals['start'], proc.locals['length'])
+    return proc.r_rp
 
 def prim_qt_qheaderview_hide(proc):
     qtobj = _lookup_field(proc.r_rp, 'self')

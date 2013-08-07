@@ -1,8 +1,94 @@
 module idez(qt,io)
   qt:  memetalk/qt/1.0();
   io:  memetalk/io/1.0();
-  [QWidget, QMainWindow, QPlainTextEdit, QComboBox, QTableWidget] <= qt;
+  [QWidget, QMainWindow, QPlainTextEdit, QLineEdit, QComboBox, QTableWidget] <= qt;
 {
+
+  fun eval(text, imodule, vars) {
+    var cmod = get_compiled_module(imodule);
+    var cfun = CompiledFunction.new(text, [], cmod, vars);
+    var fn = cfun.asContext(imodule, null, vars);
+    var res =  fn.apply([]);
+    vars = vars + fn.getEnv();
+    return {"result":res, "env":vars};
+  }
+
+  class LineEditor < QLineEdit {
+    fields: variables;
+    init new(parent) {
+      super.new(parent);
+      @variables = {};
+      this.connect("returnPressed", fun() {
+        this.selectAll();
+        this.doIt();
+      });
+
+      var action = qt.QAction.new("&Do it", this);
+      action.setShortcut("ctrl+d");
+      action.connect("triggered", fun() {
+          this.doIt();
+      });
+      action.setShortcutContext(0); //widget context
+      this.addAction(action);
+
+      action = qt.QAction.new("&Print it", this);
+      action.setShortcut("ctrl+p");
+      action.connect("triggered", fun() {
+          this.printIt();
+      });
+      action.setShortcutContext(0); //widget context
+      this.addAction(action);
+
+      action = qt.QAction.new("&Inspect it", this);
+      action.setShortcut("ctrl+i");
+      action.connect("triggered", fun() {
+          this.inspectIt();
+      });
+      action.setShortcutContext(0); //widget context
+      this.addAction(action);
+
+      action = qt.QAction.new("De&bug it", this);
+      action.setShortcut("ctrl+b");
+      action.connect("triggered", fun() {
+          this.debugIt();
+      });
+      action.setShortcutContext(0); //widget context
+      this.addAction(action);
+    }
+    fun evalSelection() {
+      var r = eval(this.selectedText(), thisModule, @variables);
+      @variables = r["env"];
+      return r["result"];
+    }
+    fun insertSelectedText(text) {
+      var len = this.text().size();
+      this.setText(this.text() + text);
+      this.setSelection(len, text.size());
+    }
+    fun doIt() {
+      try {
+        this.evalSelection();
+      } catch(e) {
+        this.insertSelectedText(e.value());
+      }
+    }
+    fun printIt() {
+      try {
+        var res = this.evalSelection();
+        this.insertSelectedText(res.toString());
+      } catch(e) {
+        this.insertSelectedText(e.value());
+      }
+    }
+    fun inspectIt() {
+      try {
+        var res = this.evalSelection();
+        Inspector.new(res).show();
+      } catch(e) {
+        this.insertSelectedText(e.value());
+      }
+    }
+  }
 
   class Editor < QPlainTextEdit {
     fields: variables, onAccept;
@@ -57,22 +143,17 @@ module idez(qt,io)
       }
       @onAccept = fn;
     }
+    fun evalSelection() {
+      var r = eval(this.selectedText(), thisModule, @variables);
+      @variables = r["env"];
+      return r["result"];
+    }
     fun doIt() {
       try {
         this.evalSelection();
       } catch(e) {
         this.insertSelectedText(e.value());
       }
-    }
-    fun evalSelection() {
-      var selection = this.selectedText();
-
-      var cmod = get_compiled_module(thisModule);
-      var cfun = CompiledFunction.new(selection, [], cmod, @variables);
-      var fn = cfun.asContext(thisModule, null, @variables);
-      var res =  fn.apply([]);
-      @variables = @variables + fn.getEnv();
-      return res;
     }
     fun printIt() {
       try {
@@ -141,10 +222,7 @@ module idez(qt,io)
 
       mainLayout.addLayout(hbox);
 
-      @lineEdit = qt.QLineEdit.new(centralWidget);
-      @lineEdit.connect("returnPressed", fun() {
-          this.lineEditDoIt(@lineEdit.text());
-      });
+      @lineEdit = LineEditor.new(centralWidget);
       mainLayout.addWidget(@lineEdit);
 
       this.setCentralWidget(centralWidget);
@@ -159,11 +237,44 @@ module idez(qt,io)
 
       var execMenu = this.menuBar().addMenu("&Execution");
 
-      var action = qt.QAction.new("Accept it", execMenu);
+      var action = qt.QAction.new("&Do it", this);
+      action.setShortcut("ctrl+d");
+      action.connect("triggered", fun() {
+          this.doIt();
+      });
+      action.setShortcutContext(0); //widget context
+      execMenu.addAction(action);
+
+      action = qt.QAction.new("&Print it", this);
+      action.setShortcut("ctrl+p");
+      action.connect("triggered", fun() {
+          this.printIt();
+      });
+      action.setShortcutContext(0); //widget context
+      execMenu.addAction(action);
+
+      action = qt.QAction.new("&Inspect it", this);
+      action.setShortcut("ctrl+i");
+      action.connect("triggered", fun() {
+          this.inspectIt();
+      });
+      action.setShortcutContext(0); //widget context
+      execMenu.addAction(action);
+
+      action = qt.QAction.new("De&bug it", this);
+      action.setShortcut("ctrl+b");
+      action.connect("triggered", fun() {
+          this.debugIt();
+      });
+      action.setShortcutContext(0); //widget context
+      execMenu.addAction(action);
+
+      action = qt.QAction.new("Accept it", execMenu);
       action.setShortcut("ctrl+s");
       action.connect("triggered", fun() {
           this.acceptIt();
       });
+      action.setShortcutContext(0); //widget context
       execMenu.addAction(action);
     }
 
@@ -190,11 +301,27 @@ module idez(qt,io)
       }
     }
 
-    fun lineEditDoIt(text) {
-      var cmod = get_compiled_module(thisModule);
-      var cfun = CompiledFunction.new(text, [], cmod, {});
-      var fn = cfun.asContext(thisModule, @inspectee, {});
-      fn.apply([]);
+    fun doIt() {
+      if (@lineEdit.hasFocus()) {
+        @lineEdit.doIt();
+      } else {
+        @textArea.doIt();
+      }
+    }
+
+    fun printIt() {
+      if (@lineEdit.hasFocus()) {
+        @lineEdit.printIt();
+      } else {
+        @textArea.printIt();
+      }
+    }
+    fun inspectIt() {
+      if (@lineEdit.hasFocus()) {
+        @lineEdit.inspectIt();
+      } else {
+        @textArea.inspectIt();
+      }
     }
 
     fun acceptIt() {

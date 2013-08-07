@@ -60,6 +60,9 @@ module qt(io)
     fun close() {
       <primitive "qt_qwidget_close">
     }
+    fun hasFocus() {
+      <primitive "qt_qwidget_has_focus">
+    }
   }
 
   class QMenuBar < QWidget {
@@ -198,6 +201,18 @@ module qt(io)
     }
     fun text() {
       <primitive "qt_qlineedit_text">
+    }
+    fun setText(text) {
+      <primitive "qt_qlineedit_set_text">
+    }
+    fun selectedText() {
+      <primitive "qt_qlineedit_selected_text">
+    }
+    fun selectAll() {
+      <primitive "qt_qlineedit_select_all">
+    }
+    fun setSelection(start,length) {
+      <primitive "qt_qlineedit_set_selection">
     }
   }
 
