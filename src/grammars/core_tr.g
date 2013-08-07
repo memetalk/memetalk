@@ -52,15 +52,23 @@ body = [(expr+):b] -> b
 
 exprs = expr+
 
-expr = ['var-def' :id !(self.i.l_var_def(id)) expr]
+expr = ['var-def' :id expr]
      | ['fun-literal'
-         !(self.i.l_enter_literal_fun())
-         params:p
-         !(self.i.l_set_fun_literal_parameters(p))
-         ['body' :b
-            !(self.i.l_literal_fun_body(b))
-          apply('body' b)]
-            !(self.i.l_done_literal_function())]
-     | ['send' :r :s ['args' [expr+]]]
-     | [:tag expr*]
-     | :x
+                !(self.i.l_enter_literal_fun())
+                  params:p
+                !(self.i.l_set_fun_literal_parameters(p))
+                  ['body' :b
+                !(self.i.l_literal_fun_body(b))
+                  apply('body' b)]]:f -> self.i.l_done_literal_function(f)
+    | ['super-ctor-send' :s ['args' [expr*]]]
+    | ['call' expr ['args' [expr*]]]
+    | ['setter' expr :s ['args' [expr*]]]
+    | ['getter' expr :s]
+    | ['send-or-call' :e ['args' [expr*]]]
+    | ['send' expr :s ['args' [expr*]]]
+    | ['if' :c [expr*]]
+    | ['if' :c [expr*] [expr*]]
+    | ['while' expr [expr*]]
+    | ['literal-dict'  ['pair' expr*]*]
+    | [:tag expr*]
+    | :x
