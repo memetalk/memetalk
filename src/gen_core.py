@@ -225,6 +225,15 @@ KernelModule = {"_vt": ModuleBehavior,
                 "'owner': "+self.current+"['compiled_class'],"+\
                 "'@tag': '<"+self.current+">."+name+" compiled function'})"
 
+    def add_class_self_method(self, name, params,body):
+        self.bv_methods[self.current][name] = "_create_compiled_function({"+\
+                "'name': "+to_source(name)+","+\
+                "'params': "+to_source(params)+","+\
+                "'body': "+to_source(body)+","+\
+                "'is_ctor': "+to_source(False)+","+\
+                "'owner': "+self.current+"['compiled_class'],"+\
+                "'@tag': '<"+self.current+"Behavior>."+name+" compiled function'})"
+
     def add_class_fields(self, f):
         self.classes[self.current]['size'] = str(len(f))
         self.fields[self.current] = f

@@ -24,6 +24,8 @@ class_constructor = ['ctor' :name params:p
 
 method_definition = ['fun' :name  params:p
                       ['body' body:b]] -> self.i.add_class_method(name, p, b)
+                   | ['func' :name  params:p
+                      ['body' body:b]] -> self.i.add_class_self_method(name, p, b)
 
 obj_slot = ['slot' :name obj_slot_value:v] -> self.i.add_slot(name,v)
 
