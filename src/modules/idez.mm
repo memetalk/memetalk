@@ -191,16 +191,14 @@ module idez(qt,io)
     }
 
     fun lineEditDoIt(text) {
-      var CompiledFunction = getClass_CompiledFunction();
-      var cmod = get_current_compiled_module();
+      var cmod = get_compiled_module(thisModule);
       var cfun = CompiledFunction.new(text, [], cmod, {});
       var fn = cfun.asContext(thisModule, @inspectee, {});
       fn.apply([]);
     }
 
     fun acceptIt() {
-      var CompiledFunction = getClass_CompiledFunction();
-      var cmod = get_current_compiled_module();
+      var cmod = get_compiled_module(thisModule);
       var cfun = CompiledFunction.new(@textArea.toPlainText(), [], cmod, {});
       var fn = cfun.asContext(thisModule, @inspectee, {});
       var new_value = fn.apply([]);
