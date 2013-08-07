@@ -123,7 +123,6 @@ module idez(qt,io)
       super.new();
 
       @inspectee = inspectee;
-      var Mirror = get_mirror_class();
       @mirror = Mirror.new(@inspectee);
 
       this.resize(300,250);
