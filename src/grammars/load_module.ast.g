@@ -72,6 +72,7 @@ expr = ['var-def' :id !(self.i.l_var_def(id)) expr]
     | ['if' :c [expr*]]
     | ['if' :c [expr*] [expr*]]
     | ['while' expr [expr*]]
+    | ['try' expr :id !(self.i.l_var_def(id)) expr]
     | ['literal-dict'  ['pair' expr*]*]
     | [:tag expr*]
     | :x

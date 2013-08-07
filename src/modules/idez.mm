@@ -58,6 +58,13 @@ module idez(qt,io)
       @onAccept = fn;
     }
     fun doIt() {
+      try {
+        this.evalSelection();
+      } catch(e) {
+        this.insertSelectedText(e.value());
+      }
+    }
+    fun evalSelection() {
       var selection = this.selectedText();
 
       var cmod = get_compiled_module(thisModule);
@@ -68,12 +75,20 @@ module idez(qt,io)
       return res;
     }
     fun printIt() {
-      var res = this.doIt();
-      this.insertSelectedText(res.toString());
+      try {
+        var res = this.evalSelection();
+        this.insertSelectedText(res.toString());
+      } catch(e) {
+        this.insertSelectedText(e.value());
+      }
     }
     fun inspectIt() {
-      var res = this.doIt();
-      Inspector.new(res).show();
+      try {
+        var res = this.evalSelection();
+        Inspector.new(res).show();
+      } catch(e) {
+        this.insertSelectedText(e.value());
+      }
     }
     fun selectedText() {
       return this.textCursor().selectedText();
@@ -452,7 +467,11 @@ module idez(qt,io)
       e.onAccept(fun() {
         io.print("setting code:" + params["module_name"] + " :: " + params["function_name"]);
         var cfn = get_module(params["module_name"]).compiled_functions()[params["function_name"]];
-        cfn.setCode(e.toPlainText());
+        try {
+          cfn.setCode(e.toPlainText());
+        } catch(ex) {
+          e.insertSelectedText(ex.value());
+        }
       });
     }
     fun show_home() {

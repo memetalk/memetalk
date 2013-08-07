@@ -278,7 +278,7 @@ class ASTNode(list):
         self.line = line
 
 class FunctionLoader(ASTBuilder): # for eval
-    def load_fun(self, cfun, code):
+    def load_fun(self, interpreter, cfun, code):
         self.line_offset = cfun['line']
         self.filename = "?"
         self.parser = MemeParser(code)
@@ -290,7 +290,7 @@ class FunctionLoader(ASTBuilder): # for eval
             #print "//--F AST"
         except Exception as err:
             if hasattr(err,'formatError'):
-                print(err.formatError(''.join(self.parser.input.data)))
+                interpreter.throw_with_value(err.formatError(''.join(self.parser.input.data)))
             else:
                 traceback.print_exc()
             raise
@@ -310,7 +310,7 @@ class FunctionLoader(ASTBuilder): # for eval
         return cfun
 
 
-    def load_body(self, code, params, owner, env):
+    def load_body(self, interpreter, code, params, owner, env):
         self.line_offset = 0
         self.filename = "<eval>"
         self.parser = MemeParser("{"+code+"}")
@@ -322,7 +322,7 @@ class FunctionLoader(ASTBuilder): # for eval
             print "//--EVAL AST"
         except Exception as err:
             if hasattr(err,'formatError'):
-                print(err.formatError(''.join(self.parser.input.data)))
+                interpreter.throw_with_value(err.formatError(''.join(self.parser.input.data)))
             else:
                 traceback.print_exc()
             raise
@@ -409,7 +409,7 @@ class FunctionLoader(ASTBuilder): # for eval
         self.env_idx = len(params)
         self.functions[-1]["params"] = params
 
-    def l_end_function(self, body,ast):
+    def l_end_function(self, _, body,ast):
         function = self.functions[-1]
         function['body'] = body
         function['text'] = ast.text
@@ -641,8 +641,27 @@ class Interpreter():
     def get_class(self, name):
         return getattr(core, name)
 
-    def memetalk_exception(self, mmobj):
-        return MemetalkException(mmobj)
+    def throw(self, mex):
+        # MemetalkException encapsulates the memetalk exception:
+        raise MemetalkException(mex)
+
+    def throw_with_value(self, value):
+        ex = self.create_instance(core.Exception)
+
+        # ...and this me being stupid:
+        ex['value'] =  value
+
+        # MemetalkException encapsulates the memetalk exception:
+        raise MemetalkException(ex)
+
+    def create_instance(self, klass):
+        p = None
+        if klass["parent"] != None:
+            p = self.create_instance(klass["parent"])
+        fields = klass["compiled_class"]["fields"]
+        name = klass["compiled_class"]["name"]
+        res = dict([(x,None) for x in fields] + {"_vt": klass, "_delegate":p, "@tag": name + " instance"}.items() )
+        return res
 
     def create_compiled_function(self, data):
         return _create_compiled_function(data)
@@ -654,10 +673,10 @@ class Interpreter():
         return _compiled_function_to_context(cfun, env, imodule)
 
     def compile_code(self, text, params, owner, env):
-        return FunctionLoader().load_body(text, params, owner, env)
+        return FunctionLoader().load_body(self, text, params, owner, env)
 
     def recompile_fun(self, cfun, code):
-        return FunctionLoader().load_fun(cfun, code)
+        return FunctionLoader().load_fun(self, cfun, code)
 
     # object routines
     # -dealing with nulls, booleans, integers, etc...
@@ -892,6 +911,14 @@ class Process(greenlet):
         idx = self.env_lookup(name)
         if idx != None:
             self.r_ep[idx] = value
+        else:
+            raise Exception('Undeclared env variable: ' + name)
+
+    def set_local_value(self, name, expr):
+        if self.r_ep != None:
+            self.env_set_value(name, expr)
+        else:
+            self.locals[name] = expr
 
     ##### eval routines
 
@@ -914,19 +941,10 @@ class Process(greenlet):
     def eval_do_local_attr(self, name,expr, ast):
         self.r_ip = ast
         self.dbg_control('eval_do_local_attr')
-
-        if self.r_ep != None:
-            self.env_set_value(name, expr)
-        elif name in self.locals:
-            self.locals[name] = expr
-        else:
-            raise Exception("Undeclared variable: " + name)
+        self.set_local_value(name, expr)
 
     def eval_do_var_def(self, name, expr):
-        if self.r_ep != None:
-            self.env_set_value(name, expr)
-        else:
-            self.locals[name] = expr
+        self.set_local_value(name, expr)
 
     def eval_do_fun_lit(self, params, body):
         compiled_fun = self.r_cp["compiled_function"]["fun_literals"][id(body[0])]
@@ -1065,13 +1083,18 @@ class Process(greenlet):
         else:
             self.evaluator.apply("exprlist", no)
 
-    def eval_do_try(self, tr, bind, ct):
+    def eval_do_try(self, ast, tr, bind, ct):
+        self.r_ip = ast
         try:
-            return self.evaluator.apply("exprlist", tr)
+            ev = Eval([tr])
+            ev.i = self
+            return ev.apply("exprlist")[0]
         except MemetalkException as e:
-            self.locals[bind] = e.mmobj()
-            return self.evaluator.apply("exprlist", ct)
-
+            self.set_local_value(bind, e.mmobj())
+            return self.evaluator.apply("exprlist", ct)[0]
+        except Exception as e:
+            traceback.print_exc()
+            print e
     def eval_do_debug(self,ast):
         self.r_ip = ast
         self.state = 'paused'

@@ -53,16 +53,7 @@ def prim_get_module(proc):
     return proc.interpreter.compiled_modules[proc.locals['name']]
 
 def prim_basic_new(proc):
-    def create_instances(klass):
-        p = None
-        if klass["parent"] != None:
-            p = create_instances(klass["parent"])
-        fields = klass["compiled_class"]["fields"]
-        name = klass["compiled_class"]["name"]
-        res = dict([(x,None) for x in fields] + {"_vt": klass, "_delegate":p, "@tag": name + " instance"}.items() )
-        return res
-
-    return create_instances(proc.r_rp)
+    return proc.interpreter.create_instance(proc.r_rp)
 
 def prim_import(proc):
     compiled_module = proc.interpreter.compile_module_by_filename(proc.locals["mname"])
@@ -71,7 +62,7 @@ def prim_import(proc):
     return imodule
 
 def prim_exception_raise(proc):
-    raise proc.interpreter.memetalk_exception(proc.r_rp)
+    proc.interpreter.throw(proc.r_rp)
 
 def prim_vmprocess(proc):
     VMProcessClass = proc.interpreter.get_vt(proc)
