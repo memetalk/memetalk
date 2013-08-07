@@ -159,12 +159,12 @@ module idez(qt,io)
 
       var execMenu = this.menuBar().addMenu("&Execution");
 
-      // action = qt.QAction.new("Accept it", execMenu);
-      // action.setShortcut("ctrl+s");
-      // action.connect("triggered", fun() {
-      //     this.acceptIt();
-      // });
-      // execMenu.addAction(action);
+      var action = qt.QAction.new("Accept it", execMenu);
+      action.setShortcut("ctrl+s");
+      action.connect("triggered", fun() {
+          this.acceptIt();
+      });
+      execMenu.addAction(action);
     }
 
     fun loadValues() {
