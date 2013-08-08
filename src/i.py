@@ -748,7 +748,7 @@ class Process(greenlet):
         self.state = 'running' # process state
 
         ret = self.setup_and_run_fun(module, module, entry_name, module[entry_name], args, True)
-        print "RETVAL: " + str(ret)
+        print "RETVAL: " + pformat(ret,1,80,2)
 
     def _lookup(self, drecv, vt, selector):
         if vt == None:
