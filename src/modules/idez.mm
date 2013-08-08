@@ -93,9 +93,13 @@ module idez(qt,io)
       }
     }
     fun debugIt() {
-      var fn = evalFn(this.selectedText(), thisModule, @variables);
-      VMProcess.debug(fn,[]);
-      @variables = @variables + fn.getEnv();
+      try {
+        var fn = evalFn(this.selectedText(), thisModule, @variables);
+        VMProcess.debug(fn,[]);
+        @variables = @variables + fn.getEnv();
+      } catch(e) {
+        this.insertSelectedText(e.value());
+      }
     }
   }
 
@@ -181,9 +185,13 @@ module idez(qt,io)
       }
     }
     fun debugIt() {
-      var fn = evalFn(this.selectedText(), thisModule, @variables);
-      VMProcess.debug(fn,[]);
-      @variables = @variables + fn.getEnv();
+      try {
+        var fn = evalFn(this.selectedText(), thisModule, @variables);
+        VMProcess.debug(fn,[]);
+        @variables = @variables + fn.getEnv();
+      } catch(e) {
+        this.insertSelectedText(e.value());
+      }
     }
     fun selectedText() {
       return this.textCursor().selectedText();
