@@ -842,9 +842,9 @@ class Process(greenlet):
             sys.exit(1)
         if len(method["compiled_function"]["params"]) != len(args):
             #P(method,3)
-            raise Exception("arity error: " + method['compiled_function']['name'] +\
-                                ", expecting " + str(len(method["compiled_function"]["params"])) +\
-                                ", got " + str(len(args)) + " -- "+pformat(args,1,80,2))
+            self.interpreter.throw_with_value("arity error: " + method['compiled_function']['name'] +\
+                                                  ", expecting " + str(len(method["compiled_function"]["params"])) +\
+                                                  ", got " + str(len(args)) + " -- "+pformat(args,1,80,2))
 
         #backup frame
         self.stack.append({
@@ -912,7 +912,7 @@ class Process(greenlet):
         if idx != None:
             self.r_ep[idx] = value
         else:
-            raise Exception('Undeclared env variable: ' + name)
+            self.interpreter.throw_with_value('Undeclared env variable: ' + name)
 
     def set_local_value(self, name, expr):
         if self.r_ep != None:
@@ -934,7 +934,7 @@ class Process(greenlet):
         self.dbg_control('eval_do_field_attr')
 
         if not field in self.r_rdp:
-            raise Exception("object has no field " + field)
+            self.interpreter.throw_with_value("object has no field " + field)
         else:
             self.r_rdp[field] = rhs
 
@@ -954,7 +954,7 @@ class Process(greenlet):
         if field in self.r_rdp:
             return self.r_rdp[field]
         else:
-            raise Exception("object has no field " + field)
+            self.interpreter.throw_with_value("object has no field " + field)
 
     def eval_do_access_index(self, left, idx, ast):
         return left[idx]
@@ -982,7 +982,7 @@ class Process(greenlet):
             elif mp['_delegate'] != None:
                 return lookup_in_modules(name, mp['_delegate'])
             else:
-                raise Exception("Undeclared var: " + name + " : "+pformat(self.r_cp['compiled_function'],1,80,1))
+                self.interpreter.throw_with_value("Undeclared var: " + name + " : "+pformat(self.r_cp['compiled_function'],1,80,1))
         return lookup_in_modules(name, self.r_mp)
 
     def eval_do_return(self, value, ast):
@@ -1005,9 +1005,7 @@ class Process(greenlet):
         drecv, method = self._lookup(receiver, self.interpreter.get_vt(pklass), selector)
 
         if not method:
-            traceback.print_exc()
-            print("DoesNotUnderstand: " + selector + " -- " + pformat(instance,1,80,1))
-            sys.exit(1)
+            self.interpreter.throw_with_value("DoesNotUnderstand: " + selector + " -- " + pformat(instance,1,80,1))
         elif not method["compiled_function"]["is_ctor"]:
             raise Exception("Method is not constructor: " + selector)
         else:
@@ -1018,9 +1016,7 @@ class Process(greenlet):
         #self.dbg_control()
         drecv, method = self._lookup(receiver, self.interpreter.get_vt(receiver), selector)
         if not method:
-            traceback.print_exc()
-            print("DoesNotUnderstand: " + selector + " -- " + pformat(receiver,1,80,1))
-            sys.exit(1)
+            self.interpreter.throw_with_value("DoesNotUnderstand: " + selector + " -- " + pformat(receiver,1,80,1))
         else:
             return self.setup_and_run_fun(receiver, drecv, selector, method, [arg], True)
 
@@ -1039,10 +1035,7 @@ class Process(greenlet):
         self.dbg_control('eval_do_send')
         drecv, method = self._lookup(receiver, self.interpreter.get_vt(receiver), selector)
         if not method:
-            traceback.print_exc()
-            print("DoesNotUnderstand: " + selector + " -- " + pformat(receiver,1,80,1))
-            sys.exit(1)
-
+            self.interpreter.throw_with_value("DoesNotUnderstand: " + selector + " -- " + pformat(receiver,1,80,1))
         else:
             return self.setup_and_run_fun(receiver, drecv, selector, method, args, True)
 
@@ -1074,7 +1067,7 @@ class Process(greenlet):
             elif mp['_delegate'] != None:
                 return lookup_in_modules(name, mp['_delegate'])
             else:
-                raise Exception("Undeclared function: " + name)
+                self.interpreter.throw_with_value("Undeclared function: " + name)
         fn = lookup_in_modules(name, self.r_mp)
         return self.setup_and_run_fun(self.r_mp, self.r_mp, name, fn, args, True)
 
