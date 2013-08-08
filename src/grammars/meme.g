@@ -166,9 +166,9 @@ expr_unary =   spaces !(self.input.position):begin token("+") prim_expr:a  -> se
             |  spaces !(self.input.position):begin token("-") prim_expr:a  -> self.i.ast(begin, ['negative', a])
             |  spaces !(self.input.position):begin token("!") expr_unary:a -> self.i.ast(begin, ['not', a])
             |  spaces !(self.input.position):begin token("~") expr_unary:a -> self.i.ast(begin, ['bit-neg', a])
-            | suffix_expr
+            | spaces suffix_expr
 
-suffix_expr =  spaces !(self.input.position):begin token("super") token(".") alpha_name:sel args:p
+suffix_expr = !(self.input.position):begin token("super") token(".") alpha_name:sel args:p
             -> self.i.ast(begin, ['super-ctor-send', sel, ['args', p]])
           |  !(self.input.position):begin suffix_expr:r token(".") alpha_name:sel args:p
             -> self.i.ast(begin, ['send', r, sel, ['args', p]])
