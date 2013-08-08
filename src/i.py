@@ -31,6 +31,7 @@ from pprint import pprint, pformat
 from pdb import set_trace as br
 import traceback
 from config import MODULES_PATH
+from astbuilder import *
 
 def P(obj, depth=1):
     if depth > 5:
@@ -103,7 +104,7 @@ def _create_class(data):
 def _create_accessor_method(imodule, name):
     cf =  _create_compiled_function({
             "name": name,
-            "body":  [['return', ['field', name]]]})
+            "body":  [ASTNode(['return', ['field', name]],'?','return @'+name+';',0)]})
     return _function_from_cfunction(cf, imodule)
 
 def _function_from_cfunction(cfun, imodule):
@@ -260,22 +261,6 @@ def _instantiate_module(i, compiled_module, _args, parent_module):
 #######################################################
 ## Loading
 #######################################################
-
-class ASTBuilder:
-    def ast(self, begin, ast):
-        end = self.parser.input.position
-        full = ''.join(self.parser.input.data)
-        text = full[begin:end]
-        line = full[:begin].count("\n") + self.line_offset
-        node = ASTNode(ast, self.filename, text, line+1)
-        return node
-
-class ASTNode(list):
-    def __init__(self, lst, filename, text, line):
-        list.__init__(self,lst)
-        self.filename = filename
-        self.text = text
-        self.line = line
 
 class FunctionLoader(ASTBuilder): # for eval
     def load_fun(self, interpreter, cfun, code):

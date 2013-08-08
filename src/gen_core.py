@@ -25,7 +25,7 @@ from pdb import set_trace as br
 import traceback
 import os
 from config import MODULES_PATH
-
+from astbuilder import *
 
 def P(obj, depth=1):
     if depth > 5:
@@ -35,11 +35,12 @@ def P(obj, depth=1):
 def to_source(x):
     return pformat(x)
 
-class CoreGenerator():
-    def ast(self, begin, ast):
-        return ast
-
+class CoreGenerator(ASTBuilder):
     def __init__(self):
+        self.parser = None
+        self.line_offset = 0
+        self.filename = 'core.md'
+
         self.objects = {}
         self.classes = {}
         self.current = None
@@ -72,13 +73,13 @@ class CoreGenerator():
 
     def gen(self):
 
-        parser = CoreParser(open(os.path.join(MODULES_PATH,"core.md")).read())
-        parser.i = self
+        self.parser = CoreParser(open(os.path.join(MODULES_PATH,self.filename)).read())
+        self.parser.i = self
         try:
-            ast = parser.apply("start")[0]
+            ast = self.parser.apply("start")[0]
         except Exception as err:
             if hasattr(err, 'formatError'):
-                print(err.formatError(''.join(parser.input.data)))
+                print(err.formatError(''.join(self.parser.input.data)))
             else:
                 traceback.print_exc()
             exit(1)
@@ -93,6 +94,7 @@ class CoreGenerator():
             self.source = self.source + x + "\n"
 
         append("from i import _create_compiled_function, _function_from_cfunction")
+        append("from astbuilder import *")
         append("kernel_imodule = {}")
 
         for k,v in self.objects.iteritems():
@@ -176,10 +178,10 @@ KernelModule = {"_vt": ModuleBehavior,
         f.close()
 
     def run_tr(self, ast, prod):
-        parser = CoreTr([ast])
-        parser.i = self
+        self.parser = CoreTr([ast])
+        self.parser.i = self
         try:
-            parser.apply(prod)
+            self.parser.apply(prod)
         except Exception as err:
             if hasattr(err, 'formatError'):
                 P(err)
