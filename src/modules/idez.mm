@@ -289,7 +289,6 @@ module idez(qt,io)
       action.connect("triggered", fun() {
           this.acceptIt();
       });
-      action.setShortcutContext(0); //widget context
       execMenu.addAction(action);
     }
 
@@ -347,7 +346,7 @@ module idez(qt,io)
     }
     fun acceptIt() {
       var cmod = get_compiled_module(thisModule);
-      var cfun = CompiledFunction.new(@textArea.toPlainText(), [], cmod, {});
+      var cfun = CompiledFunction.new(@textArea.text(), [], cmod, {});
       var fn = cfun.asContext(thisModule, @inspectee, {});
       var new_value = fn.apply([]);
       var slot = @fieldList.currentItem().text();
