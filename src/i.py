@@ -588,7 +588,8 @@ class Interpreter():
         imodule = _instantiate_module(self, compiled_module, {}, core.kernel_imodule)
         self.current_process = Process(self)
         self.processes.append(self.current_process)
-        self.current_process.switch('run_module', 'main', imodule, [])
+        ret = self.current_process.switch('run_module', 'main', imodule, [])
+        print "RETVAL: " + pformat(ret,1,80,2)
 
     def debug_process(self, target_process):
         target_process.state = 'paused'
@@ -733,8 +734,7 @@ class Process(greenlet):
 
         self.state = 'running' # process state
 
-        ret = self.setup_and_run_fun(module, module, entry_name, module[entry_name], args, True)
-        print "RETVAL: " + pformat(ret,1,80,2)
+        return self.setup_and_run_fun(module, module, entry_name, module[entry_name], args, True)
 
     def _lookup(self, drecv, vt, selector):
         if vt == None:
