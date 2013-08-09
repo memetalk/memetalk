@@ -1,17 +1,22 @@
 from PyQt4 import QtGui
-from PyQt4.Qsci import QsciScintilla, QsciLexerJavaScript, QsciLexerPython
+from PyQt4.Qsci import QsciScintilla, QsciLexerJavaScript, QsciLexerPython, QsciCommand
 from PyQt4.QtCore import *
 from PyQt4.QtGui import *
 
-class SimpleEditor(QsciScintilla):
+class MemeQsciScintilla(QsciScintilla):
 
     def __init__(self, parent=None):
-        super(SimpleEditor, self).__init__(parent)
+        super(MemeQsciScintilla, self).__init__(parent)
 
         self.CURRENT_LINE_MARKER = 8
         self.CURRENT_RANGE_IND = self.indicatorDefine(self.INDIC_DOTBOX)
 
         self.indicators = {self.CURRENT_RANGE_IND: None}
+
+        # we need to clear up ctrl+d command
+        # so QsciScintilla doesn't ignore our QAction
+        ctrl_d = self.standardCommands().find(QsciCommand.SelectionDuplicate)
+        ctrl_d.setKey(0)
 
         # Set the default font
         font = QFont()
@@ -64,9 +69,6 @@ class SimpleEditor(QsciScintilla):
         # Use raw message to Scintilla here (all messages are documented
         # here: http://www.scintilla.org/ScintillaDoc.html)
         self.SendScintilla(QsciScintilla.SCI_SETHSCROLLBAR, 0)
-
-        # not too small
-        self.setMinimumSize(600, 450)
 
     def paused_at_line(self, start_line, start_col, end_line, end_col):
         # margin arrow

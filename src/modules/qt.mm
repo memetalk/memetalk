@@ -349,4 +349,37 @@ module qt(io)
   fun qapp_running() {
     <primitive "qapp_running">
   }
+
+  class QsciScintilla < QWidget {
+    init new(parent) {
+        <primitive "qt_scintilla_editor_new">
+    }
+    fun setText(text) {
+        <primitive "qt_scintilla_editor_set_text">
+    }
+    fun pausedAtLine(start_line, start_col, end_line, end_col) {
+        <primitive "qt_scintilla_paused_at_line">
+    }
+    fun text() {
+        <primitive "qt_scintilla_text">
+    }
+    fun setText(text) {
+        <primitive "qt_scintilla_set_text">
+    }
+    fun selectedText() {
+        <primitive "qt_scintilla_selected_text">
+    }
+    fun getCursorPosition() {
+        <primitive "qt_scintilla_get_cursor_position">
+    }
+    fun insertAt(text, line, index) {
+        <primitive "qt_scintilla_insert_at">
+    }
+    fun getSelection() {
+        <primitive "qt_scintilla_get_selection">
+    }
+    fun setSelection(start_line, start_index, end_line, end_index) {
+        <primitive "qt_scintilla_set_selection">
+    }
+  }
 }

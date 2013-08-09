@@ -237,6 +237,9 @@ def prim_string_concat(proc):
 def prim_string_from(proc):
     return proc.r_rp[proc.locals['idx']:]
 
+def prim_string_count(proc):
+    return proc.r_rp.count(proc.locals['sub'])
+
 def prim_module_instance_compiled_module(proc):
     return proc.r_rdp['_vt']['compiled_module']
 
@@ -982,9 +985,9 @@ def prim_qt_scintilla_editor_new(proc):
     parent = proc.locals['parent']
     if parent != None:
         qtobj = _lookup_field(parent, 'self')
-        proc.r_rdp['self'] = scintilla_editor.SimpleEditor(qtobj)
+        proc.r_rdp['self'] = scintilla_editor.MemeQsciScintilla(qtobj)
     else:
-        proc.r_rdp['self'] = scintilla_editor.SimpleEditor()
+        proc.r_rdp['self'] = scintilla_editor.MemeQsciScintilla()
     return proc.r_rp
 
 def prim_qt_scintilla_editor_set_text(proc):
@@ -996,9 +999,39 @@ def prim_qt_scintilla_text(proc):
     qtobj = _lookup_field(proc.r_rp, 'self')
     return qstring_to_str(qtobj.text())
 
+
+def prim_qt_scintilla_set_text(proc):
+    qtobj = _lookup_field(proc.r_rp, 'self')
+    qtobj.setText(proc.locals['text'])
+    return proc.r_rp
+
 def prim_qt_scintilla_paused_at_line(proc):
     qtobj = _lookup_field(proc.r_rp, 'self')
     qtobj.paused_at_line(proc.locals['start_line'], proc.locals['start_col'], proc.locals['end_line'], proc.locals['end_col'])
+    return proc.r_rp
+
+def prim_qt_scintilla_selected_text(proc):
+    qtobj = _lookup_field(proc.r_rp, 'self')
+    return qstring_to_str(qtobj.selectedText())
+
+def prim_qt_scintilla_get_cursor_position(proc):
+    qtobj = _lookup_field(proc.r_rp, 'self')
+    line, idx = qtobj.getCursorPosition()
+    return {"line": line, "index":idx}
+
+def prim_qt_scintilla_insert_at(proc):
+    qtobj = _lookup_field(proc.r_rp, 'self')
+    qtobj.insertAt(proc.locals['text'], proc.locals['line'], proc.locals['index'])
+    return proc.r_rp
+
+def prim_qt_scintilla_get_selection(proc):
+    qtobj = _lookup_field(proc.r_rp, 'self')
+    start_line, start_index, end_line, end_index = qtobj.getSelection()
+    return {"start_line":start_line, "start_index": start_index, 'end_line': end_line, 'end_index': end_index}
+
+def prim_qt_scintilla_set_selection(proc):
+    qtobj = _lookup_field(proc.r_rp, 'self')
+    qtobj.setSelection(proc.locals['start_line'], proc.locals['start_index'], proc.locals['end_line'], proc.locals['end_index'])
     return proc.r_rp
 
 

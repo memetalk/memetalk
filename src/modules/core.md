@@ -157,6 +157,9 @@ module core() {
     fun from(idx) {
       <primitive "string_from">
     }
+    fun count(sub) {
+      <primitive "string_count">
+    }
   }
 
   class Dictionary {

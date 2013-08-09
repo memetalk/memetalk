@@ -1,7 +1,7 @@
 module idez(qt,io)
   qt:  memetalk/qt/1.0();
   io:  memetalk/io/1.0();
-  [QWidget, QMainWindow, QPlainTextEdit, QLineEdit, QComboBox, QTableWidget] <= qt;
+  [QWidget, QMainWindow, QsciScintilla, QLineEdit, QComboBox, QTableWidget] <= qt;
 {
 
   fun evalFn(text, imodule, vars) {
@@ -103,13 +103,11 @@ module idez(qt,io)
     }
   }
 
-  class Editor < QPlainTextEdit {
+  class Editor < QsciScintilla {
     fields: variables, onAccept;
     init new(parent) {
       super.new(parent);
       @variables = {};
-
-      this.setTabStopWidth(20);
 
       var action = qt.QAction.new("&Do it", this);
       action.setShortcut("ctrl+d");
@@ -193,16 +191,11 @@ module idez(qt,io)
         this.insertSelectedText(e.value());
       }
     }
-    fun selectedText() {
-      return this.textCursor().selectedText();
-    }
     fun insertSelectedText(text) {
-      var cursor = this.textCursor();
-      var pos = cursor.selectionEnd();
-      cursor.setPosition(pos);
-      cursor.insertText(text);
-      cursor.dragRight(text.size());
-      this.setTextCursor(cursor);
+      var pos = this.getSelection();
+      this.insertAt(text, pos["end_line"], pos["end_index"]);
+      //text.size(): this is rude
+      this.setSelection(pos["end_line"], pos["end_index"], pos["end_line"] + text.count("\n"), pos["end_index"] + text.size());
     }
   }
 
@@ -309,10 +302,10 @@ module idez(qt,io)
 
     fun itemSelected(item) { //QListWidgetItem, curr from the signal
       if (item.text() == '*self') {
-        @textArea.setPlainText(@inspectee.toSource());
+        @textArea.setText(@inspectee.toSource());
       } else {
         var value = @mirror.valueFor(item.text());
-        @textArea.setPlainText(value.toSource());
+        @textArea.setText(value.toSource());
       }
     }
 
@@ -362,21 +355,6 @@ module idez(qt,io)
     }
   }
 
-
-  class ScintillaEditor < QWidget {
-    init new(parent) {
-        <primitive "qt_scintilla_editor_new">
-    }
-    fun setText(text) {
-        <primitive "qt_scintilla_editor_set_text">
-    }
-    fun pausedAtLine(start_line, start_col, end_line, end_col) {
-        <primitive "qt_scintilla_paused_at_line">
-    }
-    fun text() {
-        <primitive "qt_scintilla_text">
-    }
-  }
 
   class StackCombo < QComboBox {
     fields: frames;
@@ -591,7 +569,7 @@ module idez(qt,io)
         var e = Editor.new(null);
         e.setStyleSheet("border-style: outset;");
         if (params.has("code")) {
-          e.setPlainText(params["code"]);
+          e.setText(params["code"]);
         }
         if (params.has("module_function")) {
           this.setupAccept(e, params);
@@ -653,7 +631,7 @@ module idez(qt,io)
       @webview.loadUrl(modules_path() + "/module-explorer/module-view.html");
       var module = get_module(name);
       var doc = @webview.page().mainFrame().documentElement();
-      doc.findFirst(".module_name").setPlainText(module.name());
+      doc.findFirst(".module_name").setText(module.name());
 
       var ul = doc.findFirst(".module_parameters");
       module.params().each(fun(p) {
@@ -664,8 +642,8 @@ module idez(qt,io)
       fns.each(fun(name,cfn) {
         var div = doc.findFirst(".fun_tpl").clone();
         div.setStyleProperty("display","block");
-        div.findFirst(".function_name").setPlainText(cfn.name());
-        div.findFirst(".fun_paramslist").setPlainText(cfn.parameters().toString());
+        div.findFirst(".function_name").setText(cfn.name());
+        div.findFirst(".fun_paramslist").setText(cfn.parameters().toString());
         div.findFirst(".fun_body param[name=module_name]").setAttribute("value",module.name());
         div.findFirst(".fun_body param[name=function_name]").setAttribute("value",name);
         div.findFirst(".fun_body param[name=code]").setAttribute("value",cfn.text());
