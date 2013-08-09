@@ -469,10 +469,12 @@ module idez(qt,io)
   }
 
   class DebuggerUI < QMainWindow {
-    fields: process, execFrames, stackCombo, editor, localVarList, moduleVarList;
+    fields: cont_on_exit, process, execFrames, stackCombo, editor, localVarList, moduleVarList;
     init new(process) {
       super.new();
       @process = process;
+
+      @cont_on_exit = true;
 
       this.resize(700,250);
       this.setWindowTitle("Debugger");
@@ -546,12 +548,15 @@ module idez(qt,io)
       @stackCombo.updateInfo();
     }
     fun closeEvent() {
-      @process.continue();
+      if (@cont_on_exit) {
+        @process.continue();
+      }
     }
     fun stepInto() {
       if(@process.stepInto()) {
         @stackCombo.updateInfo();
       } else {
+        @cont_on_exit = false;
         this.close();
       }
     }
@@ -559,12 +564,12 @@ module idez(qt,io)
       if(@process.stepOver()) {
         @stackCombo.updateInfo();
       } else {
+        @cont_on_exit = false;
         this.close();
       }
     }
     fun continue() {
       this.close();
-      @process.continue();
     }
     fun compileAndRewind() {
       var text = @editor.text();
