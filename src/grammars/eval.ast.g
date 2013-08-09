@@ -1,11 +1,11 @@
 exec_fun = exprlist:x -> x
-         | ['primitive' ['literal-string' :name] (:ignore)*]:ast   -> self.i.eval_prim(name)
+         | [['primitive' ['literal-string' :name]]:ast (:ignore)*]   -> self.i.eval_prim(name,ast)
 
 exprlist = [(expr:x)+] -> x
 
 pair = ['pair' expr:key expr:val] -> (key,val)
 
-expr = ['super-ctor-send' :s args:a]:ast     -> self.i.eval_do_super_ctor_send(s,a)
+expr = ['super-ctor-send' :s args:a]:ast     -> self.i.eval_do_super_ctor_send(s,a,ast)
      | ['var-def' :id expr:e]:ast            -> self.i.eval_do_var_def(id,e)
      | ['debug']:ast                         -> self.i.eval_do_debug(ast)
      | ['return' expr:x]:ast                 -> self.i.eval_do_return(x,ast)

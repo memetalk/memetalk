@@ -907,7 +907,9 @@ class Process(greenlet):
 
     ##### eval routines
 
-    def eval_prim(self, prim_name):
+    def eval_prim(self, prim_name, ast):
+        self.r_ip = ast
+        self.dbg_control('eval_prim')
         try:
             return globals()['prim_'+prim_name](self)
         except KeyError as e:
@@ -975,7 +977,9 @@ class Process(greenlet):
         self.dbg_control('eval_do_return')
         raise ReturnException(value)
 
-    def eval_do_super_ctor_send(self, selector, args):
+    def eval_do_super_ctor_send(self, selector, args, ast):
+        self.r_ip = ast
+        self.dbg_control('eval_do_super_ctor_send')
         # -super.foo() can only be used inside constructors.
         # -normal methods can invoke super() to get its superclass version.
         # -A method m() cannot invoke a super method of different name.
