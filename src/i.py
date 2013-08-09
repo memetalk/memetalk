@@ -104,7 +104,7 @@ def _create_class(data):
 def _create_accessor_method(imodule, name):
     cf =  _create_compiled_function({
             "name": name,
-            "body":  [ASTNode(['return', ['field', name]],'?','return @'+name+';',0)]})
+            "body":  [ASTNode(['return', ['field', name]],'?','return @'+name+';',0,0,0,0)]})
     return _function_from_cfunction(cf, imodule)
 
 def _function_from_cfunction(cfun, imodule):
@@ -296,9 +296,9 @@ class FunctionLoader(ASTBuilder): # for eval
 
 
     def load_body(self, interpreter, code, params, owner, env):
-        self.line_offset = 0
         self.filename = "<eval>"
-        self.parser = MemeParser("{"+code+"}")
+        self.line_offset = -1 # to compensate for the new line in '{\n' below
+        self.parser = MemeParser("{\n"+code+"\n}")
         self.parser.i = self
         try:
             ast,err = self.parser.apply("as_eval")
@@ -369,7 +369,7 @@ class FunctionLoader(ASTBuilder): # for eval
     def l_done_literal_function(self, ast):
         function = self.functions.pop()
         function['text'] = ast.text
-        function['line'] = ast.line
+        function['line'] = ast.start_line
 
         body = function["body"]
 
@@ -398,7 +398,7 @@ class FunctionLoader(ASTBuilder): # for eval
         function = self.functions[-1]
         function['body'] = body
         function['text'] = ast.text
-        function['line'] = ast.line
+        function['line'] = ast.start_line
 
         env_table = self.env_id_table.pop()
         if function["uses_env"]:
@@ -489,7 +489,7 @@ class ModuleLoader(ASTBuilder):
         function = self.functions.pop()
         function['body'] = body
         function['text'] = ast.text
-        function['line'] = ast.line
+        function['line'] = ast.start_line
 
         env_table = self.env_id_table.pop()
         if function["uses_env"]:
@@ -530,7 +530,7 @@ class ModuleLoader(ASTBuilder):
 
         body = function["body"]
         function['text'] = ast.text
-        function['line'] = ast.line
+        function['line'] = ast.start_line
 
         function['env_table'] = self.env_id_table.pop()
 

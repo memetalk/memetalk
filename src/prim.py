@@ -77,13 +77,22 @@ def prim_vmprocess_context_pointer(proc):
     _proc = _lookup_field(proc.r_rp, 'self')
     return _proc.r_cp
 
+# dirty stuff ahead: I'm too lazy to create a memetalk class wrapper over ASTNode
 def prim_vmprocess_instruction_pointer(proc):
     _proc = _lookup_field(proc.r_rp, 'self')
-    return _proc.r_ip.line - _proc.r_cp['compiled_function']['line']+1
+    ast = _proc.r_ip
 
-def prim_vmprocess_instruction_pointer(proc):
-    _proc = _lookup_field(proc.r_rp, 'self')
-    return _proc.r_ip.line - _proc.r_cp['compiled_function']['line']+1
+    start_line = ast.start_line - _proc.r_cp['compiled_function']['line']+1
+    start_col = ast.start_col
+    end_line = ast.end_line - _proc.r_cp['compiled_function']['line']+1
+    end_col = ast.end_col
+    res = {"start_line":start_line, "start_col": start_col, "end_line": end_line, "end_col":end_col}
+    print(res)
+    return res
+
+# def prim_vmprocess_instruction_pointer(proc):
+#     _proc = _lookup_field(proc.r_rp, 'self')
+#     return _proc.r_ip.line - _proc.r_cp['compiled_function']['line']+1
 
 def prim_vmprocess_step_into(proc):
     print '+ENTER prim_vmprocess_step_into'
@@ -151,8 +160,16 @@ def prim_vmprocess_debug(proc):
 # convenience
 def prim_vmstackframe_instruction_pointer(proc):
     frame = _lookup_field(proc.r_rp, 'self')
-    if frame['r_ip'] != None: #first frame is none
-        return frame['r_ip'].line - frame['r_cp']['compiled_function']['line']+1
+    ast = frame['r_ip']
+    if ast != None: #first frame is none
+        #ast = frame['r_ip'] #.line - frame['r_cp']['compiled_function']['line']+1
+        start_line = ast.start_line - frame['r_cp']['compiled_function']['line']+1
+        start_col = ast.start_col
+        end_line = ast.end_line - frame['r_cp']['compiled_function']['line']+1
+        end_col = ast.end_col
+        res = {"start_line":start_line, "start_col": start_col, "end_line": end_line, "end_col":end_col}
+        print(res)
+        return res
     else:
         return None
 
@@ -970,7 +987,7 @@ def prim_qt_scintilla_text(proc):
 
 def prim_qt_scintilla_paused_at_line(proc):
     qtobj = _lookup_field(proc.r_rp, 'self')
-    qtobj.paused_at_line(proc.locals['line'])
+    qtobj.paused_at_line(proc.locals['start_line'], proc.locals['start_col'], proc.locals['end_line'], proc.locals['end_col'])
     return proc.r_rp
 
 

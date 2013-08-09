@@ -4,10 +4,12 @@ from PyQt4.QtCore import *
 from PyQt4.QtGui import *
 
 class SimpleEditor(QsciScintilla):
-    CURRENT_LINE_MARKER = 8
 
     def __init__(self, parent=None):
         super(SimpleEditor, self).__init__(parent)
+
+        self.CURRENT_LINE_MARKER = 8
+        self.CURRENT_RANGE_IND = self.indicatorDefine(self.INDIC_DOTBOX)
 
         # Set the default font
         font = QFont()
@@ -64,9 +66,16 @@ class SimpleEditor(QsciScintilla):
         # not too small
         self.setMinimumSize(600, 450)
 
-    def paused_at_line(self, line):
+        self.indicatorDefine(self.INDIC_DOTBOX)
+
+    def paused_at_line(self, start_line, start_col, end_line, end_col):
+        print '--scintilla paused at'
+        # margin arrow
         self.markerDeleteAll(self.CURRENT_LINE_MARKER)
-        self.markerAdd(line-1, self.CURRENT_LINE_MARKER)
+        self.markerAdd(start_line, self.CURRENT_LINE_MARKER)
+        # highlight expression
+        self.fillIndicatorRange(start_line,start_col,end_line,end_col,self.CURRENT_RANGE_IND)
+        print '--End: scintilla paused at'
 
     def on_margin_clicked(self, nmargin, nline, modifiers):
         print str(nmargin) + ":" + str(nline) + ":" + str(modifiers)

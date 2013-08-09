@@ -370,7 +370,7 @@ module idez(qt,io)
     fun setText(text) {
         <primitive "qt_scintilla_editor_set_text">
     }
-    fun pausedAtLine(line) {
+    fun pausedAtLine(start_line, start_col, end_line, end_col) {
         <primitive "qt_scintilla_paused_at_line">
     }
     fun text() {
@@ -433,7 +433,7 @@ module idez(qt,io)
       // });
       return {};
     }
-    fun currentLineFor(i) {
+    fun locationInfoFor(i) {
       if (i < @vmproc.stackFrames().size()) {
         return @vmproc.stackFrames().get(i).instructionPointer();
       } else {
@@ -490,7 +490,8 @@ module idez(qt,io)
       @stackCombo.connect("currentIndexChanged",fun(i) {
         if (0 <= i) {
           @editor.setText(@execFrames.codeFor(i));
-          @editor.pausedAtLine(@execFrames.currentLineFor(i));
+          var locInfo = @execFrames.locationInfoFor(i);
+          @editor.pausedAtLine(locInfo["start_line"]-1, locInfo["start_col"], locInfo["end_line"]-1, locInfo["end_col"]);
           @localVarList.setVariables(@execFrames.localsFor(i));
           @moduleVarList.setVariables(@execFrames.moduleVarsFor(i));
         }
