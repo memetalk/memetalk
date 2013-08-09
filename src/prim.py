@@ -52,9 +52,6 @@ def prim_available_modules(proc):
 def prim_get_module(proc):
     return proc.interpreter.compiled_modules[proc.locals['name']]
 
-def prim_basic_new(proc):
-    return proc.interpreter.create_instance(proc.r_rp)
-
 def prim_import(proc):
     compiled_module = proc.interpreter.compile_module_by_filename(proc.locals["mname"])
     args = dict(zip(compiled_module["params"],proc.locals["margs"]))
@@ -518,8 +515,20 @@ def prim_qt_qwidget_has_focus(proc):
     return qtobj.hasFocus()
 
 # QMainWindow
+
+class _QMainWindow(QtGui.QMainWindow):
+    def __init__(self, proc, meme_obj, parent=None):
+        super(QMainWindow, self).__init__(parent)
+        self.meme_obj = meme_obj
+        self.proc = proc
+
+    def closeEvent(self, ev):
+        if 'closeEvent' in self.meme_obj['_vt']['dict']:
+            fn = self.meme_obj['_vt']['dict']['closeEvent']
+            self.proc.setup_and_run_fun(self.meme_obj, self.meme_obj, 'closeEvent', fn, [], True)
+
 def prim_qt_qmainwindow_new(proc):
-    proc.r_rdp['self'] = QtGui.QMainWindow()
+    proc.r_rdp['self'] = _QMainWindow(proc, proc.r_rp)
     return proc.r_rp
 
 def prim_qt_qmainwindow_set_central_widget(proc):

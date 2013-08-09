@@ -545,6 +545,9 @@ module idez(qt,io)
 
       @stackCombo.updateInfo();
     }
+    fun closeEvent() {
+      @process.continue();
+    }
     fun stepInto() {
       if(@process.stepInto()) {
         @stackCombo.updateInfo();

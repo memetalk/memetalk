@@ -765,7 +765,7 @@ class Process(greenlet):
         self.setup_parameters_and_registers(recv, drecv, fun, args)
         if should_allocate and fun["compiled_function"]['is_ctor']:
             #allocate new instance and make it the receiver
-            self.r_rp = prim_basic_new(self)
+            self.r_rp = self.interpreter.create_instance(self.r_rp)
             # rdp will be the instance associated to the class of fun
             self.r_rdp = self.ctor_rdp_for(self.r_rp, fun)
             #...updating env if exist
@@ -998,7 +998,7 @@ class Process(greenlet):
         elif not method["compiled_function"]["is_ctor"]:
             raise Exception("Method is not constructor: " + selector)
         else:
-            return self.setup_and_run_fun(receiver, drecv, selector, method, args, False)
+            return self.setup_and_run_fun(instance, drecv, selector, method, args, False)
 
     def eval_do_bin_send(self, selector, receiver, arg, ast):
         self.r_ip = ast
