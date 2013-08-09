@@ -74,6 +74,16 @@ module qt(io)
   class QMenu < QWidget {
   }
 
+  class QShortcut {
+    fields: self;
+    init new(sc, parent, slot) {
+      <primitive "qt_qshortcut_new">
+    }
+    fun setContext(context) {
+      <primitive "qt_qshortcut_set_context">
+    }
+  }
+
   class QAction {
     fields: self;
     init new(label, parent) {
@@ -87,6 +97,9 @@ module qt(io)
     }
     fun setShortcutContext(context) {
       <primitive "qt_qaction_set_shortcut_context">
+    }
+    fun setEnabled(val) {
+      <primitive "qt_qaction_set_enabled">
     }
   }
 

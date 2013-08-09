@@ -646,11 +646,49 @@ def prim_qt_qaction_set_shortcut_context(proc):
     qtobj.setShortcutContext(proc.locals["context"]);
     return proc.r_rp
 
-# def prim_qt_qshortcut_new(proc):
-#     keys = proc.locals['keys']
-#     parent = proc.locals['parent']
-#     fn = proc.locals['fn']
-#     qtobj = _lookup_field(parent, 'self')
+def prim_qt_qaction_set_enabled(proc):
+    qtobj = _lookup_field(proc.r_rp, 'self')
+    qtobj.setEnabled(proc.locals["val"]);
+    return proc.r_rp
+
+def prim_qt_qshortcut_set_context(proc):
+    qtobj = _lookup_field(proc.r_rp, 'self')
+    qtobj.setContext(proc.locals["context"]);
+    return proc.r_rp
+
+def prim_qt_qshortcut_new(proc):
+    keys = proc.locals['sc']
+    parent = proc.locals['parent']
+    slot = proc.locals['slot']
+
+    if parent != None:
+        qt_parent = _lookup_field(parent, 'self')
+    else:
+        qt_parent = None
+
+    proc.r_rdp["self"] = QtGui.QShortcut(keys,qt_parent)
+    proc.r_rdp["self"].setKey(keys)
+
+    qtobj = _lookup_field(proc.r_rp, 'self')
+    def callback(*rest):
+        proc.setup_and_run_fun(None, None, '<?>', slot, [], True)
+        print 'callback slot: ' + str(slot['compiled_function']['body'])
+        print 'callback: eventloop proc equal? ' + str(proc == eventloop_processes[-1]['proc'])
+        if proc != eventloop_processes[-1]['proc']:
+            entry = eventloop_processes[-1]
+            #entry['qtobj'].exit(0)
+            entry['proc'].switch('done') # this is were the exit point of the debugger arrives
+            print 'debugger module ended'
+            proc.interpreter.debugger_process = None
+            proc.interpreter.processes.remove(entry['proc'])
+            proc.state = 'running'
+        if eventloop_processes[-1]['done']:
+            print 'POPing eventloop'
+            eventloop_processes.pop()
+        print "END of callback"
+
+    qtobj.activated.connect(callback)
+    return proc.r_rp
 
 #     def callback():
 #         proc.setup_and_run_fun(None, None, '<?>', fn, [], True)
