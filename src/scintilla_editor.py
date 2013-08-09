@@ -69,7 +69,6 @@ class SimpleEditor(QsciScintilla):
         self.indicatorDefine(self.INDIC_DOTBOX)
 
     def paused_at_line(self, start_line, start_col, end_line, end_col):
-        print '--scintilla paused at'
         # margin arrow
         self.markerDeleteAll(self.CURRENT_LINE_MARKER)
         self.markerAdd(start_line, self.CURRENT_LINE_MARKER)
