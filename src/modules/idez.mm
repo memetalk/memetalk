@@ -4,14 +4,14 @@ module idez(qt,io)
   [QWidget, QMainWindow, QsciScintilla, QLineEdit, QComboBox, QTableWidget] <= qt;
 {
 
-  fun evalFn(text, imodule, vars) {
+  fun evalFn(text, receiver, imodule, vars) {
     var cmod = get_compiled_module(imodule);
     var cfun = CompiledFunction.new(text, [], cmod, vars);
-    return cfun.asContext(imodule, null, vars);
+    return cfun.asContext(imodule, receiver, vars);
   }
 
-  fun eval(text, imodule, vars) {
-    var fn = evalFn(text, imodule, vars);
+  fun eval(text, receiver, imodule, vars) {
+    var fn = evalFn(text, receiver, imodule, vars);
     var res =  fn.apply([]);
     vars = vars + fn.getEnv();
     return {"result":res, "env":vars};
@@ -22,15 +22,21 @@ module idez(qt,io)
     init new(parent) {
       super.new(parent);
       @variables = {};
+
+      if (parent == null) {
+        this.initActions();
+      }
+    }
+
+    fun initActions() {
       this.connect("returnPressed", fun() {
-        this.selectAll();
-        this.doIt();
+        this.selectAllAndDoit(null);
       });
 
       var action = qt.QAction.new("&Do it", this);
       action.setShortcut("ctrl+d");
       action.connect("triggered", fun() {
-          this.doIt();
+          this.doIt(null);
       });
       action.setShortcutContext(0); //widget context
       this.addAction(action);
@@ -38,7 +44,7 @@ module idez(qt,io)
       action = qt.QAction.new("&Print it", this);
       action.setShortcut("ctrl+p");
       action.connect("triggered", fun() {
-          this.printIt();
+          this.printIt(null);
       });
       action.setShortcutContext(0); //widget context
       this.addAction(action);
@@ -46,7 +52,7 @@ module idez(qt,io)
       action = qt.QAction.new("&Inspect it", this);
       action.setShortcut("ctrl+i");
       action.connect("triggered", fun() {
-          this.inspectIt();
+          this.inspectIt(null);
       });
       action.setShortcutContext(0); //widget context
       this.addAction(action);
@@ -54,13 +60,13 @@ module idez(qt,io)
       action = qt.QAction.new("De&bug it", this);
       action.setShortcut("ctrl+b");
       action.connect("triggered", fun() {
-          this.debugIt();
+          this.debugIt(null);
       });
       action.setShortcutContext(0); //widget context
       this.addAction(action);
     }
-    fun evalSelection() {
-      var r = eval(this.selectedText(), thisModule, @variables);
+    fun evalSelection(receiver) {
+      var r = eval(this.selectedText(), receiver, thisModule, @variables);
       @variables = r["env"];
       return r["result"];
     }
@@ -69,32 +75,36 @@ module idez(qt,io)
       this.setText(this.text() + text);
       this.setSelection(len, text.size());
     }
-    fun doIt() {
+    fun selectAllAndDoit(receiver) {
+        this.selectAll();
+        this.doIt(receiver);
+    }
+    fun doIt(receiver) {
       try {
-        this.evalSelection();
+        this.evalSelection(receiver);
       } catch(e) {
         this.insertSelectedText(e.value());
       }
     }
-    fun printIt() {
+    fun printIt(receiver) {
       try {
-        var res = this.evalSelection();
+        var res = this.evalSelection(receiver);
         this.insertSelectedText(res.toString());
       } catch(e) {
         this.insertSelectedText(e.value());
       }
     }
-    fun inspectIt() {
+    fun inspectIt(receiver) {
       try {
-        var res = this.evalSelection();
+        var res = this.evalSelection(receiver);
         Inspector.new(res).show();
       } catch(e) {
         this.insertSelectedText(e.value());
       }
     }
-    fun debugIt() {
+    fun debugIt(receiver) {
       try {
-        var fn = evalFn(this.selectedText(), thisModule, @variables);
+        var fn = evalFn(this.selectedText(), receiver, thisModule, @variables);
         VMProcess.debug(fn,[]);
         @variables = @variables + fn.getEnv();
       } catch(e) {
@@ -109,10 +119,15 @@ module idez(qt,io)
       super.new(parent);
       @variables = {};
 
+      if (parent == null) {
+        this.initActions();
+      }
+    }
+    fun initActions() {
       var action = qt.QAction.new("&Do it", this);
       action.setShortcut("ctrl+d");
       action.connect("triggered", fun() {
-          this.doIt();
+          this.doIt(null);
       });
       action.setShortcutContext(0); //widget context
       this.addAction(action);
@@ -120,7 +135,7 @@ module idez(qt,io)
       action = qt.QAction.new("&Print it", this);
       action.setShortcut("ctrl+p");
       action.connect("triggered", fun() {
-          this.printIt();
+          this.printIt(null);
       });
       action.setShortcutContext(0); //widget context
       this.addAction(action);
@@ -128,7 +143,7 @@ module idez(qt,io)
       action = qt.QAction.new("&Inspect it", this);
       action.setShortcut("ctrl+i");
       action.connect("triggered", fun() {
-          this.inspectIt();
+          this.inspectIt(null);
       });
       action.setShortcutContext(0); //widget context
       this.addAction(action);
@@ -136,7 +151,7 @@ module idez(qt,io)
       action = qt.QAction.new("De&bug it", this);
       action.setShortcut("ctrl+b");
       action.connect("triggered", fun() {
-          this.debugIt();
+          this.debugIt(null);
       });
       action.setShortcutContext(0); //widget context
       this.addAction(action);
@@ -154,37 +169,37 @@ module idez(qt,io)
       }
       @onAccept = fn;
     }
-    fun evalSelection() {
-      var r = eval(this.selectedText(), thisModule, @variables);
+    fun evalSelection(receiver) {
+      var r = eval(this.selectedText(), receiver, thisModule, @variables);
       @variables = r["env"];
       return r["result"];
     }
-    fun doIt() {
+    fun doIt(receiver) {
       try {
-        this.evalSelection();
+        this.evalSelection(receiver);
       } catch(e) {
         this.insertSelectedText(e.value());
       }
     }
-    fun printIt() {
+    fun printIt(receiver) {
       try {
-        var res = this.evalSelection();
+        var res = this.evalSelection(receiver);
         this.insertSelectedText(res.toString());
       } catch(e) {
         this.insertSelectedText(e.value());
       }
     }
-    fun inspectIt() {
+    fun inspectIt(receiver) {
       try {
-        var res = this.evalSelection();
+        var res = this.evalSelection(receiver);
         Inspector.new(res).show();
       } catch(e) {
         this.insertSelectedText(e.value());
       }
     }
-    fun debugIt() {
+    fun debugIt(receiver) {
       try {
-        var fn = evalFn(this.selectedText(), thisModule, @variables);
+        var fn = evalFn(this.selectedText(), receiver, thisModule, @variables);
         VMProcess.debug(fn,[]);
         @variables = @variables + fn.getEnv();
       } catch(e) {
@@ -240,6 +255,10 @@ module idez(qt,io)
       @lineEdit = LineEditor.new(centralWidget);
       mainLayout.addWidget(@lineEdit);
 
+      @lineEdit.connect("returnPressed", fun() {
+        @lineEdit.selectAllAndDoit(@inspectee);
+      });
+
       this.setCentralWidget(centralWidget);
 
       this.loadValues();
@@ -257,7 +276,6 @@ module idez(qt,io)
       action.connect("triggered", fun() {
           this.doIt();
       });
-      action.setShortcutContext(0); //widget context
       execMenu.addAction(action);
 
       action = qt.QAction.new("&Print it", this);
@@ -265,7 +283,6 @@ module idez(qt,io)
       action.connect("triggered", fun() {
           this.printIt();
       });
-      action.setShortcutContext(0); //widget context
       execMenu.addAction(action);
 
       action = qt.QAction.new("&Inspect it", this);
@@ -273,7 +290,6 @@ module idez(qt,io)
       action.connect("triggered", fun() {
           this.inspectIt();
       });
-      action.setShortcutContext(0); //widget context
       execMenu.addAction(action);
 
       action = qt.QAction.new("De&bug it", this);
@@ -281,7 +297,6 @@ module idez(qt,io)
       action.connect("triggered", fun() {
           this.debugIt();
       });
-      action.setShortcutContext(0); //widget context
       execMenu.addAction(action);
 
       action = qt.QAction.new("Accept it", execMenu);
@@ -317,37 +332,35 @@ module idez(qt,io)
 
     fun doIt() {
       if (@lineEdit.hasFocus()) {
-        @lineEdit.doIt();
+        @lineEdit.doIt(@inspectee);
       } else {
-        @textArea.doIt();
+        @textArea.doIt(@inspectee);
       }
     }
 
     fun printIt() {
       if (@lineEdit.hasFocus()) {
-        @lineEdit.printIt();
+        @lineEdit.printIt(@inspectee);
       } else {
-        @textArea.printIt();
+        @textArea.printIt(@inspectee);
       }
     }
     fun inspectIt() {
       if (@lineEdit.hasFocus()) {
-        @lineEdit.inspectIt();
+        @lineEdit.inspectIt(@inspectee);
       } else {
-        @textArea.inspectIt();
+        @textArea.inspectIt(@inspectee);
       }
     }
     fun debugIt() {
       if (@lineEdit.hasFocus()) {
-        @lineEdit.debugIt();
+        @lineEdit.debugIt(@inspectee);
       } else {
-        @textArea.debugIt();
+        @textArea.debugIt(@inspectee);
       }
     }
     fun acceptIt() {
-      var cmod = get_compiled_module(thisModule);
-      var cfun = CompiledFunction.new(@textArea.text(), [], cmod, {});
-      var fn = cfun.asContext(thisModule, @inspectee, {});
+      var fn = evalFn(@textArea.text(), @inspectee, thisModule, {});
       var new_value = fn.apply([]);
       var slot = @fieldList.currentItem().text();
       @mirror.setValueFor(slot, new_value);
