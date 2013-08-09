@@ -704,16 +704,14 @@ class Process(greenlet):
         self.state = None
 
     def greenlet_entry(self, cmd, *rest):
-        getattr(self, cmd)(*rest)
+        return getattr(self, cmd)(*rest)
 
     def switch(self, *rest):
         # if self.interpreter.current_process:
         #     self.interpreter.current_process.state = 'paused'
         self.interpreter.current_process = self
         print "switching..."
-        ret = super(Process,self).switch(*rest)
-        print "switched: " + str(ret)
-        return ret
+        return super(Process,self).switch(*rest)
 
     def run_module(self, entry_name, module, args):
         # registers
