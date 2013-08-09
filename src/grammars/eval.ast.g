@@ -34,7 +34,7 @@ expr = ['super-ctor-send' :s args:a]:ast     -> self.i.eval_do_super_ctor_send(s
      | ['literal-array'  expr*:r]            -> r
      | ['literal-dict'  pair*:r]             -> dict(r)
      | ['fun-literal'  ['params' :p]
-          ['body' :b]]                       -> self.i.eval_do_fun_lit(p,b)
+          ['body' :b]]:ast                   -> self.i.eval_do_fun_lit(p,b,ast)
      | ['return-this']:ast                   -> self.i.eval_do_return(self.i.r_rp,ast)
      | ['return-null']:ast                   -> self.i.eval_do_return(None,ast)
      | ['return-top']                        -> self.i.todo26()

@@ -934,7 +934,9 @@ class Process(greenlet):
     def eval_do_var_def(self, name, expr):
         self.set_local_value(name, expr)
 
-    def eval_do_fun_lit(self, params, body):
+    def eval_do_fun_lit(self, params, body, ast):
+        self.r_ip = ast
+        self.dbg_control('eval_do_fun_lit')
         compiled_fun = self.r_cp["compiled_function"]["fun_literals"][id(body[0])]
         return _compiled_function_to_context(compiled_fun, self.r_ep, self.r_mp)
 
