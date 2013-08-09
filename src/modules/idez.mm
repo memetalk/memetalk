@@ -476,7 +476,7 @@ module idez(qt,io)
       @stackCombo = StackCombo.new(centralWidget, @execFrames);
       mainLayout.addWidget(@stackCombo);
 
-      @editor = ScintillaEditor.new(centralWidget);
+      @editor = Editor.new(centralWidget);
       mainLayout.addWidget(@editor);
 
       @stackCombo.connect("currentIndexChanged",fun(i) {
