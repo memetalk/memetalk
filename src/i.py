@@ -631,6 +631,7 @@ class Interpreter():
         raise MemetalkException(mex)
 
     def throw_with_value(self, value):
+        print "throwing with value: " + value
         ex = self.create_instance(core.Exception)
 
         # ...and this me being stupid:
@@ -1105,13 +1106,14 @@ class Process(greenlet):
 
     def dbg_control(self, name):
         if self.state == 'paused' or self.state == 'next':
+            print name
             if not self.debugger_process:
-                print 'dbg_control: paused: initiating debugger'
+                print 'dbg_control: paused: initiating debugger...'
                 cmd = self.interpreter.debug_process(self)
             else:
                 print 'dbg_control paused: asking debugger for cmd...'
                 cmd = self.debugger_process.switch()
-            print 'dbg_control got: ' + str(cmd)
+            #print 'dbg_control got: ' + str(cmd)
             self.dbg_cmd(cmd)
 
 if __name__ == "__main__":

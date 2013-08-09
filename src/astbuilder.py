@@ -41,6 +41,6 @@ class ASTNode(list):
         self.end_col = end_col
 
     def __repr__(self):
-        #return str(self.lst) + ":" + str(self.line)
+        #return str(self.lst) + ":" + str(self.start_line)
         return "ASTNode(" + str(self.lst) + "," +self.filename.__repr__() + "," + self.text.__repr__() + "," + \
             str(self.start_line) + "," + str(self.start_col) + "," + str(self.end_line) + ","+ str(self.end_col) + ")"
