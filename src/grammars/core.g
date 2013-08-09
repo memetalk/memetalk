@@ -127,7 +127,7 @@ expr_try = spaces !(self.input.position):begin token("try") token("{")
            token("}")
           -> self.i.ast(begin, ['try', s_try, id, s_catch])
 
-expr = expr_or
+expr = spaces expr_or
 
 expr_or =  !(self.input.position):begin expr_or:a token("or") expr_and:b -> self.i.ast(begin,['or', a, b])
         | expr_and

@@ -1002,7 +1002,7 @@ class Process(greenlet):
 
     def eval_do_bin_send(self, selector, receiver, arg, ast):
         self.r_ip = ast
-        #self.dbg_control()
+        self.dbg_control('eval_do_bin_send')
         drecv, method = self._lookup(receiver, self.interpreter.get_vt(receiver), selector)
         if not method:
             self.interpreter.throw_with_value("DoesNotUnderstand: " + selector + " -- " + pformat(receiver,1,80,1))
