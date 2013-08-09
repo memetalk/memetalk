@@ -75,6 +75,7 @@ class SimpleEditor(QsciScintilla):
         self.markerAdd(start_line, self.CURRENT_LINE_MARKER)
         # highlight expression
         self.fillIndicatorRange(start_line,start_col,end_line,end_col,self.CURRENT_RANGE_IND)
+        self.ensureLineVisible(start_line)
 
     def on_margin_clicked(self, nmargin, nline, modifiers):
         print str(nmargin) + ":" + str(nline) + ":" + str(modifiers)
