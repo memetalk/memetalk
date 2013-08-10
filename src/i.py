@@ -1130,7 +1130,7 @@ class Process(greenlet):
         if self.state == 'paused' or self.state == 'next':
             print name
             if not self.debugger_process:
-                print 'dbg_control: paused: initiating debugger...'
+                print 'dbg_control: paused: initiating debugger...please wait'
                 cmd = self.interpreter.debug_process(self)
             else:
                 print 'dbg_control paused: asking debugger for cmd...'
