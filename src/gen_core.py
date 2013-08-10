@@ -94,7 +94,9 @@ class CoreGenerator(ASTBuilder):
             self.source = self.source + x + "\n"
 
         append("from i import _create_compiled_function, _function_from_cfunction")
+        append("from i import _create_compiled_module, _create_compiled_class")
         append("from astbuilder import *")
+        append("kernel_cmodule = {}")
         append("kernel_imodule = {}")
 
         for k,v in self.objects.iteritems():
@@ -125,13 +127,14 @@ class CoreGenerator(ASTBuilder):
 
 
         for name,obj in self.classes.iteritems():
-            append(name + '["compiled_class"] = {"_vt": CompiledClass,'+\
+            append(name + '["compiled_class"] = _create_compiled_class({"_vt": CompiledClass,'+\
                                        '"_delegate": None,'+\
                                        '"name": "'+name+'",'+\
                                        '"super_class_name":"'+self.supers[name]+'",'+\
                                        '"fields": '+to_source(self.fields[name])+','+\
+                                       '"module": kernel_cmodule,'+\
                                        '"methods": {},'+\
-                                       '"own_methods":{}}')
+                                       '"own_methods":{}})')
 
 
         for name, dc in self.methods.iteritems():
@@ -151,6 +154,12 @@ class CoreGenerator(ASTBuilder):
         append( "for name, m, in ObjectBehavior['dict'].iteritems():")
         append( "   Object_CompiledClass['own_methods'][name] = m['compiled_function']")
 
+
+        append("kernel_cmodule.update(_create_compiled_module({'name': 'core'," +\
+               "'ast': None," +\
+               "'parent_module':None," +\
+               "'@tag':'kernel compiled module'}))")
+
         append("""
 KernelModule = {"_vt": ModuleBehavior,
 "_delegate": None,
@@ -159,6 +168,7 @@ KernelModule = {"_vt": ModuleBehavior,
 "@tag": "KernelModule"}""")
         append("kernel_imodule['_vt'] = KernelModule")
         append("kernel_imodule['_delegate'] = None")
+        append("kernel_imodule['compiled_module'] = kernel_cmodule")
         append("kernel_imodule['@tag'] = 'Kernel module instance'")
         append("KernelModule['size'] = " + str(len(self.classes)+len(self.objects)))
         for name, val in self.classes.iteritems():

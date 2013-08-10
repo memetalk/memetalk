@@ -205,6 +205,7 @@ literal = lit_number
         | spaces !(self.input.position):begin token("[") expr_list:e token("]")    -> self.i.ast(begin, ['literal-array']+e)
         | spaces !(self.input.position):begin token("{") pair_list:e token("}")    -> self.i.ast(begin, ['literal-dict']+e)
         | token("thisModule")-> ['literal', 'module']
+        | token("thisContext")-> ['literal', 'context']
         | token("this")   -> ['literal', 'this']
         | token("null")   -> ['literal', 'null']
         | token("true")   -> ['literal', 'true']

@@ -6,8 +6,8 @@ module idez(qt,io)
 
   fun evalFn(text, receiver, imodule, vars) {
     var cmod = get_compiled_module(imodule);
-    var cfun = CompiledFunction.new(text, [], cmod, vars);
-    return cfun.asContext(imodule, receiver, vars);
+    var cfun = CompiledFunction.new(text, [], cmod, null, vars);
+    return cfun.asContext(imodule, vars, receiver);
   }
 
   fun eval(text, receiver, imodule, vars) {
@@ -393,8 +393,8 @@ module idez(qt,io)
     }
     fun names() {
       return @vmproc.stackFrames().map(fun(frame) {
-        frame.contextPointer().compiledFunction().name()
-      }) + [@vmproc.contextPointer().compiledFunction().name()];
+        frame.contextPointer().compiledFunction().fullName() + ":" + frame.instructionPointer()["start_line"].toString()
+      }) + [@vmproc.contextPointer().compiledFunction().fullName()];
     }
     fun codeFor(i) {
       if (i < @vmproc.stackFrames().size()) {

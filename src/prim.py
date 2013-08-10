@@ -205,10 +205,10 @@ def prim_object_to_string(proc):
     obj = proc.r_rp
     if obj == None:
         return "null"
-    elif isinstance(obj, basestring):
-        return obj
-    else:
+    elif isinstance(obj, dict) and '_vt' in obj:
         return pformat(obj,1,80,1) #dirt and limited, str does inifinite loop
+    else:
+        return str(obj)
 
 def prim_object_to_source(proc):
     obj = proc.r_rp
@@ -249,6 +249,7 @@ def prim_compiled_function_new(proc):
     cfun = proc.interpreter.compile_code(proc.locals['text'],
                                          proc.locals['parameters'],
                                          proc.locals['module'],
+                                         proc.locals['top_level_cfun'],
                                          proc.locals['env'])
     return cfun
 

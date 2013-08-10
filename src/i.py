@@ -67,6 +67,7 @@ def _create_compiled_function(data):
                 "env_table":{},
                 "env_table_skel": None,
                 "outter_cfun":None,
+                "top_level_cfun":None,
                 "owner":None,
                 "is_ctor": False,
                 "@tag": "a CompiledFunction"}
@@ -75,6 +76,7 @@ def _create_compiled_function(data):
 def _create_compiled_class(data):
     template = {"_vt": core.CompiledClass,
                 "_delegate": None,
+                "module": None, #compiled module
                 "name": "",
                 "super_class_name":"",
                 "fields": [],
@@ -295,9 +297,10 @@ class FunctionLoader(ASTBuilder): # for eval
         return cfun
 
 
-    def load_body(self, interpreter, code, params, owner, env):
+    def load_body(self, interpreter, code, params, owner, top_level_cfun, env):
         self.filename = "<eval>"
         self.line_offset = -1 # to compensate for the new line in '{\n' below
+        self.owner = owner    # compiled function or compiled module
         self.parser = MemeParser("{\n"+code+"\n}")
         self.parser.i = self
         try:
@@ -325,6 +328,10 @@ class FunctionLoader(ASTBuilder): # for eval
         self.env_id_table = [dict(_env1.items() + _env2.items())]
 
         self.functions = []
+
+        if top_level_cfun:
+            self.functions.append(top_level_cfun)
+
         self.functions.append(_create_compiled_function({"name":"<anonymous>",
                                                          "outter_cfun": None,
                                                          "params": params,
@@ -335,6 +342,7 @@ class FunctionLoader(ASTBuilder): # for eval
                                                          'uses_env': uses_env,
                                                          'env_table_skel': dict(zip(range(0,self.env_idx),[None]*self.env_idx)),
                                                          'owner': owner,
+                                                         'top_level_cfun': top_level_cfun,
                                                          "@tag":"a compiled literal function"}))
 
         loader = Loader([ast])
@@ -347,6 +355,7 @@ class FunctionLoader(ASTBuilder): # for eval
         self.env_id_table.append({})
         self.functions.append(_create_compiled_function({"name":name,
                                                          "is_ctor": is_ctor,
+                                                         "owner": owner,
                                                          "@tag":"a compiled function"}))
 
     def l_enter_literal_fun(self):
@@ -355,6 +364,8 @@ class FunctionLoader(ASTBuilder): # for eval
         self.functions.append(
             _create_compiled_function({"name":"<anonymous>",
                                        "outter_cfun": self.functions[-1],
+                                       "top_level_cfun": self.functions[0],
+                                       "owner": self.functions[-1]['owner'],
                                        "@tag":"a compiled literal function"}))
 
     def l_set_fun_literal_parameters(self, params):
@@ -461,6 +472,7 @@ class ModuleLoader(ASTBuilder):
         self.loading_class = True
         self.current_class = _create_compiled_class({"name":name,
                                                      "super_class_name":super_class,
+                                                     "module": self.current_module,
                                                      "fields":fields})
 
     def l_end_class(self):
@@ -471,8 +483,15 @@ class ModuleLoader(ASTBuilder):
 
     def l_begin_function(self, name, is_ctor):
         self.env_id_table.append({})
+
+        if self.loading_class:
+            owner = self.current_class
+        else:
+            owner = self.current_module
+
         self.functions.append(_create_compiled_function({"name":name,
                                                          "is_ctor": is_ctor,
+                                                         'owner': owner,
                                                          "@tag":"a compiled function"}))
 
     def l_var_def(self, name):
@@ -502,10 +521,8 @@ class ModuleLoader(ASTBuilder):
                 self.current_class["own_methods"][fname] = function
             else:
                 self.current_class["methods"][fname] = function
-            function['owner'] = self.current_class
         else:
             self.current_module["compiled_functions"][fname] = function
-            function['owner'] = self.current_module
 
 
     def l_enter_literal_fun(self):
@@ -514,6 +531,8 @@ class ModuleLoader(ASTBuilder):
         self.functions.append(
             _create_compiled_function({"name":"<anonymous>",
                                        "outter_cfun": self.functions[-1],
+                                       "top_level_cfun": self.functions[0],
+                                       "owner": self.functions[-1]['owner'],
                                        "@tag":"a compiled literal function"}))
 
     def l_set_fun_literal_parameters(self, params):
@@ -659,8 +678,8 @@ class Interpreter():
     def compiled_function_to_context(self, cfun, env, imodule):
         return _compiled_function_to_context(cfun, env, imodule)
 
-    def compile_code(self, text, params, owner, env):
-        return FunctionLoader().load_body(self, text, params, owner, env)
+    def compile_code(self, text, params, owner, top_level_cfun, env):
+        return FunctionLoader().load_body(self, text, params, owner, top_level_cfun, env)
 
     def recompile_fun(self, cfun, code):
         return FunctionLoader().load_fun(self, cfun, code)
@@ -949,6 +968,9 @@ class Process(greenlet):
 
     def eval_access_module(self):
         return self.r_mp
+
+    def eval_access_context(self):
+        return self.r_cp
 
     def eval_access_this(self):
         return self.r_rp

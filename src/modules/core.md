@@ -61,17 +61,20 @@ module core() {
   }
 
   class CompiledClass {
-    fields: name, super_class_name, fields, methods, own_methods;
+    fields: module, name, super_class_name, fields, methods, own_methods;
+    fun fullName() {
+      return @module.fullName() + "/" + @name;
+    }
   }
 
   class CompiledFunction {
     fields: _delegate, body, env_table, env_table_skel, fun_literals, is_ctor,
-            is_prim, name, params, prim_name, uses_env, outter_cfun, owner,
-            text;
-    init new(text, parameters, module, env) {
+            is_prim, name, params, prim_name, uses_env, outter_cfun,
+            top_level_cfun, owner, text;
+    init new(text, parameters, module, top_level_cfun, env) {
       <primitive "compiled_function_new">
     }
-    fun asContext(imodule, self, env) {
+    fun asContext(imodule, env, self) {
       <primitive "compiled_function_as_context">
     }
     fun instantiate(imodule) {
@@ -91,6 +94,16 @@ module core() {
     }
     fun ast() {
       return @body;
+    }
+    fun isTopLevel() {
+      return !@top_level_cfun;
+    }
+    fun fullName() {
+      if (!this.isTopLevel()) {
+        return @top_level_cfun.fullName() + "[" + @name + "]";
+      } else {
+        return @owner.fullName() + "::" + @name;
+      }
     }
   }
 
@@ -121,6 +134,9 @@ module core() {
     fields: _delegate, name, filepath, params, default_params, aliases, compiled_functions, compiled_classes;
     fun name() {
       return @name;
+    }
+    fun fullName() {
+      return this.name();
     }
     fun filepath() {
       return @filepath;
