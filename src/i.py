@@ -332,7 +332,7 @@ class FunctionLoader(ASTBuilder): # for eval
         if top_level_cfun:
             self.functions.append(top_level_cfun)
 
-        self.functions.append(_create_compiled_function({"name":"<anonymous>",
+        self.this_fn = _create_compiled_function({"name":"<anonymous>",
                                                          "outter_cfun": None,
                                                          "params": params,
                                                          "body": ast,
@@ -343,12 +343,13 @@ class FunctionLoader(ASTBuilder): # for eval
                                                          'env_table_skel': dict(zip(range(0,self.env_idx),[None]*self.env_idx)),
                                                          'owner': owner,
                                                          'top_level_cfun': top_level_cfun,
-                                                         "@tag":"a compiled literal function"}))
+                                                         "@tag":"a compiled literal function"})
+        self.functions.append(self.this_fn)
 
         loader = Loader([ast])
         loader.i = self
         loader.apply("load_body")
-        return self.functions[0]
+        return self.this_fn
 
 
     def l_begin_function(self, name, is_ctor):
