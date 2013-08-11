@@ -652,7 +652,9 @@ class Interpreter():
         raise MemetalkException(mex)
 
     def throw_with_value(self, value):
-        print "throwing with value: " + value
+        print "-- MemetalkException!--"
+        self.current_process.pp_stack_trace();
+        print "...throwing with value: " + value
         ex = self.create_instance(core.Exception)
 
         # ...and this me being stupid:
@@ -752,7 +754,16 @@ class Process(greenlet):
 
         self.state = 'running' # process state
 
-        return self.setup_and_run_fun(module, module, entry_name, module[entry_name], args, True)
+        try:
+            return self.setup_and_run_fun(module, module, entry_name, module[entry_name], args, True)
+        except MemetalkException as e:
+            print "exiting with memetalk exception: " + e.mmobj()['value']
+
+    def pp_stack_trace(self):
+        for frame in self.stack:
+            if frame['r_cp']:
+                P(frame['r_cp']['compiled_function'])
+        P(self.r_cp['compiled_function'])
 
     def _lookup(self, drecv, vt, selector):
         if vt == None:
