@@ -838,6 +838,23 @@ class Process(greenlet):
         # P(fun["compiled_function"]["body"],5)
         return ret
 
+    def top_frame(self):
+        return {"r_cp": self.r_cp,
+                "r_rp": self.r_rp,
+                "r_rdp": self.r_rdp,
+                "r_ep" : self.r_ep,
+                'r_ip' : self.r_ip,
+                'locals':self.locals}
+
+    def push_stack_frame(self):
+        self.stack.append({
+                "r_cp": self.r_cp,
+                "r_rp": self.r_rp,
+                "r_rdp": self.r_rdp,
+                "r_ep" : self.r_ep,
+                'r_ip' : self.r_ip,
+                'locals':self.locals})
+                # no need to backup mp, it can be infered from current fun
     def tear_fun(self):
         frame = self.stack.pop()
         self.r_cp = frame["r_cp"]
@@ -862,15 +879,7 @@ class Process(greenlet):
                                                   ", got " + str(len(args)) + " -- "+pformat(args,1,80,2))
 
         #backup frame
-        self.stack.append({
-                "r_cp": self.r_cp,
-                "r_rp": self.r_rp,
-                "r_rdp": self.r_rdp,
-                "r_ep" : self.r_ep,
-                'r_ip' : self.r_ip,
-                'locals':self.locals})
-                # no need to backup mp, it can be infered from current fun
-
+        self.push_stack_frame()
         return self.run_fun(recv, drecv, method, args, should_allocate)
 
     def setup_parameters_and_registers(self, recv, drecv, method, args):
