@@ -393,9 +393,9 @@ class FunctionLoader(ASTBuilder): # for eval
         self.functions[-1]["fun_literals"][id(body[0])] = function
 
     def l_var_def(self, name):
-        # checking if a name exist so we don't add duplicates.
+        # checking if `name` exist so we don't add duplicates.
         # A duplicate can happen if a CompiledFunction is being
-        # manually constructed with a particular env
+        # manually constructed with a particular env that already has `name`
         if name not in self.env_id_table[-1].values():
             self.env_id_table[-1][self.env_idx] = name
             self.env_idx = self.env_idx + 1
