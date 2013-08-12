@@ -944,18 +944,18 @@ class Process(greenlet):
             traceback.print_exc()
             sys.exit(1)
 
-    def eval_do_field_attr(self, field, rhs, ast):
+    def eval_do_field_assign(self, field, rhs, ast):
         self.r_ip = ast
-        self.dbg_control('eval_do_field_attr')
+        self.dbg_control('eval_do_field_assign')
 
         if not field in self.r_rdp:
             self.interpreter.throw_with_value("object has no field " + field)
         else:
             self.r_rdp[field] = rhs
 
-    def eval_do_local_attr(self, name,expr, ast):
+    def eval_do_local_assign(self, name,expr, ast):
         self.r_ip = ast
-        self.dbg_control('eval_do_local_attr')
+        self.dbg_control('eval_do_local_assign')
         self.set_local_value(name, expr)
 
     def eval_do_var_def(self, name, expr, ast):

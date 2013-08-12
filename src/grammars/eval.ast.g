@@ -38,11 +38,11 @@ expr = ['super-ctor-send' :s args:a]:ast     -> self.i.eval_do_super_ctor_send(s
      | ['return-this']:ast                   -> self.i.eval_do_return(self.i.r_rp,ast)
      | ['return-null']:ast                   -> self.i.eval_do_return(None,ast)
      | ['return-top']                        -> self.i.todo26()
-     | attribution
+     | assignment
      | atom
 
-attribution = ['=' ['id' :v] expr:rhs]:ast    -> self.i.eval_do_local_attr(v,rhs,ast)
-            | ['=' ['field' :f] expr:rhs]:ast -> self.i.eval_do_field_attr(f,rhs,ast)
+assignment = ['=' ['id' :v] expr:rhs]:ast    -> self.i.eval_do_local_assign(v,rhs,ast)
+           | ['=' ['field' :f] expr:rhs]:ast -> self.i.eval_do_field_assign(f,rhs,ast)
 
 args =  ['args' arglist:x] -> x
      |  ['args' []] -> []
