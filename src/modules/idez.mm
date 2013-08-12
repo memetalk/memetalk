@@ -667,7 +667,7 @@ module idez(qt,io)
         io.print("setting code:" + params["module_name"] + " :: " + params["function_name"]);
         var cfn = get_module(params["module_name"]).compiled_functions()[params["function_name"]];
         try {
-          cfn.setCode(e.toPlainText());
+          cfn.setCode(e.text());
         } catch(ex) {
           e.insertSelectedText(ex.value());
         }
@@ -691,7 +691,7 @@ module idez(qt,io)
       @webview.loadUrl(modules_path() + "/module-explorer/module-view.html");
       var module = get_module(name);
       var doc = @webview.page().mainFrame().documentElement();
-      doc.findFirst(".module_name").setText(module.name());
+      doc.findFirst(".module_name").setPlainText(module.name());
 
       var ul = doc.findFirst(".module_parameters");
       module.params().each(fun(p) {
@@ -702,8 +702,8 @@ module idez(qt,io)
       fns.each(fun(name,cfn) {
         var div = doc.findFirst(".fun_tpl").clone();
         div.setStyleProperty("display","block");
-        div.findFirst(".function_name").setText(cfn.name());
-        div.findFirst(".fun_paramslist").setText(cfn.parameters().toString());
+        div.findFirst(".function_name").setPlainText(cfn.name());
+        div.findFirst(".fun_paramslist").setPlainText(cfn.parameters().toString());
         div.findFirst(".fun_body param[name=module_name]").setAttribute("value",module.name());
         div.findFirst(".fun_body param[name=function_name]").setAttribute("value",name);
         div.findFirst(".fun_body param[name=code]").setAttribute("value",cfn.text());
