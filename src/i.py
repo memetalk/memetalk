@@ -598,7 +598,7 @@ class Interpreter():
 
     def start(self, filename):
         #self.load_modules()
-        compiled_module = self.compile_module_by_filename(filename)
+        compiled_module = self.compiled_module_by_filename(filename)
 
         imodule = _instantiate_module(self, compiled_module, {}, core.kernel_imodule)
         self.current_process = Process(self)
@@ -609,7 +609,7 @@ class Interpreter():
     def debug_process(self, target_process):
         target_process.state = 'paused'
 
-        compiled_module = self.compile_module_by_filename('idez.mm')
+        compiled_module = self.compiled_module_by_filename('idez.mm')
         imodule = _instantiate_module(self, compiled_module, {}, core.kernel_imodule)
         target_process.debugger_process = Process(self)
         self.processes.append(target_process.debugger_process)
@@ -619,14 +619,14 @@ class Interpreter():
         print('debug_process: switch back from debugger_process')
         return ret
 
-    def compile_module_by_filename(self, filename):
+    def compiled_module_by_filename(self, filename):
         module_name = filename[:-3]
         if module_name not in self.compiled_modules:
             source = self.open_module_file(filename).read()
             self.compiled_modules[module_name] =  ModuleLoader().compile_module(self,filename,source)
         return self.compiled_modules[module_name]
 
-    def compile_module_by_filepath(self, filepath):
+    def compiled_module_by_filepath(self, filepath):
         module_name = filepath
         if module_name not in self.compiled_modules:
             source = open(filepath).read()
@@ -638,7 +638,7 @@ class Interpreter():
 
     def compile_module_lib(self, spec):
         name = spec[1]
-        compiled_module = self.compile_module_by_filename(name + '.mm')
+        compiled_module = self.compiled_module_by_filename(name + '.mm')
         return _instantiate_module(self, compiled_module, {}, core.kernel_imodule)
 
     def compile_module_uri(self, uri):

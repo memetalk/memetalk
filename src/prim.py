@@ -50,10 +50,10 @@ def prim_available_modules(proc):
     return [f[:-3] for f in listdir(MODULES_PATH) if isfile(join(MODULES_PATH,f)) and f != "core.md"]
 
 def prim_get_module(proc):
-    return proc.interpreter.compiled_modules[proc.locals['name']]
+    return proc.interpreter.compiled_module_by_filename(proc.locals['name'] + ".mm")
 
 def prim_import(proc):
-    compiled_module = proc.interpreter.compile_module_by_filename(proc.locals["mname"])
+    compiled_module = proc.interpreter.compiled_module_by_filename(proc.locals["mname"])
     args = dict(zip(compiled_module["params"],proc.locals["margs"]))
     imodule = proc.interpreter.instantiate_module(compiled_module, args, proc.interpreter.kernel_module_instance())
     return imodule
@@ -1148,5 +1148,5 @@ def prim_test_files(proc):
     return [path + "/" + f for f in listdir(path) if isfile(join(path,f))]
 
 def prim_test_import(proc):
-    cmod = proc.interpreter.compile_module_by_filepath(proc.locals['filepath'])
+    cmod = proc.interpreter.compiled_module_by_filepath(proc.locals['filepath'])
     return proc.interpreter.instantiate_module(cmod, [], proc.r_cp['module'])
