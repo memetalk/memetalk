@@ -58,5 +58,5 @@ atom = ['literal-string' :x]      -> x
     |  ['literal' 'false']        -> False
     |  ['literal' 'module']       -> self.i.eval_access_module()
     |  ['literal' 'context']      -> self.i.eval_access_context()
-    |  ['id' :x]                  -> self.i.eval_access_var(x)
+    |  ['id' :x]:ast              -> self.i.eval_access_var(x,ast)
     |  ['field' :x]               -> self.i.eval_access_field(x)

@@ -987,7 +987,9 @@ class Process(greenlet):
     def eval_access_this(self):
         return self.r_rp
 
-    def eval_access_var(self, name):
+    def eval_access_var(self, name, ast):
+        self.r_ip = ast
+        self.dbg_control('eval_access_var')
         #-local
         if self.r_ep != None: # env
             idx = self.env_lookup(name)
