@@ -128,16 +128,23 @@ def prim_vmprocess_debug(proc):
 def prim_vmstackframe_instruction_pointer(proc):
     frame = _lookup_field(proc.r_rp, 'self')
     ast = frame['r_ip']
-    if ast != None: #first frame is none
-        #ast = frame['r_ip'] #.line - frame['r_cp']['compiled_function']['line']+1
-        start_line = ast.start_line - frame['r_cp']['compiled_function']['line']+1
-        start_col = ast.start_col
-        end_line = ast.end_line - frame['r_cp']['compiled_function']['line']+1
-        end_col = ast.end_col
-        res = {"start_line":start_line, "start_col": start_col, "end_line": end_line, "end_col":end_col}
-        return res
-    else:
+    if ast == None: #first frame is none
         return None
+
+    # ast has the line numbering relative to the entire module filre.
+    # we need to make it relative to the toplevel function
+
+    # I'm crying now...
+    outter_cfun = frame['r_cp']['compiled_function']
+    while outter_cfun['outter_cfun']:
+        outter_cfun = outter_cfun['outter_cfun']
+
+    start_line = ast.start_line - outter_cfun['line']+1
+    start_col = ast.start_col
+    end_line = ast.end_line - outter_cfun['line']+1
+    end_col = ast.end_col
+    res = {"start_line":start_line, "start_col": start_col, "end_line": end_line, "end_col":end_col}
+    return res
 
 def prim_vmstackframe_module_pointer(proc):
     frame = _lookup_field(proc.r_rp, 'self')

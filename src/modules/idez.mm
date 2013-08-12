@@ -406,7 +406,12 @@ module idez(qt,io)
       });
     }
     fun codeFor(i) {
-      return @vmproc.stackFrames().get(i).contextPointer().compiledFunction().text();
+      var cp = @vmproc.stackFrames().get(i).contextPointer().compiledFunction();
+      if (cp.isTopLevel()) {
+        return cp.text();
+      } else {
+        return cp.topLevelCompiledFunction().text();
+      }
     }
     fun localsFor(i) { // this is used for the local variable list widet
       return @vmproc.stackFrames().get(i).localVars();
