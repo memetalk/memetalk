@@ -65,7 +65,7 @@ def _create_compiled_function(data):
                 "uses_env": False,
                 "fun_literals":{},
                 "env_table":{},
-                "env_table_skel": None,
+                "env_table_skel": {},
                 "outter_cfun":None,
                 "owner":None,
                 "is_ctor": False,
