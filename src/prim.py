@@ -135,8 +135,6 @@ def prim_vmstackframe_instruction_pointer(proc):
         end_line = ast.end_line - frame['r_cp']['compiled_function']['line']+1
         end_col = ast.end_col
         res = {"start_line":start_line, "start_col": start_col, "end_line": end_line, "end_col":end_col}
-        print(ast)
-        print(res)
         return res
     else:
         return None
