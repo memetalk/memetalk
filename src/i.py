@@ -615,7 +615,7 @@ class Interpreter():
 
     def compile_module_by_filename(self, filename):
         module_name = filename[:-3]
-        if filename not in self.compiled_modules:
+        if module_name not in self.compiled_modules:
             self.compiled_modules[module_name] =  ModuleLoader().compile_module(self,filename)
         return self.compiled_modules[module_name]
 
