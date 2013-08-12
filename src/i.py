@@ -958,7 +958,7 @@ class Process(greenlet):
         self.dbg_control('eval_do_local_attr')
         self.set_local_value(name, expr)
 
-    def eval_do_var_def(self, name, expr):
+    def eval_do_var_def(self, name, expr, ast):
         self.r_ip = ast
         self.dbg_control('eval_var_def')
         self.set_local_value(name, expr)
