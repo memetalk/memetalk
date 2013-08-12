@@ -66,7 +66,7 @@ def _create_compiled_function(data):
                 "fun_literals":{},
                 "env_table":{},
                 "env_table_skel": {},
-                "outter_cfun":None,
+                "outer_cfun":None,
                 "owner":None,
                 "is_ctor": False,
                 "@tag": "a CompiledFunction"}
@@ -333,7 +333,7 @@ class FunctionLoader(ASTBuilder): # for eval
         self.functions = []
 
         self.this_fn = _create_compiled_function({"name":"<anonymous>",
-                                                         "outter_cfun": None,
+                                                         "outer_cfun": None,
                                                          "params": params,
                                                          "body": ast,
                                                          "text": code,
@@ -362,7 +362,7 @@ class FunctionLoader(ASTBuilder): # for eval
         self.functions[0]["uses_env"] = True # root Function using env
         self.functions.append(
             _create_compiled_function({"name":"<anonymous>",
-                                       "outter_cfun": self.functions[-1],
+                                       "outer_cfun": self.functions[-1],
                                        "owner": self.functions[-1]['owner'],
                                        "@tag":"a compiled literal function"}))
 
@@ -527,7 +527,7 @@ class ModuleLoader(ASTBuilder):
         self.functions[0]["uses_env"] = True # root Function using env
         self.functions.append(
             _create_compiled_function({"name":"<anonymous>",
-                                       "outter_cfun": self.functions[-1],
+                                       "outer_cfun": self.functions[-1],
                                        "owner": self.functions[-1]['owner'],
                                        "@tag":"a compiled literal function"}))
 
@@ -928,8 +928,8 @@ class Process(greenlet):
         def lookup(cfun, name):
             if name in cfun["env_table"].values():
                 return [k for k,v in cfun["env_table"].iteritems() if v == name][0]
-            elif cfun["outter_cfun"]:
-                return lookup(cfun["outter_cfun"], name)
+            elif cfun["outer_cfun"]:
+                return lookup(cfun["outer_cfun"], name)
             else:
                 return None
         return lookup(self.r_cp["compiled_function"], name)

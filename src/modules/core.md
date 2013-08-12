@@ -69,7 +69,7 @@ module core() {
 
   class CompiledFunction {
     fields: _delegate, body, env_table, env_table_skel, fun_literals, is_ctor,
-            is_prim, name, params, prim_name, uses_env, outter_cfun, owner,
+            is_prim, name, params, prim_name, uses_env, outer_cfun, owner,
             text;
     init new(text, parameters, module) {
       <primitive "compiled_function_new">
@@ -96,16 +96,16 @@ module core() {
       return @body;
     }
     fun isTopLevel() {
-      return !@outter_cfun;
+      return !@outer_cfun;
     }
     fun topLevelCompiledFunction() {
       if (this.isTopLevel()) {
         return null;
       } else {
-        if (@outter_cfun.isTopLevel()) {
-          return @outter_cfun;
+        if (@outer_cfun.isTopLevel()) {
+          return @outer_cfun;
         } else {
-          return @outter_cfun.topLevelCompiledFunction();
+          return @outer_cfun.topLevelCompiledFunction();
         }
       }
     }

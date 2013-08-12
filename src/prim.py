@@ -135,13 +135,13 @@ def prim_vmstackframe_instruction_pointer(proc):
     # we need to make it relative to the toplevel function
 
     # I'm crying now...
-    outter_cfun = frame['r_cp']['compiled_function']
-    while outter_cfun['outter_cfun']:
-        outter_cfun = outter_cfun['outter_cfun']
+    outer_cfun = frame['r_cp']['compiled_function']
+    while outer_cfun['outer_cfun']:
+        outer_cfun = outer_cfun['outer_cfun']
 
-    start_line = ast.start_line - outter_cfun['line']+1
+    start_line = ast.start_line - outer_cfun['line']+1
     start_col = ast.start_col
-    end_line = ast.end_line - outter_cfun['line']+1
+    end_line = ast.end_line - outer_cfun['line']+1
     end_col = ast.end_col
     res = {"start_line":start_line, "start_col": start_col, "end_line": end_line, "end_col":end_col}
     return res
@@ -270,7 +270,7 @@ def prim_compiled_function_as_context(proc):
         frame = proc.locals['frameOrTable']
         if frame['self']['r_ep'] != None:
             env = frame['self']['r_ep']
-            proc.r_rp['outter_cfun'] = proc.locals['frameOrTable']['self']['r_cp']['compiled_function'] # patching the env_table
+            proc.r_rp['outer_cfun'] = proc.locals['frameOrTable']['self']['r_cp']['compiled_function'] # patching the env_table
         else:
             env = ProxyEnv(frame['self'])
             proc.r_rp['env_table'] = env.table # patching the env_table
@@ -299,7 +299,7 @@ def prim_context_apply(proc):
 
 def prim_context_get_env(proc):
     #warning 1: no checking if the env idexes are ordered. we assume so.
-    #warning 2: only the outter env is returned (closures declaring variables
+    #warning 2: only the outer env is returned (closures declaring variables
     #                                            are not contemplated. its
     #                                            a TODO).
     env = dict(proc.r_rdp['env'])
