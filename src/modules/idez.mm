@@ -258,8 +258,8 @@ module idez(qt,io)
       @fieldList.setMaximumWidth(200);
       hbox.addWidget(@fieldList);
 
-      @textArea = Editor.new(centralWidget, fun() { @variables },
-                             fun(env) { @variables = env + @variables; });
+      @textArea = Editor.new(centralWidget, fun() { {"this" : @inspectee} }, null);
+
       hbox.addWidget(@textArea);
 
       mainLayout.addLayout(hbox);
