@@ -751,8 +751,8 @@ class Process(greenlet):
     def pp_stack_trace(self):
         for frame in self.stack:
             if frame['r_cp']:
-                P(frame['r_cp']['compiled_function'])
-        P(self.r_cp['compiled_function'])
+                print frame['r_cp']['compiled_function']['name'] + str(frame['r_cp']['compiled_function']['body'])
+        print self.r_cp['compiled_function']['name'] + str(self.r_cp['compiled_function']['body'])
 
     def _lookup(self, drecv, vt, selector):
         if vt == None:
