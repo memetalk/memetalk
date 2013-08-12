@@ -711,7 +711,7 @@ module idez(qt,io)
     var app = qt.QApplication.new();
     var main = ModuleExplorer.new();
     main.show();
-    app.exec();
+    return app.exec();
   }
 
   fun debug(process) {
