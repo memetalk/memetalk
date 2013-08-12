@@ -1,4 +1,4 @@
-module ex()
+module foo()
 {
   class X {
     fields: x;
@@ -14,6 +14,6 @@ module ex()
   }
 
   fun main() {
-    return X.throw + X.new(2).x;
+    assert(X.throw + X.new(2).x == 12, "Testing class method");
   }
 }

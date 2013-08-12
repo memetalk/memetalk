@@ -1,8 +1,7 @@
-module ex()
+module foo()
 {
   class X {
     init new() {
-      return this;
     }
     fun y(fn) {
       fn(1);
@@ -21,6 +20,6 @@ module ex()
         });
       }
     });
-    return res;
+    assert(res == 3, "if inside nested closures triggered by methods");
   }
 }

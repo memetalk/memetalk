@@ -1,14 +1,12 @@
 module foo() {
 
   fun main() {
-    var x = 10;
-    var y = 11;
+    var a = 0;
     if (1 == 10) {
-      x = 50;
-      return x;
+      assert(false, "Shouldn't execute this");
     } else {
-      x = 2;
+      a = 1;
     }
-    return 99;
+    assert(a == 1, "Simple if");
   }
 }

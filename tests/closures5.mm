@@ -1,4 +1,3 @@
-/* Shadowing identifiers within nested closures */
 module foo() {
 
   fun x(g) {
@@ -17,6 +16,6 @@ module foo() {
     };
     var j = w();
     var k = x(f);
-    return x(f);
+    assert(x(f) == 29, "Shadowing identifier with nested closures");
   }
 }

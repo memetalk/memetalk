@@ -6,6 +6,6 @@ module foo() {
     var cfun = CompiledFunction.new("fun() { a }", [], cmod);
     var fn = cfun.asContext(thisModule, env);
     var res = fn.apply([]);
-    return res();
+    assert(res() == 9, "CompiledFunction.asContext returning closure value");
   }
 }

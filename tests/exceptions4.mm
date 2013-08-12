@@ -1,23 +1,21 @@
-module ex(io)
-  io : memetalk/io/1.0();
+module foo()
 {
-
   fun f(fn) {
     fn();
   }
 
   fun main() {
+    var a = 0;
     f(fun() {
       try {
-        io.print("init");
         Exception.throw(10);
-        io.print("NOT HERE");
+        assert(false, "Shouldn't execute here");
       } catch(e) {
-        io.print("catch");
+        a = a + 1;
       }
-      io.print("last");
-      return 10;
+      a = a + 1;
     });
-    return 1;
+    a = a + 1;
+    assert(a == 3, "try/catch inside closure");
   }
 }

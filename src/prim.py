@@ -1142,3 +1142,11 @@ def prim_qt_extra_qwebpage_enable_plugins(proc):
     QWebSettings.globalSettings().setAttribute(QWebSettings.PluginsEnabled, True)
     qtobj.setPluginFactory(_factory)
     return proc.r_rp
+
+def prim_test_files(proc):
+    path = MODULES_PATH + "/../../tests"
+    return [path + "/" + f for f in listdir(path) if isfile(join(path,f))]
+
+def prim_test_import(proc):
+    cmod = proc.interpreter.compile_module_by_filepath(proc.locals['filepath'])
+    return proc.interpreter.instantiate_module(cmod, [], proc.r_cp['module'])

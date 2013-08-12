@@ -1,4 +1,3 @@
-/* accessing enclosed data from closures */
 module foo() {
 
   fun x(f) {
@@ -8,6 +7,6 @@ module foo() {
   fun main() {
     var f = fun() { 99 };
     var z = fun(k) { f() + 1 + k };
-    return x(z);
+    assert(x(z) == 109, "accessing closure environment");
   }
 }

@@ -6,6 +6,6 @@ module foo() {
     var cfun = CompiledFunction.new("return a + b;", ['b'], cmod);
     var fn = cfun.asContext(thisModule, env);
     var res = fn.apply([20]);
-    return res; // 30
+    assert(res == 30, "CompiledFunction.asContext with var table");
   }
 }

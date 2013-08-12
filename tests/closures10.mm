@@ -1,26 +1,18 @@
-module ex()
-
+module foo()
 {
-  fun print(arg) {
-    <primitive "io_print">
-  }
-
   fun foo(fn) {
-    print("executing foo fn");
-    fn();
+    fn(3);
   }
 
   fun bar(fn) {
-    print("executing bar fn");
-    fn();
+    fn(7);
   }
 
   fun main() {
-    foo(fun() {
-      bar(fun() {
-        print("inner");
+    foo(fun(x) {
+      bar(fun(y) {
+        assert(x + y == 10, "Passing nested closures with parameters");
       });
     });
-    return null;
   }
 }

@@ -415,13 +415,12 @@ class FunctionLoader(ASTBuilder): # for eval
             function['env_table_skel'] =  dict(zip(range(0,self.env_idx),[None]*self.env_idx))
 
 class ModuleLoader(ASTBuilder):
-    def compile_module(self, i, filename):
+    def compile_module(self, i, filename, src):
         self.line_offset = 0
         self.pos_stack = []
         #self.function_line_offset = 0
         self.filename = filename
 
-        src = i.open_module_file(filename).read()
         self.parser = MemeParser(src)
         self.parser.i = self
         try:
@@ -623,7 +622,15 @@ class Interpreter():
     def compile_module_by_filename(self, filename):
         module_name = filename[:-3]
         if module_name not in self.compiled_modules:
-            self.compiled_modules[module_name] =  ModuleLoader().compile_module(self,filename)
+            source = self.open_module_file(filename).read()
+            self.compiled_modules[module_name] =  ModuleLoader().compile_module(self,filename,source)
+        return self.compiled_modules[module_name]
+
+    def compile_module_by_filepath(self, filepath):
+        module_name = filepath
+        if module_name not in self.compiled_modules:
+            source = open(filepath).read()
+            self.compiled_modules[module_name] =  ModuleLoader().compile_module(self,filepath,source)
         return self.compiled_modules[module_name]
 
     def instantiate_module(self, compiled_module, args, imodule):

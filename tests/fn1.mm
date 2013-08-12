@@ -1,13 +1,8 @@
-module ex(qt)
-  qt:  memetalk/qt/1.0();
+module foo()
 {
-  fn QWidget = qt.QWidget;
-  fn QApplication = qt.QApplication;
+  fn a = 1;
 
   fun main() {
-    var app = QApplication().new();
-    var w = QWidget().new(null);
-    w.show();
-    return app.exec();
+    assert(a() == 1, "testing fn");
   }
 }

@@ -1,4 +1,4 @@
-module ex()
+module foo()
 {
   fun evalFn(text, imodule, frame) {
     var cmod = get_compiled_module(imodule);
@@ -13,6 +13,6 @@ module ex()
     }();
     var new_value = fn.apply([]);
     var env = fn.getEnv();
-    return locc;
+    assert(locc == 98, "nested CompiledFunction.asContext changing value of stack frame");
   }
 }

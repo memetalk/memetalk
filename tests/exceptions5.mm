@@ -1,38 +1,41 @@
-module ex(io)
-  io : memetalk/io/1.0();
+module foo()
 {
-
-  fun r() {
-    io.print("r:init");
+  fun r(fn) {
+    fn();
     Exception.throw("xx");
-    io.print("r:last");
+    fn();
   }
 
-  fun b() {
+  fun b(fn) {
+    fn();
     try {
-      io.print("b:init");
-      r();
-      io.print("b:after-r");
+      fn();
+      r(fn);
+      fn();
     } catch(e) {
-      io.print("b:catch " + e.value());
+      fn();
     }
+    fn();
     Exception.throw("yy");
-    io.print("b:last");
+    fn();
   }
 
-  fun a() {
+  fun a(fn) {
+    fn();
     try {
-      io.print("a:init");
-      b();
-      io.print("a:after-b");
+      fn();
+      b(fn);
+      fn();
     } catch(e) {
-      io.print("a:catch " + e.value());
+      fn();
     }
-    io.print("a:last");
+    fn();
   }
 
   fun main() {
-    a();
-    return null;
+    var x = 0;
+    var fn = fun() { x = x + 1; };
+    a(fn);
+    assert(x == 9, "Multiple try/catches");
   }
 }

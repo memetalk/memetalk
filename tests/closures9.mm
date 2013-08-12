@@ -14,6 +14,6 @@ module foo() {
   }
 
   fun main() {
-    return X.new().bla();
+    assert(X.new().bla() == 10, "Closure accessing instance field");
   }
 }

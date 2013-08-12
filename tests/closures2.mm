@@ -1,5 +1,3 @@
-/* passing closure as parameter, passing parameter to closure
-  and getting result */
 module foo() {
 
   fun x(f) {
@@ -8,6 +6,6 @@ module foo() {
 
   fun main() {
     var z = fun(k) { k + 1 };
-    return x(z);
+    assert(x(z) == 10, "testing closure parameters");
   }
 }

@@ -1,19 +1,13 @@
-module ex(io)
-  io : memetalk/io/1.0();
+module foo()
 {
-  fun f() {
-    io.print("init");
-    Exception.throw(10);
-    io.print("NOT HERE");
-  }
-
   fun main() {
+    var a = 0;
     try {
-      f();
+      Exception.throw(10);
     } catch(e) {
-      io.print("catch");
+      a = a + 1;
     }
-    io.print("last");
-    return 10;
+    a = a + 1;
+    assert(a == 2, "Core Exception class");
   }
 }

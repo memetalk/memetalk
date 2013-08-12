@@ -1,13 +1,12 @@
-module ex(io)
-  io : memetalk/io/1.0();
+module foo()
 {
-  class Exception {
+  class MyException {
     fields: x;
     init new(x) {
       @x = x;
     }
     func throw(x) {
-      var self = Exception.new(x);
+      var self = MyException.new(x);
       self.raise();
     }
     fun raise() {
@@ -18,32 +17,18 @@ module ex(io)
     }
   }
 
-  fun r() {
-    io.print("r()");
-    Exception.throw(10);
-    io.print("--r() DONT GO HERE");
-  }
-
-  fun i() {
-    io.print("i()");
-    r();
-    io.print("--i(): DONT GO HERE");
-  }
-
-  fun i2() {
-    io.print("i2()");
+  fun i(fn) {
+    fn(1);
   }
 
   fun main() {
-    var a = 1;
+    var a = 0;
+    var fn = fun(x) { a = a + x; };
     try {
-      io.print("trying i()");
-      i2();
-      io.print("try: end!");
+      i(fn);
     } catch(e) {
-      io.print("--catch! DONT PASS HERE");
-      return e.x() + a;
+      assert(false, "Shouldn't execute catch");
     }
-    return 99 + a;
+    assert(a == 1, "Executing code after try/catch");
   }
 }

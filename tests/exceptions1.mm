@@ -1,13 +1,12 @@
-module ex(io)
-  io : memetalk/io/1.0();
+module foo()
 {
-  class Exception {
+  class MyException {
     fields: x;
     init new(x) {
       @x = x;
     }
     func throw(x) {
-      var self = Exception.new(x);
+      var self = MyException.new(x);
       self.raise();
     }
     fun raise() {
@@ -18,32 +17,26 @@ module ex(io)
     }
   }
 
-  fun r() {
-    io.print("r()");
-    Exception.throw(10);
-    io.print("--r() DONT GO HERE");
+  fun r(fn) {
+    fn(1);
+    MyException.throw(10);
+    assert(false, "r(): shouldn't execute here");
   }
 
-  fun i() {
-    io.print("i()");
-    r();
-    io.print("--i(): DONT GO HERE");
-  }
-
-  fun i2() {
-    io.print("i2()");
+  fun i(fn) {
+    fn(1);
+    r(fn);
+    assert(false, "i(): shouldn't execute here");
   }
 
   fun main() {
-    var a = 2;
+    var a = 0;
+    var fn = fun(x) { a = a + x; };
     try {
-      io.print("trying i()");
-      i();
-      io.print("--try: DONT GO HERE");
+      i(fn);
+      assert(false, "main: shouldn't execute here");
     } catch(e) {
-      io.print("catch!");
-      return e.x() + a;
+      assert(e.x() + a == 12, "try/catch and exception flow with custom exception class");
     }
-    return 99;
   }
 }

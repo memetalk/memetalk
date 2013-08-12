@@ -23,6 +23,6 @@ module foo() {
 
   fun main() {
     var x = Point3D.new(1,5,9);
-    return x.all();
+    assert(x.all() == 15, "Simple inheritance");
   }
 }

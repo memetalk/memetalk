@@ -6,6 +6,6 @@ module foo() {
     var cfun = CompiledFunction.new("var a = 10 + b + c; a;", ['b'], cmod);
     var fn = cfun.asContext(thisModule, env);
     var res = fn.apply([20]);
-    return res;
+    assert(res == 31, "CompiledFunction.asContext declaring local var");
   }
 }

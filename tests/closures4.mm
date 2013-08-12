@@ -1,4 +1,3 @@
-/* returning closure from closure and accessing it */
 module foo() {
 
   fun x(g) {
@@ -11,6 +10,6 @@ module foo() {
       return fun(x) { x + y };
     };
     var k = x(f);
-    return k;
+    assert(k == 20, "manipulating returned closure");
   }
 }

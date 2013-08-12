@@ -1,9 +1,5 @@
 module foo() {
 
-  fun print(arg) {
-    <primitive "print">
-  }
-
   fun main() {
     var cmod = get_compiled_module(thisModule);
     var env = {"a": 1};
@@ -12,6 +8,6 @@ module foo() {
     var f = fn.apply([]);
     var ret = f(20);
     var env_new = fn.getEnv();
-    return env_new;
+    assert(env_new['a'] == 40, "Context.getEnv");
   }
 }
