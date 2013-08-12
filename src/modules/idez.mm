@@ -202,7 +202,6 @@ module idez(qt,io)
 
     fun debugIt() {
       try {
-      var r = evalWithVars(this.selectedText(), thisModule, @getContext());
         var fn = evalFn(this.selectedText(), thisModule, @getContext());
         VMProcess.debug(fn,[]);
         @afterEval(fn.getEnv());
