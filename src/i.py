@@ -67,7 +67,6 @@ def _create_compiled_function(data):
                 "env_table":{},
                 "env_table_skel": None,
                 "outter_cfun":None,
-                "top_level_cfun":None,
                 "owner":None,
                 "is_ctor": False,
                 "@tag": "a CompiledFunction"}
@@ -297,10 +296,10 @@ class FunctionLoader(ASTBuilder): # for eval
         return cfun
 
 
-    def load_body(self, interpreter, code, params, owner, top_level_cfun, env):
+    def load_body(self, interpreter, code, params, owner):
         self.filename = "<eval>"
         self.line_offset = -1 # to compensate for the new line in '{\n' below
-        self.owner = owner    # compiled function or compiled module
+        self.owner = owner    # compiled class or compiled module
         self.parser = MemeParser("{\n"+code+"\n}")
         self.parser.i = self
         try:
@@ -315,22 +314,16 @@ class FunctionLoader(ASTBuilder): # for eval
                 traceback.print_exc()
             raise
 
-        uses_env = env != {}
+        uses_env = True
 
-        # given env
-        _env1 = dict(zip(range(0,len(env.keys())), env.keys()))
-        self.env_idx = len(env.keys())
+        self.env_idx = 0
 
         # parameters env
-        _env2 = dict(zip(range(self.env_idx,self.env_idx+len(params)),params))
+        _env1 = dict(zip(range(self.env_idx,self.env_idx+len(params)),params))
         self.env_idx = self.env_idx+len(params)
 
-        self.env_id_table = [dict(_env1.items() + _env2.items())]
-
+        self.env_id_table = [_env1]
         self.functions = []
-
-        if top_level_cfun:
-            self.functions.append(top_level_cfun)
 
         self.this_fn = _create_compiled_function({"name":"<anonymous>",
                                                          "outter_cfun": None,
@@ -338,17 +331,15 @@ class FunctionLoader(ASTBuilder): # for eval
                                                          "body": ast,
                                                          "text": code,
                                                          "line":1,
-                                                         'env_table': self.env_id_table[0],
                                                          'uses_env': uses_env,
-                                                         'env_table_skel': dict(zip(range(0,self.env_idx),[None]*self.env_idx)),
                                                          'owner': owner,
-                                                         'top_level_cfun': top_level_cfun,
                                                          "@tag":"a compiled literal function"})
         self.functions.append(self.this_fn)
 
         loader = Loader([ast])
         loader.i = self
         loader.apply("load_body")
+        self.this_fn['env_table'] = self.env_id_table.pop()
         return self.this_fn
 
 
@@ -365,7 +356,6 @@ class FunctionLoader(ASTBuilder): # for eval
         self.functions.append(
             _create_compiled_function({"name":"<anonymous>",
                                        "outter_cfun": self.functions[-1],
-                                       "top_level_cfun": self.functions[0],
                                        "owner": self.functions[-1]['owner'],
                                        "@tag":"a compiled literal function"}))
 
@@ -532,7 +522,6 @@ class ModuleLoader(ASTBuilder):
         self.functions.append(
             _create_compiled_function({"name":"<anonymous>",
                                        "outter_cfun": self.functions[-1],
-                                       "top_level_cfun": self.functions[0],
                                        "owner": self.functions[-1]['owner'],
                                        "@tag":"a compiled literal function"}))
 
@@ -681,8 +670,8 @@ class Interpreter():
     def compiled_function_to_context(self, cfun, env, imodule):
         return _compiled_function_to_context(cfun, env, imodule)
 
-    def compile_code(self, text, params, owner, top_level_cfun, env):
-        return FunctionLoader().load_body(self, text, params, owner, top_level_cfun, env)
+    def compile_code(self, text, params, owner):
+        return FunctionLoader().load_body(self, text, params, owner)
 
     def recompile_fun(self, cfun, code):
         return FunctionLoader().load_fun(self, cfun, code)

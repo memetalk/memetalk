@@ -69,12 +69,12 @@ module core() {
 
   class CompiledFunction {
     fields: _delegate, body, env_table, env_table_skel, fun_literals, is_ctor,
-            is_prim, name, params, prim_name, uses_env, outter_cfun,
-            top_level_cfun, owner, text;
-    init new(text, parameters, module, top_level_cfun, env) {
+            is_prim, name, params, prim_name, uses_env, outter_cfun, owner,
+            text;
+    init new(text, parameters, module) {
       <primitive "compiled_function_new">
     }
-    fun asContext(imodule, env, self) {
+    fun asContext(imodule, frameOrTable) {
       <primitive "compiled_function_as_context">
     }
     fun instantiate(imodule) {
@@ -96,13 +96,24 @@ module core() {
       return @body;
     }
     fun isTopLevel() {
-      return !@top_level_cfun;
+      return !@outter_cfun;
+    }
+    fun topLevelCompiledFunction() {
+      if (this.isTopLevel()) {
+        return null;
+      } else {
+        if (@outter_cfun.isTopLevel()) {
+          return @outter_cfun;
+        } else {
+          return @outter_cfun.topLevelCompiledFunction();
+        }
+      }
     }
     fun fullName() {
-      if (!this.isTopLevel()) {
-        return @top_level_cfun.fullName() + "[" + @name + "]";
-      } else {
+      if (this.isTopLevel()) {
         return @owner.fullName() + "::" + @name;
+      } else {
+        return this.topLevelCompiledFunction().fullName() + "[" + @name + "]";
       }
     }
   }
@@ -280,18 +291,6 @@ module core() {
     fun rewind() {
       <primitive "vmprocess_rewind">
     }
-    fun localVars() {
-      <primitive "vmprocess_local_vars">
-    }
-    fun contextPointer() {
-      <primitive "vmprocess_context_pointer">
-    }
-    fun instructionPointer() {
-      <primitive "vmprocess_instruction_pointer">
-    }
-    fun modulePointer() {
-      <primitive "vmprocess_module_pointer">
-    }
     func debug(fn, args) {
       <primitive "vmprocess_debug">
     }
@@ -325,6 +324,9 @@ module core() {
   }
 
   //temporary home for some infrastructure functions
+  fun get_current_process() {
+    <primitive "get_current_process">
+  }
 
   fun get_compiled_module(module) {
     <primitive "get_compiled_module">

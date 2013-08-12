@@ -68,29 +68,9 @@ def prim_vmprocess(proc):
 def prim_vmprocess_stack_frames(proc):
     _proc = _lookup_field(proc.r_rp, 'self')
     VMStackFrameClass = proc.interpreter.get_class('VMStackFrame')
-    return [proc.interpreter.alloc(VMStackFrameClass,{'self':x}) for x in _proc.stack if x['r_cp']]
-
-def prim_vmprocess_context_pointer(proc):
-    _proc = _lookup_field(proc.r_rp, 'self')
-    return _proc.r_cp
-
-# dirty stuff ahead: I'm too lazy to create a memetalk class wrapper over ASTNode
-def prim_vmprocess_instruction_pointer(proc):
-    _proc = _lookup_field(proc.r_rp, 'self')
-    ast = _proc.r_ip
-
-    start_line = ast.start_line - _proc.r_cp['compiled_function']['line']+1
-    start_col = ast.start_col
-    end_line = ast.end_line - _proc.r_cp['compiled_function']['line']+1
-    end_col = ast.end_col
-    res = {"start_line":start_line, "start_col": start_col, "end_line": end_line, "end_col":end_col}
-    print ast
-    print(res)
-    return res
-
-# def prim_vmprocess_instruction_pointer(proc):
-#     _proc = _lookup_field(proc.r_rp, 'self')
-#     return _proc.r_ip.line - _proc.r_cp['compiled_function']['line']+1
+    # first r_cp on stack is None
+    return [proc.interpreter.alloc(VMStackFrameClass,{'self':x}) for x in _proc.stack if x['r_cp']] +\
+        [proc.interpreter.alloc(VMStackFrameClass,{'self':_proc.top_frame()})]
 
 def prim_vmprocess_step_into(proc):
     print '+ENTER prim_vmprocess_step_into'
@@ -138,24 +118,13 @@ def prim_vmprocess_rewind(proc):
     _proc = _lookup_field(proc.r_rp, 'self')
     _proc.switch("rewind")
 
-def prim_vmprocess_local_vars(proc):
-    _proc = _lookup_field(proc.r_rp, 'self')
-    return _proc.locals
-
-def prim_vmprocess_module_pointer(proc):
-    _proc = _lookup_field(proc.r_rp, 'self')
-    if _proc.r_cp != None: #first frame is none
-        return _proc.r_cp['module']
-    else:
-        return None
-
 def prim_vmprocess_debug(proc):
     fn = proc.locals['fn']
     args = proc.locals['args']
     proc.state = 'paused'
     return proc.setup_and_run_fun(None, None, fn['compiled_function']['name'], fn, args, True)
 
-# convenience
+# dirty stuff ahead: I'm too lazy to create a memetalk class wrapper over ASTNode
 def prim_vmstackframe_instruction_pointer(proc):
     frame = _lookup_field(proc.r_rp, 'self')
     ast = frame['r_ip']
@@ -248,27 +217,70 @@ def prim_compiled_function_new(proc):
     #  --we are only interested in the names of the env slots here
     cfun = proc.interpreter.compile_code(proc.locals['text'],
                                          proc.locals['parameters'],
-                                         proc.locals['module'],
-                                         proc.locals['top_level_cfun'],
-                                         proc.locals['env'])
+                                         proc.locals['module'])
     return cfun
 
 
 def prim_compiled_function_set_code(proc):
     return proc.interpreter.recompile_fun(proc.r_rdp, proc.locals['code'])
 
+
+# hackutility for as_context..
+class ProxyEnv():
+    def __init__(self, frame):
+        self.frame = frame
+        self.table = {}
+
+        self.i = 0
+        for name in frame['locals'].keys():
+            self.table[self.i] = name
+            self.i = self.i + 1
+
+    def __getitem__(self, key):
+        if isinstance(key, (int, long)):
+            return self.frame['locals'][self.table[key]]
+        else:
+            #r_rdp,r_rp
+            return self.frame[key]
+
+    def __setitem__(self, key, val):
+        if isinstance(key, (int, long)):
+            self.frame['locals'][self.table[key]] = val
+        else:
+            #r_rdp,r_rp
+            self.frame[key] = val
+    def __contains__(self, item):
+        return item in ['r_rdp', 'r_rp'] + range(0,self.i)
+
+    def __iter__(self):
+        return {}.iteritems()
+
 def prim_compiled_function_as_context(proc):
-    #asContext(imodule, env)
-    # -- now we want the names and values of the env
-    env = proc.locals['env']
-    this = proc.locals['self']
-    if env != None:
-        env = dict(zip(range(0,len(env.keys())), env.values()))
-        env['r_rdp'] = env['r_rp'] = this
-    elif this == None:
-        env = None
-    else:
-        env = {'r_rdp': this, 'r_rp': this}
+    # hack ahead.
+    if 'self' in proc.locals['frameOrTable']: # frameOrTable is a stackFrame
+        # If the frame passed has an r_ep, just use it as our env.
+        # else, we need to construct a proxy env capable of changing
+        # frame.locals. We also need to patch r_rp function's env_table
+        # so that all frame.locals/this are mapped there (so env_lookup works).
+        frame = proc.locals['frameOrTable']
+        if frame['self']['r_ep'] != None:
+            env = frame['self']['r_ep']
+            proc.r_rp['outter_cfun'] = proc.locals['frameOrTable']['self']['r_cp']['compiled_function'] # patching the env_table
+        else:
+            env = ProxyEnv(frame['self'])
+            proc.r_rp['env_table'] = env.table # patching the env_table
+    else: # frameOrTable is a table
+        env = dict(proc.locals['frameOrTable']) # we do 'del' below, lets no fuck with the parameter
+        if env != None:
+            if 'this' in env: #another hack for binding this
+                this = env['this']
+                del env['this']
+            else:
+                this = None
+            begin = len(proc.r_rp['env_table'])
+            proc.r_rp['env_table'].update(dict(zip(range(begin,begin+len(env.keys())), env.keys())))
+            env = dict([(key,env[name]) for key,name in proc.r_rp['env_table'].iteritems() if name in env])
+            env['r_rdp'] = env['r_rp'] = this
     ret = proc.interpreter.compiled_function_to_context(proc.r_rp, env, proc.locals['imodule'])
     return ret
 
@@ -322,6 +334,9 @@ def prim_dictionary_has(proc):
 def prim_get_compiled_module(proc):
     return proc.interpreter.get_vt(proc.locals['module'])['compiled_module']
 
+def prim_get_current_process(proc):
+    VMProcess = proc.interpreter.get_class('VMProcess')
+    return proc.interpreter.alloc(VMProcess, {'self': proc})
 
 def prim_mirror_fields(proc):
     mirrored = proc.r_rdp['mirrored']
