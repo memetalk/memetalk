@@ -386,9 +386,6 @@ module idez(qt,io)
       super.new(parent);
       @frames = execframes;
     }
-    // fun initialize() {
-    //   this.setCurrentIndex(@frames.size() - 1);
-    // }
     fun updateInfo() {
       this.clear();
       @frames.names().each(fun(name) {
