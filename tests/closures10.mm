@@ -21,5 +21,6 @@ module ex()
         print("inner");
       });
     });
+    return null;
   }
 }

@@ -33,5 +33,6 @@ module ex(io)
 
   fun main() {
     a();
+    return null;
   }
 }
