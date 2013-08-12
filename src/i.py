@@ -193,6 +193,13 @@ def _instantiate_module(i, compiled_module, _args, parent_module):
         imod_dictionary[cfname] = _function_from_cfunction(cfun,imodule)
 
     #instantiate classes
+
+    def lookup_super_class_on_parent_module(super_name, module):
+        if super_name in module:
+            return module[super_name] # TODO: should be actually a msg send
+        elif module["_delegate"]:
+            return lookup_super_class_on_parent_module(super_name, module['_delegate'])
+
     classes = {}
     bclasses = {}
     super_later = {}
@@ -201,8 +208,8 @@ def _instantiate_module(i, compiled_module, _args, parent_module):
         super_class = None
         if super_name in args.keys():
             super_class = args[super_name]
-        elif super_name in parent_module:
-            super_class = parent_module[super_name] # TODO: should be actually a msg send
+        elif lookup_super_class_on_parent_module(super_name, parent_module):
+            super_class = lookup_super_class_on_parent_module(super_name, parent_module)
         elif super_name in compiled_module["compiled_classes"]:
             super_later[c["name"]] = super_name
         else:
