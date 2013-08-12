@@ -620,7 +620,11 @@ module idez(qt,io)
       this.show_home();
       @webview.page().setLinkDelegationPolicy(2);
       @webview.page().enablePluginsWith("editor", fun(params) {
-        var e = Editor.new(null);
+        var variables = {};
+
+        var e = Editor.new(null, fun() { variables },
+                           fun(env) { variables = env + variables;});
+
         e.setStyleSheet("border-style: outset;");
         if (params.has("code")) {
           e.setText(params["code"]);
