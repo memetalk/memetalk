@@ -8,6 +8,6 @@ module ex(qt)
     var app = QApplication().new();
     var w = QWidget().new(null);
     w.show();
-    app.exec();
+    return app.exec();
   }
 }
