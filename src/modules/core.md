@@ -176,6 +176,12 @@ module core() {
     fun compiled_classes() {
       return @compiled_classes;
     }
+    fun removeFunction(name) {
+      <primitive "compiled_module_remove_function">
+    }
+    fun addFunction(cfun) {
+      <primitive "compiled_module_add_function">
+    }
   }
 
   object ModuleBehavior { //the behavior of module instances

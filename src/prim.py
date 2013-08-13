@@ -396,9 +396,36 @@ def prim_list_has(proc):
 def prim_io_file_contents(proc):
     return open(proc.locals['path']).read()
 
+def prim_compiled_module_remove_function(proc):
+    name = proc.locals['name']
+    cmod = proc.r_rdp
 
-###
+    # removing function from compiled module
+    del cmod['compiled_functions'][name]
 
+    # removing function from instances:
+    for imod in proc.interpreter.mem_imodules:
+        if imod['_vt']['compiled_module'] == cmod:
+            # remove the getter...
+            del imod['_vt']['dict'][name]
+            # ...and the python dict field
+            del imod[name]
+
+def prim_compiled_module_add_function(proc):
+    cfun = proc.locals['cfun']
+    cmod = proc.r_rdp
+
+    # add the function to the compiled module
+    cmod['compiled_functions'][cfun['name']] = cfun
+
+    # add the function to the module instances:
+    for imod in proc.interpreter.mem_imodules:
+        if imod['_vt']['compiled_module'] == cmod:
+            fun = proc.interpreter.create_function_from_cfunction(cfun, imod)
+            # add the getter
+            imod['_vt']['dict'][cfun['name']] = fun
+            # add the function to the dict:
+            imod[cfun['name']] = fun
 
 # lookup the inner handle of the actual binding object
 # which is set -- this is because a hierarchy of delegates
