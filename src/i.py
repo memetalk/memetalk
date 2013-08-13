@@ -321,7 +321,7 @@ class FunctionLoader(ASTBuilder): # for eval
                 traceback.print_exc()
             raise
 
-        uses_env = True
+        uses_env = False
 
         self.env_idx = 0
 
@@ -1054,7 +1054,7 @@ class Process(greenlet):
         elif not method["compiled_function"]["is_ctor"]:
             raise Exception("Method is not constructor: " + selector)
         else:
-            return self.setup_and_run_fun(instance, drecv, selector, method, args, False)
+            return self.setup_and_run_fun(self.r_rp, drecv, selector, method, args, False)
 
     def eval_do_bin_send(self, selector, receiver, arg, ast):
         self.r_ip = ast
