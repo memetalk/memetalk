@@ -101,6 +101,9 @@ module core() {
     fun isTopLevel() {
       return !@outer_cfun;
     }
+    fun owner() {
+      return @owner;
+    }
     fun topLevelCompiledFunction() {
       if (this.isTopLevel()) {
         return null;
