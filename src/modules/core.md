@@ -26,6 +26,9 @@ module core() {
       fun toSource() {
           <primitive "object_to_source">
       }
+      fun ==(other) {
+          <primitive "object_equal">
+      }
     }
   }
 
