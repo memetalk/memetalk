@@ -74,7 +74,7 @@ module core() {
     fields: _delegate, body, env_table, env_table_skel, fun_literals, is_ctor,
             is_prim, name, params, prim_name, uses_env, outer_cfun, owner,
             text;
-    init new(text, parameters, module) {
+    init new(name, text, parameters, module) {
       <primitive "compiled_function_new">
     }
     fun asContext(imodule, frameOrTable) {

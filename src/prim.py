@@ -223,6 +223,7 @@ def prim_compiled_function_new(proc):
     cfun = proc.interpreter.compile_code(proc.locals['text'],
                                          proc.locals['parameters'],
                                          proc.locals['module'])
+    cfun["name"] = proc.locals['name']
     return cfun
 
 

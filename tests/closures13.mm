@@ -2,7 +2,7 @@ module foo()
 {
   fun evalFn(text, imodule, frame) {
     var cmod = get_compiled_module(imodule);
-    var cfun = CompiledFunction.new(text, [], cmod);
+    var cfun = CompiledFunction.new("bar",text, [], cmod);
     return cfun.asContext(imodule, frame);
   }
 

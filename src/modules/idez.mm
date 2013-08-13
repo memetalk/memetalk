@@ -5,7 +5,7 @@ module idez(qt,io)
 {
   fun evalFn(text, imodule, frameOrEnv) {
     var cmod = get_compiled_module(imodule);
-    var cfun = CompiledFunction.new(text, [], cmod);
+    var cfun = CompiledFunction.new("<doIt>",text, [], cmod);
     return cfun.asContext(imodule, frameOrEnv);
   }
 

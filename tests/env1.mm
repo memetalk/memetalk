@@ -3,7 +3,7 @@ module foo() {
   fun main() {
     var cmod = get_compiled_module(thisModule);
     var env = {"a": 1};
-    var cfun = CompiledFunction.new("fun(x) { a = a + x; }", [], cmod);
+    var cfun = CompiledFunction.new("bar","fun(x) { a = a + x; }", [], cmod);
     var fn = cfun.asContext(thisModule, env);
     var f = fn.apply([]);
     var ret = f(20);
