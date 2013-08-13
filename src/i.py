@@ -578,6 +578,7 @@ class Interpreter():
         self.compiled_modules = {}
         self.processes = []
         self.current_process = None
+        self.mem_imodules = [core.kernel_imodule]
 
     def open_module_file(self, filename):
         if os.path.isfile(filename):
@@ -600,7 +601,8 @@ class Interpreter():
         #self.load_modules()
         compiled_module = self.compiled_module_by_filename(filename)
 
-        imodule = _instantiate_module(self, compiled_module, {}, core.kernel_imodule)
+        imodule = self.instantiate_module(compiled_module, {}, core.kernel_imodule)
+
         self.current_process = Process(self)
         self.processes.append(self.current_process)
         ret = self.current_process.switch('run_module', 'main', imodule, [])
@@ -610,7 +612,8 @@ class Interpreter():
         target_process.state = 'paused'
 
         compiled_module = self.compiled_module_by_filename('idez.mm')
-        imodule = _instantiate_module(self, compiled_module, {}, core.kernel_imodule)
+        imodule = self.instantiate_module(self, compiled_module, {}, core.kernel_imodule)
+
         target_process.debugger_process = Process(self)
         self.processes.append(target_process.debugger_process)
 
@@ -634,12 +637,14 @@ class Interpreter():
         return self.compiled_modules[module_name]
 
     def instantiate_module(self, compiled_module, args, imodule):
-        return _instantiate_module(self, compiled_module, args, imodule)
+        imodule = _instantiate_module(self, compiled_module, args, imodule)
+        self.mem_imodules.append(imodule)
+        return imodule
 
     def compile_module_lib(self, spec):
         name = spec[1]
         compiled_module = self.compiled_module_by_filename(name + '.mm')
-        return _instantiate_module(self, compiled_module, {}, core.kernel_imodule)
+        return self.instantiate_module(compiled_module, {}, core.kernel_imodule)
 
     def compile_module_uri(self, uri):
         raise Exception('TODO')
