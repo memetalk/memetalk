@@ -146,6 +146,9 @@ module core() {
     fun name() {
       return @name;
     }
+    fun setName(name) {
+      @name = name;
+    }
     fun fullName() {
       return this.name();
     }
