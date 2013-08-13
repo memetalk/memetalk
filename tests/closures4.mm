@@ -1,10 +1,10 @@
 module foo() {
 
-  fun x(g) {
+  x: fun(g) {
     return g()(10);
   }
 
-  fun main() {
+  main: fun() {
     var f = fun() {
       var y = 10;
       return fun(x) { x + y };

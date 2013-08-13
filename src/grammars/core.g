@@ -47,25 +47,31 @@ fields = token("fields") token(":") idlist:xs token(";") -> ['fields', xs]
 
 constructors = constructor*:c -> ["ctors", c]
 
-constructor = spaces !(self.input.position):begin  token("init") alpha_name:name params:p token("{")
+constructor = spaces token("init") alpha_name:name token(":") !(self.input.position):begin
+              token("fun") params:p token("{")
                   top_fun_body:body !(self.input.position):end
                 token("}")
              -> self.i.ast(begin,['ctor', name, ["params", p],
                   ['body', body + [self.i.sint_ast(end,['return-this'])]]])
 
-top_level_fun = spaces  !(self.input.position):begin token("fun") alpha_name:name params:p token("{")
+top_level_fun = spaces alpha_name:name token(":") !(self.input.position):begin
+                token("fun")  params:p token("{")
                   top_fun_body:body !(self.input.position):end
                 token("}")
                   -> self.i.ast(begin,['fun', name, ["params", p],
                                               ['body', body + [self.i.sint_ast(end,['return-this'])]]])
 
 
-metho_decl = spaces  !(self.input.position):begin token("fun") alpha_name:name params:p token("{")
+metho_decl = spaces token("instance_method") alpha_name:name token(":")
+             !(self.input.position):begin
+                token("fun") params:p token("{")
                   top_fun_body:body !(self.input.position):end
                token("}")
                -> self.i.ast(begin,['fun', name, ["params", p],
                     ['body', body + [self.i.sint_ast(end,['return-this'])]]])
-           | spaces  !(self.input.position):begin token("func") alpha_name:name params:p token("{")
+           | spaces token("class_method") alpha_name:name token(":")
+             !(self.input.position):begin
+                token("fun") params:p token("{")
                   top_fun_body:body !(self.input.position):end
                token("}")
                -> self.i.ast(begin,['func', name, ["params", p],

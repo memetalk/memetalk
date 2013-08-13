@@ -1,8 +1,8 @@
 module foo()
 {
-  fn a = 1;
+  a: 1;
 
-  fun main() {
+  main: fun() {
     assert(a() == 1, "testing fn");
   }
 }

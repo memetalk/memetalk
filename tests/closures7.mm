@@ -1,6 +1,6 @@
 module foo() {
 
-  fun main() {
+  main: fun() {
     var cmod = get_compiled_module(thisModule);
     var env = {"c": 1};
     var cfun = CompiledFunction.new("bar","var a = 10 + b + c; a;", ['b'], cmod);

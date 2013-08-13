@@ -3,13 +3,13 @@ module idez(qt,io)
   io:  memetalk/io/1.0();
   [QWidget, QMainWindow, QsciScintilla, QLineEdit, QComboBox, QTableWidget] <= qt;
 {
-  fun evalFn(text, imodule, frameOrEnv) {
+  evalFn: fun(text, imodule, frameOrEnv) {
     var cmod = get_compiled_module(imodule);
     var cfun = CompiledFunction.new("<doIt>",text, [], cmod);
     return cfun.asContext(imodule, frameOrEnv);
   }
 
-  fun evalWithVars(text, imodule, vars) {
+  evalWithVars: fun(text, imodule, vars) {
     var fn = evalFn(text, imodule, vars);
     var res =  fn.apply([]);
     return {"result":res, "env":fn.getEnv()};
@@ -17,7 +17,7 @@ module idez(qt,io)
 
   class LineEditor < QLineEdit {
     fields: receiver;
-    init new(parent, receiver) {
+    init new: fun(parent, receiver) {
       super.new(parent);
       if (parent == null) {
         this.initActions();
@@ -25,7 +25,7 @@ module idez(qt,io)
       @receiver = receiver;
     }
 
-    fun initActions() {
+    instance_method initActions: fun() {
       this.connect("returnPressed", fun() {
         this.selectAllAndDoit(null);
       });
@@ -62,27 +62,27 @@ module idez(qt,io)
       action.setShortcutContext(0); //widget context
       this.addAction(action);
     }
-    fun evalSelection() {
+    instance_method evalSelection: fun() {
       var r = evalWithVars(this.selectedText(), thisModule, {"this" : @receiver});
       return r["result"];
     }
-    fun insertSelectedText(text) {
+    instance_method insertSelectedText: fun(text) {
       var len = this.text().size();
       this.setText(this.text() + text);
       this.setSelection(len, text.size());
     }
-    fun selectAllAndDoit(receiver) {
+    instance_method selectAllAndDoit: fun(receiver) {
         this.selectAll();
         this.doIt();
     }
-    fun doIt() {
+    instance_method doIt: fun() {
       try {
         this.evalSelection();
       } catch(e) {
         this.insertSelectedText(e.value());
       }
     }
-    fun printIt() {
+    instance_method printIt: fun() {
       try {
         var res = this.evalSelection();
         this.insertSelectedText(res.toString());
@@ -90,7 +90,7 @@ module idez(qt,io)
         this.insertSelectedText(e.value());
       }
     }
-    fun inspectIt() {
+    instance_method inspectIt: fun() {
       try {
         var res = this.evalSelection();
         Inspector.new(res).show();
@@ -98,7 +98,7 @@ module idez(qt,io)
         this.insertSelectedText(e.value());
       }
     }
-    fun debugIt() {
+    instance_method debugIt: fun() {
       try {
         var fn = evalFn(this.selectedText(), thisModule, {"this" : @receiver});
         VMProcess.debug(fn,[]);
@@ -110,7 +110,7 @@ module idez(qt,io)
 
   class Editor < QsciScintilla {
     fields: onAccept, getContext, afterEval;
-    init new(parent, getContext, afterEval) {
+    init new: fun(parent, getContext, afterEval) {
       super.new(parent);
       if (parent == null) {
         this.initActions();
@@ -119,7 +119,7 @@ module idez(qt,io)
       @afterEval = afterEval;
     }
 
-    fun initActions() {
+    instance_method initActions: fun() {
       var action = qt.QAction.new("&Do it", this);
       action.setShortcut("ctrl+d");
       action.connect("triggered", fun() {
@@ -153,7 +153,7 @@ module idez(qt,io)
       this.addAction(action);
     }
 
-    fun onAccept(fn) {
+    instance_method onAccept: fun(fn) {
       if (@onAccept == null) {
         var action = qt.QAction.new("&Accept it", this);
         action.setShortcut("ctrl+s");
@@ -166,7 +166,7 @@ module idez(qt,io)
       @onAccept = fn;
     }
 
-    fun evalSelection() {
+    instance_method evalSelection: fun() {
       var r = evalWithVars(this.selectedText(), thisModule, @getContext());
       if (@afterEval) {
         @afterEval(r["env"]);
@@ -174,7 +174,7 @@ module idez(qt,io)
       return r["result"];
     }
 
-    fun doIt() {
+    instance_method doIt: fun() {
       try {
         this.evalSelection();
       } catch(e) {
@@ -182,7 +182,7 @@ module idez(qt,io)
       }
     }
 
-    fun printIt() {
+    instance_method printIt: fun() {
       try {
         var res = this.evalSelection();
         this.insertSelectedText(res.toString());
@@ -191,7 +191,7 @@ module idez(qt,io)
       }
     }
 
-    fun inspectIt() {
+    instance_method inspectIt: fun() {
       try {
         var res = this.evalSelection();
         Inspector.new(res).show();
@@ -200,7 +200,7 @@ module idez(qt,io)
       }
     }
 
-    fun debugIt() {
+    instance_method debugIt: fun() {
       try {
         var fn = evalFn(this.selectedText(), thisModule, @getContext());
         VMProcess.debug(fn,[]);
@@ -209,7 +209,7 @@ module idez(qt,io)
         this.insertSelectedText(e.value());
       }
     }
-    fun insertSelectedText(text) {
+    instance_method insertSelectedText: fun(text) {
       var pos = this.getSelection();
       this.insertAt(text, pos["end_line"], pos["end_index"]);
       //text.size(): this is rude
@@ -219,7 +219,7 @@ module idez(qt,io)
 
   class Workspace < QMainWindow {
     fields: editor, variables;
-    init new() {
+    init new: fun() {
       super.new();
       @variables = {};
 
@@ -240,7 +240,7 @@ module idez(qt,io)
 
   class Inspector  < QMainWindow {
     fields: inspectee, variables, mirror, fieldList, textArea, lineEdit;
-    init new(inspectee) {
+    init new: fun(inspectee) {
       super.new();
 
       @variables = {"this":@inspectee};
@@ -319,14 +319,14 @@ module idez(qt,io)
       execMenu.addAction(action);
     }
 
-    fun loadValues() {
+    instance_method loadValues: fun() {
       qt.QListWidgetItem.new('*self', @fieldList);
       @mirror.fields().each(fun(name) {
           qt.QListWidgetItem.new(name, @fieldList);
       });
     }
 
-    fun itemSelected(item) { //QListWidgetItem, curr from the signal
+    instance_method itemSelected: fun(item) { //QListWidgetItem, curr from the signal
       if (item.text() == '*self') {
         @textArea.setText(@inspectee.toString());
       } else {
@@ -335,14 +335,14 @@ module idez(qt,io)
       }
     }
 
-    fun itemActivated(item) {
+    instance_method itemActivated: fun(item) {
       if (item.text() != '*self') {
         var value = @mirror.valueFor(item.text());
         Inspector.new(value).show();
       }
     }
 
-    fun doIt() {
+    instance_method doIt: fun() {
       if (@lineEdit.hasFocus()) {
         @lineEdit.doIt();
       } else {
@@ -350,28 +350,28 @@ module idez(qt,io)
       }
     }
 
-    fun printIt() {
+    instance_method printIt: fun() {
       if (@lineEdit.hasFocus()) {
         @lineEdit.printIt();
       } else {
         @textArea.printIt();
       }
     }
-    fun inspectIt() {
+    instance_method inspectIt: fun() {
       if (@lineEdit.hasFocus()) {
         @lineEdit.inspectIt();
       } else {
         @textArea.inspectIt();
       }
     }
-    fun debugIt() {
+    instance_method debugIt: fun() {
       if (@lineEdit.hasFocus()) {
         @lineEdit.debugIt();
       } else {
         @textArea.debugIt();
       }
     }
-    fun acceptIt() {
+    instance_method acceptIt: fun() {
       var fn = evalFn(@textArea.text(), thisModule, {"this":@inspectee});
       var new_value = fn.apply([]);
       var slot = @fieldList.currentItem().text();
@@ -382,11 +382,11 @@ module idez(qt,io)
 
   class StackCombo < QComboBox {
     fields: frames;
-    init new(parent, execframes) {
+    init new: fun(parent, execframes) {
       super.new(parent);
       @frames = execframes;
     }
-    fun updateInfo() {
+    instance_method updateInfo: fun() {
       this.clear();
       @frames.names().each(fun(name) {
         this.addItem(name);
@@ -397,15 +397,15 @@ module idez(qt,io)
 
   class ExecutionFrames {
     fields: vmproc;
-    init new(vmproc) {
+    init new: fun(vmproc) {
       @vmproc = vmproc;
     }
-    fun names() {
+    instance_method names: fun() {
       return @vmproc.stackFrames().map(fun(frame) {
         frame.contextPointer().compiledFunction().fullName() + ":" + frame.instructionPointer()["start_line"].toString()
       });
     }
-    fun codeFor(i) {
+    instance_method codeFor: fun(i) {
       var cp = @vmproc.stackFrames().get(i).contextPointer().compiledFunction();
       if (cp.isTopLevel()) {
         return cp.text();
@@ -413,13 +413,13 @@ module idez(qt,io)
         return cp.topLevelCompiledFunction().text();
       }
     }
-    fun localsFor(i) { // this is used for the local variable list widet
+    instance_method localsFor: fun(i) { // this is used for the local variable list widet
       return @vmproc.stackFrames().get(i).localVars();
     }
-    fun frame(i) { // this is used for doIt/printIt/etc.
+    instance_method frame: fun(i) { // this is used for doIt/printIt/etc.
       return @vmproc.stackFrames().get(i);
     }
-    fun moduleVarsFor(i) { // this is used for the module variables list wdiget
+    instance_method moduleVarsFor: fun(i) { // this is used for the module variables list wdiget
       // var pnames = null;
       // if (i < @vmproc.stackFrames().size()) {
       //   pnames = @vmproc.stackFrames().get(i).modulePointer()._compiledModule().params();
@@ -432,17 +432,17 @@ module idez(qt,io)
       // });
       return {};
     }
-    fun locationInfoFor(i) {
+    instance_method locationInfoFor: fun(i) {
       return @vmproc.stackFrames().get(i).instructionPointer();
     }
-    fun size() {
+    instance_method size: fun() {
       return @vmproc.stackFrames().size();
     }
   }
 
   class VariableListWidget < QTableWidget {
     fields: variables;
-    init new(parent) {
+    init new: fun(parent) {
       super.new(2, 2, parent);
       this.verticalHeader().hide();
       this.setSelectionMode(1);
@@ -450,7 +450,7 @@ module idez(qt,io)
       header.setStretchLastSection(true);
       this.setSortingEnabled(false);
     }
-    fun setVariables(vars) {
+    instance_method setVariables: fun(vars) {
       @variables = vars;
       this.clear();
       this.setHorizontalHeaderLabels(['Name', 'Value']);
@@ -465,7 +465,7 @@ module idez(qt,io)
 
   class DebuggerUI < QMainWindow {
     fields: cont_on_exit, frame_index, process, execFrames, stackCombo, editor, localVarList, moduleVarList;
-    init new(process) {
+    init new: fun(process) {
       super.new();
       @process = process;
 
@@ -581,12 +581,12 @@ module idez(qt,io)
 
       @stackCombo.updateInfo();
     }
-    fun closeEvent() {
+    instance_method closeEvent: fun() {
       if (@cont_on_exit) {
         @process.continue();
       }
     }
-    fun stepInto() {
+    instance_method stepInto: fun() {
       if(@process.stepInto()) {
         @stackCombo.updateInfo();
       } else {
@@ -594,7 +594,7 @@ module idez(qt,io)
         this.close();
       }
     }
-    fun stepOver() {
+    instance_method stepOver: fun() {
       if(@process.stepOver()) {
         @stackCombo.updateInfo();
       } else {
@@ -602,10 +602,10 @@ module idez(qt,io)
         this.close();
       }
     }
-    fun continue() {
+    instance_method continue: fun() {
       this.close();
     }
-    fun compileAndRewind() {
+    instance_method compileAndRewind: fun() {
       var text = @editor.text();
       @process.contextPointer().compiledFunction().setCode(text);
       @process.rewind();
@@ -615,7 +615,7 @@ module idez(qt,io)
 
   class MiniBuffer < QWidget {
     fields: label, lineEdit, callback;
-    init new(parent) {
+    init new: fun(parent) {
       super.new(parent);
 
       this.hide();
@@ -638,7 +638,7 @@ module idez(qt,io)
       });
     }
 
-    fun prompt(labelText, defaultValue, callback) {
+    instance_method prompt: fun(labelText, defaultValue, callback) {
       @callback = callback;
       @label.setText(labelText);
       @lineEdit.setText(defaultValue.toString());
@@ -649,23 +649,23 @@ module idez(qt,io)
 
   class CommandHistory {
     fields: undo, redo, next;
-    init new() {
+    init new: fun() {
       @next = null;
       @undo = null;
       @redo = null;
     }
-    fun add(undo, redo) {
+    instance_method add: fun(undo, redo) {
       @undo = undo;
       @redo = redo;
       @next = "undo";
     }
-    fun undo() {
+    instance_method undo: fun() {
       if (@next == "undo") {
         @undo();
         @next = "redo";
       }
     }
-    fun redo() {
+    instance_method redo: fun() {
       if (@next == "redo") {
         @redo();
         @next = "undo";
@@ -675,7 +675,7 @@ module idez(qt,io)
 
   class ExplorerEditor < Editor {
     fields: cfun;
-    init new(cfun, parent, getContext, afterEval) {
+    init new: fun(cfun, parent, getContext, afterEval) {
       super.new(parent, getContext, afterEval);
       @cfun = cfun;
 
@@ -687,14 +687,14 @@ module idez(qt,io)
         }
       });
     }
-    fun cfun() {
+    instance_method cfun: fun() {
       return @cfun;
     }
   }
 
   class ModuleExplorer < QMainWindow {
     fields: webview, miniBuffer, current_cmodule, chistory, statusLabel;
-    init new() {
+    init new: fun() {
       super.new();
 
       @chistory = CommandHistory.new();
@@ -764,7 +764,7 @@ module idez(qt,io)
       this.show_home();
     }
 
-    fun initActions() {
+    instance_method initActions: fun() {
       var execMenu = this.menuBar().addMenu("&System");
       var action = qt.QAction.new("&Save", execMenu);
       action.setShortcut("alt+x,s");
@@ -889,12 +889,12 @@ module idez(qt,io)
       execMenu.addAction(action);
     }
 
-    fun command(redo, undo) {
+    instance_method command: fun(redo, undo) {
       redo();
       @chistory.add(undo,redo);
     }
 
-    fun action_addFunction() {
+    instance_method action_addFunction: fun() {
       if (@current_cmodule == null) {
         @statusLabel.setText("No current module");
         return null;
@@ -907,7 +907,7 @@ module idez(qt,io)
       });
     }
 
-    fun action_deleteFunction() {
+    instance_method action_deleteFunction: fun() {
       if (@current_cmodule == null) {
         @statusLabel.setText("No current module");
         return null;
@@ -924,7 +924,7 @@ module idez(qt,io)
       }
     }
 
-    fun action_renameModule() {
+    instance_method action_renameModule: fun() {
       if (@current_cmodule == null) {
         @statusLabel.setText("No current module");
         return null;
@@ -944,15 +944,15 @@ module idez(qt,io)
       });
     }
 
-    fun show_home() {
+    instance_method show_home: fun() {
       @current_cmodule = null;
       @webview.setUrl(modules_path() + "/module-explorer/index.html");
     }
-    fun show_tutorial() {
+    instance_method show_tutorial: fun() {
       @current_cmodule = null;
       @webview.setUrl(modules_path() + "/module-explorer/tutorial.html");
     }
-    fun show_modules() {
+    instance_method show_modules: fun() {
       @current_cmodule = null;
       @webview.loadUrl(modules_path() + "/module-explorer/modules-index.html");
       var modules = available_modules();
@@ -961,7 +961,7 @@ module idez(qt,io)
         ul.appendInside("<li><a href='/" + name + "'>" + name + "</a></li>")
       });
     }
-    fun show_module(name) {
+    instance_method show_module: fun(name) {
       @current_cmodule = get_module(name);
       @webview.loadUrl(modules_path() + "/module-explorer/module-view.html");
       var doc = @webview.page().mainFrame().documentElement();
@@ -978,7 +978,7 @@ module idez(qt,io)
       });
     }
 
-    fun showEditorForFunction(cfn) {
+    instance_method showEditorForFunction: fun(cfn) {
       var doc = @webview.page().mainFrame().documentElement();
       var div = doc.findFirst(".fun_tpl").clone();
       div.setAttribute("id", cfn.name);
@@ -992,14 +992,14 @@ module idez(qt,io)
     }
   }
 
-  fun main() {
+  main: fun() {
     var app = qt.QApplication.new();
     var main = ModuleExplorer.new();
     main.show();
     return app.exec();
   }
 
-  fun debug(process) {
+  debug: fun(process) {
     var eventloop = null;
     if (!qt.qapp_running()) {
       eventloop = qt.QApplication.new();

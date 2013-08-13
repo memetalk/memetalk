@@ -1,10 +1,10 @@
 module foo()
 {
-  fun f(fn) {
+  f: fun(fn) {
     fn();
   }
 
-  fun main() {
+  main: fun() {
     var a = 0;
     f(fun() {
       try {

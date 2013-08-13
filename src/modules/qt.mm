@@ -4,87 +4,87 @@ module qt(io)
 
   class QApplication {
     fields: self;
-    init new() {
+    init new: fun() {
       <primitive "qt_qapplication_new">
     }
-    fun exec() {
+    instance_method exec: fun() {
       <primitive "qt_qapplication_exec">
     }
-    func focusWidget() {
+    class_method focusWidget: fun() {
       <primitive "qt_qapplication_focus_widget">
     }
   }
 
   class QEventLoop {
     fields: self;
-    init new() {
+    init new: fun() {
       <primitive "qt_qeventloop_new">
     }
-    fun exec() {
+    instance_method exec: fun() {
       <primitive "qt_qeventloop_exec">
     }
-    fun exit(code) {
+    instance_method exit: fun(code) {
       <primitive "qt_qeventloop_exit">
     }
   }
 
   class QWidget {
     fields: self;
-    init new(parent) {
+    init new: fun(parent) {
       <primitive "qt_qwidget_new">
     }
-    fun setWindowTitle(title) {
+    instance_method setWindowTitle: fun(title) {
       <primitive "qt_qwidget_set_window_title">
     }
-    fun setFocus() {
+    instance_method setFocus: fun() {
       <primitive "qt_qwidget_set_focus">
     }
-    fun resize(w,h) {
+    instance_method resize: fun(w,h) {
       <primitive "qt_qwidget_resize">
     }
-    fun setMaximumHeight(h) {
+    instance_method setMaximumHeight: fun(h) {
       <primitive "qt_qwidget_set_maximum_height">
     }
-    fun setMinimumSize(w,h) {
+    instance_method setMinimumSize: fun(w,h) {
       <primitive "qt_qwidget_set_minimum_size">
     }
-    fun setMinimumWidth(w) {
+    instance_method setMinimumWidth: fun(w) {
       <primitive "qt_qwidget_set_minimum_width">
     }
-    fun show() {
+    instance_method show: fun() {
       <primitive "qt_qwidget_show">
     }
-    fun hide() {
+    instance_method hide: fun() {
       <primitive "qt_qwidget_hide">
     }
-    fun addAction(action) {
+    instance_method addAction: fun(action) {
       <primitive "qt_qwidget_add_action">
     }
-    fun setMaximumWidth(w) {
+    instance_method setMaximumWidth: fun(w) {
       <primitive "qt_qwidget_set_maximum_width">
     }
-    fun connect(signal, slot) {
+    instance_method connect: fun(signal, slot) {
       <primitive "qt_qwidget_connect">
     }
-    fun actions() {
+    instance_method actions: fun() {
       <primitive "qt_qwidget_actions">
     }
-    fun setStyleSheet(s) {
+    instance_method setStyleSheet: fun(s) {
       <primitive "qt_qwidget_set_stylesheet">
     }
-    fun isVisible() {
+    instance_method isVisible: fun() {
       <primitive "qt_qwidget_is_visible">
     }
-    fun close() {
+    instance_method close: fun() {
       <primitive "qt_qwidget_close">
     }
-    fun hasFocus() {
+    instance_method hasFocus: fun() {
       <primitive "qt_qwidget_has_focus">
     }
   }
 
   class QMenuBar < QWidget {
-    fun addMenu(str) {
+    instance_method addMenu: fun(str) {
       <primitive "qt_qmenubar_add_menu">
     }
   }
@@ -94,340 +94,333 @@ module qt(io)
 
   class QShortcut {
     fields: self;
-    init new(sc, parent, slot) {
+    init new: fun(sc, parent, slot) {
       <primitive "qt_qshortcut_new">
     }
-    fun setContext(context) {
+    instance_method setContext: fun(context) {
       <primitive "qt_qshortcut_set_context">
     }
   }
 
   class QAction {
     fields: self;
-    init new(label, parent) {
+    init new: fun(label, parent) {
       <primitive "qt_qaction_new">
     }
-    fun connect(signal, slot) {
+    instance_method connect: fun(signal, slot) {
       <primitive "qt_qaction_connect">
     }
-    fun setShortcut(shortcut) {
+    instance_method setShortcut: fun(shortcut) {
       <primitive "qt_qaction_set_shortcut">
     }
-    fun setShortcutContext(context) {
+    instance_method setShortcutContext: fun(context) {
       <primitive "qt_qaction_set_shortcut_context">
     }
-    fun setEnabled(val) {
+    instance_method setEnabled: fun(val) {
       <primitive "qt_qaction_set_enabled">
     }
   }
 
-  // class QShortcut {
-  //   fields: self;
-  //   init new(keys, parent, fn) {
-  //     <primitive "qt_qshortcut_new">
-  //   }
-  // }
-
   class QMainWindow < QWidget {
-    init new() {
+    init new: fun() {
       <primitive "qt_qmainwindow_new">
     }
-    fun setCentralWidget(widget) {
+    instance_method setCentralWidget: fun(widget) {
       <primitive "qt_qmainwindow_set_central_widget">
     }
-    fun menuBar() {
+    instance_method menuBar: fun() {
       <primitive "qt_qmainwindow_menu_bar">
     }
-    fun statusBar() {
+    instance_method statusBar: fun() {
       <primitive "qt_qmainwindow_status_bar">
     }
   }
 
   class QPlainTextEdit < QWidget {
-    init new(parent) {
+    init new: fun(parent) {
       <primitive "qt_qplaintextedit_new">
     }
-    fun setTabStopWidth(val) {
+    instance_method setTabStopWidth: fun(val) {
       <primitive "qt_qplaintextedit_set_tabstop_width">
     }
-    fun textCursor() {
+    instance_method textCursor: fun() {
       <primitive "qt_qplaintextedit_text_cursor">
     }
-    fun setTextCursor(cursor) {
+    instance_method setTextCursor: fun(cursor) {
       <primitive "qt_qplaintextedit_set_text_cursor">
     }
-    fun setPlainText(text) {
+    instance_method setPlainText: fun(text) {
       <primitive "qt_qplaintextedit_set_plain_text">
     }
-    fun toPlainText() {
+    instance_method toPlainText: fun() {
       <primitive "qt_qplaintextedit_to_plain_text">
     }
   }
 
   class QTextCursor {
-    fun selectedText() {
+    instance_method selectedText: fun() {
       <primitive "qt_qtextcursor_selected_text">
     }
-    fun selectionEnd() {
+    instance_method selectionEnd: fun() {
       <primitive "qt_qtextcursor_selection_end">
     }
-    fun setPosition(pos) {
+    instance_method setPosition: fun(pos) {
       <primitive "qt_qtextcursor_set_position">
     }
-    fun insertText(text) {
+    instance_method insertText: fun(text) {
       <primitive "qt_qtextcursor_insert_text">
     }
-    fun dragRight(len) {
+    instance_method dragRight: fun(len) {
       <primitive "qt_qtextcursor_drag_right">
     }
   }
 
   class QLayout {
     fields: self;
-    fun addWidget(widget) {
+    instance_method addWidget: fun(widget) {
       <primitive "qt_qlayout_add_widget">
     }
   }
   class QVBoxLayout < QLayout {
-    init new(parent) {
+    init new: fun(parent) {
       <primitive "qt_qvboxlayout_new">
     }
-    fun addLayout(layout) {
+    instance_method addLayout: fun(layout) {
       <primitive "qt_qvboxlayout_add_layout">
     }
-    fun addWidget(widget) {
+    instance_method addWidget: fun(widget) {
       <primitive "qt_qvboxlayout_add_widget">
     }
   }
 
   class QHBoxLayout < QLayout {
-    init new(parent) {
+    init new: fun(parent) {
       <primitive "qt_qhboxlayout_new">
     }
-    fun addLayout(layout) {
+    instance_method addLayout: fun(layout) {
       <primitive "qt_qhboxlayout_add_layout">
     }
-    fun addWidget(widget) {
+    instance_method addWidget: fun(widget) {
       <primitive "qt_qhboxlayout_add_widget">
     }
-    fun setContentsMargins(l,t,r,b) {
+    instance_method setContentsMargins: fun(l,t,r,b) {
       <primitive "qt_qhboxlayout_set_contents_margins">
     }
   }
 
 
   class QListWidget < QWidget {
-    init new(parent) {
+    init new: fun(parent) {
       <primitive "qt_qlistwidget_new">
     }
-    fun currentItem() {
+    instance_method currentItem: fun() {
       <primitive "qt_qlistwidget_current_item">
     }
   }
 
   class QListWidgetItem {
     fields: self;
-    init new(text, parent) {
+    init new: fun(text, parent) {
       <primitive "qt_qlistwidgetitem_new">
     }
-    fun text() {
+    instance_method text: fun() {
       <primitive "qt_qlistwidgetitem_text">
     }
   }
 
   class QLineEdit < QWidget {
-    init new(parent) {
+    init new: fun(parent) {
       <primitive "qt_qlineedit_new">
     }
-    fun text() {
+    instance_method text: fun() {
       <primitive "qt_qlineedit_text">
     }
-    fun setText(text) {
+    instance_method setText: fun(text) {
       <primitive "qt_qlineedit_set_text">
     }
-    fun selectedText() {
+    instance_method selectedText: fun() {
       <primitive "qt_qlineedit_selected_text">
     }
-    fun selectAll() {
+    instance_method selectAll: fun() {
       <primitive "qt_qlineedit_select_all">
     }
-    fun setSelection(start,length) {
+    instance_method setSelection: fun(start,length) {
       <primitive "qt_qlineedit_set_selection">
     }
   }
 
   class QLabel < QWidget {
-    init new(parent) {
+    init new: fun(parent) {
         <primitive "qt_qlabel_new">
     }
-    fun setText(text) {
+    instance_method setText: fun(text) {
         <primitive "qt_qlabel_set_text">
     }
   }
 
   class QComboBox < QWidget {
-    init new(parent) {
+    init new: fun(parent) {
         <primitive "qt_qcombobox_new">
     }
-    fun addItem(item) {
+    instance_method addItem: fun(item) {
       <primitive "qt_qcombobox_add_item">
     }
-    fun setCurrentIndex(i) {
+    instance_method setCurrentIndex: fun(i) {
       <primitive "qt_qcombobox_set_current_index">
     }
-    fun clear() {
+    instance_method clear: fun() {
       <primitive "qt_qcombobox_clear">
     }
   }
 
   class QHeaderView {
     fields: self;
-    fun hide() {
+    instance_method hide: fun() {
       <primitive "qt_qheaderview_hide">
     }
-    fun setStretchLastSection(val) {
+    instance_method setStretchLastSection: fun(val) {
       <primitive "qt_qheaderview_set_stretch_last_section">
     }
   }
 
   class QTableWidget < QWidget { //actually inherits qtableview
-    init new(rows, cols, parent) {
+    init new: fun(rows, cols, parent) {
         <primitive "qt_qtablewidget_new">
     }
-    fun setHorizontalHeaderLabels(labels) {
+    instance_method setHorizontalHeaderLabels: fun(labels) {
       <primitive "qt_qtablewidget_set_horizontal_header_labels">
     }
-    fun verticalHeader() {
+    instance_method verticalHeader: fun() {
       <primitive "qt_qtablewidget_vertical_header">
     }
-    fun setSelectionMode(mode) {
+    instance_method setSelectionMode: fun(mode) {
       <primitive "qt_qtablewidget_set_selection_mode">
     }
-    fun horizontalHeader() {
+    instance_method horizontalHeader: fun() {
       <primitive "qt_qtablewidget_horizontal_header">
     }
-    fun setItem(line,col,item) {
+    instance_method setItem: fun(line,col,item) {
       <primitive "qt_qtablewidget_set_item">
     }
-    fun setSortingEnabled(val) {
+    instance_method setSortingEnabled: fun(val) {
       <primitive "qt_qtablewidget_set_sorting_enabled">
     }
-    fun clear() {
+    instance_method clear: fun() {
       <primitive "qt_qtablewidget_clear">
     }
   }
 
   class QTableWidgetItem {
     fields: self;
-    init new(label) {
+    init new: fun(label) {
       <primitive "qt_qtablewidgetitem_new">
     }
-    fun setFlags(flags) {
+    instance_method setFlags: fun(flags) {
       <primitive "qt_qtablewidgetitem_set_flags">
     }
   }
 
   class QWebView < QWidget {
-    init new(parent) {
+    init new: fun(parent) {
       <primitive "qt_qwebview_new">
     }
-    fun setUrl(url) {
+    instance_method setUrl: fun(url) {
       <primitive "qt_qwebview_set_url">
     }
-    fun loadUrl(url) {
+    instance_method loadUrl: fun(url) {
       this.setHtml(io.file_contents(url));
     }
-    fun setHtml(html) {
+    instance_method setHtml: fun(html) {
       <primitive "qt_qwebview_set_html">
     }
-    fun page() {
+    instance_method page: fun() {
       <primitive "qt_qwebview_page">
     }
   }
 
   class QWebPage {
     fields: self;
-    fun mainFrame() {
+    instance_method mainFrame: fun() {
       <primitive "qt_qwebpage_main_frame">
     }
-    fun setLinkDelegationPolicy(policy) {
+    instance_method setLinkDelegationPolicy: fun(policy) {
       <primitive "qt_qwebpage_set_link_delegation_policy">
     }
-    fun enablePluginsWith(name,fn) {
+    instance_method enablePluginsWith: fun(name,fn) {
       <primitive "qt_extra_qwebpage_enable_plugins">
     }
   }
   class QWebFrame {
     fields: self;
-    fun addToJavaScriptWindowObject(name, obj) {
+    instance_method addToJavaScriptWindowObject: fun(name, obj) {
       <primitive "qt_qwebframe_add_to_javascript_window_object">
     }
-    fun documentElement() {
+    instance_method documentElement: fun() {
       <primitive "qt_qwebframe_document_element">
     }
   }
 
   class QWebElement {
     fields: self;
-    fun findFirst(str) {
+    instance_method findFirst: fun(str) {
       <primitive "qt_qwebelement_find_first">
     }
-    fun appendInside(val) {
+    instance_method appendInside: fun(val) {
       <primitive "qt_qwebelement_append_inside">
     }
-    fun appendOutside(val) {
+    instance_method appendOutside: fun(val) {
       <primitive "qt_qwebelement_append_outside">
     }
-    fun setPlainText(str) {
+    instance_method setPlainText: fun(str) {
       <primitive "qt_qwebelement_set_plain_text">
     }
-    fun clone() {
+    instance_method clone: fun() {
       <primitive "qt_qwebelement_clone">
     }
-    fun setStyleProperty(name, val) {
+    instance_method setStyleProperty: fun(name, val) {
       <primitive "qt_qwebelement_set_style_property">
     }
-    fun setAttribute(name, val) {
+    instance_method setAttribute: fun(name, val) {
       <primitive "qt_qwebelement_set_attribute">
     }
-    fun toOuterXml() {
+    instance_method toOuterXml: fun() {
       <primitive "qt_qwebelement_to_outer_xml">
     }
   }
 
-  fun qapp_running() {
+  qapp_running: fun() {
     <primitive "qapp_running">
   }
 
   class QsciScintilla < QWidget {
-    init new(parent) {
+    init new: fun(parent) {
         <primitive "qt_scintilla_editor_new">
     }
-    fun setText(text) {
+    instance_method setText: fun(text) {
         <primitive "qt_scintilla_editor_set_text">
     }
-    fun pausedAtLine(start_line, start_col, end_line, end_col) {
+    instance_method pausedAtLine: fun(start_line, start_col, end_line, end_col) {
         <primitive "qt_scintilla_paused_at_line">
     }
-    fun text() {
+    instance_method text: fun() {
         <primitive "qt_scintilla_text">
     }
-    fun setText(text) {
+    instance_method setText: fun(text) {
         <primitive "qt_scintilla_set_text">
     }
-    fun selectedText() {
+    instance_method selectedText: fun() {
         <primitive "qt_scintilla_selected_text">
     }
-    fun getCursorPosition() {
+    instance_method getCursorPosition: fun() {
         <primitive "qt_scintilla_get_cursor_position">
     }
-    fun insertAt(text, line, index) {
+    instance_method insertAt: fun(text, line, index) {
         <primitive "qt_scintilla_insert_at">
     }
-    fun getSelection() {
+    instance_method getSelection: fun() {
         <primitive "qt_scintilla_get_selection">
     }
-    fun setSelection(start_line, start_index, end_line, end_index) {
+    instance_method setSelection: fun(start_line, start_index, end_line, end_index) {
         <primitive "qt_scintilla_set_selection">
     }
   }

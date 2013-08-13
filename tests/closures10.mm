@@ -1,14 +1,14 @@
 module foo()
 {
-  fun foo(fn) {
+  foo: fun(fn) {
     fn(3);
   }
 
-  fun bar(fn) {
+  bar: fun(fn) {
     fn(7);
   }
 
-  fun main() {
+  main: fun() {
     foo(fun(x) {
       bar(fun(y) {
         assert(x + y == 10, "Passing nested closures with parameters");

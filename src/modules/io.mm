@@ -1,10 +1,10 @@
 module io() {
 
-  fun file_contents(path) {
+  file_contents: fun(path) {
     <primitive "io_file_contents">
   }
 
-  fun print(arg) {
+  print: fun(arg) {
     <primitive "io_print">
   }
 }

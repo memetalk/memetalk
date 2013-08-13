@@ -1,6 +1,6 @@
 module foo() {
 
-  fun main() {
+  main: fun() {
     var a = 0;
     if (1 == 10) {
       assert(false, "Shouldn't execute this");

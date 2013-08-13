@@ -2,26 +2,26 @@ module foo()
 {
   class MyException {
     fields: x;
-    init new(x) {
+    init new: fun(x) {
       @x = x;
     }
-    func throw(x) {
+    class_method throw: fun(x) {
       var self = MyException.new(x);
       self.raise();
     }
-    fun raise() {
+    instance_method raise: fun() {
        <primitive "exception_raise">
     }
-    fun x() {
+    instance_method x: fun() {
       return @x;
     }
   }
 
-  fun i(fn) {
+  i: fun(fn) {
     fn(1);
   }
 
-  fun main() {
+   main: fun() {
     var a = 0;
     var fn = fun(x) { a = a + x; };
     try {

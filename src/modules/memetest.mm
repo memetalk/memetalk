@@ -1,15 +1,15 @@
 module memetest(io)
 io : memetalk/io/1.0();
 {
-  fun _test_files() {
+  _test_files: fun() {
     <primitive "test_files">
   }
 
-  fun _test_import(filepath) {
+  _test_import: fun(filepath) {
     <primitive "test_import">
   }
 
-  fun assert(x,desc) {
+  assert: fun(x,desc) {
     if (!x) {
       if (desc) {
         Exception.throw("assertion failed: '" + desc + "'");
@@ -19,7 +19,7 @@ io : memetalk/io/1.0();
     }
   }
 
-  fun main() {
+  main: fun() {
     _test_files().each(fun(path) {
       io.print("test:loading " + path);
       var m = _test_import(path);

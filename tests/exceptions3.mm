@@ -1,6 +1,6 @@
 module foo()
 {
-  fun main() {
+  main: fun() {
     var a = 0;
     try {
       Exception.throw(10);

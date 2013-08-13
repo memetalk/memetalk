@@ -1,16 +1,16 @@
 module foo()
 {
   class X {
-    init new() {
+    init new: fun() {
     }
-    fun y(fn) {
+    instance_method y: fun(fn) {
       fn(1);
     }
-    fun x(fn) {
+    instance_method x: fun(fn) {
       fn(2);
     }
   }
-  fun main() {
+  main: fun() {
     var res = 0;
     var e = X.new();
     e.x(fun(m) {

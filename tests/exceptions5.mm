@@ -1,12 +1,12 @@
 module foo()
 {
-  fun r(fn) {
+  r: fun(fn) {
     fn();
     Exception.throw("xx");
     fn();
   }
 
-  fun b(fn) {
+  b: fun(fn) {
     fn();
     try {
       fn();
@@ -20,7 +20,7 @@ module foo()
     fn();
   }
 
-  fun a(fn) {
+  a: fun(fn) {
     fn();
     try {
       fn();
@@ -32,7 +32,7 @@ module foo()
     fn();
   }
 
-  fun main() {
+  main: fun() {
     var x = 0;
     var fn = fun() { x = x + 1; };
     a(fn);

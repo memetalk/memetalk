@@ -2,18 +2,18 @@ module foo() {
 
   class X {
     fields: bla;
-    init new() {
+    init new: fun() {
       var f = fun() {
         @bla = 10;
       };
       f();
     }
-    fun bla() {
+    instance_method bla: fun() {
       return @bla;
     }
   }
 
-  fun main() {
+  main: fun() {
     assert(X.new().bla() == 10, "Closure accessing instance field");
   }
 }

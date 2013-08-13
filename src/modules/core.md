@@ -4,10 +4,10 @@ module core() {
     _vt: Behavior; //self-referencing
     parent: null;
     functions {
-      fun toSource() {
+      toSource: fun() {
           <primitive "object_to_source">
       }
-      fun toString() {
+      toString: fun() {
           <primitive "object_to_string">
       }
     }
@@ -17,16 +17,16 @@ module core() {
     _vt: Behavior;
     parent: null;
     functions {
-      init new() {
+      init new: fun() {
         return this;
       }
-      fun toString() {
+      toString: fun() {
           <primitive "object_to_string">
       }
-      fun toSource() {
+      toSource: fun() {
           <primitive "object_to_source">
       }
-      fun ==(other) {
+      ==: fun(other) {
           <primitive "object_equal">
       }
     }
@@ -48,16 +48,16 @@ module core() {
     size: 0;
     compiled_class: Object_CompiledClass;
     functions {
-      fun toString() {
+      toString: fun() {
           <primitive "object_to_string">
       }
-      fun toSource() {
+      toSource: fun() {
           <primitive "object_to_source">
       }
-      fun ==(other) {
+      ==: fun(other) {
           <primitive "object_equal">
       }
-      fun !=(other) {
+      !=: fun(other) {
           <primitive "object_not_equal">
       }
     }
@@ -65,7 +65,7 @@ module core() {
 
   class CompiledClass {
     fields: module, name, super_class_name, fields, methods, own_methods;
-    fun fullName() {
+    instance_method fullName: fun() {
       return @module.fullName() + "/" + @name;
     }
   }
@@ -74,37 +74,37 @@ module core() {
     fields: _delegate, body, env_table, env_table_skel, fun_literals, is_ctor,
             is_prim, name, params, prim_name, uses_env, outer_cfun, owner,
             text;
-    init new(name, text, parameters, module) {
+    init new: fun(name, text, parameters, module) {
       <primitive "compiled_function_new">
     }
-    fun asContext(imodule, frameOrTable) {
+    instance_method asContext: fun(imodule, frameOrTable) {
       <primitive "compiled_function_as_context">
     }
-    fun instantiate(imodule) {
+    instance_method instantiate: fun(imodule) {
       <primitive "compiled_function_instantiate">
     }
-    fun name() {
+    instance_method name: fun() {
       return @name;
     }
-    fun parameters() {
+    instance_method parameters: fun() {
       return @params;
     }
-    fun text() {
+    instance_method text: fun() {
       return @text;
     }
-    fun setCode(code) {
+    instance_method setCode: fun(code) {
       <primitive "compiled_function_set_code">
     }
-    fun ast() {
+    instance_method ast: fun() {
       return @body;
     }
-    fun isTopLevel() {
+    instance_method isTopLevel: fun() {
       return !@outer_cfun;
     }
-    fun owner() {
+    instance_method owner: fun() {
       return @owner;
     }
-    fun topLevelCompiledFunction() {
+    instance_method topLevelCompiledFunction: fun() {
       if (this.isTopLevel()) {
         return null;
       } else {
@@ -115,7 +115,7 @@ module core() {
         }
       }
     }
-    fun fullName() {
+    instance_method fullName: fun() {
       if (this.isTopLevel()) {
         return @owner.fullName() + "::" + @name;
       } else {
@@ -126,60 +126,60 @@ module core() {
 
   class Function {
     fields: compiled_function, module, _delegate;
-    fun compiledFunction() {
+    instance_method compiledFunction: fun() {
       return @compiled_function;
     }
-    fun apply(args) {
+    instance_method apply: fun(args) {
       <primitive "function_apply">
     }
   }
 
   class Context {
     fields: _delegate, compiled_function, env, module;
-    fun apply(args) {
+    instance_method apply: fun(args) {
       <primitive "context_apply">
     }
-    fun getEnv() {
+    instance_method getEnv: fun() {
       <primitive "context_get_env">
     }
-    fun compiledFunction() {
+    instance_method compiledFunction: fun() {
       return @compiled_function;
     }
   }
 
   class CompiledModule {
     fields: _delegate, name, filepath, params, default_params, aliases, compiled_functions, compiled_classes;
-    fun name() {
+    instance_method name: fun() {
       return @name;
     }
-    fun setName(name) {
+    instance_method setName: fun(name) {
       @name = name;
     }
-    fun fullName() {
+    instance_method fullName: fun() {
       return this.name();
     }
-    fun filepath() {
+    instance_method filepath: fun() {
       return @filepath;
     }
-    fun params() {
+    instance_method params: fun() {
       return @params;
     }
-    fun default_params() {
+    instance_method default: fun() {
       return @default_params;
     }
-    fun aliases() {
+    instance_method aliases: fun() {
       return @aliases;
     }
-    fun compiled_functions() {
+    instance_method compiled_functions: fun() {
       return @compiled_functions;
     }
-    fun compiled_classes() {
+    instance_method compiled: fun() {
       return @compiled_classes;
     }
-    fun removeFunction(name) {
+    instance_method removeFunction: fun(name) {
       <primitive "compiled_module_remove_function">
     }
-    fun addFunction(cfun) {
+    instance_method addFunction: fun(cfun) {
       <primitive "compiled_module_add_function">
     }
   }
@@ -190,84 +190,84 @@ module core() {
   }
 
   class String {
-    fun size() {
+    instance_method size: fun() {
       <primitive "string_size">
     }
-    fun +(arg) {
+    instance_method +: fun(arg) {
       <primitive "string_concat">
     }
-    fun from(idx) {
+    instance_method from: fun(idx) {
       <primitive "string_from">
     }
-    fun count(sub) {
+    instance_method count: fun(sub) {
       <primitive "string_count">
     }
   }
 
   class Dictionary {
-    fun +(arg) {
+    instance_method +: fun(arg) {
       <primitive "dictionary_plus">
     }
-    fun each(fn) {
+    instance_method each: fun(fn) {
       <primitive "dictionary_each">
     }
-    fun has(key) {
+    instance_method has: fun(key) {
       <primitive "dictionary_has">
     }
   }
 
   class List {
-    fun each(fn) {
+    instance_method each: fun(fn) {
       <primitive "list_each">
     }
-    fun get(n) {
+    instance_method get: fun(n) {
       <primitive "list_get">
     }
-    fun size() {
+    instance_method size: fun() {
       <primitive "list_size">
     }
-    fun map(fn) {
+    instance_method map: fun(fn) {
       <primitive "list_map">
     }
-    fun +(arg) {
+    instance_method +: fun(arg) {
       <primitive "list_plus">
     }
-    fun has(value) {
+    instance_method has: fun(value) {
       <primitive "list_has">
     }
   }
 
   class Number {
-    fun +(arg) {
+    instance_method +: fun(arg) {
       <primitive "number_plus">
     }
-    fun -(arg) {
+    instance_method -: fun(arg) {
       <primitive "number_minus">
     }
-    fun <(arg) {
+    instance_method <: fun(arg) {
       <primitive "number_lst">
     }
-    fun <=(arg) {
+    instance_method <=: fun(arg) {
       <primitive "number_lsteq">
     }
-    fun >=(arg) {
+    instance_method >=: fun(arg) {
       <primitive "number_grteq">
     }
   }
 
   class Exception {
     fields: value;
-    init new(value) {
+    init new: fun(value) {
       @value = value;
     }
-    func throw(value) {
+    class_method throw: fun(value) {
       var self = Exception.new(value);
       self.raise();
     }
-    fun raise() {
+    instance_method raise: fun() {
        <primitive "exception_raise">
     }
-    fun value() {
+    instance_method value: fun() {
       return @value;
     }
   }
@@ -276,92 +276,92 @@ module core() {
 
   class Mirror {
     fields: mirrored;
-    init new(mirrored) {
+    init new: fun(mirrored) {
       @mirrored = mirrored;
     }
-    fun fields() {
+    instance_method fields: fun() {
       <primitive "mirror_fields">
     }
-    fun valueFor(name) {
+    instance_method valueFor: fun(name) {
       <primitive "mirror_value_for">
     }
-    fun setValueFor(name, value) {
+    instance_method setValueFor: fun(name, value) {
       <primitive "mirror_set_value_for">
     }
-    func vtFor(obj) {
+    class_method vtFor: fun(obj) {
       <primitive "mirror_vt">
     }
   }
 
   class VMProcess {
-    fun stackFrames() {
+    instance_method stackFrames: fun() {
       <primitive "vmprocess_stack_frames">
     }
-    fun stepInto() {
+    instance_method stepInto: fun() {
       <primitive "vmprocess_step_into">
     }
-    fun stepOver() {
+    instance_method stepOver: fun() {
       <primitive "vmprocess_step_over">
     }
-    fun stepOut() {
+    instance_method stepOut: fun() {
       <primitive "vmprocess_step_out">
     }
-    fun continue() {
+    instance_method continue: fun() {
       <primitive "vmprocess_continue">
     }
-    fun rewind() {
+    instance_method rewind: fun() {
       <primitive "vmprocess_rewind">
     }
-    func debug(fn, args) {
+    class_method debug: fun(fn, args) {
       <primitive "vmprocess_debug">
     }
   }
 
   class VMStackFrame {
-    fun modulePointer() {
+    instance_method modulePointer: fun() {
       <primitive "vmstackframe_module_pointer">
     }
-    fun contextPointer() {
+    instance_method contextPointer: fun() {
       <primitive "vmstackframe_context_pointer">
     }
-    fun receiverPointer() {
+    instance_method receiverPointer: fun() {
       <primitive "vmstackframe_receiver_pointer">
     }
-    fun environmentPointer() {
+    instance_method environmentPointer: fun() {
       <primitive "vmstackframe_environment_pointer">
     }
-    fun instructionPointer() {
+    instance_method instructionPointer: fun() {
       <primitive "vmstackframe_instruction_pointer">
     }
-    fun localVars() {
+    instance_method localVars: fun() {
       <primitive "vmstackframe_local_vars">
     }
-    fun instanceVars() {
+    instance_method instanceVars: fun() {
       <primitive "vmstackframe_instance_vars">
     }
-    fun moduleVars() {
+    instance_method moduleVars: fun() {
       <primitive "vmstackframe_module_vars">
     }
   }
 
   //temporary home for some infrastructure functions
-  fun get_current_process() {
+  get_current_process: fun() {
     <primitive "get_current_process">
   }
 
-  fun get_compiled_module(module) {
+  get_compiled_module: fun(module) {
     <primitive "get_compiled_module">
   }
 
-  fun modules_path() {
+  modules_path: fun() {
     <primitive "modules_path">
   }
 
-  fun available_modules() {
+  available_modules: fun() {
     <primitive "available_modules">
   }
 
-  fun get_module(name) {
+  get_module: fun(name) {
     <primitive "get_module">
   }
 }
