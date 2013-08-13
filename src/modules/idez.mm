@@ -613,31 +613,129 @@ module idez(qt,io)
     }
   }
 
+  class MiniBuffer < QWidget {
+    fields: label, lineEdit, callback;
+    init new(parent) {
+      super.new(parent);
+
+      this.hide();
+      this.setMaximumHeight(30);
+      @callback = null;
+      @lineEdit = QLineEdit.new(this);
+      @lineEdit.setMinimumSize(200,30);
+      @label = qt.QLabel.new(this);
+      var l = qt.QHBoxLayout.new(this);
+      l.addWidget(@label);
+      l.addWidget(@lineEdit);
+      l.setContentsMargins(10,2,10,2);
+
+      @lineEdit.connect("returnPressed", fun() {
+        if (@callback) {
+          @callback(@lineEdit.text());
+        }
+        @callback = null;
+        this.hide();
+      });
+    }
+
+    fun prompt(labelText, defaultValue, callback) {
+      @callback = callback;
+      @label.setText(labelText);
+      @lineEdit.setText(defaultValue.toString());
+      this.show();
+      @lineEdit.setFocus();
+    }
+  }
+
+  class CommandHistory {
+    fields: undo, redo, next;
+    init new() {
+      @next = null;
+      @undo = null;
+      @redo = null;
+    }
+    fun add(undo, redo) {
+      @undo = undo;
+      @redo = redo;
+      @next = "undo";
+    }
+    fun undo() {
+      if (@next == "undo") {
+        @undo();
+        @next = "redo";
+      }
+    }
+    fun redo() {
+      if (@next == "redo") {
+        @redo();
+        @next = "undo";
+      }
+    }
+  }
+
+  class ExplorerEditor < Editor {
+    fields: cfun;
+    init new(cfun, parent, getContext, afterEval) {
+      super.new(parent, getContext, afterEval);
+      @cfun = cfun;
+
+      this.onAccept(fun() {
+        try {
+          @cfn.setCode(this.text());
+        } catch(ex) {
+          this.insertSelectedText(ex.value());
+        }
+      });
+    }
+    fun cfun() {
+      return @cfun;
+    }
+  }
+
   class ModuleExplorer < QMainWindow {
-    fields: webview;
+    fields: webview, miniBuffer, current_cmodule, chistory, statusLabel;
     init new() {
       super.new();
+
+      @chistory = CommandHistory.new();
+
       this.setWindowTitle("Memetalk");
-      @webview = qt.QWebView.new(this);
-      this.show_home();
+      this.resize(800,600);
+
+      var centralWidget = QWidget.new(this);
+      this.setCentralWidget(centralWidget);
+
+      var l = qt.QVBoxLayout.new(centralWidget);
+      @webview = qt.QWebView.new(centralWidget);
+      l.addWidget(@webview);
+
+      @miniBuffer = MiniBuffer.new(centralWidget);
+      l.addWidget(@miniBuffer);
+
+      @statusLabel = qt.QLabel.new(this.statusBar());
+      @statusLabel.setMinimumWidth(300);
+
       @webview.page().setLinkDelegationPolicy(2);
+
       @webview.page().enablePluginsWith("editor", fun(params) {
         var variables = {};
 
-        var e = Editor.new(null, fun() { variables },
-                           fun(env) { variables = env + variables;});
-
-        e.setStyleSheet("border-style: outset;");
-        if (params.has("code")) {
-          e.setText(params["code"]);
-        }
+        var e = null;
         if (params.has("module_function")) {
-          this.setupAccept(e, params);
+          var cfn = get_module(params["module_name"]).compiled_functions()[params["function_name"]];
+          e = ExplorerEditor.new(cfn, null, fun() { variables },
+                                 fun(env) { variables = env + variables;});
+        } else {
+          if (params.has("code")) {
+            e = ExplorerEditor.new(null, null, fun() { variables },
+                                   fun(env) { variables = env + variables;});
+          }
         }
+        e.setText(params["code"]);
+        e.setStyleSheet("border-style: outset;");
         return e;
       });
-      this.setCentralWidget(@webview);
-      this.resize(800,600);
+
       @webview.connect('linkClicked', fun(url) {
         io.print("URL selected: " + url);
 
@@ -661,25 +759,201 @@ module idez(qt,io)
           return null;
         }
       });
+
+      this.initActions();
+      this.show_home();
     }
-    fun setupAccept(e, params) {
-      e.onAccept(fun() {
-        io.print("setting code:" + params["module_name"] + " :: " + params["function_name"]);
-        var cfn = get_module(params["module_name"]).compiled_functions()[params["function_name"]];
-        try {
-          cfn.setCode(e.text());
-        } catch(ex) {
-          e.insertSelectedText(ex.value());
-        }
+
+    fun initActions() {
+      var execMenu = this.menuBar().addMenu("&System");
+      var action = qt.QAction.new("&Save", execMenu);
+      action.setShortcut("alt+x,s");
+      action.connect("triggered", fun() {
+        io.print("save to filesystem");
+      });
+      action.setShortcutContext(1);
+      execMenu.addAction(action);
+
+      action = qt.QAction.new("&Accept code", execMenu);
+      action.setShortcut("alt+x,a");
+      action.connect("triggered", fun() {
+        io.print("Accept entry");
+      });
+      action.setShortcutContext(1);
+      execMenu.addAction(action);
+
+      action = qt.QAction.new("Dismiss Mini Buffer", execMenu);
+      action.setShortcut("ctrl+g");
+      action.connect("triggered", fun() {
+        @miniBuffer.hide();
+      });
+      action.setShortcutContext(1);
+      execMenu.addAction(action);
+
+      action = qt.QAction.new("Undo", execMenu);
+      action.setShortcut("alt+u");
+      action.connect("triggered", fun() {
+        @chistory.undo();
+      });
+      action.setShortcutContext(1);
+      execMenu.addAction(action);
+
+      action = qt.QAction.new("Redo", execMenu);
+      action.setShortcut("alt+r");
+      action.connect("triggered", fun() {
+        @chistory.redo();
+      });
+      action.setShortcutContext(1);
+      execMenu.addAction(action);
+
+      execMenu = this.menuBar().addMenu("&Edit Module");
+      action = qt.QAction.new("&Rename module", execMenu);
+      action.setShortcut("alt+m,r");
+      action.connect("triggered", fun() {
+        this.action_renameModule()
+      });
+      action.setShortcutContext(1);
+      execMenu.addAction(action);
+
+      action = qt.QAction.new("Edit Module &Parameters", execMenu);
+      action.setShortcut("alt+m,p");
+      action.connect("triggered", fun() {
+        io.print("Edit module parameters");
+      });
+      action.setShortcutContext(1);
+      execMenu.addAction(action);
+
+      action = qt.QAction.new("Edit Module &Aliases", execMenu);
+      action.setShortcut("alt+m,a");
+      action.connect("triggered", fun() {
+        io.print("Edit module aliases");
+      });
+      action.setShortcutContext(1);
+      execMenu.addAction(action);
+
+      action = qt.QAction.new("Add Module &Function", execMenu);
+      action.setShortcut("alt+m,f");
+      action.connect("triggered", fun() {
+        this.action_addFunction()
+      });
+      action.setShortcutContext(1);
+      execMenu.addAction(action);
+
+      action = qt.QAction.new("&Delete Module Function", execMenu);
+      action.setShortcut("alt+m,d");
+      action.connect("triggered", fun() {
+        this.action_deleteFunction()
+      });
+      action.setShortcutContext(1);
+      execMenu.addAction(action);
+
+      execMenu = this.menuBar().addMenu("&Edit Class");
+      action = qt.QAction.new("&Add Class", execMenu);
+      action.setShortcut("alt+c,a");
+      action.connect("triggered", fun() {
+        io.print("Add class");
+      });
+      action.setShortcutContext(1);
+      execMenu.addAction(action);
+
+      action = qt.QAction.new("Rename Class", execMenu);
+      action.setShortcut("alt+c,r");
+      action.connect("triggered", fun() {
+        io.print("Rename class/superclass");
+      });
+      action.setShortcutContext(1);
+      execMenu.addAction(action);
+
+      action = qt.QAction.new("Edit &Fields", execMenu);
+      action.setShortcut("alt+c,f");
+      action.connect("triggered", fun() {
+        io.print("Edit fields");
+      });
+      action.setShortcutContext(1);
+      execMenu.addAction(action);
+
+      action = qt.QAction.new("Add &Method", execMenu);
+      action.setShortcut("alt+c,m");
+      action.connect("triggered", fun() {
+        io.print("Add method");
+      });
+      action.setShortcutContext(1);
+      execMenu.addAction(action);
+
+      action = qt.QAction.new("&Delete Method", execMenu);
+      action.setShortcut("alt+c,d");
+      action.connect("triggered", fun() {
+        io.print("Delete Method");
+      });
+      action.setShortcutContext(1);
+      execMenu.addAction(action);
+    }
+
+    fun command(redo, undo) {
+      redo();
+      @chistory.add(undo,redo);
+    }
+
+    fun action_addFunction() {
+      if (@current_cmodule == null) {
+        @statusLabel.setText("No current module");
+        return null;
+      }
+
+      @miniBuffer.prompt("Function name: ", "", fun(value) {
+        var cfun = CompiledFunction.new(value, "fun() { return null; }",[],@current_cmodule);
+        @current_cmodule.addFunction(cfun);
+        this.showEditorForFunction(cfun);
       });
     }
+
+    fun action_deleteFunction() {
+      if (@current_cmodule == null) {
+        @statusLabel.setText("No current module");
+        return null;
+      }
+
+      var e = qt.QApplication.focusWidget();
+      if (Mirror.vtFor(e) == ExplorerEditor) {
+        var name = e.cfun.name;
+        e.cfun().owner().removeFunction(name);
+        //TODO: findFirst(...).takeFromDocument()
+        @webview.page().mainFrame().documentElement().findFirst("#"+name).setAttribute("style","display:none");
+      } else {
+        @statusLabel.setText("No module function selected");
+      }
+    }
+
+    fun action_renameModule() {
+      if (@current_cmodule == null) {
+        @statusLabel.setText("No current module");
+        return null;
+      }
+
+      @miniBuffer.prompt("Module name: ", @current_cmodule.name(), fun(value) {
+        var old_name = @current_cmodule.name();
+        this.command(fun() {
+          @current_cmodule.setName(value);
+          @webview.page().mainFrame().documentElement().findFirst(".module_name").setPlainText(@current_cmodule.name());
+          @statusLabel.setText("Renamed module to: " + value);
+        }, fun() {
+          @current_cmodule.setName(old_name);
+          @webview.page().mainFrame().documentElement().findFirst(".module_name").setPlainText(@current_cmodule.name());
+          @statusLabel.setText("Renamed module to: " + old_name);
+        });
+      });
+    }
+
     fun show_home() {
+      @current_cmodule = null;
       @webview.setUrl(modules_path() + "/module-explorer/index.html");
     }
     fun show_tutorial() {
+      @current_cmodule = null;
       @webview.setUrl(modules_path() + "/module-explorer/tutorial.html");
     }
     fun show_modules() {
+      @current_cmodule = null;
       @webview.loadUrl(modules_path() + "/module-explorer/modules-index.html");
       var modules = available_modules();
       var ul = @webview.page().mainFrame().documentElement().findFirst("ul.modules");
@@ -688,27 +962,33 @@ module idez(qt,io)
       });
     }
     fun show_module(name) {
+      @current_cmodule = get_module(name);
       @webview.loadUrl(modules_path() + "/module-explorer/module-view.html");
-      var module = get_module(name);
       var doc = @webview.page().mainFrame().documentElement();
-      doc.findFirst(".module_name").setPlainText(module.name());
+      doc.findFirst(".module_name").setPlainText(@current_cmodule.name());
 
       var ul = doc.findFirst(".module_parameters");
-      module.params().each(fun(p) {
+      @current_cmodule.params().each(fun(p) {
         ul.appendInside("<li>" + p + "</li>");
       });
 
-      var fns = module.compiled_functions();
+      var fns = @current_cmodule.compiled_functions();
       fns.each(fun(name,cfn) {
-        var div = doc.findFirst(".fun_tpl").clone();
-        div.setStyleProperty("display","block");
-        div.findFirst(".function_name").setPlainText(cfn.name());
-        div.findFirst(".fun_paramslist").setPlainText(cfn.parameters().toString());
-        div.findFirst(".fun_body param[name=module_name]").setAttribute("value",module.name());
-        div.findFirst(".fun_body param[name=function_name]").setAttribute("value",name);
-        div.findFirst(".fun_body param[name=code]").setAttribute("value",cfn.text());
-        doc.findFirst(".functions").appendInside(div);
+        this.showEditorForFunction(cfn)
       });
+    }
+
+    fun showEditorForFunction(cfn) {
+      var doc = @webview.page().mainFrame().documentElement();
+      var div = doc.findFirst(".fun_tpl").clone();
+      div.setAttribute("id", cfn.name);
+      div.setStyleProperty("display","block");
+      div.findFirst(".function_name").setPlainText(cfn.name);
+      div.findFirst(".fun_paramslist").setPlainText(cfn.parameters().toString());
+      div.findFirst(".fun_body param[name=module_name]").setAttribute("value",@current_cmodule.name());
+      div.findFirst(".fun_body param[name=function_name]").setAttribute("value",cfn.name);
+      div.findFirst(".fun_body param[name=code]").setAttribute("value",cfn.text());
+      doc.findFirst(".functions").appendInside(div);
     }
   }
 
