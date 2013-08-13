@@ -453,10 +453,12 @@ def _lookup_field(mobj, name):
 def _meme_instance(proc, obj):
     mapping = {
         QtGui.QListWidgetItem: proc.r_mp["QListWidgetItem"],
+        QtWebKit.QWebView: proc.r_mp['QWebView'],
         QtWebKit.QWebFrame: proc.r_mp['QWebFrame'],
         QtWebKit.QWebPage: proc.r_mp['QWebPage'],
         QtWebKit.QWebElement: proc.r_mp['QWebElement'],
-        QtGui.QAction: proc.r_mp['QAction']}
+        QtGui.QAction: proc.r_mp['QAction'],
+        scintilla_editor.MemeQsciScintilla: proc.r_mp['QsciScintilla']}
 
     if obj == None:
         return obj
@@ -470,8 +472,15 @@ def _meme_instance(proc, obj):
         return obj#{"_vt":i.get_class("List"), 'self':obj}
     elif isinstance(obj, QtCore.QUrl):
         return qstring_to_str(obj.path()) # TODO: currently ignoring QUrl objects
-    else: #should be a qt instance
-        return {"_vt":mapping[obj.__class__], 'self':obj}
+    elif obj.__class__ in mapping: # NOTE: should be a qt instance
+        if hasattr(obj, 'meme_instance'): # all qt objetcs should have this one day
+            return obj.meme_instance
+        else:
+            return {"_vt":mapping[obj.__class__], 'self':obj}
+    else:
+        print "*** WARNING: object has no memetalk mapping specified:"
+        print obj
+        return None
 
 def qstring_to_str(qstring):
     #return str(qstring.toUtf8()).decode("utf-8")
@@ -1141,9 +1150,9 @@ def prim_qt_scintilla_editor_new(proc):
     parent = proc.locals['parent']
     if parent != None:
         qtobj = _lookup_field(parent, 'self')
-        proc.r_rdp['self'] = scintilla_editor.MemeQsciScintilla(qtobj)
+        proc.r_rdp['self'] = scintilla_editor.MemeQsciScintilla(proc.r_rp, qtobj)
     else:
-        proc.r_rdp['self'] = scintilla_editor.MemeQsciScintilla()
+        proc.r_rdp['self'] = scintilla_editor.MemeQsciScintilla(proc.r_rp)
     return proc.r_rp
 
 def prim_qt_scintilla_editor_set_text(proc):

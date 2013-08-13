@@ -5,8 +5,9 @@ from PyQt4.QtGui import *
 
 class MemeQsciScintilla(QsciScintilla):
 
-    def __init__(self, parent=None):
+    def __init__(self, meme_instance, parent=None):
         super(MemeQsciScintilla, self).__init__(parent)
+        self.meme_instance = meme_instance
 
         self.CURRENT_LINE_MARKER = 8
         self.CURRENT_RANGE_IND = self.indicatorDefine(self.INDIC_DOTBOX)
