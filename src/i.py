@@ -147,7 +147,7 @@ def _instantiate_module(i, compiled_module, _args, parent_module):
                     args[mp[1]] = i.compile_module_uri(mp[2])
                 else:
                     raise Exception('Unknown module spec')
-        if args.keys() != compiled_module['params']:
+        if args.keys().sort() != compiled_module['params'].sort():
             raise Exception('arity error (module parameters)')
 
         # module's aliases. dirty: using arg to set it
