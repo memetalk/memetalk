@@ -483,9 +483,35 @@ def prim_qt_qwidget_new(proc):
         proc.r_rdp['self'] = QtGui.QWidget()
     return proc.r_rp
 
+def prim_qt_qwidget_set_focus(proc):
+    qtobj = _lookup_field(proc.r_rp, 'self')
+    qtobj.setFocus()
+    return proc.r_rp
+
+def prim_qt_qwidget_set_maximum_height(proc):
+    qtobj = _lookup_field(proc.r_rp, 'self')
+    qtobj.setMaximumHeight(proc.locals['h'])
+    return proc.r_rp
+
+def prim_qt_qwidget_set_minimum_size(proc):
+    qtobj = _lookup_field(proc.r_rp, 'self')
+    qtobj.setMinimumSize(proc.locals['w'],proc.locals['h'])
+    return proc.r_rp
+
+def prim_qt_qwidget_set_minimum_width(proc):
+    qtobj = _lookup_field(proc.r_rp, 'self')
+    qtobj.setMinimumWidth(proc.locals['w'])
+    return proc.r_rp
+
+
 def prim_qt_qwidget_show(proc):
     qtobj = _lookup_field(proc.r_rp, 'self')
     qtobj.show()
+    return proc.r_rp
+
+def prim_qt_qwidget_hide(proc):
+    qtobj = _lookup_field(proc.r_rp, 'self')
+    qtobj.hide()
     return proc.r_rp
 
 def prim_qt_qwidget_set_window_title(proc):
@@ -573,6 +599,12 @@ def prim_qt_qmainwindow_menu_bar(proc):
     qtobj = _lookup_field(proc.r_rp, 'self')
     qt_bar_instance = qtobj.menuBar()
     return proc.interpreter.alloc(QMenuBarClass, {'self':qt_bar_instance})
+
+def prim_qt_qmainwindow_status_bar(proc):
+    QWidgetClass = proc.r_mp["QWidget"]
+    qtobj = _lookup_field(proc.r_rp, 'self')
+    qt_bar_instance = qtobj.statusBar()
+    return proc.interpreter.alloc(QWidgetClass, {'self':qt_bar_instance})
 
 # QPlainTextEdit
 def prim_qt_qplaintextedit_new(proc):
@@ -779,6 +811,12 @@ def prim_qt_qvboxlayout_add_layout(proc):
     qtobj.addLayout(parent)
     return proc.r_rp
 
+def prim_qt_qvboxlayout_add_widget(proc):
+    qtobj = _lookup_field(proc.r_rp, 'self')
+    w = _lookup_field(proc.locals['widget'], 'self')
+    qtobj.addWidget(w)
+    return proc.r_rp
+
 
 
 # QHBoxLayout
@@ -791,6 +829,16 @@ def prim_qt_qhboxlayout_new(proc):
         proc.r_rdp['self'] = QtGui.QHBoxLayout()
     return proc.r_rp
 
+def prim_qt_qhboxlayout_add_widget(proc):
+    qtobj = _lookup_field(proc.r_rp, 'self')
+    w = _lookup_field(proc.locals['widget'], 'self')
+    qtobj.addWidget(w)
+    return proc.r_rp
+
+def prim_qt_qhboxlayout_set_contents_margins(proc):
+    qtobj = _lookup_field(proc.r_rp, 'self')
+    qtobj.setContentsMargins(proc.locals['l'],proc.locals['t'],proc.locals['r'],proc.locals['b'])
+    return proc.r_rp
 
 # QListWidget
 def prim_qt_qlistwidget_new(proc):
@@ -829,11 +877,6 @@ def prim_qt_qlineedit_new(proc):
         proc.r_rdp['self'] = QtGui.QLineEdit()
     return proc.r_rp
 
-def prim_qt_qlineedit_set_focus(proc):
-    qtobj = _lookup_field(proc.r_rp, 'self')
-    qtobj.setFocus()
-    return proc.r_rp
-
 def prim_qt_qlineedit_text(proc):
     qtobj = _lookup_field(proc.r_rp, 'self')
     return qstring_to_str(qtobj.text())
@@ -855,6 +898,21 @@ def prim_qt_qlineedit_select_all(proc):
 def prim_qt_qlineedit_set_selection(proc):
     qtobj = _lookup_field(proc.r_rp, 'self')
     qtobj.setSelection(proc.locals['start'], proc.locals['length'])
+    return proc.r_rp
+
+
+def prim_qt_qlabel_new(proc):
+    parent = proc.locals['parent']
+    if parent != None:
+        qtobj = _lookup_field(parent, 'self')
+        proc.r_rdp['self'] = QtGui.QLabel(qtobj)
+    else:
+        proc.r_rdp['self'] = QtGui.QLabel()
+    return proc.r_rp
+
+def prim_qt_qlabel_set_text(proc):
+    qtobj = _lookup_field(proc.r_rp, 'self')
+    qtobj.setText(proc.locals['text'])
     return proc.r_rp
 
 def prim_qt_qheaderview_hide(proc):

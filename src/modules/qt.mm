@@ -33,11 +33,26 @@ module qt(io)
     fun setWindowTitle(title) {
       <primitive "qt_qwidget_set_window_title">
     }
+    fun setFocus() {
+      <primitive "qt_qwidget_set_focus">
+    }
     fun resize(w,h) {
       <primitive "qt_qwidget_resize">
     }
+    fun setMaximumHeight(h) {
+      <primitive "qt_qwidget_set_maximum_height">
+    }
+    fun setMinimumSize(w,h) {
+      <primitive "qt_qwidget_set_minimum_size">
+    }
+    fun setMinimumWidth(w) {
+      <primitive "qt_qwidget_set_minimum_width">
+    }
     fun show() {
       <primitive "qt_qwidget_show">
+    }
+    fun hide() {
+      <primitive "qt_qwidget_hide">
     }
     fun addAction(action) {
       <primitive "qt_qwidget_add_action">
@@ -120,6 +135,9 @@ module qt(io)
     fun menuBar() {
       <primitive "qt_qmainwindow_menu_bar">
     }
+    fun statusBar() {
+      <primitive "qt_qmainwindow_status_bar">
+    }
   }
 
   class QPlainTextEdit < QWidget {
@@ -174,6 +192,9 @@ module qt(io)
     fun addLayout(layout) {
       <primitive "qt_qvboxlayout_add_layout">
     }
+    fun addWidget(widget) {
+      <primitive "qt_qvboxlayout_add_widget">
+    }
   }
 
   class QHBoxLayout < QLayout {
@@ -182,6 +203,12 @@ module qt(io)
     }
     fun addLayout(layout) {
       <primitive "qt_qhboxlayout_add_layout">
+    }
+    fun addWidget(widget) {
+      <primitive "qt_qhboxlayout_add_widget">
+    }
+    fun setContentsMargins(l,t,r,b) {
+      <primitive "qt_qhboxlayout_set_contents_margins">
     }
   }
 
@@ -209,9 +236,6 @@ module qt(io)
     init new(parent) {
       <primitive "qt_qlineedit_new">
     }
-    fun setFocus() {
-      <primitive "qt_qlineedit_set_focus">
-    }
     fun text() {
       <primitive "qt_qlineedit_text">
     }
@@ -226,6 +250,15 @@ module qt(io)
     }
     fun setSelection(start,length) {
       <primitive "qt_qlineedit_set_selection">
+    }
+  }
+
+  class QLabel < QWidget {
+    init new(parent) {
+        <primitive "qt_qlabel_new">
+    }
+    fun setText(text) {
+        <primitive "qt_qlabel_set_text">
     }
   }
 
