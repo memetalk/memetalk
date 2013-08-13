@@ -326,6 +326,9 @@ def prim_number_lst(proc):
 def prim_number_lsteq(proc):
     return proc.r_rp <= proc.locals['arg']
 
+def prim_number_grteq(proc):
+    return proc.r_rp >= proc.locals['arg']
+
 def prim_dictionary_plus(proc):
     return dict(proc.r_rp.items() + proc.locals['arg'].items())
 

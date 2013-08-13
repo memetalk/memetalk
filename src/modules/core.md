@@ -235,6 +235,9 @@ module core() {
     fun <=(arg) {
       <primitive "number_lsteq">
     }
+    fun >=(arg) {
+      <primitive "number_grteq">
+    }
   }
 
   class Exception {

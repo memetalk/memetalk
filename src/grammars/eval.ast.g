@@ -17,6 +17,7 @@ expr = ['super-ctor-send' :s args:a]:ast     -> self.i.eval_do_super_ctor_send(s
      | ['*' expr:x expr:y]                   -> self.i.todo8()
      | ['<' expr:x expr:y]:ast               -> self.i.eval_do_bin_send('<',x,y,ast)
      | ['<=' expr:x expr:y]:ast              -> self.i.eval_do_bin_send('<=',x,y,ast)
+     | ['>=' expr:x expr:y]:ast              -> self.i.eval_do_bin_send('>=',x,y,ast)
      | ['==' expr:x expr:y]:ast              -> self.i.eval_do_bin_send('==',x,y,ast)
      | ['!=' expr:x expr:y]:ast              -> self.i.eval_do_bin_send('!=',x,y,ast)
      | ['call' expr:e args:a]:ast            -> self.i.eval_do_call(e,a,ast)
