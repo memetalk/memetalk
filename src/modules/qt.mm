@@ -10,6 +10,9 @@ module qt(io)
     fun exec() {
       <primitive "qt_qapplication_exec">
     }
+    func focusWidget() {
+      <primitive "qt_qapplication_focus_widget">
+    }
   }
 
   class QEventLoop {

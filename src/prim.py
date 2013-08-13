@@ -491,6 +491,11 @@ def prim_qt_qapplication_exec(proc):
     eventloop_processes.append({'proc':proc, 'qtobj':proc.r_rdp['self'], 'done': False})
     return proc.r_rdp['self'].exec_()
 
+def prim_qt_qapplication_focus_widget(proc):
+    w = QApplication.focusWidget()
+    return _meme_instance(proc,w)
+
+
 def prim_qt_qeventloop_new(proc):
     qev = QtCore.QEventLoop()
     proc.r_rdp['self'] = qev
