@@ -282,6 +282,9 @@ module core() {
     fun setValueFor(name, value) {
       <primitive "mirror_set_value_for">
     }
+    func vtFor(obj) {
+      <primitive "mirror_vt">
+    }
   }
 
   class VMProcess {
