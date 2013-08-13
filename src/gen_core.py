@@ -168,8 +168,8 @@ KernelModule = {"_vt": ModuleBehavior,
 "@tag": "KernelModule"}""")
         append("kernel_imodule['_vt'] = KernelModule")
         append("kernel_imodule['_delegate'] = None")
-        append("kernel_imodule['compiled_module'] = kernel_cmodule")
         append("kernel_imodule['@tag'] = 'Kernel module instance'")
+        append("KernelModule['compiled_module'] = kernel_cmodule")
         append("KernelModule['size'] = " + str(len(self.classes)+len(self.objects)))
         for name, val in self.classes.iteritems():
             append("kernel_imodule["+to_source(name)+"] = " + name)
