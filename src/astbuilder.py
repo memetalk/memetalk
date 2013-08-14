@@ -18,7 +18,7 @@ class ASTBuilder:
             end_col = start_col + len(text)
         else:
             end_col = len(text[inside_nl:])
-        node = ASTNode(ast, self.filename, text, start_line, start_col, end_line, end_col)
+        node = ASTNode(ast, text, start_line, start_col, end_line, end_col)
         return node
 
     def sint_ast(self, last_begin, ast):
@@ -26,14 +26,13 @@ class ASTBuilder:
         full = ''.join(self.parser.input.data)
         text = full[last_begin:end]
         line = full[:last_begin].count("\n") + self.line_offset+2
-        node = ASTNode(ast, self.filename, text, line, 0, line, 0)
+        node = ASTNode(ast, text, line, 0, line, 0)
         return node
 
 class ASTNode(list):
-    def __init__(self, lst, filename, text, start_line, start_col, end_line, end_col):
+    def __init__(self, lst, text, start_line, start_col, end_line, end_col):
         list.__init__(self,lst)
         self.lst = lst
-        self.filename = filename
         self.text = text
         self.start_line = start_line
         self.start_col = start_col
@@ -41,6 +40,6 @@ class ASTNode(list):
         self.end_col = end_col
 
     def __repr__(self):
-        #return str(self.lst) + ":" + str(self.start_line)
-        return "ASTNode(" + str(self.lst) + "," +self.filename.__repr__() + "," + self.text.__repr__() + "," + \
-            str(self.start_line) + "," + str(self.start_col) + "," + str(self.end_line) + ","+ str(self.end_col) + ")"
+        return str(self.lst) # + ":" + str(self.start_line)
+        #return "ASTNode(" + str(self.lst) + "," + self.text.__repr__() + "," + \
+        #    str(self.start_line) + "," + str(self.start_col) + "," + str(self.end_line) + ","+ str(self.end_col) + ")"

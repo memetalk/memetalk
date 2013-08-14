@@ -100,14 +100,15 @@ def _create_class(data):
                 "parent": None,
                 "size": 1, #delegate
                 "dict": {},
-                "compiled_class":None}
+                "compiled_class":None,
+                "@tag":"a class"}
     return dict(template.items() + data.items())
 
 
 def _create_accessor_method(imodule, name):
     cf =  _create_compiled_function({
             "name": name,
-            "body":  [ASTNode(['return', ['field', name]],'?','return @'+name+';',0,0,0,0)]})
+            "body":  [ASTNode(['return', ['field', name]],'return @'+name+';',0,0,0,0)]})
     return _function_from_cfunction(cf, imodule)
 
 def _function_from_cfunction(cfun, imodule):
@@ -281,7 +282,6 @@ class ModuleLoader(ASTBuilder):
     def recompile_top_level(self, i, cfun, src):
         self.line_offset = 0
         self.pos_stack = []
-        self.filename = cfun['owner']['filepath']
         self.current_module = cfun['owner']
 
         name = cfun['name']
