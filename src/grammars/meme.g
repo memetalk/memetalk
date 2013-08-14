@@ -224,9 +224,6 @@ funliteral = spaces !(self.input.position):begin token("fun") params:p token("{"
              token("}") -> self.i.ast(begin, ['fun-literal', ["params", p],
                             ['body', body]])
 
-as_eval = token("{") funliteral_body:body token("}") -> body
-
-
 funliteral_body = stmt:x stmts:xs -> [x]+xs
                 | expr_ret:e      -> [e]
                 | expr:e          -> [e]
@@ -243,3 +240,10 @@ lit_string  = spaces '"' ('\\' '"' | ~'"' :x)*:xs '"'
                -> ["literal-string", unicode(''.join(xs).decode("string_escape"))]
 
 field_name = spaces '@' letter_or_digit_string:x -> x
+
+
+single_top_level_fun :name = spaces !(self.input.position):begin token("fun")  params:p token("{")
+                         top_fun_body:body !(self.input.position):end
+                       token("}")
+                       -> self.i.ast(begin,['fun', name, ["params", p],
+                              ['body', body + [self.i.sint_ast(end,['return-this'])]]])

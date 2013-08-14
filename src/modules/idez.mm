@@ -3,16 +3,27 @@ module idez(qt,io)
   io:  memetalk/io/1.0();
   [QWidget, QMainWindow, QsciScintilla, QLineEdit, QComboBox, QTableWidget] <= qt;
 {
-  evalFn: fun(text, imodule, frameOrEnv) {
-    var cmod = get_compiled_module(imodule);
-    var cfun = CompiledFunction.new("<doIt>",text, [], cmod);
-    return cfun.asContext(imodule, frameOrEnv);
+
+  evalWithVars: fun(text, vars) {
+    var fn = evalWithVarsFn(text, vars);
+    var res = fn();
+    return {"result": res, "env": fn.getEnv()};
   }
 
-  evalWithVars: fun(text, imodule, vars) {
-    var fn = evalFn(text, imodule, vars);
-    var res =  fn.apply([]);
-    return {"result":res, "env":fn.getEnv()};
+  evalWithVarsFn: fun(text, vars) {
+    var cmod = get_compiled_module(thisModule);
+    var code = "fun() {" + text + "}";
+    var cfn = CompiledFunction.newClosure(code, thisContext.compiledFunction(), false);
+    return cfn.asContextWithVars(thisModule, vars);
+  }
+
+  evalWithFrame: fun(text, frame) {
+    var cmod = get_compiled_module(thisModule);
+    var code = "fun() {" + text + "}";
+    var cfn = CompiledFunction.newClosure(code, thisContext.compiledFunction());
+    var fn = cfn.asContextWithFrame(thisModule, frame);
+    var res = fn();
+    return {"result": res, "env": fn.getEnv()};
   }
 
   class LineEditor < QLineEdit {
@@ -63,7 +74,7 @@ module idez(qt,io)
       this.addAction(action);
     }
     instance_method evalSelection: fun() {
-      var r = evalWithVars(this.selectedText(), thisModule, {"this" : @receiver});
+      var r = evalWithVars(this.selectedText(), {"this" : @receiver});
       return r["result"];
     }
     instance_method insertSelectedText: fun(text) {
@@ -100,7 +111,7 @@ module idez(qt,io)
     }
     instance_method debugIt: fun() {
       try {
-        var fn = evalFn(this.selectedText(), thisModule, {"this" : @receiver});
+        var fn = evalWithVarsFn(this.selectedText(), thisModule, {"this" : @receiver});
         VMProcess.debug(fn,[]);
       } catch(e) {
         this.insertSelectedText(e.value());
@@ -109,13 +120,14 @@ module idez(qt,io)
   }
 
   class Editor < QsciScintilla {
-    fields: onAccept, getContext, afterEval;
-    init new: fun(parent, getContext, afterEval) {
+    fields: onAccept, getContext, getFrame, afterEval;
+    init new: fun(parent, getContext, getFrame, afterEval) {
       super.new(parent);
       if (parent == null) {
         this.initActions();
       }
       @getContext = getContext;
+      @getFrame = getFrame;
       @afterEval = afterEval;
     }
 
@@ -167,7 +179,12 @@ module idez(qt,io)
     }
 
     instance_method evalSelection: fun() {
-      var r = evalWithVars(this.selectedText(), thisModule, @getContext());
+      var r = null;
+      if (@getContext) {
+        r = evalWithVars(this.selectedText(), @getContext());
+      } else {
+        r = evalWithFrame(this.selectedText(), @getFrame());
+      }
       if (@afterEval) {
         @afterEval(r["env"]);
       }
@@ -202,9 +219,11 @@ module idez(qt,io)
 
     instance_method debugIt: fun() {
       try {
-        var fn = evalFn(this.selectedText(), thisModule, @getContext());
+        var fn = evalWithVarsFn(this.selectedText(), @getContext());
         VMProcess.debug(fn,[]);
-        @afterEval(fn.getEnv());
+        if (@afterEval) {
+          @afterEval(fn.getEnv());
+        }
       } catch(e) {
         this.insertSelectedText(e.value());
       }
@@ -225,7 +244,7 @@ module idez(qt,io)
 
       this.setWindowTitle("Workspace");
 
-      @editor = Editor.new(this, fun() { @variables },
+      @editor = Editor.new(this, fun() { @variables }, null,
                            fun(env) { @variables = env + @variables; });
 
       @editor.initActions();
@@ -258,7 +277,7 @@ module idez(qt,io)
       @fieldList.setMaximumWidth(200);
       hbox.addWidget(@fieldList);
 
-      @textArea = Editor.new(centralWidget, fun() { {"this" : @inspectee} }, null);
+      @textArea = Editor.new(centralWidget, fun() { {"this" : @inspectee} }, null, null);
 
       hbox.addWidget(@textArea);
 
@@ -372,7 +391,7 @@ module idez(qt,io)
       }
     }
     instance_method acceptIt: fun() {
-      var fn = evalFn(@textArea.text(), thisModule, {"this":@inspectee});
+      var fn = evalWithVarsFn(@textArea.text(), {"this":@inspectee});
       var new_value = fn.apply([]);
       var slot = @fieldList.currentItem().text();
       @mirror.setValueFor(slot, new_value);
@@ -410,7 +429,11 @@ module idez(qt,io)
       if (cp.isTopLevel()) {
         return cp.text();
       } else {
-        return cp.topLevelCompiledFunction().text();
+        if (cp.isEmbedded()) {
+          return cp.topLevelCompiledFunction().text();
+        } else {
+          return cp.text();
+        }
       }
     }
     instance_method localsFor: fun(i) { // this is used for the local variable list widet
@@ -482,7 +505,7 @@ module idez(qt,io)
       @stackCombo = StackCombo.new(centralWidget, @execFrames);
       mainLayout.addWidget(@stackCombo);
 
-      @editor = Editor.new(centralWidget, fun() { @execFrames.frame(@frame_index) }, null);
+      @editor = Editor.new(centralWidget, null, fun() { @execFrames.frame(@frame_index) }, null);
 
       mainLayout.addWidget(@editor);
 
@@ -723,11 +746,11 @@ module idez(qt,io)
         var e = null;
         if (params.has("module_function")) {
           var cfn = get_module(params["module_name"]).compiled_functions()[params["function_name"]];
-          e = ExplorerEditor.new(cfn, null, fun() { variables },
+          e = ExplorerEditor.new(cfn, fun() { variables }, null,
                                  fun(env) { variables = env + variables;});
         } else {
           if (params.has("code")) {
-            e = ExplorerEditor.new(null, null, fun() { variables },
+            e = ExplorerEditor.new(null, fun() { variables }, null,
                                    fun(env) { variables = env + variables;});
           }
         }

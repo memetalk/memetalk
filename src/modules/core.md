@@ -72,13 +72,19 @@ module core() {
 
   class CompiledFunction {
     fields: _delegate, body, env_table, env_table_skel, fun_literals, is_ctor,
-            is_prim, name, params, prim_name, uses_env, outer_cfun, owner,
-            text;
-    init new: fun(name, text, parameters, module) {
-      <primitive "compiled_function_new">
+            is_prim, is_top_level, is_embedded, name, params, prim_name, 
+            uses_env, outer_cfun, owner, text;
+    init newTopLevel: fun(name, text, cmodule) {
+      <primitive "compiled_function_new_top_level">
     }
-    instance_method asContext: fun(imodule, frameOrTable) {
-      <primitive "compiled_function_as_context">
+    init newClosure: fun(text, cfun, is_embedded) {
+      <primitive "compiled_function_new_closure">
+    }
+    instance_method asContextWithFrame: fun(imodule, frame) {
+      <primitive "compiled_function_as_context_with_frame">
+    }
+    instance_method asContextWithVars: fun(imodule, vars) {
+      <primitive "compiled_function_as_context_with_vars">
     }
     instance_method instantiate: fun(imodule) {
       <primitive "compiled_function_instantiate">
@@ -98,8 +104,11 @@ module core() {
     instance_method ast: fun() {
       return @body;
     }
+    instance_method isEmbedded: fun() {
+      return @is_embedded;
+    }
     instance_method isTopLevel: fun() {
-      return !@outer_cfun;
+      return @is_top_level;
     }
     instance_method owner: fun() {
       return @owner;

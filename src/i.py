@@ -69,6 +69,8 @@ def _create_compiled_function(data):
                 "outer_cfun":None,
                 "owner":None,
                 "is_ctor": False,
+                "is_top_level": True,
+                "is_embedded": True,
                 "@tag": "a CompiledFunction"}
     return dict(template.items() + data.items())
 
@@ -270,151 +272,148 @@ def _instantiate_module(i, compiled_module, _args, parent_module):
 ## Loading
 #######################################################
 
-class FunctionLoader(ASTBuilder): # for eval
-    def load_fun(self, interpreter, cfun, code):
-        self.line_offset = cfun['line']
-        self.filename = "?"
-        self.parser = MemeParser(code)
+
+class ModuleLoader(ASTBuilder):
+    def __init__(self):
+        self.first_fnlit = None
+        self.recompiling_cfun = None
+
+    def recompile_top_level(self, i, cfun, src):
+        self.line_offset = 0
+        self.pos_stack = []
+        self.filename = cfun['owner']['filepath']
+        self.current_module = cfun['owner']
+
+        name = cfun['name']
+
+        self.recompiling_cfun = cfun
+
+        self.parser = MemeParser(src)
         self.parser.i = self
         try:
-            ast,err = self.parser.apply("top_level_fun")
-            #print "--F AST"
-            #print ast
-            #print "//--F AST"
+            ast,_ = self.parser.apply("single_top_level_fun", name)
         except Exception as err:
             if hasattr(err,'formatError'):
-                interpreter.throw_with_value(err.formatError(''.join(self.parser.input.data)))
+                print(err.formatError(''.join(self.parser.input.data)))
             else:
                 traceback.print_exc()
-            raise
+            sys.exit(1)
 
-        self.env_idx = 0
+        print "---- AST ----"
+        print ast
+        print "//---- AST ----"
+
         self.env_id_table = []
+        self.env_idx = 0
+        self.fun_literals = []
+
+        self.loading_class = False
+        self.functions = [self.recompiling_cfun]
+
+        loader = Loader([ast])
+        loader.i = self
+        loader.apply("function_definition")
+        return self.current_module['compiled_functions'][name]
+
+    def recompile_closure(self, i, cfun, src):
+        self.line_offset = 0
+        self.pos_stack = []
+        self.filename = '?'
+
+        self.parser = MemeParser(src)
+        self.parser.i = self
+        try:
+            ast,_ = self.parser.apply("funliteral")
+        except Exception as err:
+            if hasattr(err,'formatError'):
+                print(err.formatError(''.join(self.parser.input.data)))
+            else:
+                traceback.print_exc()
+            sys.exit(1)
+
+        print "---- AST ----"
+        print ast
+        print "//---- AST ----"
+
+        self.env_id_table = []
+        self.env_idx = 0
+        self.fun_literals = []
+
+        self.loading_class = False
+        self.functions = [cfun['outer_cfun'],cfun]
+
+        self.first_fnlit = cfun
+        loader = Loader([ast])
+        loader.i = self
+        loader.apply("load_fun_lit")
+        return cfun
+
+    def compile_closure(self, i, src, outer):
+        self.line_offset = 0
+        self.pos_stack = []
+        self.filename = '?'
+
+        self.parser = MemeParser(src)
+        self.parser.i = self
+        try:
+            ast,_ = self.parser.apply("funliteral")
+        except Exception as err:
+            if hasattr(err,'formatError'):
+                print(err.formatError(''.join(self.parser.input.data)))
+            else:
+                traceback.print_exc()
+            sys.exit(1)
+
+        print "---- AST ----"
+        print ast
+        print "//---- AST ----"
+
+        self.env_id_table = []
+        self.env_idx = 0
+        self.fun_literals = []
+
+        self.loading_class = False
+        self.functions = [outer]
+
+        self.first_fnlit = None
+        loader = Loader([ast])
+        loader.i = self
+        loader.apply("load_fun_lit")
+        return self.first_fnlit
+
+    def compile_top_level(self, i, name, src, cmodule):
+        self.line_offset = 0
+        self.pos_stack = []
+        self.filename = cmodule['filepath']
+        self.current_module = cmodule
+
+        self.parser = MemeParser(src)
+        self.parser.i = self
+        try:
+            ast,_ = self.parser.apply("single_top_level_fun", name)
+        except Exception as err:
+            if hasattr(err,'formatError'):
+                print(err.formatError(''.join(self.parser.input.data)))
+            else:
+                traceback.print_exc()
+            sys.exit(1)
+
+        print "---- AST ----"
+        print ast
+        print "//---- AST ----"
+
+        self.env_id_table = []
+        self.env_idx = 0
+        self.fun_literals = []
+
+        self.loading_class = False
         self.functions = []
 
         loader = Loader([ast])
         loader.i = self
         loader.apply("function_definition")
+        return self.current_module['compiled_functions'][name]
 
-        for k,v in cfun.iteritems():
-            cfun[k]  = self.functions[0][k]
-
-        #P(cfun, 4)
-        return cfun
-
-
-    def load_body(self, interpreter, code, params, owner):
-        self.filename = "<eval>"
-        self.line_offset = -1 # to compensate for the new line in '{\n' below
-        self.owner = owner    # compiled class or compiled module
-        self.parser = MemeParser("{\n"+code+"\n}")
-        self.parser.i = self
-        try:
-            ast,err = self.parser.apply("as_eval")
-            print "--EVAL AST"
-            print ast
-            print "//--EVAL AST"
-        except Exception as err:
-            if hasattr(err,'formatError'):
-                interpreter.throw_with_value(err.formatError(''.join(self.parser.input.data)))
-            else:
-                traceback.print_exc()
-            raise
-
-        uses_env = False
-
-        self.env_idx = 0
-
-        # parameters env
-        _env1 = dict(zip(range(self.env_idx,self.env_idx+len(params)),params))
-        self.env_idx = self.env_idx+len(params)
-
-        self.env_id_table = [_env1]
-        self.functions = []
-
-        self.this_fn = _create_compiled_function({"name":"<anonymous>",
-                                                         "outer_cfun": None,
-                                                         "params": params,
-                                                         "body": ast,
-                                                         "text": code,
-                                                         "line":1,
-                                                         'uses_env': uses_env,
-                                                         'owner': owner,
-                                                         "@tag":"a compiled literal function"})
-        self.functions.append(self.this_fn)
-
-        loader = Loader([ast])
-        loader.i = self
-        loader.apply("load_body")
-        self.this_fn['env_table'] = self.env_id_table.pop()
-        return self.this_fn
-
-
-    def l_begin_function(self, name, is_ctor):
-        self.env_id_table.append({})
-        self.functions.append(_create_compiled_function({"name":name,
-                                                         "is_ctor": is_ctor,
-                                                         "owner": owner,
-                                                         "@tag":"a compiled function"}))
-
-    def l_enter_literal_fun(self):
-        self.env_id_table.append({})
-        self.functions[0]["uses_env"] = True # root Function using env
-        self.functions.append(
-            _create_compiled_function({"name":"<anonymous>",
-                                       "outer_cfun": self.functions[-1],
-                                       "owner": self.functions[-1]['owner'],
-                                       "@tag":"a compiled literal function"}))
-
-    def l_set_fun_literal_parameters(self, params):
-        self.env_id_table[-1] = dict(zip(range(self.env_idx,self.env_idx+len(params)),params))
-        self.env_idx = self.env_idx + len(params)
-
-        self.functions[-1]["params"] = params
-
-    def l_literal_fun_body(self, body):
-        self.functions[-1]["body"] = body
-
-    def l_done_literal_function(self, ast):
-        function = self.functions.pop()
-        function['text'] = ast.text
-        function['line'] = ast.start_line
-
-        body = function["body"]
-
-        function['env_table'] = self.env_id_table.pop()
-
-        #hack to identify the literal function when executing it
-        #body[0]: the first instruction. The body changes id, unfortunately
-        #literal is in the parent fun, so it can be easily fetched during execution
-        self.functions[-1]["fun_literals"][id(body[0])] = function
-
-    def l_var_def(self, name):
-        # checking if `name` exist so we don't add duplicates.
-        # A duplicate can happen if a CompiledFunction is being
-        # manually constructed with a particular env that already has `name`
-        if name not in self.env_id_table[-1].values():
-            self.env_id_table[-1][self.env_idx] = name
-            self.env_idx = self.env_idx + 1
-
-    def l_set_function_parameters(self, params):
-        self.env_idx = 0
-        self.env_id_table[-1] = dict(zip(range(self.env_idx,self.env_idx+len(params)),params))
-        self.env_idx = len(params)
-        self.functions[-1]["params"] = params
-
-    def l_end_function(self, _, body,ast):
-        function = self.functions[-1]
-        function['body'] = body
-        function['text'] = ast.text
-        function['line'] = ast.start_line
-
-        env_table = self.env_id_table.pop()
-        if function["uses_env"]:
-            function['env_table'] = env_table
-            function['env_table_skel'] =  dict(zip(range(0,self.env_idx),[None]*self.env_idx))
-
-class ModuleLoader(ASTBuilder):
     def compile_module(self, i, filename, src):
         self.line_offset = 0
         self.pos_stack = []
@@ -486,10 +485,14 @@ class ModuleLoader(ASTBuilder):
         else:
             owner = self.current_module
 
-        self.functions.append(_create_compiled_function({"name":name,
-                                                         "is_ctor": is_ctor,
-                                                         'owner': owner,
-                                                         "@tag":"a compiled function"}))
+        if self.recompiling_cfun:
+            self.recompiling_cfun['name'] = name
+            self.recompiling_cfun['is_ctor'] = is_ctor
+        else:
+            self.functions.append(_create_compiled_function({"name":name,
+                                                             "is_ctor": is_ctor,
+                                                             'owner': owner,
+                                                             "@tag":"a compiled function"}))
 
     def l_var_def(self, name):
         self.env_id_table[-1][self.env_idx] = name
@@ -525,11 +528,22 @@ class ModuleLoader(ASTBuilder):
     def l_enter_literal_fun(self):
         self.env_id_table.append({})
         self.functions[0]["uses_env"] = True # root Function using env
-        self.functions.append(
-            _create_compiled_function({"name":"<anonymous>",
-                                       "outer_cfun": self.functions[-1],
-                                       "owner": self.functions[-1]['owner'],
-                                       "@tag":"a compiled literal function"}))
+        cfun = _create_compiled_function({"name":"<anonymous>",
+                                          "outer_cfun": self.functions[-1],
+                                          "owner": self.functions[-1]['owner'],
+                                          "is_top_level": False,
+                                          "@tag":"a compiled literal function"})
+        self.functions.append(cfun)
+
+    def l_enter_first_literal_fun(self):
+        self.env_id_table.append({})
+        if self.first_fnlit == None:
+            self.first_fnlit = _create_compiled_function({"name":"<anonymous>",
+                                                          "outer_cfun": self.functions[-1],
+                                                          "owner": self.functions[-1]['owner'],
+                                                          "is_top_level": False,
+                                                          "@tag":"a compiled literal function"})
+            self.functions.append(self.first_fnlit)
 
     def l_set_fun_literal_parameters(self, params):
         self.env_id_table[-1] = dict(zip(range(self.env_idx,self.env_idx+len(params)),params))
@@ -689,11 +703,17 @@ class Interpreter():
     def compiled_function_to_context(self, cfun, env, imodule):
         return _compiled_function_to_context(cfun, env, imodule)
 
-    def compile_code(self, text, params, owner):
-        return FunctionLoader().load_body(self, text, params, owner)
+    def compile_top_level(self, name,text, cmodule):
+        return ModuleLoader().compile_top_level(self, name, text, cmodule)
 
-    def recompile_fun(self, cfun, code):
-        return FunctionLoader().load_fun(self, cfun, code)
+    def compile_closure(self, text, cfun):
+        return ModuleLoader().compile_closure(self, text, cfun)
+
+    def recompile_top_level(self, cfun, code):
+        return ModuleLoader().recompile_top_level(self, cfun, code)
+
+    def recompile_closure(self, cfun, code):
+        return ModuleLoader().recompile_closure(self, cfun, code)
 
     # object routines
     # -dealing with nulls, booleans, integers, etc...

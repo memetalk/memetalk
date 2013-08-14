@@ -1,11 +1,8 @@
 module foo() {
-
   main: fun() {
     var cmod = get_compiled_module(thisModule);
-    var env = {"a": 9};
-    var cfun = CompiledFunction.new("bar","fun() { a }", [], cmod);
-    var fn = cfun.asContext(thisModule, env);
-    var res = fn.apply([]);
-    assert(res() == 9, "CompiledFunction.asContext returning closure value");
+    var cfn = CompiledFunction.newTopLevel("bar", "fun(a) { return fun() { a }; }", cmod);
+    var fn = cfn.instantiate(thisModule);
+    assert(fn(9)() == 9, "Compiling top leve function returning closure");
   }
 }

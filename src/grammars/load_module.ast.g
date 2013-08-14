@@ -16,8 +16,6 @@ module_aliases = ['aliases' [module_alias*]]
 module_alias = ['alias' :libname :alias] -> self.i.l_module_alias(libname, alias)
 
 
-load_body = body
-
 
 module_definitions = ['defs' []]
                    | ['defs' [definition+]]
@@ -55,8 +53,16 @@ params = ['params' []]  -> []
 body = [(expr+):b] -> b
 
 
+load_fun_lit = ['fun-literal'
+                !(self.i.l_enter_first_literal_fun())
+                  params:p
+                !(self.i.l_set_fun_literal_parameters(p))
+                  ['body' :b
+                !(self.i.l_literal_fun_body(b))
+                  apply('body' b)]]:f -> self.i.l_done_literal_function(f)
+
 expr = ['var-def' :id !(self.i.l_var_def(id)) expr]
-     | ['fun-literal'
+    | ['fun-literal'
                 !(self.i.l_enter_literal_fun())
                   params:p
                 !(self.i.l_set_fun_literal_parameters(p))

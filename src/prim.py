@@ -217,27 +217,38 @@ def prim_string_count(proc):
 def prim_module_instance_compiled_module(proc):
     return proc.r_rdp['_vt']['compiled_module']
 
-def prim_compiled_function_new(proc):
-    #init new(text, parameters, module, env_idx_table_or_somethin')
-    #  --we are only interested in the names of the env slots here
-    cfun = proc.interpreter.compile_code(proc.locals['text'],
-                                         proc.locals['parameters'],
-                                         proc.locals['module'])
-    cfun["name"] = proc.locals['name']
+def prim_compiled_function_new_top_level(proc):
+    name = proc.locals['name']
+    text = proc.locals['text']
+    cmod = proc.locals['cmodule']
+    cfun = proc.interpreter.compile_top_level(name,text,cmod)
+    cfun['is_top_level'] = True
     return cfun
 
+def prim_compiled_function_new_closure(proc):
+    text = proc.locals['text']
+    outer = proc.locals['cfun']
+    cfun = proc.interpreter.compile_closure(text,outer)
+    cfun['is_embedded'] = proc.locals['is_embedded'] #text is embeded in outter cfun?
+    cfun['is_top_level'] = False
+    return cfun
 
 def prim_compiled_function_set_code(proc):
-    return proc.interpreter.recompile_fun(proc.r_rdp, proc.locals['code'])
+    if proc.r_rdp['is_top_level']:
+        return proc.interpreter.recompile_top_level(proc.r_rdp, proc.locals['code'])
+    else:
+        # NOTE: if a Function of this cfun already exists, its env should
+        # be updated, otherwise calling it will screw up var access.
+        return proc.interpreter.recompile_closure(proc.r_rdp, proc.locals['code'])
 
 
 # hackutility for as_context..
 class ProxyEnv():
-    def __init__(self, frame):
+    def __init__(self, frame, cp_env_table):
         self.frame = frame
-        self.table = {}
+        self.table = dict(cp_env_table)
 
-        self.i = 0
+        self.i = len(self.table)
         for name in frame['locals'].keys():
             self.table[self.i] = name
             self.i = self.i + 1
@@ -259,34 +270,43 @@ class ProxyEnv():
         return item in ['r_rdp', 'r_rp'] + range(0,self.i)
 
     def __iter__(self):
-        return {}.iteritems()
+        ret = {}
+        for key, name in self.table.iteritems():
+            ret[key] = self.frame['locals'][name]
+        return ret.iteritems()
 
-def prim_compiled_function_as_context(proc):
-    # hack ahead.
-    if 'self' in proc.locals['frameOrTable']: # frameOrTable is a stackFrame
-        # If the frame passed has an r_ep, just use it as our env.
-        # else, we need to construct a proxy env capable of changing
-        # frame.locals. We also need to patch r_rp function's env_table
-        # so that all frame.locals/this are mapped there (so env_lookup works).
-        frame = proc.locals['frameOrTable']
-        if frame['self']['r_ep'] != None:
-            env = frame['self']['r_ep']
-            proc.r_rp['outer_cfun'] = proc.locals['frameOrTable']['self']['r_cp']['compiled_function'] # patching the env_table
-        else:
-            env = ProxyEnv(frame['self'])
-            proc.r_rp['env_table'] = env.table # patching the env_table
-    else: # frameOrTable is a table
-        env = dict(proc.locals['frameOrTable']) # we do 'del' below, lets no fuck with the parameter
-        if env != None:
-            if 'this' in env: #another hack for binding this
-                this = env['this']
-                del env['this']
-            else:
-                this = None
-            begin = len(proc.r_rp['env_table'])
-            proc.r_rp['env_table'].update(dict(zip(range(begin,begin+len(env.keys())), env.keys())))
-            env = dict([(key,env[name]) for key,name in proc.r_rp['env_table'].iteritems() if name in env])
-            env['r_rdp'] = env['r_rp'] = this
+def prim_compiled_function_as_context_with_frame(proc):
+    frame = proc.locals['frame']
+    # If the frame passed has an r_ep, just use it as our env.
+    # else, we need to construct a proxy env capable of changing
+    # frame.locals. We also need to patch r_rp function's env_table
+    # so that all frame.locals/this are mapped there (so env_lookup works).
+    if frame['self']['r_ep'] != None:
+        env = frame['self']['r_ep']
+        # Though this cfun was already constructed with an outer_cfun,
+        # now we have a frame, so it's cp should be our outer_cfun! :(
+        proc.r_rp['outer_cfun'] = frame['self']['r_cp']['compiled_function']
+        # patching our env_table's indexes
+        begin = max(proc.r_rp['outer_cfun']['env_table'].keys()) + 1
+        proc.r_rp['env_table'] = dict([(x+begin,y) for x,y in proc.r_rp['env_table'].iteritems()])
+    else:
+        env = ProxyEnv(frame['self'], proc.r_rp['env_table'])
+        proc.r_rp['env_table'] = env.table # patching the env_table
+    ret = proc.interpreter.compiled_function_to_context(proc.r_rp, env, proc.locals['imodule'])
+    return ret
+
+def prim_compiled_function_as_context_with_vars(proc):
+    var_dict = proc.locals['vars']
+    env = dict(var_dict) # we do 'del' below, lets no fuck with the parameter
+    if 'this' in env: #another hack for binding this
+        this = env['this']
+        del env['this']
+    else:
+        this = None
+    begin = len(proc.r_rp['env_table'])
+    proc.r_rp['env_table'].update(dict(zip(range(begin,begin+len(env.keys())), env.keys())))
+    env = dict([(key,env[name]) for key,name in proc.r_rp['env_table'].iteritems() if name in env])
+    env['r_rdp'] = env['r_rp'] = this
     ret = proc.interpreter.compiled_function_to_context(proc.r_rp, env, proc.locals['imodule'])
     return ret
 
@@ -307,7 +327,8 @@ def prim_context_get_env(proc):
     env_table = dict(proc.r_rdp['compiled_function']['env_table'])
     ret = {}
     for k,v in env_table.items():
-        ret[v] = env[k]
+        if k in env:
+            ret[v] = env[k]
     return ret
 
 def prim_function_apply(proc):

@@ -211,9 +211,6 @@ funliteral = spaces !(self.input.position):begin token("fun") params:p token("{"
              token("}") -> self.i.ast(begin, ['fun-literal', ["params", p],
                             ['body', body]])
 
-as_eval = token("{") funliteral_body:body token("}") -> body
-
-
 funliteral_body = stmt:x stmts:xs -> [x]+xs
                 | expr_ret:e      -> [e]
                 | expr:e          -> [e]
