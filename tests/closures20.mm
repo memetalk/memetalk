@@ -1,8 +1,10 @@
-module foo(io) 
+module foo(io)
  io: memetalk/io/1.0();
 {
   foo: fun() {
-    var cfn = CompiledFunction.newClosure("fun(a) { a }", thisContext.compiledFunction());
+    var cfn = CompiledFunction.newClosure(
+      "fun(a) { a }", thisContext.compiledFunction(), false);
+
     var fn = cfn.asContextWithVars(thisModule, {});
   }
 
