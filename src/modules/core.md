@@ -68,6 +68,9 @@ module core() {
     instance_method fullName: fun() {
       return @module.fullName() + "/" + @name;
     }
+    instance_method constructors: fun() {
+      <primitive "compiled_class_constructors">
+    }
   }
 
   class CompiledFunction {
@@ -360,6 +363,10 @@ module core() {
 
   get_compiled_module: fun(module) {
     <primitive "get_compiled_module">
+  }
+
+  get_compiled_class: fun(klass) {
+    <primitive "get_compiled_class">
   }
 
   modules_path: fun() {

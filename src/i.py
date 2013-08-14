@@ -328,6 +328,8 @@ class ModuleLoader(ASTBuilder):
                 self.current_module = owner['module']
                 if cfun in owner['methods'].values():
                     loader.apply("function_definition", "instance_method")
+                elif cfun['is_ctor']:
+                    loader.apply("function_definition", "constructor")
                 else:
                     loader.apply("function_definition", "class_method")
                 return cfun
@@ -534,20 +536,20 @@ class ModuleLoader(ASTBuilder):
         self.current_module["compiled_classes"][cname] = self.current_class
         self.current_class = None
 
-    def l_begin_function(self, tp, name, is_ctor):
+    def l_begin_function(self, tp, name):
         self.env_id_table.append({})
 
-        if tp == "instance_method" or tp == "class_method":
+        if tp == "instance_method" or tp == "class_method" or tp == "constructor":
             owner = self.current_class
         else:
             owner = self.current_module
 
         if self.recompiling_cfun:
             self.recompiling_cfun['name'] = name
-            self.recompiling_cfun['is_ctor'] = is_ctor
+            self.recompiling_cfun['is_ctor'] = tp == "constructor"
         else:
             self.functions.append(_create_compiled_function({"name":name,
-                                                             "is_ctor": is_ctor,
+                                                             "is_ctor": tp == "constructor",
                                                              'owner': owner,
                                                              "@tag":"a compiled function"}))
 
@@ -573,11 +575,10 @@ class ModuleLoader(ASTBuilder):
             function['env_table_skel'] =  dict(zip(range(0,self.env_idx),[None]*self.env_idx))
 
         fname = function["name"]
-        if tp == "class_method" or tp == "instance_method":
-            if function["is_ctor"] or tp == 'class_method':
-                self.current_class["own_methods"][fname] = function
-            else:
-                self.current_class["methods"][fname] = function
+        if tp == "class_method" or tp == "constructor":
+            self.current_class["own_methods"][fname] = function
+        elif tp == 'instance_method':
+            self.current_class["methods"][fname] = function
         else:
             self.current_module["compiled_functions"][fname] = function
 

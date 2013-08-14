@@ -35,14 +35,14 @@ constructors = ['ctors' [constructor*]]
              | ['ctors' []]
 
 constructor = ['ctor' :name
-               !(self.i.l_begin_function("class_method",name, True))
+               !(self.i.l_begin_function("constructor",name))
                  params:p
                !(self.i.l_set_function_parameters(p))
                 ['body' body:b]]:f
-                 -> self.i.l_end_function("class_method",b,f)
+                 -> self.i.l_end_function("constructor",b,f)
 
 function_definition :type = ['fun' :name
-                         !(self.i.l_begin_function(type, name, False))
+                         !(self.i.l_begin_function(type, name))
                       params:p
                          !(self.i.l_set_function_parameters(p))
                       ['body' body:b]]:f

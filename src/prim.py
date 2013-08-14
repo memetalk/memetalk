@@ -360,9 +360,15 @@ def prim_dictionary_has(proc):
 def prim_get_compiled_module(proc):
     return proc.interpreter.get_vt(proc.locals['module'])['compiled_module']
 
+def prim_get_compiled_class(proc):
+    return proc.locals['klass']['compiled_class']
+
 def prim_get_current_process(proc):
     VMProcess = proc.interpreter.get_class('VMProcess')
     return proc.interpreter.alloc(VMProcess, {'self': proc})
+
+def prim_compiled_class_constructors(proc):
+    return [cfun for _, cfun in proc.r_rdp['own_methods'].iteritems() if cfun['is_ctor']]
 
 def prim_mirror_fields(proc):
     mirrored = proc.r_rdp['mirrored']
