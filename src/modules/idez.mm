@@ -20,7 +20,7 @@ module idez(qt,io)
   evalWithFrame: fun(text, frame) {
     var cmod = get_compiled_module(thisModule);
     var code = "fun() {" + text + "}";
-    var cfn = CompiledFunction.newClosure(code, thisContext.compiledFunction());
+    var cfn = CompiledFunction.newClosure(code, thisContext.compiledFunction(), false);
     var fn = cfn.asContextWithFrame(thisModule, frame);
     var res = fn();
     return {"result": res, "env": fn.getEnv()};
