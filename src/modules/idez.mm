@@ -1089,7 +1089,7 @@ module idez(qt,io)
       var div = doc.findFirst("div[id=templates] .fun_tpl").clone();
       div.setAttribute("id", cfn.owner.name + "::" + cfn.name);
       div.setStyleProperty("display","block");
-      div.findFirst(".function_name").setPlainText(cfn.name);
+      div.findFirst(".function_name").setPlainText(cfn.fullName);
       div.findFirst(".fun_body param[name=function_type]").setAttribute("value",function_type);
       div.findFirst(".fun_body param[name=module_name]").setAttribute("value",@current_cmodule.name());
       div.findFirst(".fun_body param[name=function_name]").setAttribute("value",cfn.name);
