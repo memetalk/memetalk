@@ -86,7 +86,7 @@ idlist = id:x (token(",") id)*:xs -> [x]+xs
 top_fun_body = primitive
              | stmts
 
-primitive =  spaces !(self.input.position):begin token("<primitive") lit_string:s token(">") -> [self.i.ast(begin,["primitive", s])]
+primitive =  spaces !(self.input.position):begin token("<primitive") lit_string:s token(">") -> self.i.ast(begin, [self.i.ast(begin,["primitive", s])])
 
 stmts  = stmt*
 
