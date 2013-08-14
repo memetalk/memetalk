@@ -640,10 +640,9 @@ module idez(qt,io)
 
       @lineEdit.connect("returnPressed", fun() {
         if (@callback) {
-          @callback(@lineEdit.text());
+          var close = @callback(@lineEdit.text());
+          if (close) { this.hide(); }
         }
-        @callback = null;
-        this.hide();
       });
     }
 
@@ -888,7 +887,7 @@ module idez(qt,io)
       action = qt.QAction.new("Rename Class", execMenu);
       action.setShortcut("alt+c,r");
       action.connect("triggered", fun() {
-        io.print("Rename class/superclass");
+        this.action_renameClass();
       });
       action.setShortcutContext(1);
       execMenu.addAction(action);
@@ -923,10 +922,55 @@ module idez(qt,io)
       @chistory.add(undo,redo);
     }
 
+    instance_method action_renameClass: fun() {
+      if (@current_cmodule == null) {
+        @statusLabel.setText("No current module");
+        return true;
+      }
+
+      var classes = @current_cmodule.compiled_classes;
+      @miniBuffer.prompt("Rename class: ", "", fun(name) {
+        if (!classes.has(name)) {
+          @statusLabel.setText("No class found: " + name);
+          return true;
+        }
+        var doc = @webview.page().mainFrame().documentElement();
+        var klass = classes[name];
+        @miniBuffer.prompt("to: ", "", fun(new_name) {
+          this.command(fun() {
+            var fns = [];
+            klass.constructors.each(fun(name, cfn) {
+              fns.add({"old_name": cfn.fullName(), "cfn": cfn});
+            });
+            klass.instanceMethods.each(fun(name, cfn) {
+              fns.add({"old_name": cfn.fullName(), "cfn": cfn});
+            });
+            klass.classMethods.each(fun(name, cfn) {
+              fns.add({"old_name": cfn.fullName(), "cfn": cfn});
+            });
+
+            klass.setName(new_name);
+            classes.remove(name);
+            classes.set(new_name, klass);
+            var div = doc.findFirst("div[id='" + name + "']");
+            div.findFirst(".class_name").setPlainText(new_name);
+            doc.findFirst("li[name='" + name + "']").setPlainText(new_name);
+            fns.each(fun(f) {
+              doc.findFirst("strong[name='" + f["old_name"] + "']").setPlainText(f["cfn"].fullName());
+            });
+          }, fun() {
+            //TODO
+            return 11;
+          });
+        });
+        return false;
+      });
+    }
+
     instance_method action_acceptCode: fun() {
       if (@current_cmodule == null) {
         @statusLabel.setText("No current module");
-        return null;
+        return true;
       }
 
       var e = qt.QApplication.focusWidget();
@@ -941,18 +985,18 @@ module idez(qt,io)
     instance_method action_addFunction: fun() {
       if (@current_cmodule == null) {
         @statusLabel.setText("No current module");
-        return null;
+        return true;
       }
 
       @miniBuffer.prompt("Function name: ", "", fun(name) {
+        var cfun = CompiledFunction.newTopLevel(name, "fun() { return null; }", @current_cmodule);
         this.command(fun() {
-          var cfun = CompiledFunction.newTopLevel(name, "fun() { return null; }", @current_cmodule);
           @current_cmodule.addFunction(cfun);
           this.showEditorForFunction(cfun, "module", ".functions");
           @statusLabel.setText("Function added: " + name);
         }, fun() {
           @current_cmodule.removeFunction(name);
-          @webview.page().mainFrame().documentElement().findFirst("#"+name).takeFromDocument();
+          @webview.page().mainFrame().documentElement().findFirst("div[id='" + cfun.fullName + "']").takeFromDocument();
           @statusLabel.setText("Function removed: " + name);
         });
       });
@@ -961,13 +1005,13 @@ module idez(qt,io)
     instance_method action_deleteFunction: fun() {
       if (@current_cmodule == null) {
         @statusLabel.setText("No current module");
-        return null;
+        return true;
       }
 
       var e = qt.QApplication.focusWidget();
       if (Mirror.vtFor(e) == ExplorerEditor) {
         var cfun = e.cfun();
-        var div = @webview.page().mainFrame().documentElement().findFirst("#"+cfun.name);
+        var div = @webview.page().mainFrame().documentElement().findFirst("div[id='" + cfun.fullName + "']");
         this.command(fun() {
           cfun.owner.removeFunction(cfun.name);
           div.setAttribute("style","display:none");
@@ -985,7 +1029,7 @@ module idez(qt,io)
     instance_method action_renameModule: fun() {
       if (@current_cmodule == null) {
         @statusLabel.setText("No current module");
-        return null;
+        return true;
       }
 
       @miniBuffer.prompt("Module name: ", @current_cmodule.name(), fun(value) {
@@ -1037,7 +1081,7 @@ module idez(qt,io)
 
       var clist = doc.findFirst(".classes_list");
       var cnames = @current_cmodule.compiled_classes().map(fun(name,cfn) { name });
-      cnames.each(fun(name) { clist.appendInside("<li>" + name + "</li>") });
+      cnames.each(fun(name) { clist.appendInside("<li name=" + name + ">" + name + "</li>") });
 
       var fns = @current_cmodule.compiled_functions();
       fns.each(fun(name,cfn) {
@@ -1065,21 +1109,21 @@ module idez(qt,io)
       ctors.setAttribute("id", "ctors_" + klass.name);
 
       klass.constructors.each(fun(name, cfn) {
-        this.showEditorForFunction(cfn, "ctor_method", "div[id=ctors_" + klass.name + "]");
+        this.showEditorForFunction(cfn, "ctor_method", "div[id='ctors_" + klass.name + "']");
       });
 
       var ims = div.findFirst(".instance_methods");
       ims.setAttribute("id", "imethods_" + klass.name);
 
       klass.instanceMethods.each(fun(name, cfn) {
-        this.showEditorForFunction(cfn, "instance_method", "div[id=imethods_" + klass.name + "]");
+        this.showEditorForFunction(cfn, "instance_method", "div[id='imethods_" + klass.name + "']");
       });
 
       var cms = div.findFirst(".class_methods");
       cms.setAttribute("id", "cmethods_" + klass.name);
 
       klass.classMethods.each(fun(name, cfn) {
-        this.showEditorForFunction(cfn, "class_method", "div[id=cmethods_" + klass.name + "]");
+        this.showEditorForFunction(cfn, "class_method", "div[id='cmethods_" + klass.name + "']");
       });
     }
 
@@ -1087,9 +1131,10 @@ module idez(qt,io)
       var doc = @webview.page().mainFrame().documentElement();
       var parent = doc.findFirst(parent_sel);
       var div = doc.findFirst("div[id=templates] .fun_tpl").clone();
-      div.setAttribute("id", cfn.owner.name + "::" + cfn.name);
+      div.setAttribute("id", cfn.fullName);
       div.setStyleProperty("display","block");
       div.findFirst(".function_name").setPlainText(cfn.fullName);
+      div.findFirst(".function_name").setAttribute("name",cfn.fullName);
       div.findFirst(".fun_body param[name=function_type]").setAttribute("value",function_type);
       div.findFirst(".fun_body param[name=module_name]").setAttribute("value",@current_cmodule.name());
       div.findFirst(".fun_body param[name=function_name]").setAttribute("value",cfn.name);

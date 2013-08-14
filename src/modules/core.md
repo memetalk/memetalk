@@ -74,6 +74,9 @@ module core() {
     instance_method name: fun() {
       return @name;
     }
+    instance_method setName: fun(name) {
+      @name = name;
+    }
     instance_method fields: fun() {
       return @fields;
     }
@@ -246,6 +249,12 @@ module core() {
     }
     instance_method map: fun(fn) {
       <primitive "dictionary_map">
+    }
+    instance_method set: fun(key,value) {
+      <primitive "dictionary_set">
+    }
+    instance_method remove: fun(key) {
+      <primitive "dictionary_remove">
     }
   }
 

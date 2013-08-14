@@ -358,7 +358,13 @@ def prim_dictionary_each(proc):
         proc.setup_and_run_fun(None, None, 'fn', proc.locals['fn'], [key,val], True)
 
 def prim_dictionary_has(proc):
-    return proc.locals['key'] in proc.r_rp
+    return proc.locals['key'] in proc.r_rdp
+
+def prim_dictionary_set(proc):
+    proc.r_rdp['key'] = proc.locals["value"]
+
+def prim_dictionary_remove(proc):
+    del proc.r_rdp[proc.locals['key']]
 
 def prim_dictionary_map(proc):
     ret = []
@@ -422,10 +428,13 @@ def prim_list_map(proc):
     return [proc.setup_and_run_fun(None, None, 'fn', proc.locals['fn'], [x], True) for x in proc.r_rdp]
 
 def prim_list_plus(proc):
-    return list(proc.r_rp + proc.locals['arg'])
+    return list(proc.r_rdp + proc.locals['arg'])
 
 def prim_list_has(proc):
-    return proc.locals['value'] in proc.r_rp
+    return proc.locals['value'] in proc.r_rdp
+
+def prim_list_add(proc):
+    return proc.r_rdp.append(proc.locals['value'])
 
 def prim_list_to_string(proc):
     return ', '.join(proc.r_rdp)
