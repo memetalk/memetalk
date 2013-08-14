@@ -134,11 +134,7 @@ def prim_vmstackframe_instruction_pointer(proc):
     # ast has the line numbering relative to the entire module filre.
     # we need to make it relative to the toplevel function
 
-    # I'm crying now...
-    outer_cfun = frame['r_cp']['compiled_function']
-    while outer_cfun['outer_cfun']:
-        outer_cfun = outer_cfun['outer_cfun']
-
+    outer_cfun = proc.interpreter.shitty_get_module_from_cfunction(frame['r_cp']['compiled_function'])
     start_line = ast.start_line - outer_cfun['line']+1
     start_col = ast.start_col
     end_line = ast.end_line - outer_cfun['line']+1

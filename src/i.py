@@ -802,6 +802,14 @@ class Interpreter():
     def alloc(self, klass, data):
         return _create_instance(klass, data)
 
+    def shitty_get_module_from_cfunction(self, cfun):
+        # I'm crying now...
+        outer_cfun = cfun
+        while outer_cfun['outer_cfun']:
+            outer_cfun = outer_cfun['outer_cfun']
+        return outer_cfun
+
+
 class Process(greenlet):
     def __init__(self, interpreter):
         super(Process, self).__init__(self.greenlet_entry)
