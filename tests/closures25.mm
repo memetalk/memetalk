@@ -12,7 +12,7 @@ module foo() {
   main: fun() {
     var x1 = X.new(1);
     var xc = get_compiled_class(X);
-    var ctor = xc.constructors()[0];
+    var ctor = xc.constructors()['new'];
     ctor.setCode("fun(x) { @x = x + 100; }");
     var x2 = X.new(2);
     assert(x1.x + x2.x == 103, "Changing constructor");
