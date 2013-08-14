@@ -790,8 +790,8 @@ class Process(greenlet):
     def pp_stack_trace(self):
         for frame in self.stack:
             if frame['r_cp']:
-                print frame['r_cp']['compiled_function']['name'] + str(frame['r_cp']['compiled_function']['body'])[0:60]
-        print self.r_cp['compiled_function']['name'] + str(self.r_cp['compiled_function']['body'])
+                print (frame['r_cp']['compiled_function']['name'] + " :::" + str(frame['r_cp']['compiled_function']['body']))[0:80] + "..."
+        print (self.r_cp['compiled_function']['name'] + " ::: " + str(self.r_cp['compiled_function']['body']))[0:80] + "..."
 
     def _lookup(self, drecv, vt, selector):
         if vt == None:
