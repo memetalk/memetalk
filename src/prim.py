@@ -1166,6 +1166,10 @@ def prim_qt_qwebelement_to_outer_xml(proc):
     qtobj = _lookup_field(proc.r_rp, 'self')
     return qtobj.toOuterXml()
 
+def prim_qt_qwebelement_take_from_document(proc):
+    qtobj = _lookup_field(proc.r_rp, 'self')
+    return qtobj.takeFromDocument()
+
 # scintilla
 def prim_qt_scintilla_editor_new(proc):
     parent = proc.locals['parent']

@@ -120,7 +120,7 @@ module idez(qt,io)
   }
 
   class Editor < QsciScintilla {
-    fields: onAccept, getContext, getFrame, afterEval;
+    fields: getContext, getFrame, afterEval;
     init new: fun(parent, getContext, getFrame, afterEval) {
       super.new(parent);
       if (parent == null) {
@@ -163,19 +163,6 @@ module idez(qt,io)
       });
       action.setShortcutContext(0); //widget context
       this.addAction(action);
-    }
-
-    instance_method onAccept: fun(fn) {
-      if (@onAccept == null) {
-        var action = qt.QAction.new("&Accept it", this);
-        action.setShortcut("ctrl+s");
-        action.connect("triggered", fun() {
-          @onAccept();
-        });
-        action.setShortcutContext(0); //widget context
-        this.addAction(action);
-      }
-      @onAccept = fn;
     }
 
     instance_method evalSelection: fun() {
@@ -701,15 +688,16 @@ module idez(qt,io)
     init new: fun(cfun, parent, getContext, getFrame, afterEval) {
       super.new(parent, getContext, getFrame, afterEval);
       @cfun = cfun;
+    }
 
-      this.onAccept(fun() {
+    instance_method accept: fun() {
         try {
-          @cfn.setCode(this.text());
+          @cfun.setCode(this.text());
         } catch(ex) {
           this.insertSelectedText(ex.value());
         }
-      });
     }
+
     instance_method cfun: fun() {
       return @cfun;
     }
@@ -800,7 +788,7 @@ module idez(qt,io)
       action = qt.QAction.new("&Accept code", execMenu);
       action.setShortcut("alt+x,a");
       action.connect("triggered", fun() {
-        io.print("Accept entry");
+        this.action_acceptCode();
       });
       action.setShortcutContext(1);
       execMenu.addAction(action);
@@ -917,16 +905,38 @@ module idez(qt,io)
       @chistory.add(undo,redo);
     }
 
+    instance_method action_acceptCode: fun() {
+      if (@current_cmodule == null) {
+        @statusLabel.setText("No current module");
+        return null;
+      }
+
+      var e = qt.QApplication.focusWidget();
+      if (Mirror.vtFor(e) == ExplorerEditor) {
+        e.accept();
+        @statusLabel.setText("Code changed");
+      } else {
+        @statusLabel.setText("No function selected");
+      }
+    }
+
     instance_method action_addFunction: fun() {
       if (@current_cmodule == null) {
         @statusLabel.setText("No current module");
         return null;
       }
 
-      @miniBuffer.prompt("Function name: ", "", fun(value) {
-        var cfun = CompiledFunction.new(value, "fun() { return null; }",[],@current_cmodule);
-        @current_cmodule.addFunction(cfun);
-        this.showEditorForFunction(cfun);
+      @miniBuffer.prompt("Function name: ", "", fun(name) {
+        this.command(fun() {
+          var cfun = CompiledFunction.newTopLevel(name, "fun() { return null; }", @current_cmodule);
+          @current_cmodule.addFunction(cfun);
+          this.showEditorForFunction(cfun);
+          @statusLabel.setText("Function added: " + name);
+        }, fun() {
+          @current_cmodule.removeFunction(name);
+          @webview.page().mainFrame().documentElement().findFirst("#"+name).takeFromDocument();
+          @statusLabel.setText("Function removed: " + name);
+        });
       });
     }
 
@@ -938,12 +948,18 @@ module idez(qt,io)
 
       var e = qt.QApplication.focusWidget();
       if (Mirror.vtFor(e) == ExplorerEditor) {
-        var name = e.cfun.name;
-        e.cfun().owner().removeFunction(name);
-        //TODO: findFirst(...).takeFromDocument()
-        @webview.page().mainFrame().documentElement().findFirst("#"+name).setAttribute("style","display:none");
+        var cfun = e.cfun();
+        this.command(fun() {
+          cfun.owner.removeFunction(cfun.name);
+          @webview.page().mainFrame().documentElement().findFirst("#"+cfun.name).takeFromDocument();
+          @statusLabel.setText("Function deleted: " + cfun.name);
+        }, fun() {
+          cfun.owner.addFunction(cfun);
+          this.showEditorForFunction(cfun);
+          @statusLabel.setText("Function added: " + cfun.name);
+        });
       } else {
-        @statusLabel.setText("No module function selected");
+        @statusLabel.setText("No function selected");
       }
     }
 
@@ -1007,7 +1023,6 @@ module idez(qt,io)
       div.setAttribute("id", cfn.name);
       div.setStyleProperty("display","block");
       div.findFirst(".function_name").setPlainText(cfn.name);
-      div.findFirst(".fun_paramslist").setPlainText(cfn.parameters().toString());
       div.findFirst(".fun_body param[name=module_name]").setAttribute("value",@current_cmodule.name());
       div.findFirst(".fun_body param[name=function_name]").setAttribute("value",cfn.name);
       div.findFirst(".fun_body param[name=code]").setAttribute("value",cfn.text());
