@@ -6,6 +6,7 @@ module foo(io)
       "fun(a) { a }", thisContext.compiledFunction(), false);
 
     var fn = cfn.asContextWithVars(thisModule, {});
+    assert(fn(99) == 99, "Testing closures screwing with toplevel");
   }
 
   main: fun() {
