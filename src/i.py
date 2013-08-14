@@ -626,7 +626,7 @@ class Interpreter():
         target_process.state = 'paused'
 
         compiled_module = self.compiled_module_by_filename('idez.mm')
-        imodule = self.instantiate_module(self, compiled_module, {}, core.kernel_imodule)
+        imodule = self.instantiate_module(compiled_module, {}, core.kernel_imodule)
 
         target_process.debugger_process = Process(self)
         self.processes.append(target_process.debugger_process)
