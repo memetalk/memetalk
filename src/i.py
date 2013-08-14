@@ -55,7 +55,8 @@ def _create_compiled_module(data):
                 "default_params": [],
                 "aliases": [],
                 "compiled_functions": {},
-                "compiled_classes": {}}
+                "compiled_classes": {},
+                "@tag":" a CompiledModule"}
 
     return dict(template.items() + data.items())
 
@@ -89,7 +90,8 @@ def _create_compiled_class(data):
                 "super_class_name":"",
                 "fields": [],
                 "methods": {},
-                "own_methods":{}}
+                "own_methods":{},
+                "@tag":"a CompiledClass"}
     return dict(template.items() + data.items())
 
 def _create_module(data):
@@ -98,7 +100,8 @@ def _create_module(data):
                 "parent": core.Object,
                 "size": 1, #delegate
                 "dict": {},
-                "compiled_module": None}
+                "compiled_module": None,
+                "@tag": "a Module"}
     return dict(template.items() + data.items())
 
 def _create_class(data):
