@@ -698,8 +698,8 @@ module idez(qt,io)
 
   class ExplorerEditor < Editor {
     fields: cfun;
-    init new: fun(cfun, parent, getContext, afterEval) {
-      super.new(parent, getContext, afterEval);
+    init new: fun(cfun, parent, getContext, getFrame, afterEval) {
+      super.new(parent, getContext, getFrame, afterEval);
       @cfun = cfun;
 
       this.onAccept(fun() {
@@ -746,11 +746,11 @@ module idez(qt,io)
         var e = null;
         if (params.has("module_function")) {
           var cfn = get_module(params["module_name"]).compiled_functions()[params["function_name"]];
-          e = ExplorerEditor.new(cfn, fun() { variables }, null,
+          e = ExplorerEditor.new(cfn, null, fun() { variables }, null,
                                  fun(env) { variables = env + variables;});
         } else {
           if (params.has("code")) {
-            e = ExplorerEditor.new(null, fun() { variables }, null,
+            e = ExplorerEditor.new(null, null, fun() { variables }, null,
                                    fun(env) { variables = env + variables;});
           }
         }
