@@ -39,6 +39,13 @@ def P(obj, depth=1):
     pprint(obj, None, 1, 80, depth)
 
 
+def _should_dump_mast():
+    return 'DEBUG' in os.environ and os.environ['DEBUG'] == 'full'
+
+def _should_dump_ast():
+    return 'DEBUG' in os.environ
+
+
 def _create_compiled_module(data):
     template = {"_vt": core.CompiledModule,
                 "_delegate": None,
@@ -299,9 +306,10 @@ class ModuleLoader(ASTBuilder):
                 traceback.print_exc()
             sys.exit(1)
 
-        print "---- AST ----"
-        print ast
-        print "//---- AST ----"
+        if _should_dump_ast():
+            print "---- AST ----"
+            print ast
+            print "//---- AST ----"
 
         self.env_id_table = []
         self.env_idx = 0
@@ -331,9 +339,10 @@ class ModuleLoader(ASTBuilder):
                 traceback.print_exc()
             sys.exit(1)
 
-        print "---- AST ----"
-        print ast
-        print "//---- AST ----"
+        if _should_dump_ast():
+            print "---- AST ----"
+            print ast
+            print "//---- AST ----"
 
         self.env_id_table = []
         self.env_idx = 0
@@ -364,9 +373,10 @@ class ModuleLoader(ASTBuilder):
                 traceback.print_exc()
             sys.exit(1)
 
-        print "---- AST ----"
-        print ast
-        print "//---- AST ----"
+        if _should_dump_ast():
+            print "---- AST ----"
+            print ast
+            print "//---- AST ----"
 
         self.env_id_table = []
         self.env_idx = 0
@@ -398,9 +408,10 @@ class ModuleLoader(ASTBuilder):
                 traceback.print_exc()
             sys.exit(1)
 
-        print "---- AST ----"
-        print ast
-        print "//---- AST ----"
+        if _should_dump_ast():
+            print "---- AST ----"
+            print ast
+            print "//---- AST ----"
 
         self.env_id_table = []
         self.env_idx = 0
@@ -431,9 +442,11 @@ class ModuleLoader(ASTBuilder):
                 traceback.print_exc()
             sys.exit(1)
 
-        print "---- AST ----"
-        print ast
-        print "//---- AST ----"
+        if _should_dump_mast():
+            print "---- AST ----"
+            print ast
+            print "//---- AST ----"
+
         self.current_module = _create_compiled_module({"filepath": filename,
                                                        "ast": ast,
                                                        "parent_module":"memetalk/kernel",
