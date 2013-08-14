@@ -493,7 +493,6 @@ module idez(qt,io)
       mainLayout.addWidget(@stackCombo);
 
       @editor = Editor.new(centralWidget, null, fun() { @execFrames.frame(@frame_index) }, null);
-
       mainLayout.addWidget(@editor);
 
       @stackCombo.connect("currentIndexChanged",fun(i) {
@@ -987,10 +986,12 @@ module idez(qt,io)
       @current_cmodule = null;
       @webview.setUrl(modules_path() + "/module-explorer/index.html");
     }
+
     instance_method show_tutorial: fun() {
       @current_cmodule = null;
       @webview.setUrl(modules_path() + "/module-explorer/tutorial.html");
     }
+
     instance_method show_modules: fun() {
       @current_cmodule = null;
       @webview.loadUrl(modules_path() + "/module-explorer/modules-index.html");
@@ -1000,6 +1001,7 @@ module idez(qt,io)
         ul.appendInside("<li><a href='/" + name + "'>" + name + "</a></li>")
       });
     }
+
     instance_method show_module: fun(name) {
       @current_cmodule = get_module(name);
       @webview.loadUrl(modules_path() + "/module-explorer/module-view.html");

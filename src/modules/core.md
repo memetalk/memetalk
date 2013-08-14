@@ -72,7 +72,7 @@ module core() {
 
   class CompiledFunction {
     fields: _delegate, body, env_table, env_table_skel, fun_literals, is_ctor,
-            is_prim, is_top_level, is_embedded, name, params, prim_name, 
+            is_prim, is_top_level, is_embedded, name, params, prim_name,
             uses_env, outer_cfun, owner, text;
     init newTopLevel: fun(name, text, cmodule) {
       <primitive "compiled_function_new_top_level">
