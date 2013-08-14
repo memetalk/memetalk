@@ -5,11 +5,11 @@ module foo()
     init new: fun(x) {
       @x = x;
     }
-    class_method throw: fun() {
-      return 10;
-    }
     instance_method x: fun() {
       return @x;
+    }
+    class_method throw: fun() {
+      return 10;
     }
   }
 

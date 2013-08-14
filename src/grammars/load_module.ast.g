@@ -21,27 +21,28 @@ module_definitions = ['defs' []]
                    | ['defs' [definition+]]
 
 definition = class_definition
-           | function_definition
+           | function_definition("toplevel")
 
 
 class_definition =  ['class' [:name :parent]
                        ['fields' :fields]
                          !(self.i.l_begin_class(name, parent, fields))
                        constructors
-                       [function_definition*]] -> self.i.l_end_class()
+                       [function_definition("instance_method")*]
+                       [function_definition("class_method")*]] -> self.i.l_end_class()
 
 constructors = ['ctors' [constructor*]]
              | ['ctors' []]
 
-constructor = ['ctor':type :name
-               !(self.i.l_begin_function(name, True))
+constructor = ['ctor' :name
+               !(self.i.l_begin_function("class_method",name, True))
                  params:p
                !(self.i.l_set_function_parameters(p))
                 ['body' body:b]]:f
-                 -> self.i.l_end_function(type,b,f)
+                 -> self.i.l_end_function("class_method",b,f)
 
-function_definition = [('fun'|'func'):type :name
-                         !(self.i.l_begin_function(name, False))
+function_definition :type = ['fun' :name
+                         !(self.i.l_begin_function(type, name, False))
                       params:p
                          !(self.i.l_set_function_parameters(p))
                       ['body' body:b]]:f

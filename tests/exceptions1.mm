@@ -5,15 +5,15 @@ module foo()
     init new: fun(x) {
       @x = x;
     }
-    class_method throw: fun(x) {
-      var self = MyException.new(x);
-      self.raise();
-    }
     instance_method raise: fun() {
        <primitive "exception_raise">
     }
     instance_method x: fun() {
       return @x;
+    }
+    class_method throw: fun(x) {
+      var self = MyException.new(x);
+      self.raise();
     }
   }
 

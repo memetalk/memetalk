@@ -11,7 +11,8 @@ object_definition = ['object' :name !(self.i.register_object(name)) [obj_slot+] 
 class_definition = ['class' [:name :parent] !(self.i.register_class(name,parent))
                     ['fields' :fields !(self.i.add_class_fields(fields))]
                     class_constructors
-                    [method_definition*]]
+                    [imethod_definition*]
+                    [cmethod_definition*]]
 
 function_definition = ['fun' :name  params:p
                       ['body' body:b]] -> self.i.add_module_function(name, p, b)
@@ -22,9 +23,10 @@ class_constructors = ['ctors' [class_constructor*]]
 class_constructor = ['ctor' :name params:p
                      ['body' body:b]]:f -> self.i.add_class_ctor(name, p, b)
 
-method_definition = ['fun' :name  params:p
+imethod_definition = ['fun' :name  params:p
                       ['body' body:b]] -> self.i.add_class_method(name, p, b)
-                   | ['func' :name  params:p
+
+cmethod_definition = ['fun' :name  params:p
                       ['body' body:b]] -> self.i.add_class_self_method(name, p, b)
 
 obj_slot = ['slot' :name obj_slot_value:v] -> self.i.add_slot(name,v)

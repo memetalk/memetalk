@@ -292,8 +292,6 @@ class ModuleLoader(ASTBuilder):
     def recompile_top_level(self, i, cfun, src):
         self.line_offset = 0
         self.pos_stack = []
-        self.current_module = cfun['owner']
-
         name = cfun['name']
 
         self.recompiling_cfun = cfun
@@ -318,13 +316,32 @@ class ModuleLoader(ASTBuilder):
         self.env_idx = 0
         self.fun_literals = []
 
-        self.loading_class = False
         self.functions = [self.recompiling_cfun]
 
         loader = Loader([ast])
         loader.i = self
-        loader.apply("function_definition")
-        return self.current_module['compiled_functions'][name]
+
+        try:
+            owner = cfun['owner']
+            if owner['_vt'] == core.CompiledClass:
+                self.current_class = owner
+                self.current_module = owner['module']
+                if cfun in owner['methods'].values():
+                    loader.apply("function_definition", "instance_method")
+                else:
+                    loader.apply("function_definition", "class_method")
+                return cfun
+            else:
+                self.current_module = cfun['owner']
+                loader.apply("function_definition", "toplevel")
+                return cfun
+        except Exception as err:
+            if hasattr(err,'formatError'):
+                print(err.formatError(''.join(self.parser.input.data)))
+            else:
+                traceback.print_exc()
+            sys.exit(1)
+
 
     def recompile_closure(self, i, cfun, src):
         self.line_offset = 0
@@ -351,13 +368,19 @@ class ModuleLoader(ASTBuilder):
         self.env_idx = 0
         self.fun_literals = []
 
-        self.loading_class = False
         self.functions = [cfun['outer_cfun'],cfun]
 
         self.first_fnlit = cfun
         loader = Loader([ast])
         loader.i = self
-        loader.apply("load_fun_lit")
+        try:
+            loader.apply("load_fun_lit")
+        except Exception as err:
+            if hasattr(err,'formatError'):
+                print(err.formatError(''.join(self.parser.input.data)))
+            else:
+                traceback.print_exc()
+            sys.exit(1)
         return cfun
 
     def compile_closure(self, i, src, outer):
@@ -385,13 +408,20 @@ class ModuleLoader(ASTBuilder):
         self.env_idx = 0
         self.fun_literals = []
 
-        self.loading_class = False
         self.functions = [outer]
 
         self.first_fnlit = None
         loader = Loader([ast])
         loader.i = self
-        loader.apply("load_fun_lit")
+        try:
+            loader.apply("load_fun_lit")
+        except Exception as err:
+            if hasattr(err,'formatError'):
+                print(err.formatError(''.join(self.parser.input.data)))
+            else:
+                traceback.print_exc()
+            sys.exit(1)
+
         return self.first_fnlit
 
     def compile_top_level(self, i, name, src, cmodule):
@@ -420,12 +450,19 @@ class ModuleLoader(ASTBuilder):
         self.env_idx = 0
         self.fun_literals = []
 
-        self.loading_class = False
         self.functions = []
 
         loader = Loader([ast])
         loader.i = self
-        loader.apply("function_definition")
+        try:
+            loader.apply("function_definition", "toplevel")
+        except Exception as err:
+            if hasattr(err,'formatError'):
+                print(err.formatError(''.join(self.parser.input.data)))
+            else:
+                traceback.print_exc()
+            sys.exit(1)
+
         return self.current_module['compiled_functions'][name]
 
     def compile_module(self, i, filename, src):
@@ -460,11 +497,17 @@ class ModuleLoader(ASTBuilder):
         self.functions = []
         self.fun_literals = []
 
-        self.loading_class = False
-
         loader = Loader([ast])
         loader.i = self
-        loader.apply("load_module")
+        try:
+            loader.apply("load_module")
+        except Exception as err:
+            if hasattr(err,'formatError'):
+                print(err.formatError(''.join(self.parser.input.data)))
+            else:
+                traceback.print_exc()
+            sys.exit(1)
+
         return self.current_module
 
     def l_module(self, name, p):
@@ -481,22 +524,20 @@ class ModuleLoader(ASTBuilder):
         self.current_module['aliases'].append((libname, aliases))
 
     def l_begin_class(self, name, super_class, fields):
-        self.loading_class = True
         self.current_class = _create_compiled_class({"name":name,
                                                      "super_class_name":super_class,
                                                      "module": self.current_module,
                                                      "fields":fields})
 
     def l_end_class(self):
-        self.loading_class = False
         cname = self.current_class["name"]
         self.current_module["compiled_classes"][cname] = self.current_class
         self.current_class = None
 
-    def l_begin_function(self, name, is_ctor):
+    def l_begin_function(self, tp, name, is_ctor):
         self.env_id_table.append({})
 
-        if self.loading_class:
+        if tp == "instance_method" or tp == "class_method":
             owner = self.current_class
         else:
             owner = self.current_module
@@ -532,8 +573,8 @@ class ModuleLoader(ASTBuilder):
             function['env_table_skel'] =  dict(zip(range(0,self.env_idx),[None]*self.env_idx))
 
         fname = function["name"]
-        if self.loading_class:
-            if function["is_ctor"] or tp == 'func':
+        if tp == "class_method" or tp == "instance_method":
+            if function["is_ctor"] or tp == 'class_method':
                 self.current_class["own_methods"][fname] = function
             else:
                 self.current_class["methods"][fname] = function

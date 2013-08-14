@@ -39,8 +39,9 @@ object_slot = id:name  token(":") (literal|id):value token(";") -> ['slot', name
 class_decl = token("class") id:name (token("<") id | token("<") token("null") | -> "Object"):parent token("{")
                 fields:f
                 constructors:c
-                metho_decl*:m
-              token("}") -> ['class', [name, parent], f, c, m]
+                instance_method_decl*:im
+                class_method_decl*:cm
+              token("}") -> ['class', [name, parent], f, c, im,cm]
 
 fields = token("fields") token(":") idlist:xs token(";") -> ['fields', xs]
       | -> ["fields", []]
@@ -62,20 +63,20 @@ top_level_fun = spaces alpha_name:name token(":") !(self.input.position):begin
                                               ['body', body + [self.i.sint_ast(end,['return-this'])]]])
 
 
-metho_decl = spaces token("instance_method") alpha_name:name token(":")
-             !(self.input.position):begin
-                token("fun") params:p token("{")
-                  top_fun_body:body !(self.input.position):end
-               token("}")
-               -> self.i.ast(begin,['fun', name, ["params", p],
-                    ['body', body + [self.i.sint_ast(end,['return-this'])]]])
-           | spaces token("class_method") alpha_name:name token(":")
-             !(self.input.position):begin
-                token("fun") params:p token("{")
-                  top_fun_body:body !(self.input.position):end
-               token("}")
-               -> self.i.ast(begin,['func', name, ["params", p],
-                    ['body', body + [self.i.sint_ast(end,['return-this'])]]])
+instance_method_decl = spaces token("instance_method") alpha_name:name token(":")
+                     !(self.input.position):begin
+                     token("fun") params:p token("{")
+                       top_fun_body:body !(self.input.position):end
+                     token("}")
+                     -> self.i.ast(begin,['fun', name, ["params", p],
+                      ['body', body + [self.i.sint_ast(end,['return-this'])]]])
+class_method_decl = spaces token("class_method") alpha_name:name token(":")
+                  !(self.input.position):begin
+                  token("fun") params:p token("{")
+                    top_fun_body:body !(self.input.position):end
+                  token("}")
+                  -> self.i.ast(begin,['fun', name, ["params", p],
+                   ['body', body + [self.i.sint_ast(end,['return-this'])]]])
 
 params = token("(") idlist:xs token(")") -> xs
 

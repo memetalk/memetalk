@@ -269,15 +269,15 @@ module core() {
     init new: fun(value) {
       @value = value;
     }
-    class_method throw: fun(value) {
-      var self = Exception.new(value);
-      self.raise();
-    }
     instance_method raise: fun() {
        <primitive "exception_raise">
     }
     instance_method value: fun() {
       return @value;
+    }
+    class_method throw: fun(value) {
+      var self = Exception.new(value);
+      self.raise();
     }
   }
 
