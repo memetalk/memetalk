@@ -357,6 +357,12 @@ def prim_dictionary_each(proc):
 def prim_dictionary_has(proc):
     return proc.locals['key'] in proc.r_rp
 
+def prim_dictionary_map(proc):
+    ret = []
+    for key,val in proc.r_rdp.iteritems():
+        ret.append(proc.setup_and_run_fun(None, None, 'fn', proc.locals['fn'], [key,val], True))
+    return ret
+
 def prim_get_compiled_module(proc):
     return proc.interpreter.get_vt(proc.locals['module'])['compiled_module']
 
@@ -368,7 +374,10 @@ def prim_get_current_process(proc):
     return proc.interpreter.alloc(VMProcess, {'self': proc})
 
 def prim_compiled_class_constructors(proc):
-    return [cfun for _, cfun in proc.r_rdp['own_methods'].iteritems() if cfun['is_ctor']]
+    return dict([(name, cfun) for name,cfun in proc.r_rdp['own_methods'].iteritems() if cfun['is_ctor']])
+
+def prim_compiled_class_class_methods(proc):
+    return dict([(name, cfun) for name,cfun in proc.r_rdp['own_methods'].iteritems() if not cfun['is_ctor']])
 
 def prim_mirror_fields(proc):
     mirrored = proc.r_rdp['mirrored']
@@ -415,6 +424,8 @@ def prim_list_plus(proc):
 def prim_list_has(proc):
     return proc.locals['value'] in proc.r_rp
 
+def prim_list_to_string(proc):
+    return ', '.join(proc.r_rdp)
 
 def prim_io_file_contents(proc):
     return open(proc.locals['path']).read()
@@ -1166,7 +1177,7 @@ def prim_qt_qwebelement_set_attribute(proc):
 
 def prim_qt_qwebelement_to_outer_xml(proc):
     qtobj = _lookup_field(proc.r_rp, 'self')
-    return qtobj.toOuterXml()
+    return qstring_to_str(qtobj.toOuterXml())
 
 def prim_qt_qwebelement_take_from_document(proc):
     qtobj = _lookup_field(proc.r_rp, 'self')

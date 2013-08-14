@@ -71,6 +71,21 @@ module core() {
     instance_method constructors: fun() {
       <primitive "compiled_class_constructors">
     }
+    instance_method name: fun() {
+      return @name;
+    }
+    instance_method fields: fun() {
+      return @fields;
+    }
+    instance_method super_class_name: fun() {
+      return @super_class_name;
+    }
+    instance_method instanceMethods: fun() {
+      return @methods;
+    }
+    instance_method classMethods: fun() {
+      <primitive "compiled_class_class_methods">
+    }
   }
 
   class CompiledFunction {
@@ -112,6 +127,9 @@ module core() {
     }
     instance_method isTopLevel: fun() {
       return @is_top_level;
+    }
+    instance_method is_constructor: fun() {
+      return @is_ctor;
     }
     instance_method owner: fun() {
       return @owner;
@@ -185,7 +203,7 @@ module core() {
     instance_method compiled_functions: fun() {
       return @compiled_functions;
     }
-    instance_method compiled: fun() {
+    instance_method compiled_classes: fun() {
       return @compiled_classes;
     }
     instance_method removeFunction: fun(name) {
@@ -226,6 +244,9 @@ module core() {
     instance_method has: fun(key) {
       <primitive "dictionary_has">
     }
+    instance_method map: fun(fn) {
+      <primitive "dictionary_map">
+    }
   }
 
   class List {
@@ -246,6 +267,12 @@ module core() {
     }
     instance_method has: fun(value) {
       <primitive "list_has">
+    }
+    instance_method add: fun(value) {
+      <primitive "list_add">
+    }
+    instance_method toString: fun() {
+      <primitive "list_to_string">
     }
   }
 

@@ -5,25 +5,55 @@
   <body>
     <h1><a href="/">Memetalk</a></h1>
     <hr/>
-    <h2>Module: <span class="module_name"></span></h2>
-    <p>Parameters:</p>
-    <ul class="module_parameters"></ul>
+    <h2>Module: <span class="module_name"></span>(<span class="module_params"></span>)</h2>
     <p>Functions:</p>
+    <ul class="functions_list"></ul>
+    <p>Classes:</p>
+    <ul class="classes_list"></ul>
+
+    <hr/>
 
     <div class="functions">
     </div>
 
-    <div class="fun_tpl" style="display:none">
-      <div class="fun_doc"></div>
-      <strong class="function_name"></strong>
+    <hr/>
 
-      <div class="fun_body" style="border-style:solid;border-width:2px">
-        <object type="x-pyqt/editor" width="600">
-          <param name="module_function" value='true'/>
-          <param name="module_name" value=''/>
-          <param name="function_name" value=''/>
-          <param name="code" value=''/>
-        </object>
+    <div class="classes">
+    </div>
+
+
+
+    <div id="templates">
+
+      <div class="class_tpl" style="display:none">
+        <p><strong class="class_name"></strong> [<span class="super_class"></span>]</p>
+        <span class="fields_list"></span>
+
+        <div class="constructors">
+          <p><strong>Constructors</strong></p>
+        </div>
+        <div class="instance_methods">
+          <p><strong>Instance Methods</strong></p>
+        </div>
+        <div class="class_methods">
+          <p><strong>Class Methods</strong></p>
+        </div>
+      </div>
+
+
+      <div class="fun_tpl" style="display:none">
+        <div class="fun_doc"></div>
+        <strong class="function_name"></strong>
+
+        <div class="fun_body" style="border-style:solid;border-width:2px">
+          <object type="x-pyqt/editor" width="600">
+            <param name="function_type" value='module|class_method|instance_method'/>
+            <param name="module_name" value=''/>
+            <param name="class_name" value=''/>
+            <param name="function_name" value=''/>
+            <param name="code" value=''/>
+          </object>
+        </div>
       </div>
     </div>
   </body>

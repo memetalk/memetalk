@@ -731,18 +731,37 @@ module idez(qt,io)
         var variables = {};
 
         var e = null;
-        if (params.has("module_function")) {
-          var cfn = get_module(params["module_name"]).compiled_functions()[params["function_name"]];
-          e = ExplorerEditor.new(cfn, null, fun() { variables }, null,
-                                 fun(env) { variables = env + variables;});
+        if (params.has("function_type")) {
+          if (params["function_type"] == "module") {
+            var cfn = get_module(params["module_name"]).compiled_functions()[params["function_name"]];
+            e = ExplorerEditor.new(cfn, null, fun() { variables }, null,
+                                   fun(env) { variables = env + variables;});
+          }
+          if (params["function_type"] == "ctor_method") {
+            var cfn = get_module(params["module_name"]).compiled_classes()[params["class_name"]].constructors()[params["function_name"]];
+            e = ExplorerEditor.new(cfn, null, fun() { variables }, null,
+                                   fun(env) { variables = env + variables;});
+          }
+          if (params["function_type"] == "class_method") {
+            var cfn = get_module(params["module_name"]).compiled_classes()[params["class_name"]].classMethods()[params["function_name"]];
+            e = ExplorerEditor.new(cfn, null, fun() { variables }, null,
+                                   fun(env) { variables = env + variables;});
+          }
+          if (params["function_type"] == "instance_method") {
+            var cfn = get_module(params["module_name"]).compiled_classes()[params["class_name"]].instanceMethods()[params["function_name"]];
+            e = ExplorerEditor.new(cfn, null, fun() { variables }, null,
+                                   fun(env) { variables = env + variables;});
+          }
         } else {
           if (params.has("code")) {
             e = ExplorerEditor.new(null, null, fun() { variables }, null,
                                    fun(env) { variables = env + variables;});
           }
         }
-        e.setText(params["code"]);
-        e.setStyleSheet("border-style: outset;");
+        if (e) {
+          e.setText(params["code"]);
+          e.setStyleSheet("border-style: outset;");
+        }
         return e;
       });
 
@@ -929,7 +948,7 @@ module idez(qt,io)
         this.command(fun() {
           var cfun = CompiledFunction.newTopLevel(name, "fun() { return null; }", @current_cmodule);
           @current_cmodule.addFunction(cfun);
-          this.showEditorForFunction(cfun);
+          this.showEditorForFunction(cfun, "module", ".functions");
           @statusLabel.setText("Function added: " + name);
         }, fun() {
           @current_cmodule.removeFunction(name);
@@ -948,13 +967,14 @@ module idez(qt,io)
       var e = qt.QApplication.focusWidget();
       if (Mirror.vtFor(e) == ExplorerEditor) {
         var cfun = e.cfun();
+        var div = @webview.page().mainFrame().documentElement().findFirst("#"+cfun.name);
         this.command(fun() {
           cfun.owner.removeFunction(cfun.name);
-          @webview.page().mainFrame().documentElement().findFirst("#"+cfun.name).takeFromDocument();
+          div.setAttribute("style","display:none");
           @statusLabel.setText("Function deleted: " + cfun.name);
         }, fun() {
           cfun.owner.addFunction(cfun);
-          this.showEditorForFunction(cfun);
+          div.setAttribute("style","display:block");
           @statusLabel.setText("Function added: " + cfun.name);
         });
       } else {
@@ -1008,27 +1028,76 @@ module idez(qt,io)
       var doc = @webview.page().mainFrame().documentElement();
       doc.findFirst(".module_name").setPlainText(@current_cmodule.name());
 
-      var ul = doc.findFirst(".module_parameters");
-      @current_cmodule.params().each(fun(p) {
-        ul.appendInside("<li>" + p + "</li>");
-      });
+      var mp = doc.findFirst(".module_params");
+      mp.setPlainText(@current_cmodule.params.toString());
+
+      var flist = doc.findFirst(".functions_list");
+      var fnames = @current_cmodule.compiled_functions().map(fun(name,cfn) { name });
+      fnames.each(fun(name) { flist.appendInside("<li>" + name + "</li>") });
+
+      var clist = doc.findFirst(".classes_list");
+      var cnames = @current_cmodule.compiled_classes().map(fun(name,cfn) { name });
+      cnames.each(fun(name) { clist.appendInside("<li>" + name + "</li>") });
 
       var fns = @current_cmodule.compiled_functions();
       fns.each(fun(name,cfn) {
-        this.showEditorForFunction(cfn)
+        this.showEditorForFunction(cfn, "module", ".functions")
+      });
+
+      @current_cmodule.compiled_classes().each(fun(name, klass) {
+        this.showClass(klass);
       });
     }
 
-    instance_method showEditorForFunction: fun(cfn) {
+    instance_method showClass: fun(klass) {
       var doc = @webview.page().mainFrame().documentElement();
-      var div = doc.findFirst(".fun_tpl").clone();
-      div.setAttribute("id", cfn.name);
+      var div = doc.findFirst("div[id=templates] .class_tpl").clone();
+      doc.findFirst(".classes").appendInside(div);
+      div.setStyleProperty("display","block");
+      div.setAttribute("id", klass.name);
+
+      div.findFirst(".class_name").setPlainText(klass.name);
+      div.findFirst(".super_class").setPlainText(klass.super_class_name);
+
+      div.findFirst(".fields_list").setPlainText(klass.fields.toString());
+
+      var ctors = div.findFirst(".constructors");
+      ctors.setAttribute("id", "ctors_" + klass.name);
+
+      klass.constructors.each(fun(name, cfn) {
+        this.showEditorForFunction(cfn, "ctor_method", "div[id=ctors_" + klass.name + "]");
+      });
+
+      var ims = div.findFirst(".instance_methods");
+      ims.setAttribute("id", "imethods_" + klass.name);
+
+      klass.instanceMethods.each(fun(name, cfn) {
+        this.showEditorForFunction(cfn, "instance_method", "div[id=imethods_" + klass.name + "]");
+      });
+
+      var cms = div.findFirst(".class_methods");
+      cms.setAttribute("id", "cmethods_" + klass.name);
+
+      klass.classMethods.each(fun(name, cfn) {
+        this.showEditorForFunction(cfn, "class_method", "div[id=cmethods_" + klass.name + "]");
+      });
+    }
+
+    instance_method showEditorForFunction: fun(cfn, function_type, parent_sel) {
+      var doc = @webview.page().mainFrame().documentElement();
+      var parent = doc.findFirst(parent_sel);
+      var div = doc.findFirst("div[id=templates] .fun_tpl").clone();
+      div.setAttribute("id", cfn.owner.name + "::" + cfn.name);
       div.setStyleProperty("display","block");
       div.findFirst(".function_name").setPlainText(cfn.name);
+      div.findFirst(".fun_body param[name=function_type]").setAttribute("value",function_type);
       div.findFirst(".fun_body param[name=module_name]").setAttribute("value",@current_cmodule.name());
       div.findFirst(".fun_body param[name=function_name]").setAttribute("value",cfn.name);
+      if (Mirror.vtFor(cfn.owner) == CompiledClass) {
+        div.findFirst(".fun_body param[name=class_name]").setAttribute("value",cfn.owner.name);
+      }
       div.findFirst(".fun_body param[name=code]").setAttribute("value",cfn.text());
-      doc.findFirst(".functions").appendInside(div);
+      parent.appendInside(div);
     }
   }
 
