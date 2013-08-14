@@ -166,7 +166,10 @@ def prim_vmstackframe_local_vars(proc):
     return frame['locals']
 
 def prim_io_print(proc):
-    P(proc.locals["arg"],4)
+    if isinstance(proc.locals['arg'], basestring):
+        print proc.locals['arg']
+    else:
+        P(proc.locals["arg"],4)
 
 def prim_ast_line(proc):
     br()
