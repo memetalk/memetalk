@@ -232,6 +232,9 @@ module core() {
     instance_method from: fun(idx) {
       <primitive "string_from">
     }
+    instance_method rindex: fun(arg) {
+      <primitive "string_rindex">
+    }
     instance_method count: fun(sub) {
       <primitive "string_count">
     }

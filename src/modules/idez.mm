@@ -218,8 +218,13 @@ module idez(qt,io)
     instance_method insertSelectedText: fun(text) {
       var pos = this.getSelection();
       this.insertAt(text, pos["end_line"], pos["end_index"]);
-      //text.size(): this is rude
-      this.setSelection(pos["end_line"], pos["end_index"], pos["end_line"] + text.count("\n"), pos["end_index"] + text.size());
+      var nl = text.count("\n");
+      if (nl == 0) {
+        this.setSelection(pos["end_line"], pos["end_index"], pos["end_line"], pos["end_index"] + text.size);
+      } else {
+        var pl = text.rindex("\n");
+        this.setSelection(pos["end_line"], pos["end_index"], pos["end_line"] + nl, text.from(pl).size() - 1);
+      }
     }
   }
 

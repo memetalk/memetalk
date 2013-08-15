@@ -210,6 +210,12 @@ def prim_string_concat(proc):
 def prim_string_from(proc):
     return proc.r_rp[proc.locals['idx']:]
 
+def prim_string_rindex(proc):
+    try:
+        return proc.r_rdp.rindex(proc.locals['arg'])
+    except ValueError:
+        return -1
+
 def prim_string_count(proc):
     return proc.r_rp.count(proc.locals['sub'])
 
