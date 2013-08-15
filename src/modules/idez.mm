@@ -1047,14 +1047,18 @@ module idez(qt,io)
       var e = qt.QApplication.focusWidget();
       if (Mirror.vtFor(e) == ExplorerEditor) {
         var cfun = e.cfun();
-        var div = @webview.page().mainFrame().documentElement().findFirst("div[id='" + cfun.fullName + "']");
+        var doc = @webview.page().mainFrame().documentElement();
+        var div = doc.findFirst("div[id='" + cfun.fullName + "']");
+        var mitem = doc.findFirst("#menu-listing .link-list").findFirst("li a[href='#" + cfun.fullName + "']");
         this.command(fun() {
           cfun.owner.removeFunction(cfun.name);
           div.setAttribute("style","display:none");
+          mitem.setAttribute("style","display:none");
           @statusLabel.setText("Function deleted: " + cfun.name);
         }, fun() {
           cfun.owner.addFunction(cfun);
           div.setAttribute("style","display:block");
+          mitem.setAttribute("style","display:block");
           @statusLabel.setText("Function added: " + cfun.name);
         });
       } else {
