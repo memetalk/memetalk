@@ -643,7 +643,8 @@ def prim_qt_qwidget_connect(proc):
 
 def prim_qt_qwidget_actions(proc):
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
-    return [_meme_instance(proc, x) for x in qtobj.actions()]
+    r = [_meme_instance(proc, x) for x in qtobj.actions()]
+    return r
 
 def prim_qt_qwidget_set_stylesheet(proc):
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
