@@ -910,8 +910,13 @@ class Process(greenlet):
                     raise e
                 #print("Rewind: NO tear up stack; just resume")
                 return self.run_fun(recv, drecv, fun, args, should_allocate)
-            except Exception:
+            except MemetalkException:
                 self.tear_fun()
+                raise
+            except Exception as e:
+                self.tear_fun()
+                print "WARNING: python exception ocurred: " + str(e.__class__) + ":" + str(e)
+                self.interpreter.throw_with_value(traceback.format_exc())
                 raise
             self.tear_fun()
             if skip:
