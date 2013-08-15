@@ -823,6 +823,8 @@ module idez(qt,io)
     }
 
     instance_method initActions: fun() {
+      // System menu
+
       var execMenu = this.menuBar().addMenu("&System");
       var action = qt.QAction.new("&Save", execMenu);
       action.setShortcut("alt+x,s");
@@ -864,6 +866,8 @@ module idez(qt,io)
       action.setShortcutContext(1);
       execMenu.addAction(action);
 
+      // Edit Module Menu
+
       execMenu = this.menuBar().addMenu("&Edit Module");
       action = qt.QAction.new("&Rename module", execMenu);
       action.setShortcut("alt+m,r");
@@ -904,6 +908,8 @@ module idez(qt,io)
       });
       action.setShortcutContext(1);
       execMenu.addAction(action);
+
+      // Edit Class Menu
 
       execMenu = this.menuBar().addMenu("&Edit Class");
       action = qt.QAction.new("&Add Class", execMenu);
