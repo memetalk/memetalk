@@ -334,7 +334,7 @@ module idez(qt,io)
 
     instance_method itemSelected: fun(item) { //QListWidgetItem, curr from the signal
       if (item.text() == '*self') {
-        @textArea.setText(@inspectee.toString());
+        @textArea.setText(@inspectee.toSource());
       } else {
         var value = @mirror.valueFor(item.text());
         @textArea.setText(value.toSource());
