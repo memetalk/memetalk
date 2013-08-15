@@ -872,7 +872,7 @@ module idez(qt,io)
       action = qt.QAction.new("&Rename module", execMenu);
       action.setShortcut("alt+m,r");
       action.connect("triggered", fun() {
-        this.action_renameModule()
+        io.print("rename module");
       });
       action.setShortcutContext(1);
       execMenu.addAction(action);
@@ -1060,26 +1060,6 @@ module idez(qt,io)
       } else {
         @statusLabel.setText("No function selected");
       }
-    }
-
-    instance_method action_renameModule: fun() {
-      if (@current_cmodule == null) {
-        @statusLabel.setText("No current module");
-        return true;
-      }
-
-      @miniBuffer.prompt("Module name: ", @current_cmodule.name(), fun(value) {
-        var old_name = @current_cmodule.name();
-        this.command(fun() {
-          @current_cmodule.setName(value);
-          @webview.page().mainFrame().documentElement().findFirst(".module_name").setPlainText(@current_cmodule.name());
-          @statusLabel.setText("Renamed module to: " + value);
-        }, fun() {
-          @current_cmodule.setName(old_name);
-          @webview.page().mainFrame().documentElement().findFirst(".module_name").setPlainText(@current_cmodule.name());
-          @statusLabel.setText("Renamed module to: " + old_name);
-        });
-      });
     }
 
     instance_method show_home: fun() {
