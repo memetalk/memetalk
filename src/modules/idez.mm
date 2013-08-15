@@ -770,23 +770,28 @@ module idez(qt,io)
       });
 
       @webview.connect('linkClicked', fun(url) {
-        io.print("URL selected: " + url);
+        io.print("URL selected: " + url.toString());
 
-        if (url == "/") {
+        if (url.toString() == "memetalk:/") {
           this.show_home();
           return null;
         }
 
-        if (url == "/tutorial") {
+        if (url.toString() == "memetalk:/tutorial") {
           this.show_tutorial();
           return null;
         }
-        if (url == "/modules-index") {
+        if (url.toString() == "memetalk:/modules-index") {
           this.show_modules();
           return null;
         }
+        if (url.hasFragment()) {
+          @webview.page().mainFrame().scrollToAnchor(url.fragment());
+          return null;
+        }
+
         var modules = available_modules();
-        var name = url.from(1);
+        var name = url.toString().from(1);
         if (modules.has(name)) {
           this.show_module(name);
           return null;

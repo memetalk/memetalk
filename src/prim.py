@@ -42,6 +42,7 @@ def P(obj, depth=1):
 
 _app = None
 _qapp_running = False
+_qt_imodule = None
 
 def prim_modules_path(proc):
     return MODULES_PATH
@@ -509,14 +510,16 @@ def _lookup_field(proc, mobj, name):
 
 ## return a meme instance given something from pyqt
 def _meme_instance(proc, obj):
+    global _qt_imodule
     mapping = {
-        QtGui.QListWidgetItem: proc.r_mp["QListWidgetItem"],
-        QtWebKit.QWebView: proc.r_mp['QWebView'],
-        QtWebKit.QWebFrame: proc.r_mp['QWebFrame'],
-        QtWebKit.QWebPage: proc.r_mp['QWebPage'],
-        QtWebKit.QWebElement: proc.r_mp['QWebElement'],
-        QtGui.QAction: proc.r_mp['QAction'],
-        scintilla_editor.MemeQsciScintilla: proc.r_mp['QsciScintilla']}
+        QtGui.QListWidgetItem: _qt_imodule["QListWidgetItem"],
+        QtWebKit.QWebView: _qt_imodule['QWebView'],
+        QtWebKit.QWebFrame: _qt_imodule['QWebFrame'],
+        QtWebKit.QWebPage: _qt_imodule['QWebPage'],
+        QtWebKit.QWebElement: _qt_imodule['QWebElement'],
+        QtGui.QAction: _qt_imodule['QAction'],
+        QtCore.QUrl: _qt_imodule['QUrl'],
+        scintilla_editor.MemeQsciScintilla: _qt_imodule['QsciScintilla']}
 
     if obj == None:
         return obj
@@ -528,8 +531,8 @@ def _meme_instance(proc, obj):
         return obj#{"_vt":i.get_class("Number"), 'self':obj}
     elif isinstance(obj, list):
         return obj#{"_vt":i.get_class("List"), 'self':obj}
-    elif isinstance(obj, QtCore.QUrl):
-        return qstring_to_str(obj.path()) # TODO: currently ignoring QUrl objects
+    # elif isinstance(obj, QtCore.QUrl):
+    #     return qstring_to_str(obj.toString()) # TODO: currently ignoring QUrl objects
     elif obj.__class__ in mapping: # NOTE: should be a qt instance
         if hasattr(obj, 'meme_instance'): # all qt objetcs should have this one day
             return obj.meme_instance
@@ -547,8 +550,9 @@ def qstring_to_str(qstring):
 eventloop_processes = []
 
 def prim_qt_qapplication_new(proc):
-    global _app
+    global _app, _qt_imodule
     _app = QtGui.QApplication(sys.argv)
+    _qt_imodule = proc.r_mp
     proc.r_rdp['self'] = _app
     return proc.r_rp
 
@@ -1207,6 +1211,20 @@ def prim_qt_qwebelement_to_outer_xml(proc):
 def prim_qt_qwebelement_take_from_document(proc):
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
     return qtobj.takeFromDocument()
+
+def prim_qt_qurl_has_fragment(proc):
+    qtobj = _lookup_field(proc, proc.r_rp, 'self')
+    return qtobj.hasFragment()
+
+def prim_qt_qurl_fragment(proc):
+    qtobj = _lookup_field(proc, proc.r_rp, 'self')
+    return qstring_to_str(qtobj.fragment())
+
+def prim_qt_qurl_to_string(proc):
+    qtobj = _lookup_field(proc, proc.r_rp, 'self')
+    return qstring_to_str(qtobj.toString())
+
+
 
 # scintilla
 def prim_qt_scintilla_editor_new(proc):

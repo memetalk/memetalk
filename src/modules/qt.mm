@@ -427,4 +427,17 @@ module qt(io)
         <primitive "qt_scintilla_set_selection">
     }
   }
+
+  class QUrl {
+    fields: self;
+    instance_method hasFragment: fun() {
+      <primitive "qt_qurl_has_fragment">
+    }
+    instance_method fragment: fun() {
+      <primitive "qt_qurl_fragment">
+    }
+    instance_method toString: fun() {
+      <primitive "qt_qurl_to_string">
+    }
+  }
 }
