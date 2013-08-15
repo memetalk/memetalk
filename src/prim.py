@@ -437,7 +437,7 @@ def prim_list_add(proc):
     return proc.r_rdp.append(proc.locals['value'])
 
 def prim_list_to_string(proc):
-    return ', '.join(proc.r_rdp)
+    return ', '.join([pformat(x,1,80,2) for x in proc.r_rdp])
 
 def prim_io_file_contents(proc):
     return open(proc.locals['path']).read()
