@@ -74,7 +74,7 @@ def prim_vmprocess_stack_frames(proc):
 
 def prim_vmprocess_step_into(proc):
     print '+ENTER prim_vmprocess_step_into'
-    _proc = _lookup_field(proc. proc.r_rp, 'self')
+    _proc = _lookup_field(proc, proc.r_rp, 'self')
     print 'vmprocess: sending step_into'
     ret = _proc.switch("step_into")
     print 'vmprocess/step_into received: ' + str(ret)
