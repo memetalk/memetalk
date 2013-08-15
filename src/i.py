@@ -159,9 +159,9 @@ def _instantiate_module(i, compiled_module, _args, parent_module):
                 elif mp[0] == 'uri':
                     args[mp[1]] = i.compile_module_uri(mp[2])
                 else:
-                    raise Exception('Unknown module spec')
+                    i.throw_with_value('Unknown module spec')
         if args.keys().sort() != compiled_module['params'].sort():
-            raise Exception('arity error (module parameters)')
+            i.throw_with_value('arity error on module parameters')
 
         # module's aliases. dirty: using arg to set it
         for alias in compiled_module['aliases']:
@@ -226,7 +226,7 @@ def _instantiate_module(i, compiled_module, _args, parent_module):
         elif super_name in compiled_module["compiled_classes"]:
             super_later[c["name"]] = super_name
         else:
-            raise Exception("super class not found: " + super_name)
+            i.throw_with_value("super class not found: " + super_name)
 
         # superclass BarClass found
         if super_class:
@@ -302,10 +302,9 @@ class ModuleLoader(ASTBuilder):
             ast,_ = self.parser.apply("single_top_level_fun", name)
         except Exception as err:
             if hasattr(err,'formatError'):
-                print(err.formatError(''.join(self.parser.input.data)))
+                i.throw_with_value(err.formatError(''.join(self.parser.input.data)))
             else:
-                traceback.print_exc()
-            sys.exit(1)
+                i.throw_with_value(traceback.format_exc())
 
         if _should_dump_ast():
             print "---- AST ----"
@@ -339,10 +338,9 @@ class ModuleLoader(ASTBuilder):
                 return cfun
         except Exception as err:
             if hasattr(err,'formatError'):
-                print(err.formatError(''.join(self.parser.input.data)))
+                i.throw_with_value(err.formatError(''.join(self.parser.input.data)))
             else:
-                traceback.print_exc()
-            sys.exit(1)
+                i.throw_with_value(traceback.format_exc())
 
 
     def recompile_closure(self, i, cfun, src):
@@ -356,10 +354,9 @@ class ModuleLoader(ASTBuilder):
             ast,_ = self.parser.apply("funliteral")
         except Exception as err:
             if hasattr(err,'formatError'):
-                print(err.formatError(''.join(self.parser.input.data)))
+                i.throw_with_value(err.formatError(''.join(self.parser.input.data)))
             else:
-                traceback.print_exc()
-            sys.exit(1)
+                i.throw_with_value(traceback.format_exc())
 
         if _should_dump_ast():
             print "---- AST ----"
@@ -379,10 +376,9 @@ class ModuleLoader(ASTBuilder):
             loader.apply("load_fun_lit")
         except Exception as err:
             if hasattr(err,'formatError'):
-                print(err.formatError(''.join(self.parser.input.data)))
+                i.throw_with_value(err.formatError(''.join(self.parser.input.data)))
             else:
-                traceback.print_exc()
-            sys.exit(1)
+                i.throw_with_value(traceback.format_exc())
         return cfun
 
     def compile_closure(self, i, src, outer):
@@ -396,10 +392,9 @@ class ModuleLoader(ASTBuilder):
             ast,_ = self.parser.apply("funliteral")
         except Exception as err:
             if hasattr(err,'formatError'):
-                print(err.formatError(''.join(self.parser.input.data)))
+                i.throw_with_value(err.formatError(''.join(self.parser.input.data)))
             else:
-                traceback.print_exc()
-            sys.exit(1)
+                i.throw_with_value(traceback.format_exc())
 
         if _should_dump_ast():
             print "---- AST ----"
@@ -419,10 +414,9 @@ class ModuleLoader(ASTBuilder):
             loader.apply("load_fun_lit")
         except Exception as err:
             if hasattr(err,'formatError'):
-                print(err.formatError(''.join(self.parser.input.data)))
+                i.throw_with_value(err.formatError(''.join(self.parser.input.data)))
             else:
-                traceback.print_exc()
-            sys.exit(1)
+                i.throw_with_value(traceback.format_exc())
 
         return self.first_fnlit
 
@@ -438,10 +432,9 @@ class ModuleLoader(ASTBuilder):
             ast,_ = self.parser.apply("single_top_level_fun", name)
         except Exception as err:
             if hasattr(err,'formatError'):
-                print(err.formatError(''.join(self.parser.input.data)))
+                i.throw_with_value(err.formatError(''.join(self.parser.input.data)))
             else:
-                traceback.print_exc()
-            sys.exit(1)
+                i.throw_with_value(traceback.format_exc())
 
         if _should_dump_ast():
             print "---- AST ----"
@@ -460,10 +453,9 @@ class ModuleLoader(ASTBuilder):
             loader.apply("function_definition", "toplevel")
         except Exception as err:
             if hasattr(err,'formatError'):
-                print(err.formatError(''.join(self.parser.input.data)))
+                i.throw_with_value(err.formatError(''.join(self.parser.input.data)))
             else:
-                traceback.print_exc()
-            sys.exit(1)
+                i.throw_with_value(traceback.format_exc())
 
         return self.current_module['compiled_functions'][name]
 
@@ -479,10 +471,9 @@ class ModuleLoader(ASTBuilder):
             ast,_ = self.parser.apply("start")
         except Exception as err:
             if hasattr(err,'formatError'):
-                print(err.formatError(''.join(self.parser.input.data)))
+                i.throw_with_value(err.formatError(''.join(self.parser.input.data)))
             else:
-                traceback.print_exc()
-            sys.exit(1)
+                i.throw_with_value(traceback.format_exc())
 
         if _should_dump_mast():
             print "---- AST ----"
@@ -505,10 +496,9 @@ class ModuleLoader(ASTBuilder):
             loader.apply("load_module")
         except Exception as err:
             if hasattr(err,'formatError'):
-                print(err.formatError(''.join(self.parser.input.data)))
+                i.throw_with_value(err.formatError(''.join(self.parser.input.data)))
             else:
-                traceback.print_exc()
-            sys.exit(1)
+                i.throw_with_value(traceback.format_exc())
 
         return self.current_module
 
@@ -631,15 +621,18 @@ class ModuleLoader(ASTBuilder):
 ## Executing
 #######################################################
 
-class ReturnException(Exception):
+class VMException(Exception):
+    pass
+
+class ReturnException(VMException):
     def __init__(self, val):
         self.val = val
 
-class RewindException(Exception):
+class RewindException(VMException):
     def __init__(self, count):
         self.count = count
 
-class MemetalkException(Exception):
+class MemetalkException(VMException):
     def __init__(self, mmobj):
         self._mmobj = mmobj
     def mmobj(self):
@@ -719,7 +712,7 @@ class Interpreter():
         return self.instantiate_module(compiled_module, {}, core.kernel_imodule)
 
     def compile_module_uri(self, uri):
-        raise Exception('TODO')
+        self.throw_with_value('TODO: compile_module_uri')
 
     def kernel_module_instance(self):
         return core.kernel_imodule
@@ -732,9 +725,7 @@ class Interpreter():
         raise MemetalkException(mex)
 
     def throw_with_value(self, value):
-        print "-- MemetalkException!--"
-        self.current_process.pp_stack_trace();
-        print "...throwing with value: " + value
+        print "MemetalkException with value: \n" + value
         ex = self.create_instance(core.Exception)
 
         # ...and this me being stupid:
@@ -1040,14 +1031,17 @@ class Process(greenlet):
 
     ##### eval routines
 
+    def do_eval(self, name, *rest):
+        try:
+            return getattr(self, name)(*rest)
+        except StandardError as e:
+            print "WARNING: python exception ocurred: " + str(e.__class__) + ":" + str(e)
+            self.interpreter.throw_with_value(traceback.format_exc())
+
     def eval_prim(self, prim_name, ast):
         self.r_ip = ast
         self.dbg_control('eval_prim')
-        try:
-            return globals()['prim_'+prim_name](self)
-        except KeyError as e:
-            traceback.print_exc()
-            sys.exit(1)
+        return globals()['prim_'+prim_name](self)
 
     def eval_do_field_assign(self, field, rhs, ast):
         self.r_ip = ast
@@ -1126,7 +1120,7 @@ class Process(greenlet):
         # -normal methods can invoke super() to get its superclass version.
         # -A method m() cannot invoke a super method of different name.
         if not self.r_cp["compiled_function"]["is_ctor"]:
-            raise Exception("Cannot use super.m() outside ctor");
+            self.interpreter.throw_with_value("Cannot use super.m() outside ctor");
 
         instance = self.r_rdp
         klass = self.interpreter.get_vt(instance)
@@ -1138,7 +1132,7 @@ class Process(greenlet):
         if not method:
             self.interpreter.throw_with_value("DoesNotUnderstand: " + selector + " -- " + pformat(instance,1,80,1))
         elif not method["compiled_function"]["is_ctor"]:
-            raise Exception("Method is not constructor: " + selector)
+            self.interpreter.throw_with_value("Method is not constructor: " + selector)
         else:
             return self.setup_and_run_fun(self.r_rp, drecv, selector, method, args, False)
 
@@ -1221,9 +1215,7 @@ class Process(greenlet):
         except MemetalkException as e:
             self.set_local_value(bind, e.mmobj())
             return self.evaluator.apply("exprlist", ct)[0]
-        except Exception as e:
-            traceback.print_exc()
-            print e
+
     def eval_do_debug(self,ast):
         self.r_ip = ast
         self.state = 'paused'
