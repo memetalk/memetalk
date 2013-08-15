@@ -443,7 +443,13 @@ def prim_list_add(proc):
     return proc.r_rdp.append(proc.locals['value'])
 
 def prim_list_to_string(proc):
-    return ', '.join([pformat(x,1,80,2) for x in proc.r_rdp])
+    ret = []
+    for x in proc.r_rdp:
+        if hasattr(x,'__str__'):
+            ret.append(str(x))
+        else:
+            ret.append(pformat(x,1,80,2))
+    return ', '.join(ret)
 
 def prim_io_file_contents(proc):
     return open(proc.locals['path']).read()
