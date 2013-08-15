@@ -1164,6 +1164,10 @@ def prim_qt_qwebframe_document_element(proc):
     x = _meme_instance(proc,qtobj.documentElement())
     return x
 
+def prim_qt_qwebframe_scroll_to_anchor(proc):
+    qtobj = _lookup_field(proc, proc.r_rp, 'self')
+    return qtobj.scrollToAnchor(proc.locals['anchor'])
+
 def prim_qt_qwebelement_find_first(proc):
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
     return _meme_instance(proc,qtobj.findFirst(proc.locals['str']))

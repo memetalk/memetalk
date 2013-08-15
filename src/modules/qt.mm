@@ -358,6 +358,9 @@ module qt(io)
     instance_method documentElement: fun() {
       <primitive "qt_qwebframe_document_element">
     }
+    instance_method scrollToAnchor: fun(anchor) {
+      <primitive "qt_qwebframe_scroll_to_anchor">
+    }
   }
 
   class QWebElement {

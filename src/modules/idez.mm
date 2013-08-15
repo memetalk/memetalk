@@ -1080,22 +1080,18 @@ module idez(qt,io)
       @current_cmodule = get_module(name);
       @webview.loadUrl(modules_path() + "/module-explorer/module-view.html");
       var doc = @webview.page().mainFrame().documentElement();
-      doc.findFirst(".module_name").setPlainText(@current_cmodule.name());
+      doc.findFirst("head").appendInside('<link rel="stylesheet" href="file://' + modules_path() + '/module-explorer/style.css" type="text/css">');
 
-      var mp = doc.findFirst(".module_params");
-      mp.setPlainText(@current_cmodule.params.toString());
+      doc.findFirst("#module_title").setPlainText(@current_cmodule.name());
 
-      var flist = doc.findFirst(".functions_list");
-      var fnames = @current_cmodule.compiled_functions().map(fun(name,cfn) { name });
-      fnames.each(fun(name) { flist.appendInside("<li>" + name + "</li>") });
+      var mp = doc.findFirst(".module_title_params").setPlainText(@current_cmodule.params.toString());
 
-      var clist = doc.findFirst(".classes_list");
-      var cnames = @current_cmodule.compiled_classes().map(fun(name,cfn) { name });
-      cnames.each(fun(name) { clist.appendInside("<li name=" + name + ">" + name + "</li>") });
+      var mlist = doc.findFirst("#menu-listing .link-list");
 
       var fns = @current_cmodule.compiled_functions();
       fns.each(fun(name,cfn) {
-        this.showEditorForFunction(cfn, "module", ".functions")
+        mlist.appendInside("<li><a href='#" + cfn.fullName + "'>" + cfn.fullName + "</a></li>");
+        this.showEditorForFunction(cfn, "module", ".module-functions");
       });
 
       @current_cmodule.compiled_classes().each(fun(name, klass) {
@@ -1105,27 +1101,30 @@ module idez(qt,io)
 
     instance_method showClass: fun(klass) {
       var doc = @webview.page().mainFrame().documentElement();
-      var div = doc.findFirst("div[id=templates] .class_tpl").clone();
-      doc.findFirst(".classes").appendInside(div);
+      var div = doc.findFirst("div[id=templates] .class_template").clone();
+      doc.findFirst(".module-classes").appendInside(div);
       div.setStyleProperty("display","block");
-      div.setAttribute("id", klass.name);
+      div.setAttribute("id", klass.fullName);
 
       div.findFirst(".class_name").setPlainText(klass.name);
       div.findFirst(".super_class").setPlainText(klass.super_class_name);
 
       div.findFirst(".fields_list").setPlainText(klass.fields.toString());
 
+      var mlist = doc.findFirst("#menu-listing .link-list");
+
       var ctors = div.findFirst(".constructors");
       ctors.setAttribute("id", "ctors_" + klass.name);
 
       klass.constructors.each(fun(name, cfn) {
+        mlist.appendInside("<li><a href='#" + cfn.fullName + "'>" + cfn.fullName + "</a></li>");
         this.showEditorForFunction(cfn, "ctor_method", "div[id='ctors_" + klass.name + "']");
       });
-
       var ims = div.findFirst(".instance_methods");
       ims.setAttribute("id", "imethods_" + klass.name);
 
       klass.instanceMethods.each(fun(name, cfn) {
+        mlist.appendInside("<li><a href='#" + cfn.fullName + "'>" + cfn.fullName + "</a></li>");
         this.showEditorForFunction(cfn, "instance_method", "div[id='imethods_" + klass.name + "']");
       });
 
@@ -1133,6 +1132,7 @@ module idez(qt,io)
       cms.setAttribute("id", "cmethods_" + klass.name);
 
       klass.classMethods.each(fun(name, cfn) {
+        mlist.appendInside("<li><a href='#" + cfn.fullName + "'>" + cfn.fullName + "</a></li>");
         this.showEditorForFunction(cfn, "class_method", "div[id='cmethods_" + klass.name + "']");
       });
     }
@@ -1140,18 +1140,18 @@ module idez(qt,io)
     instance_method showEditorForFunction: fun(cfn, function_type, parent_sel) {
       var doc = @webview.page().mainFrame().documentElement();
       var parent = doc.findFirst(parent_sel);
-      var div = doc.findFirst("div[id=templates] .fun_tpl").clone();
+      var div = doc.findFirst("div[id=templates] .function_template").clone();
       div.setAttribute("id", cfn.fullName);
       div.setStyleProperty("display","block");
       div.findFirst(".function_name").setPlainText(cfn.fullName);
       div.findFirst(".function_name").setAttribute("name",cfn.fullName);
-      div.findFirst(".fun_body param[name=function_type]").setAttribute("value",function_type);
-      div.findFirst(".fun_body param[name=module_name]").setAttribute("value",@current_cmodule.name());
-      div.findFirst(".fun_body param[name=function_name]").setAttribute("value",cfn.name);
+      div.findFirst(".function-source-code param[name=function_type]").setAttribute("value",function_type);
+      div.findFirst(".function-source-code param[name=module_name]").setAttribute("value",@current_cmodule.name());
+      div.findFirst(".function-source-code param[name=function_name]").setAttribute("value",cfn.name);
       if (Mirror.vtFor(cfn.owner) == CompiledClass) {
-        div.findFirst(".fun_body param[name=class_name]").setAttribute("value",cfn.owner.name);
+        div.findFirst(".function-source-code param[name=class_name]").setAttribute("value",cfn.owner.name);
       }
-      div.findFirst(".fun_body param[name=code]").setAttribute("value",cfn.text());
+      div.findFirst(".function-source-code param[name=code]").setAttribute("value",cfn.text());
       parent.appendInside(div);
     }
   }
