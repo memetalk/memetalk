@@ -817,7 +817,7 @@ class Process(greenlet):
         # if self.interpreter.current_process:
         #     self.interpreter.current_process.state = 'paused'
         self.interpreter.current_process = self
-        print "switching..."
+        #print "switching..."
         return super(Process,self).switch(*rest)
 
     def run_module(self, entry_name, module, args):
@@ -1223,7 +1223,7 @@ class Process(greenlet):
     ## debugger
 
     def dbg_cmd(self, cmd):
-        print 'dbg_cmd received: ' + str(cmd)
+        #print 'dbg_cmd received: ' + str(cmd)
         if cmd == 'step_into':
             #print("process:: changed state to paused")
             self.state = 'paused'
@@ -1231,7 +1231,7 @@ class Process(greenlet):
             #print("process:: changed state to next")
             self.state = 'next'
         if cmd == 'continue':
-            #print("process:: changed state to continue")
+            print("process:: changed state to continue")
             self.state = 'running'
         if cmd == 'rewind':
             #print("process: rewinding 1")
@@ -1239,12 +1239,11 @@ class Process(greenlet):
 
     def dbg_control(self, name):
         if self.state == 'paused' or self.state == 'next':
-            print name
             if not self.debugger_process:
-                print 'dbg_control: paused: initiating debugger...please wait'
+                #print 'dbg_control: paused: initiating debugger...please wait'
                 cmd = self.interpreter.debug_process(self)
             else:
-                print 'dbg_control paused: asking debugger for cmd...'
+                #print 'dbg_control paused: asking debugger for cmd...'
                 cmd = self.debugger_process.switch()
             #print 'dbg_control got: ' + str(cmd)
             self.dbg_cmd(cmd)
