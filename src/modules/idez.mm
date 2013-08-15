@@ -1026,11 +1026,15 @@ module idez(qt,io)
 
       @miniBuffer.prompt("Function name: ", "", fun(name) {
         var cfun = CompiledFunction.newTopLevel(name, "fun() { return null; }", @current_cmodule);
+        var doc = @webview.page().mainFrame().documentElement();
+        var mlist = doc.findFirst("#menu-listing .link-list");
         this.command(fun() {
           @current_cmodule.addFunction(cfun);
-          this.showEditorForFunction(cfun, "module", ".functions");
+          this.showEditorForFunction(cfun, "module", ".module-functions");
           @statusLabel.setText("Function added: " + name);
+          mlist.appendInside("<li><a href='#" + cfun.fullName + "'>" + cfun.fullName + "</a></li>");
         }, fun() {
+          mlist.findFirst("li a[href='#" + cfun.fullName + "']").setAttribute("style","display:none");
           @current_cmodule.removeFunction(name);
           @webview.page().mainFrame().documentElement().findFirst("div[id='" + cfun.fullName + "']").takeFromDocument();
           @statusLabel.setText("Function removed: " + name);
