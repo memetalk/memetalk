@@ -40,10 +40,18 @@ Inside of the `memetal/src` directory, run the following scripts:
 For now, the entry-point for memetalk's interpreter is `i.py`. From the `memetalk` dir, run `python src/i.py {{source.mm}}`. For example:
 
 ```
-$ python src/i.py tests/closures1.mm
+$ python src/i.py src/modules/memetest.mm
 ```
 
-The main (super alpha) programming environment can be executed with:
+or preferably:
+
+```
+$ python src/i.py memetest.mm
+```
+
+as the module path is set to `src/modules` already.
+
+Finally, the main (super alpha) programming environment can be executed with:
 
 ```
 $ python src/i.py idez.mm
