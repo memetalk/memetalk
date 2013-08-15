@@ -487,7 +487,7 @@ module idez(qt,io)
       @cont_on_exit = true;
       @frame_index = 0;
 
-      this.resize(700,250);
+      this.resize(700,800);
       this.setWindowTitle("Debugger");
       var centralWidget = QWidget.new(this);
       var mainLayout = qt.QVBoxLayout.new(centralWidget);
