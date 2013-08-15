@@ -842,6 +842,14 @@ module idez(qt,io)
       action.setShortcutContext(1);
       execMenu.addAction(action);
 
+      action = qt.QAction.new("Eval", execMenu);
+      action.setShortcut("ctrl+e");
+      action.connect("triggered", fun() {
+        this.action_eval();
+      });
+      action.setShortcutContext(1);
+      execMenu.addAction(action);
+
       action = qt.QAction.new("Dismiss Mini Buffer", execMenu);
       action.setShortcut("ctrl+g");
       action.connect("triggered", fun() {
@@ -956,6 +964,17 @@ module idez(qt,io)
     instance_method command: fun(redo, undo) {
       redo();
       @chistory.add(undo,redo);
+    }
+
+    instance_method action_eval: fun() {
+      @miniBuffer.prompt("eval: ", "", fun(expr) {
+        try {
+          var r = evalWithVars(expr, {});
+          @statusLabel.setText(r["result"].toString());
+        } catch(e) {
+          @statusLabel.setText(e.value);
+        }
+      });
     }
 
     instance_method action_renameClass: fun() {
