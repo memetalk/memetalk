@@ -95,6 +95,9 @@ module core() {
     instance_method removeMethod: fun(name, flag) {
       <primitive "compiled_class_remove_method">
     }
+    instance_method methodFlag: fun(cfun) { //null | :class_method | :instance_method
+      <primitive "compiled_class_method_flag">
+    }
   }
 
   class CompiledFunction {

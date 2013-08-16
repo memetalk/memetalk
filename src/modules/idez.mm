@@ -909,13 +909,13 @@ module idez(qt,io)
       action.setShortcutContext(1);
       execMenu.addAction(action);
 
-      action = qt.QAction.new("&Delete Module Function", execMenu);
-      action.setShortcut("alt+m,d");
-      action.connect("triggered", fun() {
+      var del_fn_ac = qt.QAction.new("&Delete Function", execMenu);
+      del_fn_ac.setShortcut("alt+f,d");
+      del_fn_ac.connect("triggered", fun() {
         this.action_deleteFunction()
       });
-      action.setShortcutContext(1);
-      execMenu.addAction(action);
+      del_fn_ac.setShortcutContext(1);
+      execMenu.addAction(del_fn_ac);
 
       // Edit Class Menu
 
@@ -960,13 +960,7 @@ module idez(qt,io)
       action.setShortcutContext(1);
       execMenu.addAction(action);
 
-      action = qt.QAction.new("&Delete Method", execMenu);
-      action.setShortcut("alt+c,d");
-      action.connect("triggered", fun() {
-        io.print("Delete Method");
-      });
-      action.setShortcutContext(1);
-      execMenu.addAction(action);
+      execMenu.addAction(del_fn_ac);
 
       action = qt.QAction.new("Toggle Method as Constructor", execMenu);
       action.setShortcut("alt+c,c");
@@ -1116,6 +1110,13 @@ module idez(qt,io)
         var class_name = split[0];
         var method_name = split[1];
 
+        if (!@current_cmodule.compiled_classes.has(class_name)) {
+          @statusLabel.setText("No class found: " + class_name);
+          return true;
+        }
+
+        //TODO, check if method already exists
+
         var klass = @current_cmodule.compiled_classes[class_name];
         var cfun = CompiledFunction.newTopLevel(method_name, "fun() { return null; }", klass, flag);
         var doc = @webview.page().mainFrame().documentElement();
@@ -1142,6 +1143,8 @@ module idez(qt,io)
       }
 
       @miniBuffer.prompt("Function name: ", "", fun(name) {
+        // TODO, check if function already exists
+
         var cfun = CompiledFunction.newTopLevel(name, "fun() { return null; }", @current_cmodule, :module_function);
         var doc = @webview.page().mainFrame().documentElement();
         var mlist = doc.findFirst("#menu-listing .link-list");
@@ -1171,13 +1174,25 @@ module idez(qt,io)
         var doc = @webview.page().mainFrame().documentElement();
         var div = doc.findFirst("div[id='" + cfun.fullName + "']");
         var mitem = doc.findFirst("#menu-listing .link-list").findFirst("li a[href='#" + cfun.fullName + "']");
+
+        var owner = cfun.owner;
+        var flag = null;
         this.command(fun() {
-          cfun.owner.removeFunction(cfun.name);
+          if (Mirror.vtFor(owner) == CompiledModule) {
+            owner.removeFunction(cfun.name);
+          } else {
+            flag = owner.methodFlag(cfun);
+            owner.removeMethod(cfun.name, flag);
+          }
           div.setAttribute("style","display:none");
           mitem.setAttribute("style","display:none");
           @statusLabel.setText("Function deleted: " + cfun.name);
         }, fun() {
-          cfun.owner.addFunction(cfun);
+          if (Mirror.vtFor(owner) == CompiledModule) {
+            owner.addFunction(cfun);
+          } else {
+            owner.addMethod(cfun, flag);
+          }
           div.setAttribute("style","display:block");
           mitem.setAttribute("style","display:block");
           @statusLabel.setText("Function added: " + cfun.name);

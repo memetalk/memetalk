@@ -431,8 +431,11 @@ def prim_compiled_class_add_method(proc):
     # add the function to the compiled class
     if flag['self'] == 'instance_method':
         proc.r_rdp['methods'][cfun['name']] = cfun
-    else:
+    elif flag['self'] == 'class_method' or flag['self'] == 'constructor':
         proc.r_rdp['own_methods'][cfun['name']] = cfun
+    else:
+        proc.interpreter.throw_with_value("Unknown flag: " + pformat(flag,1,80,2))
+
     # add the function to the instantiated classes:
     for imod in proc.interpreter.mem_imodules:
         if imod['_vt']['compiled_module'] == proc.r_rdp['module']:
@@ -461,6 +464,13 @@ def prim_compiled_class_remove_method(proc):
                 del imod[proc.r_rdp['name']]['dict'][name]
             else:
                 del imod[proc.r_rdp['name']]['_vt']['dict'][name]
+
+def prim_compiled_class_method_flag(proc):
+    if proc.locals['cfun'] in proc.r_rdp['methods'].values():
+        return proc.interpreter.interned_symbol_for("instance_method")
+    elif proc.locals['cfun'] in proc.r_rdp['own_methods'].values():
+        return proc.interpreter.interned_symbol_for("class_method")
+    return None
 
 def prim_mirror_fields(proc):
     mirrored = proc.r_rdp['mirrored']
