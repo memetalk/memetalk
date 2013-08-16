@@ -346,7 +346,6 @@ class ModuleLoader(ASTBuilder):
     def recompile_closure(self, i, cfun, src):
         self.line_offset = 0
         self.pos_stack = []
-        self.filename = '?'
 
         self.parser = MemeParser(src)
         self.parser.i = self
@@ -384,7 +383,6 @@ class ModuleLoader(ASTBuilder):
     def compile_closure(self, i, src, outer):
         self.line_offset = 0
         self.pos_stack = []
-        self.filename = '?'
 
         self.parser = MemeParser(src)
         self.parser.i = self
@@ -463,7 +461,6 @@ class ModuleLoader(ASTBuilder):
         self.line_offset = 0
         self.pos_stack = []
         #self.function_line_offset = 0
-        self.filename = filename
 
         self.parser = MemeParser(src)
         self.parser.i = self
