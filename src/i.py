@@ -45,6 +45,9 @@ def _should_dump_mast():
 def _should_dump_ast():
     return 'DEBUG' in os.environ
 
+def _should_warn_of_exception():
+    return 'DEBUG' in os.environ
+
 
 def _create_compiled_module(data):
     template = {"_vt": core.CompiledModule,
@@ -732,7 +735,8 @@ class Interpreter():
         raise MemetalkException(mex)
 
     def throw_with_value(self, value):
-        print "MemetalkException with value: \n" + value
+        if _should_warn_of_exception():
+            print "MemetalkException with value: \n" + value
         ex = self.create_instance(core.Exception)
 
         # ...and this me being stupid:
