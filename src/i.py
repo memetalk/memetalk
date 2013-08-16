@@ -145,11 +145,6 @@ def _compiled_functions_to_functions(cfuns, imodule):
         funs[name] = _function_from_cfunction(fun, imodule)
     return funs
 
-def _create_instance(klass, data):
-    template = {"_vt": klass,
-                "_delegate": None}
-    return dict(template.items() + data.items())
-
 
 def _instantiate_module(i, compiled_module, _args, parent_module):
     def setup_module_arguments(_args, compiled_module):
@@ -652,7 +647,8 @@ class Interpreter():
         self.compiled_modules = {}
         self.processes = []
         self.current_process = None
-        self.mem_imodules = [core.kernel_imodule]
+        self.memory = []
+        self.imods = []
         self.interned_symbols = {}
 
     def open_module_file(self, filename):
@@ -686,7 +682,7 @@ class Interpreter():
         target_process.debugger_process = Process(self)
         self.processes.append(target_process.debugger_process)
 
-        mmprocess = self.alloc(core.VMProcess, {'self':target_process})
+        mmprocess = self.alloc_object(core.VMProcess, {'self':target_process})
         ret = target_process.debugger_process.switch('run_module', 'debug', imodule, [mmprocess])
         print('debug_process: switch back from debugger_process')
         return ret
@@ -707,8 +703,11 @@ class Interpreter():
 
     def instantiate_module(self, compiled_module, args, imodule):
         imodule = _instantiate_module(self, compiled_module, args, imodule)
-        self.mem_imodules.append(imodule)
+        self.imods.append(imodule)
         return imodule
+
+    def imodules(self):
+        return self.imods
 
     def compile_module_lib(self, spec):
         name = spec[1]
@@ -741,15 +740,6 @@ class Interpreter():
 
         # MemetalkException encapsulates the memetalk exception:
         raise MemetalkException(ex)
-
-    def create_instance(self, klass):
-        p = None
-        if klass["parent"] != None:
-            p = self.create_instance(klass["parent"])
-        fields = klass["compiled_class"]["fields"]
-        name = klass["compiled_class"]["name"]
-        res = dict([(x,None) for x in fields] + {"_vt": klass, "_delegate":p, "@tag": name + " instance"}.items() )
-        return res
 
     def create_compiled_function(self, data):
         return _create_compiled_function(data)
@@ -811,12 +801,27 @@ class Interpreter():
         else:
             return False
 
-    def alloc(self, klass, data):
-        return _create_instance(klass, data)
+    def create_instance(self, klass):
+        p = None
+        if klass["parent"] != None:
+            p = self.create_instance(klass["parent"])
+        fields = klass["compiled_class"]["fields"]
+        name = klass["compiled_class"]["name"]
+        res = dict([(x,None) for x in fields] + {"_vt": klass, "_delegate":p, "@tag": name + " instance"}.items() )
+        return self.alloc(res)
+
+    def alloc_object(self, klass, data):
+        template = {"_vt": klass,
+                "_delegate": None}
+        return self.alloc(dict(template.items() + data.items()))
+
+    def alloc(self, obj):
+        self.memory.append(obj)
+        return obj
 
     def interned_symbol_for(self, s):
         if s not in self.interned_symbols:
-            self.interned_symbols[s] = self.alloc(core.Symbol, {'self':s})
+            self.interned_symbols[s] = self.alloc_object(core.Symbol, {'self':s})
         return self.interned_symbols[s]
 
     def shitty_get_module_from_cfunction(self, cfun):

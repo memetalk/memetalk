@@ -64,14 +64,14 @@ def prim_exception_raise(proc):
 
 def prim_vmprocess(proc):
     VMProcessClass = proc.interpreter.get_vt(proc)
-    return proc.interpreter.alloc(VMProcessClass, {'self':proc})
+    return proc.interpreter.alloc_object(VMProcessClass, {'self':proc})
 
 def prim_vmprocess_stack_frames(proc):
     _proc = _lookup_field(proc, proc.r_rp, 'self')
     VMStackFrameClass = proc.interpreter.get_core_class('VMStackFrame')
     # first r_cp on stack is None
-    return [proc.interpreter.alloc(VMStackFrameClass,{'self':x}) for x in _proc.stack if x['r_cp']] +\
-        [proc.interpreter.alloc(VMStackFrameClass,{'self':_proc.top_frame()})]
+    return [proc.interpreter.alloc_object(VMStackFrameClass,{'self':x}) for x in _proc.stack if x['r_cp']] +\
+        [proc.interpreter.alloc_object(VMStackFrameClass,{'self':_proc.top_frame()})]
 
 def prim_vmprocess_step_into(proc):
     print '+ENTER prim_vmprocess_step_into'
@@ -397,7 +397,7 @@ def prim_get_compiled_class(proc):
 
 def prim_get_current_process(proc):
     VMProcess = proc.interpreter.get_core_class('VMProcess')
-    return proc.interpreter.alloc(VMProcess, {'self': proc})
+    return proc.interpreter.alloc_object(VMProcess, {'self': proc})
 
 def prim_compiled_class_constructors(proc):
     return dict([(name, cfun) for name,cfun in proc.r_rdp['own_methods'].iteritems() if cfun['is_ctor']])
@@ -412,7 +412,7 @@ def prim_compiled_class_rename(proc):
 
     del cmod['compiled_classes'][old_name]
     cmod['compiled_classes'][new_name] = klass
-    for imod in proc.interpreter.mem_imodules:
+    for imod in proc.interpreter.imodules():
         if imod['_vt']['compiled_module'] == cmod:
             iklass = imod[old_name]
             del imod[old_name]
@@ -437,7 +437,7 @@ def prim_compiled_class_add_method(proc):
         proc.interpreter.throw_with_value("Unknown flag: " + pformat(flag,1,80,2))
 
     # add the function to the instantiated classes:
-    for imod in proc.interpreter.mem_imodules:
+    for imod in proc.interpreter.imodules():
         if imod['_vt']['compiled_module'] == proc.r_rdp['module']:
             fun = proc.interpreter.create_function_from_cfunction(cfun, imod)
             if flag['self'] == 'instance_method':
@@ -458,7 +458,7 @@ def prim_compiled_class_remove_method(proc):
         del proc.r_rdp['own_methods'][name]
 
     # removing function from instances:
-    for imod in proc.interpreter.mem_imodules:
+    for imod in proc.interpreter.imodules():
         if imod['_vt']['compiled_module'] == proc.r_rdp['module']:
             if flag['self'] == 'instance_method':
                 del imod[proc.r_rdp['name']]['dict'][name]
@@ -540,7 +540,7 @@ def prim_compiled_module_remove_function(proc):
     del cmod['compiled_functions'][name]
 
     # removing function from instances:
-    for imod in proc.interpreter.mem_imodules:
+    for imod in proc.interpreter.imodules():
         if imod['_vt']['compiled_module'] == cmod:
             # remove the getter...
             del imod['_vt']['dict'][name]
@@ -555,7 +555,7 @@ def prim_compiled_module_add_function(proc):
     cmod['compiled_functions'][cfun['name']] = cfun
 
     # add the function to the module instances:
-    for imod in proc.interpreter.mem_imodules:
+    for imod in proc.interpreter.imodules():
         if imod['_vt']['compiled_module'] == cmod:
             fun = proc.interpreter.create_function_from_cfunction(cfun, imod)
             # add the getter
@@ -571,7 +571,7 @@ def prim_compiled_module_new_class(proc):
 
     cmod['compiled_classes'][name] = klass
 
-    for imod in proc.interpreter.mem_imodules:
+    for imod in proc.interpreter.imodules():
         if imod['_vt']['compiled_module'] == cmod:
             cb = {"_vt": proc.interpreter.get_core_class("Behavior"),
                   "parent": proc.interpreter.get_core_class("ObjectBehavior")['_vt'],
@@ -592,7 +592,7 @@ def prim_compiled_module_add_class(proc):
     klass['module'] = cmod
 
     cmod['compiled_classes'][name] = klass
-    for imod in proc.interpreter.mem_imodules:
+    for imod in proc.interpreter.imodules():
         if imod['_vt']['compiled_module'] == cmod:
             cb = {"_vt": proc.interpreter.get_core_class("Behavior"),
                   "parent": proc.lookup_in_modules(klass["super_class_name"], imod)['_vt'],
@@ -613,7 +613,7 @@ def prim_compiled_module_remove_class(proc):
     del cmod['compiled_classes'][name]
 
     # removing function from instances:
-    for imod in proc.interpreter.mem_imodules:
+    for imod in proc.interpreter.imodules():
         if imod['_vt']['compiled_module'] == cmod:
             del imod[name]
             del imod['_vt']['dict'][name]
@@ -843,13 +843,13 @@ def prim_qt_qmainwindow_menu_bar(proc):
     QMenuBarClass = proc.r_mp["QMenuBar"]
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
     qt_bar_instance = qtobj.menuBar()
-    return proc.interpreter.alloc(QMenuBarClass, {'self':qt_bar_instance})
+    return proc.interpreter.alloc_object(QMenuBarClass, {'self':qt_bar_instance})
 
 def prim_qt_qmainwindow_status_bar(proc):
     QWidgetClass = proc.r_mp["QWidget"]
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
     qt_bar_instance = qtobj.statusBar()
-    return proc.interpreter.alloc(QWidgetClass, {'self':qt_bar_instance})
+    return proc.interpreter.alloc_object(QWidgetClass, {'self':qt_bar_instance})
 
 # QPlainTextEdit
 def prim_qt_qplaintextedit_new(proc):
@@ -871,7 +871,7 @@ def prim_qt_qplaintextedit_text_cursor(proc):
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
     qt_cursor = qtobj.textCursor()
     QTextCursorClass = proc.r_mp["QTextCursor"]
-    return proc.interpreter.alloc(QTextCursorClass, {'self':qt_cursor})
+    return proc.interpreter.alloc_object(QTextCursorClass, {'self':qt_cursor})
 
 def prim_qt_qplaintextedit_set_text_cursor(proc):
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
@@ -900,7 +900,7 @@ def prim_qt_qmenubar_add_menu(proc):
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
     qt_menu_instance = qtobj.addMenu(label)
     QMenuClass = proc.r_mp["QMenu"]
-    return proc.interpreter.alloc(QMenuClass, {'self':qt_menu_instance})
+    return proc.interpreter.alloc_object(QMenuClass, {'self':qt_menu_instance})
 
 # QAction
 def prim_qt_qaction_new(proc):
@@ -1221,7 +1221,7 @@ def prim_qt_qtablewidget_vertical_header(proc):
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
     header = qtobj.verticalHeader()
     QHeaderViewClass = proc.r_mp['QHeaderView']
-    return proc.interpreter.alloc(QHeaderViewClass, {'self':header})
+    return proc.interpreter.alloc_object(QHeaderViewClass, {'self':header})
 
 def prim_qt_qtablewidget_set_selection_mode(proc):
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
@@ -1232,7 +1232,7 @@ def prim_qt_qtablewidget_horizontal_header(proc):
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
     header = qtobj.horizontalHeader()
     QHeaderViewClass = proc.r_mp['QHeaderView']
-    return proc.interpreter.alloc(QHeaderViewClass, {'self':header})
+    return proc.interpreter.alloc_object(QHeaderViewClass, {'self':header})
 
 def prim_qt_qtablewidget_set_item(proc):
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
