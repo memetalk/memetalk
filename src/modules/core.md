@@ -222,6 +222,9 @@ module core() {
     instance_method newClass: fun(name) {
       <primitive "compiled_module_new_class">
     }
+    instance_method addClass: fun(klass) {
+      <primitive "compiled_module_add_class">
+    }
     instance_method removeClass: fun(name) {
       <primitive "compiled_module_remove_class">
     }

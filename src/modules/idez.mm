@@ -923,7 +923,15 @@ module idez(qt,io)
       action = qt.QAction.new("&Add Class", execMenu);
       action.setShortcut("alt+c,a");
       action.connect("triggered", fun() {
-        io.print("Add class");
+        this.action_addClass();
+      });
+      action.setShortcutContext(1);
+      execMenu.addAction(action);
+
+      action = qt.QAction.new("Delete Class", execMenu);
+      action.setShortcut("alt+c,k");
+      action.connect("triggered", fun() {
+        this.action_deleteClass();
       });
       action.setShortcutContext(1);
       execMenu.addAction(action);
@@ -1003,6 +1011,47 @@ module idez(qt,io)
       } else {
         @statusLabel.setText("No function selected");
       }
+    }
+
+    instance_method action_addClass: fun() {
+      if (@current_cmodule == null) {
+        @statusLabel.setText("No current module");
+        return true;
+      }
+
+      @miniBuffer.prompt("New class: ", "", fun(name) {
+        this.command(fun() {
+          @current_cmodule.newClass(name);
+          this.show_module(@current_cmodule.name);
+          @statusLabel.setText("Class added: " + name);
+        }, fun() {
+          @current_cmodule.removeClass(name);
+          this.show_module(@current_cmodule.name);
+          @statusLabel.setText("Class removed: " + name);
+        });
+      });
+    }
+
+    instance_method action_deleteClass: fun() {
+      if (@current_cmodule == null) {
+        @statusLabel.setText("No current module");
+        return true;
+      }
+
+      @miniBuffer.prompt("Delete class: ", "", fun(name) {
+        if (!@current_cmodule.compiled_classes.has(name)) {
+          @statusLabel.setText("No class found: " + name);
+          return true;
+        }
+        var klass = @current_cmodule.compiled_classes[name];
+        this.command(fun() {
+          @current_cmodule.removeClass(name);
+          this.show_module(@current_cmodule.name);
+        }, fun() {
+          @current_cmodule.addClass(klass);
+          this.show_module(@current_cmodule.name);
+        });
+      });
     }
 
     instance_method action_renameClass: fun() {

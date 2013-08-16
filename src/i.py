@@ -757,6 +757,9 @@ class Interpreter():
     def create_compiled_function(self, data):
         return _create_compiled_function(data)
 
+    def compiled_functions_to_functions(self, cfuns, imod):
+        return _compiled_functions_to_functions(cfuns, imod)
+
     def create_compiled_class(self, data):
         return _create_compiled_class(data)
 
@@ -1132,14 +1135,15 @@ class Process(greenlet):
                 return self.locals[name]
 
         #-module params + module entries
-        def lookup_in_modules(name, mp):
-            if name in mp:
-                return mp[name]
-            elif mp['_delegate'] != None:
-                return lookup_in_modules(name, mp['_delegate'])
-            else:
-                self.interpreter.throw_with_value("Undeclared var: " + name + " : "+pformat(self.r_cp['compiled_function'],1,80,1))
-        return lookup_in_modules(name, self.r_mp)
+        return self.lookup_in_modules(name, self.r_mp)
+
+    def lookup_in_modules(self, name, mp):
+        if name in mp:
+            return mp[name]
+        elif mp['_delegate'] != None:
+            return self.lookup_in_modules(name, mp['_delegate'])
+        else:
+            self.interpreter.throw_with_value("Undeclared var: " + name + " : "+pformat(self.r_cp['compiled_function'],1,80,1))
 
     def eval_do_return(self, value, ast):
         self.r_ip = ast

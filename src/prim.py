@@ -560,13 +560,13 @@ def prim_compiled_module_new_class(proc):
                                                     "module": cmod})
 
     cmod['compiled_classes'][name] = klass
-    cb = {"_vt": proc.interpreter.get_core_class("ObjectBehavior"),
-          "parent": proc.interpreter.get_core_class("ObjectBehavior")['_vt'],
-          "dict": {},
-          "@tag": name + "Behavior"}
 
     for imod in proc.interpreter.mem_imodules:
         if imod['_vt']['compiled_module'] == cmod:
+            cb = {"_vt": proc.interpreter.get_core_class("Behavior"),
+                  "parent": proc.interpreter.get_core_class("ObjectBehavior")['_vt'],
+                  "dict": {},
+                  "@tag": name + "Behavior"}
             imod['_vt']['dict'][name] = proc.interpreter.create_accessor_method(imod, name)
             imod[name] = proc.interpreter.create_class({"_vt": cb,
                                                         "parent": proc.interpreter.get_core_class("Object"),
@@ -574,6 +574,28 @@ def prim_compiled_module_new_class(proc):
                                                         "compiled_class": klass,
                                                         "@tag": name + " Class"})
     return klass
+
+def prim_compiled_module_add_class(proc):
+    klass = proc.locals['klass']
+    name = klass['name']
+    cmod = proc.r_rdp
+    klass['module'] = cmod
+
+    cmod['compiled_classes'][name] = klass
+    for imod in proc.interpreter.mem_imodules:
+        if imod['_vt']['compiled_module'] == cmod:
+            cb = {"_vt": proc.interpreter.get_core_class("Behavior"),
+                  "parent": proc.lookup_in_modules(klass["super_class_name"], imod)['_vt'],
+                  "dict": proc.interpreter.compiled_functions_to_functions(klass["own_methods"], imod),
+                  "@tag": name + "Behavior"}
+            imod['_vt']['dict'][name] = proc.interpreter.create_accessor_method(imod, name)
+            imod[name] = proc.interpreter.create_class({"_vt": cb,
+                                                        "parent": proc.interpreter.get_core_class("Object"),
+                                                        "dict": {},
+                                                        "compiled_class": klass,
+                                                        "@tag": name + " Class"})
+    return klass
+
 
 def prim_compiled_module_remove_class(proc):
     name = proc.locals['name']
