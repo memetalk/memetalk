@@ -661,17 +661,6 @@ class Interpreter():
         else:
             return open(os.path.join(MODULES_PATH, filename))
 
-    # def load_modules(self):
-    #     sources = [f[:-3] for f in os.listdir(MODULES_PATH) \
-    #                    if os.path.isfile(os.path.join(MODULES_PATH,f)) and \
-    #                    f != 'core.md']
-
-    #     for name in sources:
-    #         cm = self.compile_module(name)
-    #         self.compiled_modules[cm['name']] = cm #TODO: should be msg send
-    #     br()
-    #     self.compiled_modules[core.kernel_imodule['name']] = core.kernel_imodule
-
     def start(self, filename):
         #self.load_modules()
         try:
