@@ -421,6 +421,24 @@ def prim_compiled_class_rename(proc):
             imod['_vt']['dict'][new_name] = proc.interpreter.create_accessor_method(imod, new_name)
     return proc.r_rdp
 
+def prim_compiled_class_set_fields(proc):
+    klass = proc.r_rdp
+    fields = proc.locals['fields']
+
+    def diff(a, b):
+        b = set(b)
+        return [aa for aa in a if aa not in b]
+
+    rm =  diff(klass['fields'], fields)
+    add = diff(fields, klass['fields'])
+
+    for obj in proc.interpreter.memory:
+        if 'compiled_class' in obj['_vt'] and obj['_vt']['compiled_class'] == klass:
+            for f in rm: del obj[f]
+            for f in add: obj[f] = None
+    klass['fields'] = fields
+
+
 def prim_compiled_class_class_methods(proc):
     return dict([(name, cfun) for name,cfun in proc.r_rdp['own_methods'].iteritems() if not cfun['is_ctor']])
 

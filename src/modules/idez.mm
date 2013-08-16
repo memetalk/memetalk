@@ -947,7 +947,7 @@ module idez(qt,io)
       action = qt.QAction.new("Edit &Fields", execMenu);
       action.setShortcut("alt+c,f");
       action.connect("triggered", fun() {
-        io.print("Edit fields");
+        this.action_editFields();
       });
       action.setShortcutContext(1);
       execMenu.addAction(action);
@@ -1070,6 +1070,33 @@ module idez(qt,io)
             klass.rename(name);
             this.show_module(@current_cmodule.name);
             @statusLabel.setText("Class " + new_name + " renamed to " + name);
+          });
+        });
+        return false;
+      });
+    }
+
+    instance_method action_editFields: fun() {
+      if (@current_cmodule == null) {
+        @statusLabel.setText("No current module");
+        return true;
+      }
+
+      @miniBuffer.prompt("Edit fields for class: ", "", fun(name) {
+        if (!@current_cmodule.compiled_classes.has(name)) {
+          @statusLabel.setText("No class found: " + name);
+          return true;
+        }
+        var klass = @current_cmodule.compiled_classes[name];
+        var doc = @webview.page().mainFrame().documentElement();
+        var old_fields = klass.fields;
+        @miniBuffer.prompt("Fields: ", klass.fields.toString, fun(fields) {
+          this.command(fun() {
+            klass.setFields(fields.split(","));
+            doc.findFirst("#" + klass.fullName + " .fields_list").setPlainText(fields.toString());
+          }, fun() {
+            klass.setFields(old_fields);
+            doc.findFirst("#" + klass.fullName + " .fields_list").setPlainText(old_fields.toString());
           });
         });
         return false;

@@ -80,6 +80,9 @@ module core() {
     instance_method fields: fun() {
       return @fields;
     }
+    instance_method setFields: fun(fields) {
+      <primitive "compiled_class_set_fields">
+    }
     instance_method super_class_name: fun() {
       return @super_class_name;
     }
