@@ -227,7 +227,12 @@ module idez(qt,io)
 
     instance_method debugIt: fun() {
       try {
-        var fn = evalWithVarsFn(this.selectedText(), @getContext(), @getIModule);
+        var fn = null;
+        if (@getContext) {
+          fn = evalWithVarsFn(this.selectedText(), @getContext(), @getIModule());
+        } else {
+          fn = evalWithVarsFn(this.selectedText(), @getFrame(), @getIModule());
+        }
         VMProcess.debug(fn,[]);
         if (@afterEval) {
           @afterEval(fn.getEnv());
@@ -258,7 +263,7 @@ module idez(qt,io)
       this.setWindowTitle("Workspace");
 
       @editor = Editor.new(this, fun() { @variables },
-                           fun() { thisContext }, null,
+                           fun() { thisModule }, null,
                            fun(env) { @variables = env + @variables; });
 
       @editor.initActions();
@@ -293,7 +298,7 @@ module idez(qt,io)
 
       @textArea = Editor.new(centralWidget,
                              fun() { {"this" : @inspectee} },
-                             fun() { thisContext }, null, null);
+                             fun() { thisModule }, null, null);
 
       hbox.addWidget(@textArea);
 
@@ -786,7 +791,9 @@ module idez(qt,io)
           }
         } else {
           if (params.has("code")) {
-            e = ExplorerEditor.new(null, null, fun() { @variables }, null,
+            e = ExplorerEditor.new(null, null, fun() { @variables },
+                                   fun() { this.currentIModule() },
+                                   null,
                                    fun(env) { @variables = env + @variables;});
           }
         }
@@ -1007,7 +1014,7 @@ module idez(qt,io)
           if (@imodule) {
             imod = @imodule;
           } else {
-            imod = thisContext;
+            imod = thisModule;
           }
           var r = evalWithVars(expr, {}, imod);
           @statusLabel.setText(r["result"].toString());
