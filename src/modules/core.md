@@ -89,11 +89,11 @@ module core() {
     instance_method classMethods: fun() {
       <primitive "compiled_class_class_methods">
     }
-    instance_method addInstanceMethod: fun(cfun) {
-      <primitive "compiled_class_add_instance_method">
+    instance_method addMethod: fun(cfun, flag) {
+      <primitive "compiled_class_add_method">
     }
-    instance_method removeInstanceMethod: fun(name) {
-      <primitive "compiled_class_remove_instance_method">
+    instance_method removeMethod: fun(name, flag) {
+      <primitive "compiled_class_remove_method">
     }
   }
 

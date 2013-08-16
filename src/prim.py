@@ -402,27 +402,43 @@ def prim_compiled_class_constructors(proc):
 def prim_compiled_class_class_methods(proc):
     return dict([(name, cfun) for name,cfun in proc.r_rdp['own_methods'].iteritems() if not cfun['is_ctor']])
 
-def prim_compiled_class_add_instance_method(proc):
+def prim_compiled_class_add_method(proc):
     cfun = proc.locals['cfun']
-    proc.r_rdp['methods'][cfun['name']] = cfun
+    flag = proc.locals['flag']
+
+    # add the function to the compiled class
+    if flag['self'] == 'instance_method':
+        proc.r_rdp['methods'][cfun['name']] = cfun
+    else:
+        proc.r_rdp['own_methods'][cfun['name']] = cfun
     # add the function to the instantiated classes:
     for imod in proc.interpreter.mem_imodules:
         if imod['_vt']['compiled_module'] == proc.r_rdp['module']:
             fun = proc.interpreter.create_function_from_cfunction(cfun, imod)
-            imod[proc.r_rdp['name']]['dict'][cfun['name']] = fun
-
+            if flag['self'] == 'instance_method':
+                imod[proc.r_rdp['name']]['dict'][cfun['name']] = fun
+            else:
+                imod[proc.r_rdp['name']]['_vt']['dict'][cfun['name']] = fun
     return proc.r_rp
 
-def prim_compiled_class_remove_instance_method(proc):
+def prim_compiled_class_remove_method(proc):
     name = proc.locals['name']
+    flag = proc.locals['flag']
     cclass = proc.r_rdp
-    # removing function from compiled module
-    del cclass['methods'][name]
+
+    # removing function from compiled class
+    if flag['self'] == 'instance_method':
+        del proc.r_rdp['methods'][name]
+    else:
+        del proc.r_rdp['own_methods'][name]
 
     # removing function from instances:
     for imod in proc.interpreter.mem_imodules:
         if imod['_vt']['compiled_module'] == proc.r_rdp['module']:
-            del imod[proc.r_rdp['name']]['dict'][name]
+            if flag['self'] == 'instance_method':
+                del imod[proc.r_rdp['name']]['dict'][name]
+            else:
+                del imod[proc.r_rdp['name']]['_vt']['dict'][name]
 
 def prim_mirror_fields(proc):
     mirrored = proc.r_rdp['mirrored']

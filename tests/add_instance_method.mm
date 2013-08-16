@@ -11,7 +11,7 @@ module foo() {
     var code = "fun() { return 42; }";
     var klass = get_compiled_class(X);
     var cfun = CompiledFunction.newTopLevel("bar", code, klass, :instance_method);
-    klass.addInstanceMethod(cfun);
+    klass.addMethod(cfun, :instance_method);
     assert(x.bar == 42, "Adding instance method");
   }
 }

@@ -3,17 +3,16 @@ module foo() {
   class X {
     init new: fun() {
     }
-    instance_method bar: fun() {
+    class_method bar: fun() {
       return 42;
     }
   }
 
   main: fun() {
-    var x = X.new;
     var klass = get_compiled_class(X);
-    klass.removeMethod("bar", :instance_method);
+    klass.removeMethod("bar", :class_method);
     try {
-      x.bar();
+      X.bar();
       assert(false, "Shouldn't be here");
     } catch(e) {
       assert(e, "x.bar does not exist anymore");

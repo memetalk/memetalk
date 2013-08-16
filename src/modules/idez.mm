@@ -1061,13 +1061,13 @@ module idez(qt,io)
         var doc = @webview.page().mainFrame().documentElement();
         var mlist = doc.findFirst("#menu-listing .link-list");
         this.command(fun() {
-          klass.addInstanceMethod(cfun); //TODO: addInstanceMe
+          klass.addMethod(cfun, flag);
           this.showEditorForFunction(cfun, "instance_method", "div[id='imethods_" + klass.name + "']");
           @statusLabel.setText("Method added: " + cfun.fullName);
           mlist.appendInside("<li><a href='#" + cfun.fullName + "'>" + cfun.fullName + "</a></li>");
         }, fun() {
           mlist.findFirst("li a[href='#" + cfun.fullName + "']").setAttribute("style","display:none");
-          klass.removeInstanceMethod(method_name); //TODO: removeInstancemeth
+          klass.removeMethod(method_name, flag);
           doc.findFirst("div[id='" + cfun.fullName + "']").takeFromDocument();
           @statusLabel.setText("Method removed: " + cfun.fullName);
         });
