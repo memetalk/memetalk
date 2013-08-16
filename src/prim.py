@@ -553,6 +553,40 @@ def prim_compiled_module_add_function(proc):
             # add the function to the dict:
             imod[cfun['name']] = fun
 
+def prim_compiled_module_new_class(proc):
+    name = proc.locals['name']
+    cmod = proc.r_rdp
+    klass = proc.interpreter.create_compiled_class({"name": name,
+                                                    "module": cmod})
+
+    cmod['compiled_classes'][name] = klass
+    cb = {"_vt": proc.interpreter.get_core_class("ObjectBehavior"),
+          "parent": proc.interpreter.get_core_class("ObjectBehavior")['_vt'],
+          "dict": {},
+          "@tag": name + "Behavior"}
+
+    for imod in proc.interpreter.mem_imodules:
+        if imod['_vt']['compiled_module'] == cmod:
+            imod['_vt']['dict'][name] = proc.interpreter.create_accessor_method(imod, name)
+            imod[name] = proc.interpreter.create_class({"_vt": cb,
+                                                        "parent": proc.interpreter.get_core_class("Object"),
+                                                        "dict": {},
+                                                        "compiled_class": klass,
+                                                        "@tag": name + " Class"})
+    return klass
+
+def prim_compiled_module_remove_class(proc):
+    name = proc.locals['name']
+    cmod = proc.r_rdp
+    del cmod['compiled_classes'][name]
+
+    # removing function from instances:
+    for imod in proc.interpreter.mem_imodules:
+        if imod['_vt']['compiled_module'] == cmod:
+            del imod[name]
+            del imod['_vt']['dict'][name]
+    return proc.r_rdp
+
 # lookup the inner handle of the actual binding object
 # which is set -- this is because a hierarchy of delegates
 # will have the same field (say, QMainWindow < QWidget both

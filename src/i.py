@@ -757,6 +757,12 @@ class Interpreter():
     def create_compiled_function(self, data):
         return _create_compiled_function(data)
 
+    def create_compiled_class(self, data):
+        return _create_compiled_class(data)
+
+    def create_class(self, data):
+        return _create_class(data)
+
     def create_function_from_cfunction(self, cfun, imodule):
         return _function_from_cfunction(cfun, imodule)
 
