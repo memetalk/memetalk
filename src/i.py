@@ -674,14 +674,19 @@ class Interpreter():
 
     def start(self, filename):
         #self.load_modules()
-        compiled_module = self.compiled_module_by_filename(filename)
+        try:
+            compiled_module = self.compiled_module_by_filename(filename)
 
-        imodule = self.instantiate_module(compiled_module, {}, core.kernel_imodule)
+            imodule = self.instantiate_module(compiled_module, {}, core.kernel_imodule)
 
-        self.current_process = Process(self)
-        self.processes.append(self.current_process)
-        ret = self.current_process.switch('run_module', 'main', imodule, [])
-        print "RETVAL: " + pformat(ret,1,80,2)
+            self.current_process = Process(self)
+            self.processes.append(self.current_process)
+        except MemetalkException as e:
+            print "Exception raised during the boot: " + e.mmobj()['value']
+            print traceback.format_exc()
+        else:
+            ret = self.current_process.switch('run_module', 'main', imodule, [])
+            print "RETVAL: " + pformat(ret,1,80,2)
 
     def debug_process(self, target_process):
         target_process.state = 'paused'
