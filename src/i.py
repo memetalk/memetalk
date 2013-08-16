@@ -644,6 +644,7 @@ class Interpreter():
         self.processes = []
         self.current_process = None
         self.mem_imodules = [core.kernel_imodule]
+        self.interned_symbols = {}
 
     def open_module_file(self, filename):
         if os.path.isfile(filename):
@@ -793,6 +794,11 @@ class Interpreter():
 
     def alloc(self, klass, data):
         return _create_instance(klass, data)
+
+    def interned_symbol_for(self, s):
+        if s not in self.interned_symbols:
+            self.interned_symbols[s] = self.alloc(core.Symbol, {'self':s})
+        return self.interned_symbols[s]
 
     def shitty_get_module_from_cfunction(self, cfun):
         # I'm crying now...
@@ -1090,6 +1096,9 @@ class Process(greenlet):
 
     def eval_access_this(self):
         return self.r_rp
+
+    def eval_symbol(self, s):
+        return self.interpreter.interned_symbol_for(s)
 
     def eval_access_var(self, name, ast):
         self.r_ip = ast

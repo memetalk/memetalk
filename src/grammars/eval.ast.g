@@ -52,7 +52,7 @@ arglist = [expr+:lst] -> lst
 
 atom = ['literal-string' :x]      -> x
     |  ['literal-number' :x]      -> x
-    |  ['literal-symbol' :x]      -> self.i.todo32()
+    |  ['literal-symbol' :x]      -> self.i.do_eval("eval_symbol",x)
     |  ['literal' 'this']         -> self.i.do_eval('eval_access_this',)
     |  ['literal' 'null']         -> None
     |  ['literal' 'true']         -> True

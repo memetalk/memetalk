@@ -239,6 +239,9 @@ module core() {
       <primitive "string_count">
     }
   }
+  class Symbol {
+   fields: self;
+  }
 
   class Dictionary {
     instance_method +: fun(arg) {
