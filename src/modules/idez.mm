@@ -727,11 +727,12 @@ module idez(qt,io)
   }
 
   class ModuleExplorer < QMainWindow {
-    fields: webview, miniBuffer, current_cmodule, chistory, statusLabel;
+    fields: webview, miniBuffer, current_cmodule, chistory, statusLabel, variables;
     init new: fun() {
       super.new();
 
       @chistory = CommandHistory.new();
+      @variables = {};
 
       this.setWindowTitle("Memetalk");
       this.resize(800,600);
@@ -752,34 +753,33 @@ module idez(qt,io)
       @webview.page().setLinkDelegationPolicy(2);
 
       @webview.page().enablePluginsWith("editor", fun(params) {
-        var variables = {};
 
         var e = null;
         if (params.has("function_type")) {
           if (params["function_type"] == "module") {
             var cfn = get_module(params["module_name"]).compiled_functions()[params["function_name"]];
-            e = ExplorerEditor.new(cfn, null, fun() { variables }, null,
-                                   fun(env) { variables = env + variables;});
+            e = ExplorerEditor.new(cfn, null, fun() { @variables }, null,
+                                   fun(env) { @variables = env + @variables;});
           }
           if (params["function_type"] == "ctor_method") {
             var cfn = get_module(params["module_name"]).compiled_classes()[params["class_name"]].constructors()[params["function_name"]];
-            e = ExplorerEditor.new(cfn, null, fun() { variables }, null,
-                                   fun(env) { variables = env + variables;});
+            e = ExplorerEditor.new(cfn, null, fun() { @variables }, null,
+                                   fun(env) { @variables = env + @variables;});
           }
           if (params["function_type"] == "class_method") {
             var cfn = get_module(params["module_name"]).compiled_classes()[params["class_name"]].classMethods()[params["function_name"]];
-            e = ExplorerEditor.new(cfn, null, fun() { variables }, null,
-                                   fun(env) { variables = env + variables;});
+            e = ExplorerEditor.new(cfn, null, fun() { @variables }, null,
+                                   fun(env) { @variables = env + @variables;});
           }
           if (params["function_type"] == "instance_method") {
             var cfn = get_module(params["module_name"]).compiled_classes()[params["class_name"]].instanceMethods()[params["function_name"]];
-            e = ExplorerEditor.new(cfn, null, fun() { variables }, null,
-                                   fun(env) { variables = env + variables;});
+            e = ExplorerEditor.new(cfn, null, fun() { @variables }, null,
+                                   fun(env) { @variables = env + @variables;});
           }
         } else {
           if (params.has("code")) {
-            e = ExplorerEditor.new(null, null, fun() { variables }, null,
-                                   fun(env) { variables = env + variables;});
+            e = ExplorerEditor.new(null, null, fun() { @variables }, null,
+                                   fun(env) { @variables = env + @variables;});
           }
         }
         if (e) {
