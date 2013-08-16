@@ -760,6 +760,9 @@ class Interpreter():
     def create_function_from_cfunction(self, cfun, imodule):
         return _function_from_cfunction(cfun, imodule)
 
+    def create_accessor_method(self, imodule, name):
+        return _create_accessor_method(imodule, name)
+
     def compiled_function_to_context(self, cfun, env, imodule):
         return _compiled_function_to_context(cfun, env, imodule)
 

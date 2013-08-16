@@ -1011,39 +1011,22 @@ module idez(qt,io)
         return true;
       }
 
-      var classes = @current_cmodule.compiled_classes;
       @miniBuffer.prompt("Rename class: ", "", fun(name) {
-        if (!classes.has(name)) {
+        if (!@current_cmodule.compiled_classes.has(name)) {
           @statusLabel.setText("No class found: " + name);
           return true;
         }
         var doc = @webview.page().mainFrame().documentElement();
-        var klass = classes[name];
+        var klass = @current_cmodule.compiled_classes[name];
         @miniBuffer.prompt("to: ", "", fun(new_name) {
           this.command(fun() {
-            var fns = [];
-            klass.constructors.each(fun(name, cfn) {
-              fns.add({"old_name": cfn.fullName(), "cfn": cfn});
-            });
-            klass.instanceMethods.each(fun(name, cfn) {
-              fns.add({"old_name": cfn.fullName(), "cfn": cfn});
-            });
-            klass.classMethods.each(fun(name, cfn) {
-              fns.add({"old_name": cfn.fullName(), "cfn": cfn});
-            });
-
-            klass.setName(new_name);
-            classes.remove(name);
-            classes.set(new_name, klass);
-            var div = doc.findFirst("div[id='" + name + "']");
-            div.findFirst(".class_name").setPlainText(new_name);
-            doc.findFirst("li[name='" + name + "']").setPlainText(new_name);
-            fns.each(fun(f) {
-              doc.findFirst("strong[name='" + f["old_name"] + "']").setPlainText(f["cfn"].fullName());
-            });
+            klass.rename(new_name);
+            this.show_module(@current_cmodule.name);
+            @statusLabel.setText("Class " + name + " renamed to " + new_name);
           }, fun() {
-            //TODO
-            return 11;
+            klass.rename(name);
+            this.show_module(@current_cmodule.name);
+            @statusLabel.setText("Class " + new_name + " renamed to " + name);
           });
         });
         return false;

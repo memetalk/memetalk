@@ -74,8 +74,8 @@ module core() {
     instance_method name: fun() {
       return @name;
     }
-    instance_method setName: fun(name) {
-      @name = name;
+    instance_method rename: fun(name) {
+      <primitive "compiled_class_rename">
     }
     instance_method fields: fun() {
       return @fields;

@@ -402,6 +402,25 @@ def prim_get_current_process(proc):
 def prim_compiled_class_constructors(proc):
     return dict([(name, cfun) for name,cfun in proc.r_rdp['own_methods'].iteritems() if cfun['is_ctor']])
 
+def prim_compiled_class_rename(proc):
+    klass = proc.r_rdp
+    new_name = proc.locals['name']
+    old_name = klass['name']
+    cmod = klass['module']
+
+    klass['name'] = new_name
+
+    del cmod['compiled_classes'][old_name]
+    cmod['compiled_classes'][new_name] = klass
+    for imod in proc.interpreter.mem_imodules:
+        if imod['_vt']['compiled_module'] == cmod:
+            iklass = imod[old_name]
+            del imod[old_name]
+            imod[new_name] = iklass
+            del imod['_vt']['dict'][old_name] # del accessor
+            imod['_vt']['dict'][new_name] = proc.interpreter.create_accessor_method(imod, new_name)
+    return proc.r_rdp
+
 def prim_compiled_class_class_methods(proc):
     return dict([(name, cfun) for name,cfun in proc.r_rdp['own_methods'].iteritems() if not cfun['is_ctor']])
 
