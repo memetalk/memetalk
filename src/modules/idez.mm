@@ -893,10 +893,10 @@ module idez(qt,io)
       action.setShortcutContext(1);
       execMenu.addAction(action);
 
-      action = qt.QAction.new("Edit Module &Aliases", execMenu);
-      action.setShortcut("alt+m,a");
+      action = qt.QAction.new("Edit Module &Default Parameters", execMenu);
+      action.setShortcut("alt+m,d");
       action.connect("triggered", fun() {
-        io.print("Edit module aliases");
+        this.action_editModuleDefaultParameters();
       });
       action.setShortcutContext(1);
       execMenu.addAction(action);
@@ -1070,6 +1070,33 @@ module idez(qt,io)
             klass.rename(name);
             this.show_module(@current_cmodule.name);
             @statusLabel.setText("Class " + new_name + " renamed to " + name);
+          });
+        });
+        return false;
+      });
+    }
+
+    instance_method action_editModuleDefaultParameters: fun() {
+      if (@current_cmodule == null) {
+        @statusLabel.setText("No current module");
+        return true;
+      }
+      @miniBuffer.prompt("Edit default parameter for: ", "", fun(name) {
+        if (!@current_cmodule.params().has(name)) {
+          @statusLabel.setText("parameter not found:" + name);
+          return true;
+        }
+        var dp = @current_cmodule.defaultParameterFor(name);
+        var doc = @webview.page().mainFrame().documentElement();
+        @miniBuffer.prompt("value: ", dp.toString, fun(val) {
+          this.command(fun() {
+            @current_cmodule.setDefaultParameter(name, val);
+            var lis = @current_cmodule.default_parameters.map(fun(name,d) { "<li>" + name + " : memetalk/" + d["value"] + "/1.0</li>"; });
+            doc.findFirst(".default-parameters").setInnerXml(lis.join(""));
+          }, fun() {
+            @current_cmodule.setDefaultParameter(name, dp);
+            var lis = @current_cmodule.default_parameters.map(fun(name,d) { "<li>" + name + " : memetalk/" + d["value"] + "/1.0</li>"; });
+            doc.findFirst(".default-parameters").setInnerXml(lis.join(""));
           });
         });
         return false;
@@ -1277,6 +1304,9 @@ module idez(qt,io)
       doc.findFirst("#module_title").setPlainText(@current_cmodule.name());
 
       doc.findFirst(".module_title_params").setPlainText(@current_cmodule.params.toString());
+
+      var dp = @current_cmodule.default_parameters.map(fun(name,d) { "<li>" + name + " : memetalk/" + d["value"] + "/1.0</li>"; });
+      doc.findFirst(".default-parameters").appendInside(dp.join(""));
 
       var mlist = doc.findFirst("#menu-listing .link-list");
 

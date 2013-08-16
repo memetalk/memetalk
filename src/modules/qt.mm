@@ -409,6 +409,9 @@ module qt(io)
     instance_method toOuterXml: fun() {
       <primitive "qt_qwebelement_to_outer_xml">
     }
+    instance_method setInnerXml: fun(xml) {
+      <primitive "qt_qwebelement_set_inner_xml">
+    }
     instance_method takeFromDocument: fun() {
       <primitive "qt_qwebelement_take_from_document">
     }

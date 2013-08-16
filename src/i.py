@@ -55,7 +55,7 @@ def _create_compiled_module(data):
                 "name": "",
                 "filepath":"",
                 "params": [],
-                "default_params": [],
+                "default_params": {},
                 "aliases": [],
                 "compiled_functions": {},
                 "compiled_classes": {},
@@ -148,12 +148,12 @@ def _instantiate_module(i, compiled_module, _args, parent_module):
     def setup_module_arguments(_args, compiled_module):
         args = dict(_args)
         # module's default argument
-        for mp in compiled_module['default_params']:
-            if mp[1] not in args.keys():
-                if mp[0] == 'lib':
-                    args[mp[1]] = i.compile_module_lib(mp[2])
-                elif mp[0] == 'uri':
-                    args[mp[1]] = i.compile_module_uri(mp[2])
+        for name,dp in compiled_module['default_params'].iteritems():
+            if name not in args.keys():
+                if dp['type'] == 'lib':
+                    args[name] = i.compile_module_lib(dp['value'])
+                elif dp['type'] == 'uri':
+                    args[name] = i.compile_module_uri(dp['value'])
                 else:
                     i.throw_with_value('Unknown module spec')
         if args.keys().sort() != compiled_module['params'].sort():
@@ -506,10 +506,10 @@ class ModuleLoader(ASTBuilder):
         self.current_module["params"] = p
 
     def l_default_p_lib(self, name, spec, args):
-        self.current_module['default_params'].append(("lib", name, spec, args))
+        self.current_module['default_params'][name] = {'name': name, 'type':'lib','value':spec[1]}
 
     def l_default_p_uri(self, name, uri, args):
-        self.current_module['default_params'].append(("uri", name, uri, args))
+        self.current_module['default_params'][name] = {'name': name, 'type':'uri','value':spec[1]}
 
     def l_module_alias(self, libname, aliases):
         self.current_module['aliases'].append((libname, aliases))
@@ -704,8 +704,7 @@ class Interpreter():
     def imodules(self):
         return self.imods
 
-    def compile_module_lib(self, spec):
-        name = spec[1]
+    def compile_module_lib(self, name):
         compiled_module = self.compiled_module_by_filename(name + '.mm')
         return self.instantiate_module(compiled_module, {}, core.kernel_imodule)
 

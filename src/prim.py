@@ -167,8 +167,11 @@ def prim_vmstackframe_local_vars(proc):
     return frame['locals']
 
 def prim_io_print(proc):
-    if isinstance(proc.locals['arg'], basestring):
-        print proc.locals['arg']
+    arg = proc.locals['arg']
+    if isinstance(arg, basestring):
+        print arg
+    elif isinstance(arg, dict) and '_vt' not in arg:
+        print arg
     else:
         P(proc.locals["arg"],4)
 
@@ -419,7 +422,7 @@ def prim_compiled_class_rename(proc):
             imod[new_name] = iklass
             del imod['_vt']['dict'][old_name] # del accessor
             imod['_vt']['dict'][new_name] = proc.interpreter.create_accessor_method(imod, new_name)
-    return proc.r_rdp
+    return proc.r_rp
 
 def prim_compiled_class_set_fields(proc):
     klass = proc.r_rdp
@@ -538,6 +541,9 @@ def prim_list_has(proc):
 def prim_list_add(proc):
     return proc.r_rdp.append(proc.locals['value'])
 
+def prim_list_join(proc):
+    return proc.locals['sep'].join(proc.r_rdp)
+
 def prim_list_to_string(proc):
     ret = []
     for x in proc.r_rdp:
@@ -635,7 +641,20 @@ def prim_compiled_module_remove_class(proc):
         if imod['_vt']['compiled_module'] == cmod:
             del imod[name]
             del imod['_vt']['dict'][name]
-    return proc.r_rdp
+    return proc.r_rp
+
+def prim_compiled_module_default_parameter_for(proc):
+    # really simplorious, for the moment
+    if proc.locals['name'] in proc.r_rdp['default_params']:
+        return proc.r_rdp['default_params'][proc.locals['name']]['value']
+    else:
+        return None
+
+def prim_compiled_module_set_default_parameter(proc):
+    # really simplorious, for the moment
+    proc.r_rdp['default_params'][proc.locals['name']] = \
+        {'name': proc.locals['name'], 'type':'lib','value':proc.locals['m']}
+    return proc.r_rp
 
 # lookup the inner handle of the actual binding object
 # which is set -- this is because a hierarchy of delegates
@@ -1370,6 +1389,11 @@ def prim_qt_qwebelement_set_attribute(proc):
 def prim_qt_qwebelement_to_outer_xml(proc):
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
     return qstring_to_str(qtobj.toOuterXml())
+
+def prim_qt_qwebelement_set_inner_xml(proc):
+    qtobj = _lookup_field(proc, proc.r_rp, 'self')
+    qtobj.setInnerXml(proc.locals['xml'])
+    return proc.r_rp
 
 def prim_qt_qwebelement_take_from_document(proc):
     qtobj = _lookup_field(proc, proc.r_rp, 'self')

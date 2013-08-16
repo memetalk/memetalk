@@ -216,7 +216,13 @@ module core() {
     instance_method params: fun() {
       return @params;
     }
-    instance_method default: fun() {
+    instance_method defaultParameterFor: fun(name) {
+      <primitive "compiled_module_default_parameter_for">
+    }
+    instance_method setDefaultParameter: fun(name, m) {
+      <primitive "compiled_module_set_default_parameter">
+    }
+    instance_method default_parameters: fun() {
       return @default_params;
     }
     instance_method aliases: fun() {
@@ -325,6 +331,9 @@ module core() {
     }
     instance_method toString: fun() {
       <primitive "list_to_string">
+    }
+    instance_method join: fun(sep) {
+      <primitive "list_join">
     }
   }
 
