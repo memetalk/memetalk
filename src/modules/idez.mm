@@ -508,18 +508,20 @@ module idez(qt,io)
   }
 
   class DebuggerUI < QMainWindow {
-    fields: cont_on_exit, frame_index, process, execFrames, stackCombo, editor, localVarList, moduleVarList;
-    init new: fun(process) {
+    fields: frame_index, process, execFrames, stackCombo, editor, localVarList, moduleVarList, statusLabel, eventloop, execMenu;
+    init new: fun(process, eventloop) {
       super.new();
       @process = process;
-
-      @cont_on_exit = true;
+      @eventloop = eventloop;
       @frame_index = 0;
 
       this.resize(700,800);
       this.setWindowTitle("Debugger");
       var centralWidget = QWidget.new(this);
       var mainLayout = qt.QVBoxLayout.new(centralWidget);
+
+      @statusLabel = qt.QLabel.new(this.statusBar());
+      @statusLabel.setMinimumWidth(300);
 
       @execFrames = ExecutionFrames.new(process);
 
@@ -590,6 +592,7 @@ module idez(qt,io)
         //this.leaveContext(); //drop stack frame
       });
       execMenu.addAction(action);
+      @execMenu = execMenu;
 
       execMenu = this.menuBar().addMenu("&Exploring");
       action = qt.QAction.new("&Do it", this);
@@ -629,29 +632,48 @@ module idez(qt,io)
 
       @stackCombo.updateInfo();
     }
-    instance_method closeEvent: fun() {
-      if (@cont_on_exit) {
-        @process.continue();
-      }
+    instance_method disableActions: fun() {
+      @execMenu.actions.each(fun(ac) {
+        ac.setEnabled(false);
+      });
     }
+    instance_method enableActions: fun() {
+      @execMenu.actions.each(fun(ac) {
+        ac.setEnabled(true);
+      });
+    }
+
+    // instance_method closeEvent: fun() {
+    //   if (@cont_on_exit) {
+    //     @process.continue();
+    //   }
+    // }
+
     instance_method stepInto: fun() {
+      @statusLabel.setText("Stepping into...");
+      this.disableActions();
       if(@process.stepInto()) {
         @stackCombo.updateInfo();
+        this.enableActions();
+        @statusLabel.setText("done");
       } else {
-        @cont_on_exit = false;
-        this.close();
+        this.continue();
       }
     }
     instance_method stepOver: fun() {
+      @statusLabel.setText("Stepping over...");
+      this.disableActions();
       if(@process.stepOver()) {
         @stackCombo.updateInfo();
+        this.enableActions();
+        @statusLabel.setText("done");
       } else {
-        @cont_on_exit = false;
-        this.close();
+        this.continue();
       }
     }
     instance_method continue: fun() {
       this.close();
+      @eventloop.exit(0);
     }
     instance_method compileAndRewind: fun() {
       var text = @editor.text();
@@ -1443,9 +1465,10 @@ module idez(qt,io)
       eventloop = qt.QEventLoop.new();
     }
 
-    var dbg = DebuggerUI.new(process);
+    var dbg = DebuggerUI.new(process, eventloop);
     dbg.show();
     eventloop.exec();
     io.print("debug:main left loop");
+    return "continue";
   }
 }

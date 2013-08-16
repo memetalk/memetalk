@@ -82,7 +82,6 @@ def prim_vmprocess_step_into(proc):
     print 'vmprocess/step_into received: ' + str(ret)
     if 'done' in ret:
         print 'done...exiting qevent'
-        eventloop_processes[-1]['qtobj'].exit(0)
         eventloop_processes[-1]['done'] = True
         return False
     print 'vmprocess/step_into DONE'
@@ -96,25 +95,24 @@ def prim_vmprocess_step_over(proc):
     print 'vmprocess/step_over received: ' + str(ret)
     if 'done' in ret:
         print 'done...exiting qevent'
-        eventloop_processes[-1]['qtobj'].exit(0)
         eventloop_processes[-1]['done'] = True
         return False
     print 'vmprocess/step_over DONE'
     return True
 
-def prim_vmprocess_continue(proc):
-    print '+ENTER prim_vmprocess_continue'
-    _proc = _lookup_field(proc, proc.r_rp, 'self')
-    print 'vmprocess: sending continue'
-    ret = _proc.switch("continue")
-    print 'vmprocess/continue received: ' + str(ret)
-    if 'done' in ret:
-        print 'done...exiting qevent'
-        eventloop_processes[-1]['qtobj'].exit(0)
-        eventloop_processes[-1]['done'] = True
-        return False
-    print 'vmprocess/continue DONE'
-    return True
+# def prim_vmprocess_continue(proc):
+#     print '+ENTER prim_vmprocess_continue'
+#     _proc = _lookup_field(proc, proc.r_rp, 'self')
+#     print 'vmprocess: sending continue'
+#     ret = _proc.switch("continue")
+#     print 'vmprocess/continue received: ' + str(ret)
+#     if 'done' in ret:
+#         print 'done...exiting qevent'
+#         eventloop_processes[-1]['qtobj'].exit(0)
+#         eventloop_processes[-1]['done'] = True
+#         return False
+#     print 'vmprocess/continue DONE'
+#     return True
 
 def prim_vmprocess_rewind(proc):
     _proc = _lookup_field(proc, proc.r_rp, 'self')
@@ -752,6 +750,9 @@ def prim_qt_qeventloop_exec(proc):
     return proc.r_rdp['self'].exec_()
 
 def prim_qt_qeventloop_exit(proc):
+    print 'done...exiting qevent'
+    eventloop_processes[-1]['qtobj'].exit(0)
+    eventloop_processes[-1]['done'] = True
     return proc.r_rdp['self'].exit(proc.locals['code'])
 
 # QWidget
@@ -974,7 +975,6 @@ def prim_qt_qaction_connect(proc):
             print 'debugger module ended'
             proc.interpreter.debugger_process = None
             proc.interpreter.processes.remove(entry['proc'])
-            proc.state = 'running'
         if eventloop_processes[-1]['done']:
             print 'POPing eventloop'
             eventloop_processes.pop()
