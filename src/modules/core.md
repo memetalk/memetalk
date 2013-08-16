@@ -210,6 +210,9 @@ module core() {
     instance_method filepath: fun() {
       return @filepath;
     }
+    instance_method setParams: fun(params) {
+      @params = params;
+    }
     instance_method params: fun() {
       return @params;
     }

@@ -888,7 +888,7 @@ module idez(qt,io)
       action = qt.QAction.new("Edit Module &Parameters", execMenu);
       action.setShortcut("alt+m,p");
       action.connect("triggered", fun() {
-        io.print("Edit module parameters");
+        this.action_editModuleParameters();
       });
       action.setShortcutContext(1);
       execMenu.addAction(action);
@@ -1073,6 +1073,25 @@ module idez(qt,io)
           });
         });
         return false;
+      });
+    }
+
+    instance_method action_editModuleParameters: fun() {
+      if (@current_cmodule == null) {
+        @statusLabel.setText("No current module");
+        return true;
+      }
+
+      var old_params = @current_cmodule.params;
+      var doc = @webview.page().mainFrame().documentElement();
+      @miniBuffer.prompt("Edit module parameters: ", old_params.toString(), fun(params) {
+        this.command(fun() {
+          @current_cmodule.setParams(params.split(","));
+          doc.findFirst(".module_title_params").setPlainText(params);
+        }, fun() {
+          @current_cmodule.setParams(old_params);
+          doc.findFirst(".module_title_params").setPlainText(old_params.toString);
+        });
       });
     }
 
