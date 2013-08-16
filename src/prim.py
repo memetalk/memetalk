@@ -217,6 +217,9 @@ def prim_string_rindex(proc):
     except ValueError:
         return -1
 
+def prim_symbol_to_string(proc):
+    return proc.r_rdp['self']
+
 def prim_string_count(proc):
     return proc.r_rp.count(proc.locals['sub'])
 

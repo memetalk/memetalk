@@ -1062,7 +1062,7 @@ module idez(qt,io)
         var mlist = doc.findFirst("#menu-listing .link-list");
         this.command(fun() {
           klass.addMethod(cfun, flag);
-          this.showEditorForFunction(cfun, "instance_method", "div[id='imethods_" + klass.name + "']");
+          this.showEditorForFunction(cfun, flag.toString, "div[id='imethods_" + klass.name + "']");
           @statusLabel.setText("Method added: " + cfun.fullName);
           mlist.appendInside("<li><a href='#" + cfun.fullName + "'>" + cfun.fullName + "</a></li>");
         }, fun() {

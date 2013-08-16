@@ -254,6 +254,9 @@ module core() {
   }
   class Symbol {
    fields: self;
+   instance_method toString: fun() {
+     <primitive "symbol_to_string">
+   }
   }
 
   class Dictionary {
