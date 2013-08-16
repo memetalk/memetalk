@@ -735,6 +735,9 @@ class Interpreter():
     def get_core_class(self, name):
         return getattr(core, name)
 
+    def py_memetalk_exception(self):
+        return MemetalkException
+
     def throw(self, mex):
         # MemetalkException encapsulates the memetalk exception:
         raise MemetalkException(mex)

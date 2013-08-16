@@ -775,8 +775,12 @@ def prim_qt_qwidget_connect(proc):
         args = []
         for arg in rest:
             args.append(_meme_instance(proc,arg))
+        try:
+            proc.setup_and_run_fun(None, None, '<?>', slot, args, True)
+        except proc.interpreter.py_memetalk_exception() as e:
+            print "Exception raised: " + e.mmobj()['value']
+            print traceback.format_exc()
 
-        proc.setup_and_run_fun(None, None, '<?>', slot, args, True)
     getattr(qtobj,signal).connect(callback)
     return proc.r_rp
 
@@ -904,7 +908,11 @@ def prim_qt_qaction_connect(proc):
     signal = proc.locals["signal"]
     slot = proc.locals["slot"]
     def callback(*rest):
-        proc.setup_and_run_fun(None, None, '<?>', slot, [], True)
+        try:
+            proc.setup_and_run_fun(None, None, '<?>', slot, [], True)
+        except proc.interpreter.py_memetalk_exception() as e:
+            print "Exception raised: " + e.mmobj()['value']
+            print traceback.format_exc()
         print 'callback slot: ' + str(slot['compiled_function']['body'])
         print 'callback: eventloop proc equal? ' + str(proc == eventloop_processes[-1]['proc'])
         if proc != eventloop_processes[-1]['proc']:
