@@ -249,6 +249,9 @@ module core() {
     instance_method addFunction: fun(cfun) {
       <primitive "compiled_module_add_function">
     }
+    instance_method instantiate: fun(args) {
+      <primitive "compiled_module_instantiate">
+    }
   }
 
   object ModuleBehavior { //the behavior of module instances

@@ -717,6 +717,9 @@ class Interpreter():
     def get_core_class(self, name):
         return getattr(core, name)
 
+    def get_core_module(self):
+        return core.kernel_imodule
+
     def py_memetalk_exception(self):
         return MemetalkException
 

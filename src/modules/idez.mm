@@ -24,24 +24,24 @@ module idez(qt,io)
   [QWidget, QMainWindow, QsciScintilla, QLineEdit, QComboBox, QTableWidget] <= qt;
 {
 
-  evalWithVars: fun(text, vars) {
-    var fn = evalWithVarsFn(text, vars);
+  evalWithVars: fun(text, vars, imod) {
+    var fn = evalWithVarsFn(text, vars, imod);
     var res = fn();
     return {"result": res, "env": fn.getEnv()};
   }
 
-  evalWithVarsFn: fun(text, vars) {
-    var cmod = get_compiled_module(thisModule);
+  evalWithVarsFn: fun(text, vars, imod) {
+    var cmod = get_compiled_module(imod);
     var code = "fun() {" + text + "}";
     var cfn = CompiledFunction.newClosure(code, thisContext.compiledFunction(), false);
-    return cfn.asContextWithVars(thisModule, vars);
+    return cfn.asContextWithVars(imod, vars);
   }
 
-  evalWithFrame: fun(text, frame) {
-    var cmod = get_compiled_module(thisModule);
+  evalWithFrame: fun(text, frame, imod) {
+    var cmod = get_compiled_module(imod);
     var code = "fun() {" + text + "}";
     var cfn = CompiledFunction.newClosure(code, thisContext.compiledFunction(), false);
-    var fn = cfn.asContextWithFrame(thisModule, frame);
+    var fn = cfn.asContextWithFrame(imod, frame);
     var res = fn();
     return {"result": res, "env": fn.getEnv()};
   }
@@ -94,7 +94,7 @@ module idez(qt,io)
       this.addAction(action);
     }
     instance_method evalSelection: fun() {
-      var r = evalWithVars(this.selectedText(), {"this" : @receiver});
+      var r = evalWithVars(this.selectedText(), {"this" : @receiver}, thisModule);
       return r["result"];
     }
     instance_method insertSelectedText: fun(text) {
@@ -131,7 +131,7 @@ module idez(qt,io)
     }
     instance_method debugIt: fun() {
       try {
-        var fn = evalWithVarsFn(this.selectedText(), thisModule, {"this" : @receiver});
+        var fn = evalWithVarsFn(this.selectedText(), {"this" : @receiver}, thisModule);
         VMProcess.debug(fn,[]);
       } catch(e) {
         this.insertSelectedText(e.value());
@@ -140,13 +140,14 @@ module idez(qt,io)
   }
 
   class Editor < QsciScintilla {
-    fields: getContext, getFrame, afterEval;
-    init new: fun(parent, getContext, getFrame, afterEval) {
+    fields: getContext, getIModule, getFrame, afterEval;
+    init new: fun(parent, getContext, getIModule, getFrame, afterEval) {
       super.new(parent);
       if (parent == null) {
         this.initActions();
       }
       @getContext = getContext;
+      @getIModule = getIModule;
       @getFrame = getFrame;
       @afterEval = afterEval;
     }
@@ -188,9 +189,9 @@ module idez(qt,io)
     instance_method evalSelection: fun() {
       var r = null;
       if (@getContext) {
-        r = evalWithVars(this.selectedText(), @getContext());
+        r = evalWithVars(this.selectedText(), @getContext(), @getIModule());
       } else {
-        r = evalWithFrame(this.selectedText(), @getFrame());
+        r = evalWithFrame(this.selectedText(), @getFrame(), @getIModule());
       }
       if (@afterEval) {
         @afterEval(r["env"]);
@@ -226,7 +227,7 @@ module idez(qt,io)
 
     instance_method debugIt: fun() {
       try {
-        var fn = evalWithVarsFn(this.selectedText(), @getContext());
+        var fn = evalWithVarsFn(this.selectedText(), @getContext(), @getIModule);
         VMProcess.debug(fn,[]);
         if (@afterEval) {
           @afterEval(fn.getEnv());
@@ -256,7 +257,8 @@ module idez(qt,io)
 
       this.setWindowTitle("Workspace");
 
-      @editor = Editor.new(this, fun() { @variables }, null,
+      @editor = Editor.new(this, fun() { @variables },
+                           fun() { thisContext }, null,
                            fun(env) { @variables = env + @variables; });
 
       @editor.initActions();
@@ -289,7 +291,9 @@ module idez(qt,io)
       @fieldList.setMaximumWidth(200);
       hbox.addWidget(@fieldList);
 
-      @textArea = Editor.new(centralWidget, fun() { {"this" : @inspectee} }, null, null);
+      @textArea = Editor.new(centralWidget,
+                             fun() { {"this" : @inspectee} },
+                             fun() { thisContext }, null, null);
 
       hbox.addWidget(@textArea);
 
@@ -403,7 +407,7 @@ module idez(qt,io)
       }
     }
     instance_method acceptIt: fun() {
-      var fn = evalWithVarsFn(@textArea.text(), {"this":@inspectee});
+      var fn = evalWithVarsFn(@textArea.text(), {"this":@inspectee}, thisModule);
       var new_value = fn.apply([]);
       var slot = @fieldList.currentItem().text();
       @mirror.setValueFor(slot, new_value);
@@ -517,7 +521,12 @@ module idez(qt,io)
       @stackCombo = StackCombo.new(centralWidget, @execFrames);
       mainLayout.addWidget(@stackCombo);
 
-      @editor = Editor.new(centralWidget, null, fun() { @execFrames.frame(@frame_index) }, null);
+      @editor = Editor.new(centralWidget,
+                           null,
+                           fun() { @execFrames.frame(@frame_index).modulePointer },
+                           fun() { @execFrames.frame(@frame_index) },
+                           null);
+
       mainLayout.addWidget(@editor);
 
       @stackCombo.connect("currentIndexChanged",fun(i) {
@@ -708,8 +717,8 @@ module idez(qt,io)
 
   class ExplorerEditor < Editor {
     fields: cfun;
-    init new: fun(cfun, parent, getContext, getFrame, afterEval) {
-      super.new(parent, getContext, getFrame, afterEval);
+    init new: fun(cfun, parent, getContext, getIModule, getFrame, afterEval) {
+      super.new(parent, getContext, getIModule, getFrame, afterEval);
       @cfun = cfun;
     }
 
@@ -727,7 +736,7 @@ module idez(qt,io)
   }
 
   class ModuleExplorer < QMainWindow {
-    fields: webview, miniBuffer, current_cmodule, chistory, statusLabel, variables;
+    fields: webview, miniBuffer, current_cmodule, imodule, chistory, statusLabel, variables;
     init new: fun() {
       super.new();
 
@@ -754,26 +763,25 @@ module idez(qt,io)
 
       @webview.page().enablePluginsWith("editor", fun(params) {
 
+        var cfn = null;
         var e = null;
         if (params.has("function_type")) {
           if (params["function_type"] == "module") {
-            var cfn = get_module(params["module_name"]).compiled_functions()[params["function_name"]];
-            e = ExplorerEditor.new(cfn, null, fun() { @variables }, null,
-                                   fun(env) { @variables = env + @variables;});
+            cfn = get_module(params["module_name"]).compiled_functions()[params["function_name"]];
           }
           if (params["function_type"] == "ctor_method") {
-            var cfn = get_module(params["module_name"]).compiled_classes()[params["class_name"]].constructors()[params["function_name"]];
-            e = ExplorerEditor.new(cfn, null, fun() { @variables }, null,
-                                   fun(env) { @variables = env + @variables;});
+            cfn = get_module(params["module_name"]).compiled_classes()[params["class_name"]].constructors()[params["function_name"]];
           }
           if (params["function_type"] == "class_method") {
-            var cfn = get_module(params["module_name"]).compiled_classes()[params["class_name"]].classMethods()[params["function_name"]];
-            e = ExplorerEditor.new(cfn, null, fun() { @variables }, null,
-                                   fun(env) { @variables = env + @variables;});
+            cfn = get_module(params["module_name"]).compiled_classes()[params["class_name"]].classMethods()[params["function_name"]];
           }
           if (params["function_type"] == "instance_method") {
-            var cfn = get_module(params["module_name"]).compiled_classes()[params["class_name"]].instanceMethods()[params["function_name"]];
-            e = ExplorerEditor.new(cfn, null, fun() { @variables }, null,
+            cfn = get_module(params["module_name"]).compiled_classes()[params["class_name"]].instanceMethods()[params["function_name"]];
+          }
+          if (cfn) {
+            e = ExplorerEditor.new(cfn, null, fun() { @variables },
+                                   fun() { this.currentIModule() },
+                                   null,
                                    fun(env) { @variables = env + @variables;});
           }
         } else {
@@ -874,9 +882,18 @@ module idez(qt,io)
       action.setShortcutContext(1);
       execMenu.addAction(action);
 
-      // Edit Module Menu
+      // Edit Menu
 
-      execMenu = this.menuBar().addMenu("&Edit Module");
+      execMenu = this.menuBar().addMenu("&Module");
+
+      action = qt.QAction.new("&Instantiate module", execMenu);
+      action.setShortcut("alt+m,i");
+      action.connect("triggered", fun() {
+        this.action_instantiateModule();
+      });
+      action.setShortcutContext(1);
+      execMenu.addAction(action);
+
       action = qt.QAction.new("&Rename module", execMenu);
       action.setShortcut("alt+m,r");
       action.connect("triggered", fun() {
@@ -917,9 +934,9 @@ module idez(qt,io)
       del_fn_ac.setShortcutContext(1);
       execMenu.addAction(del_fn_ac);
 
-      // Edit Class Menu
+      // Class Menu
 
-      execMenu = this.menuBar().addMenu("&Edit Class");
+      execMenu = this.menuBar().addMenu("&Class");
       action = qt.QAction.new("&Add Class", execMenu);
       action.setShortcut("alt+c,a");
       action.connect("triggered", fun() {
@@ -969,7 +986,13 @@ module idez(qt,io)
       });
       action.setShortcutContext(1);
       execMenu.addAction(action);
+    }
 
+    instance_method currentIModule: fun() {
+      if (@imodule) {
+        return @imodule;
+      }
+      return thisModule;
     }
 
     instance_method command: fun(redo, undo) {
@@ -980,12 +1003,27 @@ module idez(qt,io)
     instance_method action_eval: fun() {
       @miniBuffer.prompt("eval: ", "", fun(expr) {
         try {
-          var r = evalWithVars(expr, {});
+          var imod = null;
+          if (@imodule) {
+            imod = @imodule;
+          } else {
+            imod = thisContext;
+          }
+          var r = evalWithVars(expr, {}, imod);
           @statusLabel.setText(r["result"].toString());
         } catch(e) {
           @statusLabel.setText(e.value);
         }
       });
+    }
+
+    instance_method action_instantiateModule: fun() {
+      if (@current_cmodule == null) {
+        @statusLabel.setText("No current module");
+        return true;
+      }
+      @imodule = @current_cmodule.instantiate({});
+      @statusLabel.setText("Module instantiated");
     }
 
     instance_method action_toggleCtor: fun() {
@@ -1277,16 +1315,19 @@ module idez(qt,io)
 
     instance_method show_home: fun() {
       @current_cmodule = null;
+      @imodule = null;
       @webview.setUrl(modules_path() + "/module-explorer/index.html");
     }
 
     instance_method show_tutorial: fun() {
       @current_cmodule = null;
+      @imodule = null;
       @webview.setUrl(modules_path() + "/module-explorer/tutorial.html");
     }
 
     instance_method show_modules: fun() {
       @current_cmodule = null;
+      @imodule = null;
       @webview.loadUrl(modules_path() + "/module-explorer/modules-index.html");
       var modules = available_modules();
       var ul = @webview.page().mainFrame().documentElement().findFirst("ul.modules");

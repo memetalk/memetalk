@@ -32,6 +32,7 @@ from pprint import pprint, pformat
 #import dbgui
 import scintilla_editor
 from config import MODULES_PATH
+import traceback
 
 def P(obj, depth=1):
     if depth > 5:
@@ -655,6 +656,10 @@ def prim_compiled_module_set_default_parameter(proc):
     proc.r_rdp['default_params'][proc.locals['name']] = \
         {'name': proc.locals['name'], 'type':'lib','value':proc.locals['m']}
     return proc.r_rp
+
+def prim_compiled_module_instantiate(proc):
+    core = proc.interpreter.get_core_module()
+    return proc.interpreter.instantiate_module(proc.r_rdp, proc.locals['args'], core)
 
 # lookup the inner handle of the actual binding object
 # which is set -- this is because a hierarchy of delegates
@@ -1497,8 +1502,13 @@ def prim_qt_extra_qwebpage_enable_plugins(proc):
             names = map(str, _names)
             values =  map(str, _values)
             if mimeType == "x-pyqt/" + name:
-                mobj = proc.setup_and_run_fun(None, None, '<?>', fn, [dict(zip(names,values))], True)
-                return _lookup_field(proc, mobj, 'self')
+                try:
+                    mobj = proc.setup_and_run_fun(None, None, '<?>', fn, [dict(zip(names,values))], True)
+                    return _lookup_field(proc, mobj, 'self')
+                except proc.interpreter.py_memetalk_exception() as e:
+                    print "Exception raised: " + e.mmobj()['value']
+                    print traceback.format_exc()
+
         def plugins(self):
             plugin = QWebPluginFactory.Plugin()
             plugin.name = "PyQt Widget"
