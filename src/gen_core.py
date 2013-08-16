@@ -170,7 +170,6 @@ KernelModule = {"_vt": ModuleBehavior,
         append("kernel_imodule['_delegate'] = None")
         append("kernel_imodule['@tag'] = 'Kernel module instance'")
         append("KernelModule['compiled_module'] = kernel_cmodule")
-        append("KernelModule['size'] = " + str(len(self.classes)+len(self.objects)))
         for name, val in self.classes.iteritems():
             append("kernel_imodule["+to_source(name)+"] = " + name)
         for name, val in self.objects.iteritems():
@@ -247,7 +246,6 @@ KernelModule = {"_vt": ModuleBehavior,
                 "'@tag': '<"+self.current+"Behavior>."+name+" compiled function'})"
 
     def add_class_fields(self, f):
-        self.classes[self.current]['size'] = str(len(f))
         self.fields[self.current] = f
 
 CoreGenerator().gen()

@@ -101,7 +101,6 @@ def _create_module(data):
     template = {"_vt": core.ModuleBehavior,
                 "_delegate": None,
                 "parent": core.Object,
-                "size": 1, #delegate
                 "dict": {},
                 "compiled_module": None,
                 "@tag": "a Module"}
@@ -111,7 +110,6 @@ def _create_class(data):
     template = {"_vt": None, #it should be given by data [FooClassBehavior]
                 "_delegate": None,
                 "parent": None,
-                "size": 1, #delegate
                 "dict": {},
                 "compiled_class":None,
                 "@tag":"a class"}
@@ -185,7 +183,6 @@ def _instantiate_module(i, compiled_module, _args, parent_module):
 
     # Module
     module = _create_module({"_vt": core.ModuleBehavior,
-                             "size": size+1, #+1 delegate
                              "dict": imod_dictionary,
                              "compiled_module": compiled_module,
                              "@tag":"Module " + compiled_module["name"]})
@@ -236,7 +233,6 @@ def _instantiate_module(i, compiled_module, _args, parent_module):
 
             classes[c["name"]] = _create_class({"_vt": cbehavior,
                                                 "parent": super_class,
-                                                "size": len(c["fields"])+1,
                                                 "dict": _compiled_functions_to_functions(c["methods"],imodule),
                                                 "compiled_class":c,
                                                 "@tag":c["name"]+" Class"})
@@ -252,7 +248,6 @@ def _instantiate_module(i, compiled_module, _args, parent_module):
             # superclass BarClass will be eventually in the variable 'classes'
             classes[c["name"]] = _create_class({"_vt": cbehavior,
                                                 "parent": "*replace-me*", #placeholder to substitute later below
-                                                "size": len(c["fields"])+1,
                                                 "dict": _compiled_functions_to_functions(c["methods"],imodule),
                                                 "compiled_class":c,
                                                 "@tag":c["name"]+" Class"})
