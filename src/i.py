@@ -334,7 +334,7 @@ class ModuleLoader(ASTBuilder):
                 return cfun
             else:
                 self.current_module = cfun['owner']
-                loader.apply("function_definition", "toplevel")
+                loader.apply("function_definition", "module_function")
                 return cfun
         except Exception as err:
             if hasattr(err,'formatError'):
@@ -418,11 +418,15 @@ class ModuleLoader(ASTBuilder):
 
         return self.first_fnlit
 
-    def compile_top_level(self, i, name, src, cmodule):
+    def compile_top_level(self, i, name, src, owner, flag):
         self.line_offset = 0
         self.pos_stack = []
-        self.filename = cmodule['filepath']
-        self.current_module = cmodule
+
+        if owner['_vt'] == core.CompiledClass:
+            self.current_class = owner
+            self.current_module = owner["module"]
+        else:
+            self.current_module = owner
 
         self.parser = MemeParser(src)
         self.parser.i = self
@@ -448,14 +452,19 @@ class ModuleLoader(ASTBuilder):
         loader = Loader([ast])
         loader.i = self
         try:
-            loader.apply("function_definition", "toplevel")
+            loader.apply("function_definition", flag['self'])
         except Exception as err:
             if hasattr(err,'formatError'):
                 i.throw_with_value(err.formatError(''.join(self.parser.input.data)))
             else:
                 i.throw_with_value(traceback.format_exc())
 
-        return self.current_module['compiled_functions'][name]
+        if flag['self'] == "class_method" or flag['self'] == "constructor":
+            return self.current_class["own_methods"][name]
+        elif flag['self'] == 'instance_method':
+            return self.current_class["methods"][name]
+        else:
+            return self.current_module["compiled_functions"][name]
 
     def compile_module(self, i, filename, src):
         self.line_offset = 0
@@ -750,8 +759,8 @@ class Interpreter():
     def compiled_function_to_context(self, cfun, env, imodule):
         return _compiled_function_to_context(cfun, env, imodule)
 
-    def compile_top_level(self, name,text, cmodule):
-        return ModuleLoader().compile_top_level(self, name, text, cmodule)
+    def compile_top_level(self, name,text, owner, flags):
+        return ModuleLoader().compile_top_level(self, name, text, owner, flags)
 
     def compile_closure(self, text, cfun):
         return ModuleLoader().compile_closure(self, text, cfun)

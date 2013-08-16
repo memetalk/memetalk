@@ -220,14 +220,21 @@ def prim_string_rindex(proc):
 def prim_string_count(proc):
     return proc.r_rp.count(proc.locals['sub'])
 
+def prim_string_substring(proc):
+    return proc.r_rp[proc.locals['from']:proc.locals['from']+proc.locals['count']]
+
+def prim_string_split(proc):
+    return proc.r_rp.split(proc.locals['sep'])
+
 def prim_module_instance_compiled_module(proc):
     return proc.r_rdp['_vt']['compiled_module']
 
 def prim_compiled_function_new_top_level(proc):
     name = proc.locals['name']
     text = proc.locals['text']
-    cmod = proc.locals['cmodule']
-    cfun = proc.interpreter.compile_top_level(name,text,cmod)
+    owner = proc.locals['owner']
+    flag = proc.locals['flag']
+    cfun = proc.interpreter.compile_top_level(name,text,owner, flag)
     cfun['is_top_level'] = True
     return cfun
 
@@ -394,6 +401,28 @@ def prim_compiled_class_constructors(proc):
 
 def prim_compiled_class_class_methods(proc):
     return dict([(name, cfun) for name,cfun in proc.r_rdp['own_methods'].iteritems() if not cfun['is_ctor']])
+
+def prim_compiled_class_add_instance_method(proc):
+    cfun = proc.locals['cfun']
+    proc.r_rdp['methods'][cfun['name']] = cfun
+    # add the function to the instantiated classes:
+    for imod in proc.interpreter.mem_imodules:
+        if imod['_vt']['compiled_module'] == proc.r_rdp['module']:
+            fun = proc.interpreter.create_function_from_cfunction(cfun, imod)
+            imod[proc.r_rdp['name']]['dict'][cfun['name']] = fun
+
+    return proc.r_rp
+
+def prim_compiled_class_remove_instance_method(proc):
+    name = proc.locals['name']
+    cclass = proc.r_rdp
+    # removing function from compiled module
+    del cclass['methods'][name]
+
+    # removing function from instances:
+    for imod in proc.interpreter.mem_imodules:
+        if imod['_vt']['compiled_module'] == proc.r_rdp['module']:
+            del imod[proc.r_rdp['name']]['dict'][name]
 
 def prim_mirror_fields(proc):
     mirrored = proc.r_rdp['mirrored']

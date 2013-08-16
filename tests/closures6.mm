@@ -3,7 +3,7 @@ module foo() {
     var cmod = get_compiled_module(thisModule);
 
     var cfn = CompiledFunction.newTopLevel(
-      "bar", "fun(a) { return 10 + a; }", cmod);
+      "bar", "fun(a) { return 10 + a; }", cmod, :module_function);
 
     var fn = cfn.instantiate(thisModule);
 

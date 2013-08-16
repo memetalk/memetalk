@@ -947,7 +947,7 @@ module idez(qt,io)
       action = qt.QAction.new("Add &Method", execMenu);
       action.setShortcut("alt+c,m");
       action.connect("triggered", fun() {
-        io.print("Add method");
+        this.action_addMethod();
       });
       action.setShortcutContext(1);
       execMenu.addAction(action);
@@ -1037,6 +1037,44 @@ module idez(qt,io)
       }
     }
 
+    instance_method action_addMethod: fun() {
+      if (@current_cmodule == null) {
+        @statusLabel.setText("No current module");
+        return true;
+      }
+
+      @miniBuffer.prompt("Method name (ex: Foo.bar, Foo::bar): ", "", fun(spec_name) {
+        var flag = null;
+        var split = null;
+        if (spec_name.count(".") == 1) { //instance method
+          split = spec_name.split(".");
+          flag = :instance_method;
+        } else { //class method
+          split = spec_name.split("::");
+          flag = :class_method;
+        }
+        var class_name = split[0];
+        var method_name = split[1];
+
+        var klass = @current_cmodule.compiled_classes[class_name];
+        var cfun = CompiledFunction.newTopLevel(method_name, "fun() { return null; }", klass, flag);
+        var doc = @webview.page().mainFrame().documentElement();
+        var mlist = doc.findFirst("#menu-listing .link-list");
+        this.command(fun() {
+          klass.addInstanceMethod(cfun); //TODO: addInstanceMe
+          this.showEditorForFunction(cfun, "instance_method", "div[id='imethods_" + klass.name + "']");
+          @statusLabel.setText("Method added: " + cfun.fullName);
+          mlist.appendInside("<li><a href='#" + cfun.fullName + "'>" + cfun.fullName + "</a></li>");
+        }, fun() {
+          mlist.findFirst("li a[href='#" + cfun.fullName + "']").setAttribute("style","display:none");
+          klass.removeInstanceMethod(method_name); //TODO: removeInstancemeth
+          doc.findFirst("div[id='" + cfun.fullName + "']").takeFromDocument();
+          @statusLabel.setText("Method removed: " + cfun.fullName);
+        });
+      });
+
+    }
+
     instance_method action_addFunction: fun() {
       if (@current_cmodule == null) {
         @statusLabel.setText("No current module");
@@ -1044,7 +1082,7 @@ module idez(qt,io)
       }
 
       @miniBuffer.prompt("Function name: ", "", fun(name) {
-        var cfun = CompiledFunction.newTopLevel(name, "fun() { return null; }", @current_cmodule);
+        var cfun = CompiledFunction.newTopLevel(name, "fun() { return null; }", @current_cmodule, :module_function);
         var doc = @webview.page().mainFrame().documentElement();
         var mlist = doc.findFirst("#menu-listing .link-list");
         this.command(fun() {

@@ -89,13 +89,20 @@ module core() {
     instance_method classMethods: fun() {
       <primitive "compiled_class_class_methods">
     }
+    instance_method addInstanceMethod: fun(cfun) {
+      <primitive "compiled_class_add_instance_method">
+    }
+    instance_method removeInstanceMethod: fun(name) {
+      <primitive "compiled_class_remove_instance_method">
+    }
   }
 
   class CompiledFunction {
     fields: _delegate, body, env_table, env_table_skel, fun_literals, is_ctor,
             is_prim, is_top_level, is_embedded, name, params, prim_name,
             uses_env, outer_cfun, owner, text;
-    init newTopLevel: fun(name, text, cmodule) {
+    //flag: :module_function | :instance_method | :class_method | :constructor
+    init newTopLevel: fun(name, text, owner, flag) {
       <primitive "compiled_function_new_top_level">
     }
     init newClosure: fun(text, cfun, is_embedded) {
@@ -237,6 +244,12 @@ module core() {
     }
     instance_method count: fun(sub) {
       <primitive "string_count">
+    }
+    instance_method substring: fun(from, count) {
+      <primitive "string_substring">
+    }
+    instance_method split: fun(sep) {
+      <primitive "string_split">
     }
   }
   class Symbol {
