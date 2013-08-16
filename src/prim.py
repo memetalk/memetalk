@@ -68,7 +68,7 @@ def prim_vmprocess(proc):
 
 def prim_vmprocess_stack_frames(proc):
     _proc = _lookup_field(proc, proc.r_rp, 'self')
-    VMStackFrameClass = proc.interpreter.get_class('VMStackFrame')
+    VMStackFrameClass = proc.interpreter.get_core_class('VMStackFrame')
     # first r_cp on stack is None
     return [proc.interpreter.alloc(VMStackFrameClass,{'self':x}) for x in _proc.stack if x['r_cp']] +\
         [proc.interpreter.alloc(VMStackFrameClass,{'self':_proc.top_frame()})]
@@ -396,7 +396,7 @@ def prim_get_compiled_class(proc):
     return proc.locals['klass']['compiled_class']
 
 def prim_get_current_process(proc):
-    VMProcess = proc.interpreter.get_class('VMProcess')
+    VMProcess = proc.interpreter.get_core_class('VMProcess')
     return proc.interpreter.alloc(VMProcess, {'self': proc})
 
 def prim_compiled_class_constructors(proc):
@@ -591,13 +591,13 @@ def _meme_instance(proc, obj):
     if obj == None:
         return obj
     elif isinstance(obj, basestring):
-        return obj# {"_vt":i.get_class("String"), 'self':obj}
+        return obj# {"_vt":i.get_core_class("String"), 'self':obj}
     elif isinstance(obj, dict) and '_vt' not in obj:
-        return obj#{"_vt":i.get_class("Dictionary"), 'self':obj}
+        return obj#{"_vt":i.get_core_class("Dictionary"), 'self':obj}
     elif isinstance(obj, int) or isinstance(obj, long):
-        return obj#{"_vt":i.get_class("Number"), 'self':obj}
+        return obj#{"_vt":i.get_core_class("Number"), 'self':obj}
     elif isinstance(obj, list):
-        return obj#{"_vt":i.get_class("List"), 'self':obj}
+        return obj#{"_vt":i.get_core_class("List"), 'self':obj}
     # elif isinstance(obj, QtCore.QUrl):
     #     return qstring_to_str(obj.toString()) # TODO: currently ignoring QUrl objects
     elif obj.__class__ in mapping: # NOTE: should be a qt instance

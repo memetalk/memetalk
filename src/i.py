@@ -727,7 +727,7 @@ class Interpreter():
     def kernel_module_instance(self):
         return core.kernel_imodule
 
-    def get_class(self, name):
+    def get_core_class(self, name):
         return getattr(core, name)
 
     def throw(self, mex):
