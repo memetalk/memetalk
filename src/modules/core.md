@@ -141,6 +141,9 @@ module core() {
     instance_method is_constructor: fun() {
       return @is_ctor;
     }
+    instance_method setCtor: fun(val) {
+      @is_ctor = !!val;
+    }
     instance_method owner: fun() {
       return @owner;
     }

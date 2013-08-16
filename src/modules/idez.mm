@@ -959,6 +959,15 @@ module idez(qt,io)
       });
       action.setShortcutContext(1);
       execMenu.addAction(action);
+
+      action = qt.QAction.new("Toggle Method as Constructor", execMenu);
+      action.setShortcut("alt+c,c");
+      action.connect("triggered", fun() {
+        this.action_toggleCtor();
+      });
+      action.setShortcutContext(1);
+      execMenu.addAction(action);
+
     }
 
     instance_method command: fun(redo, undo) {
@@ -975,6 +984,25 @@ module idez(qt,io)
           @statusLabel.setText(e.value);
         }
       });
+    }
+
+    instance_method action_toggleCtor: fun() {
+      if (@current_cmodule == null) {
+        @statusLabel.setText("No current module");
+        return true;
+      }
+
+      var e = qt.QApplication.focusWidget();
+      if (Mirror.vtFor(e) == ExplorerEditor) {
+        e.cfun.setCtor(!e.cfun.is_constructor());
+        if (e.cfun.is_constructor()) {
+          @statusLabel.setText(e.cfun.fullName + " now is a constructor");
+        } else {
+          @statusLabel.setText(e.cfun.fullName + " now is not a constructor");
+        }
+      } else {
+        @statusLabel.setText("No function selected");
+      }
     }
 
     instance_method action_renameClass: fun() {
