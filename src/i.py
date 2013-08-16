@@ -90,7 +90,7 @@ def _create_compiled_class(data):
                 "_delegate": None,
                 "module": None, #compiled module
                 "name": "",
-                "super_class_name":"",
+                "super_class_name":"Object",
                 "fields": [],
                 "methods": {},
                 "own_methods":{},
