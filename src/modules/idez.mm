@@ -1276,7 +1276,7 @@ module idez(qt,io)
 
       doc.findFirst("#module_title").setPlainText(@current_cmodule.name());
 
-      var mp = doc.findFirst(".module_title_params").setPlainText(@current_cmodule.params.toString());
+      doc.findFirst(".module_title_params").setPlainText(@current_cmodule.params.toString());
 
       var mlist = doc.findFirst("#menu-listing .link-list");
 
