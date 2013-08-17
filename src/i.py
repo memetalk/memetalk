@@ -1189,7 +1189,7 @@ class Process(greenlet):
         elif mp['_delegate'] != None:
             return self.lookup_in_modules(name, mp['_delegate'])
         else:
-            self.interpreter.throw_with_value("Undeclared var: " + name + " : "+pformat(self.r_cp['compiled_function'],1,80,1))
+            self.interpreter.throw_with_value("Undeclared: " + name + " : "+pformat(self.r_cp['compiled_function'],1,80,1))
 
     def eval_do_return(self, value, ast):
         self.r_ip = ast
@@ -1267,16 +1267,7 @@ class Process(greenlet):
 
         if fn:
             return self.setup_and_run_fun(self.r_rp, self.r_rdp, name, fn, args, True)
-
-        #-module params + module entries
-        def lookup_in_modules(name, mp):
-            if name in mp:
-                return mp[name]
-            elif mp['_delegate'] != None:
-                return lookup_in_modules(name, mp['_delegate'])
-            else:
-                return self.interpreter.throw_with_value("Undeclared function: " + name)
-        fn = lookup_in_modules(name, self.r_mp)
+        fn = self.lookup_in_modules(name, self.r_mp)
         if fn:
             return self.setup_and_run_fun(self.r_mp, self.r_mp, name, fn, args, True)
 
