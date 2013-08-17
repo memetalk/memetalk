@@ -1006,10 +1006,10 @@ module idez(qt, io)
         @miniBuffer.prompt("Fields: ", klass.fields.toString, fun(fields) {
           this.command(fun() {
             klass.setFields(fields.split(","));
-            doc.findFirst("#" + klass.fullName + " .fields_list").setPlainText(fields.toString());
+            doc.findFirst("div[id='" + klass.fullName + "'] .fields_list").setPlainText(fields.toString());
           }, fun() {
             klass.setFields(old_fields);
-            doc.findFirst("#" + klass.fullName + " .fields_list").setPlainText(old_fields.toString());
+            doc.findFirst("div[id='" + klass.fullName + "'] .fields_list").setPlainText(old_fields.toString());
           });
         });
         return false;
