@@ -845,15 +845,19 @@ module idez(qt, io)
       }
 
       @miniBuffer.prompt("New class: ", "", fun(name) {
-        this.command(fun() {
-          @current_cmodule.newClass(name);
-          this.show_module(@current_cmodule.name);
-          @statusLabel.setText("Class added: " + name);
-        }, fun() {
-          @current_cmodule.removeClass(name);
-          this.show_module(@current_cmodule.name);
-          @statusLabel.setText("Class removed: " + name);
+
+        @miniBuffer.prompt("Super class name: ", "Object", fun(super_name) {
+          this.command(fun() {
+            @current_cmodule.newClass(name, super_name);
+            this.show_module(@current_cmodule.name);
+            @statusLabel.setText("Class added: " + name);
+          }, fun() {
+            @current_cmodule.removeClass(name);
+            this.show_module(@current_cmodule.name);
+            @statusLabel.setText("Class removed: " + name);
+          });
         });
+        return false;
       });
     }
     instance_method action_addFunction: fun() {

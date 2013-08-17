@@ -256,7 +256,7 @@ module core() {
     instance_method compiled_classes: fun() {
       return @compiled_classes;
     }
-    instance_method newClass: fun(name) {
+    instance_method newClass: fun(name, super_name) {
       <primitive "compiled_module_new_class">
     }
     instance_method addClass: fun(klass) {

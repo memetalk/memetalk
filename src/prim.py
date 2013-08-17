@@ -607,8 +607,10 @@ def prim_compiled_module_add_function(proc):
 
 def prim_compiled_module_new_class(proc):
     name = proc.locals['name']
+    super_name = proc.locals['super_name']
     cmod = proc.r_rdp
     klass = proc.interpreter.create_compiled_class({"name": name,
+                                                    "super_class_name":super_name,
                                                     "module": cmod})
 
     cmod['compiled_classes'][name] = klass
