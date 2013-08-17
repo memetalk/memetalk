@@ -15,7 +15,7 @@ comment = "/*"  (~"*/" anything)* "*/"
 spaces = space*
 
 
-license = token(".license")  (~(token(".endlicense")) anything)+:x token(".endlicense") -> ''.join(x)
+license = token(".license")  (~(token(".endlicense")) anything)*:x token(".endlicense") -> ''.join(x)
         | -> ""
 
 start = license:l token("module") id:name module_params:p
