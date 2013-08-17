@@ -729,7 +729,7 @@ module idez(qt, io)
     }
   }
   class ModuleExplorer < QMainWindow {
-    fields: webview, miniBuffer, current_cmodule, imodule, chistory, statusLabel, variables;
+    fields: webview, miniBuffer, current_cmodule, imodule, chistory, statusLabel, variables, sysmenu;
     init new: fun() {
       super.new();
 
@@ -1155,10 +1155,19 @@ module idez(qt, io)
       return thisModule;
     }
     instance_method initActions: fun() {
-      // System menu
 
+      var action = qt.QAction.new("Inspect", this);
+      action.setShortcut("alt+w,i");
+      action.connect("triggered", fun() {
+        Inspector.new(this).show()
+      });
+      action.setShortcutContext(1);
+      this.addAction(action);
+
+      // System menu
       var execMenu = this.menuBar().addMenu("System");
-      var action = qt.QAction.new("&Save", execMenu);
+      @sysmenu = execMenu;
+      action = qt.QAction.new("&Save", execMenu);
       action.setShortcut("alt+x,s");
       action.connect("triggered", fun() {
         this.action_saveToFileSystem();
