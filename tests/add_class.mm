@@ -2,7 +2,7 @@ module foo() {
 
   main: fun() {
     var cmod = get_compiled_module(thisModule);
-    var klass = cmod.newClass("X");
+    var klass = cmod.newClass("X", "Object");
 
     var code = "fun() { return 42; }";
     var cfun = CompiledFunction.newTopLevel("bar", code, klass, :class_method);
