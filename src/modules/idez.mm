@@ -65,8 +65,9 @@ module idez(qt, io)
   main: fun() {
     var app = qt.QApplication.new();
     var me = ModuleExplorer.new();
-    var w = Workspace.new();
-    w.show();
+    VMProcess.stopOnException();
+    //var w = Workspace.new();
+    //w.show();
     me.show();
     return app.exec();
   }
