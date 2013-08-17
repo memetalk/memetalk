@@ -13,17 +13,19 @@ to maintain your python dependencies.
 
  * Python (I'm using 2.7.5)
  * Python Greenlets
+ * Python jinja2
  * QT (with python bindings)
  * QScintila2 (with python bindings)
 
 ### Debian-like systems
 The line below will install all the dependencies recursively
 
-* `# aptitude install python-qscintilla2 python-greenlet`
+* `# aptitude install python-qscintilla2 python-greenlet python-jinja2`
 
 ### Mac OS X
 * `$ brew install python pyqt qscintilla2`
 * `pip install greenlet`
+* `pip install jinja2`
 
 ### All systems
  * Clone `pymeta` from https://github.com/thiago-silva/pymeta.git
