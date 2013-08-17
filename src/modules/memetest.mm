@@ -21,7 +21,7 @@ SOFTWARE.
 .endlicense
 
 module memetest(io)
-io : memetalk/io/1.0();
+  io : memetalk/io/1.0();
 {
   _test_files: fun() {
     <primitive "test_files">
@@ -55,4 +55,5 @@ io : memetalk/io/1.0();
     });
     return "ok";
   }
+
 }

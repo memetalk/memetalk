@@ -20,8 +20,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 .endlicense
 
-module io() {
-
+module io()
+{
   file_contents: fun(path) {
     <primitive "io_file_contents">
   }
@@ -29,4 +29,5 @@ module io() {
   print: fun(arg) {
     <primitive "io_print">
   }
+
 }

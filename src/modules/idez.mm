@@ -20,11 +20,34 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 .endlicense
 
-module idez(qt,io)
-  qt:  memetalk/qt/1.0();
-  io:  memetalk/io/1.0();
+module idez(qt, io)
+  qt : memetalk/qt/1.0();
+  io : memetalk/io/1.0();
   [QWidget, QMainWindow, QsciScintilla, QLineEdit, QComboBox, QTableWidget] <= qt;
 {
+  debug: fun(process) {
+    var eventloop = null;
+    if (!qt.qapp_running()) {
+      eventloop = qt.QApplication.new();
+    } else {
+      eventloop = qt.QEventLoop.new();
+    }
+
+    var dbg = DebuggerUI.new(process, eventloop);
+    dbg.show();
+    eventloop.exec();
+    io.print("debug:main left loop");
+    return "continue";
+  }
+
+  evalWithFrame: fun(text, frame, imod) {
+    var cmod = get_compiled_module(imod);
+    var code = "fun() {" + text + "}";
+    var cfn = CompiledFunction.newClosure(code, thisContext.compiledFunction(), false);
+    var fn = cfn.asContextWithFrame(imod, frame);
+    var res = fn();
+    return {"result": res, "env": fn.getEnv()};
+  }
 
   evalWithVars: fun(text, vars, imod) {
     var fn = evalWithVarsFn(text, vars, imod);
@@ -39,476 +62,40 @@ module idez(qt,io)
     return cfn.asContextWithVars(imod, vars);
   }
 
-  evalWithFrame: fun(text, frame, imod) {
-    var cmod = get_compiled_module(imod);
-    var code = "fun() {" + text + "}";
-    var cfn = CompiledFunction.newClosure(code, thisContext.compiledFunction(), false);
-    var fn = cfn.asContextWithFrame(imod, frame);
-    var res = fn();
-    return {"result": res, "env": fn.getEnv()};
+  main: fun() {
+    var app = qt.QApplication.new();
+    var me = ModuleExplorer.new();
+    var w = Workspace.new();
+    w.show();
+    me.show();
+    return app.exec();
   }
 
-  class LineEditor < QLineEdit {
-    fields: receiver;
-    init new: fun(parent, receiver) {
-      super.new(parent);
-      if (parent == null) {
-        this.initActions();
-      }
-      @receiver = receiver;
-    }
-
-    instance_method initActions: fun() {
-      this.connect("returnPressed", fun() {
-        this.selectAllAndDoit(null);
-      });
-
-      var action = qt.QAction.new("&Do it", this);
-      action.setShortcut("ctrl+d");
-      action.connect("triggered", fun() {
-          this.doIt();
-      });
-      action.setShortcutContext(0); //widget context
-      this.addAction(action);
-
-      action = qt.QAction.new("&Print it", this);
-      action.setShortcut("ctrl+p");
-      action.connect("triggered", fun() {
-          this.printIt();
-      });
-      action.setShortcutContext(0); //widget context
-      this.addAction(action);
-
-      action = qt.QAction.new("&Inspect it", this);
-      action.setShortcut("ctrl+i");
-      action.connect("triggered", fun() {
-          this.inspectIt();
-      });
-      action.setShortcutContext(0); //widget context
-      this.addAction(action);
-
-      action = qt.QAction.new("De&bug it", this);
-      action.setShortcut("ctrl+b");
-      action.connect("triggered", fun() {
-          this.debugIt();
-      });
-      action.setShortcutContext(0); //widget context
-      this.addAction(action);
-    }
-    instance_method evalSelection: fun() {
-      var r = evalWithVars(this.selectedText(), {"this" : @receiver}, thisModule);
-      return r["result"];
-    }
-    instance_method insertSelectedText: fun(text) {
-      var len = this.text().size();
-      this.setText(this.text() + text);
-      this.setSelection(len, text.size());
-    }
-    instance_method selectAllAndDoit: fun(receiver) {
-        this.selectAll();
-        this.doIt();
-    }
-    instance_method doIt: fun() {
-      try {
-        this.evalSelection();
-      } catch(e) {
-        this.insertSelectedText(e.value());
-      }
-    }
-    instance_method printIt: fun() {
-      try {
-        var res = this.evalSelection();
-        this.insertSelectedText(res.toString());
-      } catch(e) {
-        this.insertSelectedText(e.value());
-      }
-    }
-    instance_method inspectIt: fun() {
-      try {
-        var res = this.evalSelection();
-        Inspector.new(res).show();
-      } catch(e) {
-        this.insertSelectedText(e.value());
-      }
-    }
-    instance_method debugIt: fun() {
-      try {
-        var fn = evalWithVarsFn(this.selectedText(), {"this" : @receiver}, thisModule);
-        VMProcess.debug(fn,[]);
-      } catch(e) {
-        this.insertSelectedText(e.value());
-      }
-    }
-  }
-
-  class Editor < QsciScintilla {
-    fields: getContext, getIModule, getFrame, afterEval;
-    init new: fun(parent, getContext, getIModule, getFrame, afterEval) {
-      super.new(parent);
-      if (parent == null) {
-        this.initActions();
-      }
-      @getContext = getContext;
-      @getIModule = getIModule;
-      @getFrame = getFrame;
-      @afterEval = afterEval;
-    }
-
-    instance_method initActions: fun() {
-      var action = qt.QAction.new("&Do it", this);
-      action.setShortcut("ctrl+d");
-      action.connect("triggered", fun() {
-          this.doIt();
-      });
-      action.setShortcutContext(0); //widget context
-      this.addAction(action);
-
-      action = qt.QAction.new("&Print it", this);
-      action.setShortcut("ctrl+p");
-      action.connect("triggered", fun() {
-          this.printIt();
-      });
-      action.setShortcutContext(0); //widget context
-      this.addAction(action);
-
-      action = qt.QAction.new("&Inspect it", this);
-      action.setShortcut("ctrl+i");
-      action.connect("triggered", fun() {
-          this.inspectIt();
-      });
-      action.setShortcutContext(0); //widget context
-      this.addAction(action);
-
-      action = qt.QAction.new("De&bug it", this);
-      action.setShortcut("ctrl+b");
-      action.connect("triggered", fun() {
-          this.debugIt();
-      });
-      action.setShortcutContext(0); //widget context
-      this.addAction(action);
-    }
-
-    instance_method evalSelection: fun() {
-      var r = null;
-      if (@getContext) {
-        r = evalWithVars(this.selectedText(), @getContext(), @getIModule());
-      } else {
-        r = evalWithFrame(this.selectedText(), @getFrame(), @getIModule());
-      }
-      if (@afterEval) {
-        @afterEval(r["env"]);
-      }
-      return r["result"];
-    }
-
-    instance_method doIt: fun() {
-      try {
-        this.evalSelection();
-      } catch(e) {
-        this.insertSelectedText(e.value());
-      }
-    }
-
-    instance_method printIt: fun() {
-      try {
-        var res = this.evalSelection();
-        this.insertSelectedText(res.toString());
-      } catch(e) {
-        this.insertSelectedText(e.value());
-      }
-    }
-
-    instance_method inspectIt: fun() {
-      try {
-        var res = this.evalSelection();
-        Inspector.new(res).show();
-      } catch(e) {
-        this.insertSelectedText(e.value());
-      }
-    }
-
-    instance_method debugIt: fun() {
-      try {
-        var fn = null;
-        if (@getContext) {
-          fn = evalWithVarsFn(this.selectedText(), @getContext(), @getIModule());
-        } else {
-          fn = evalWithVarsFn(this.selectedText(), @getFrame(), @getIModule());
-        }
-        VMProcess.debug(fn,[]);
-        if (@afterEval) {
-          @afterEval(fn.getEnv());
-        }
-      } catch(e) {
-        this.insertSelectedText(e.value());
-      }
-    }
-    instance_method insertSelectedText: fun(text) {
-      var pos = this.getSelection();
-      this.insertAt(text, pos["end_line"], pos["end_index"]);
-      var nl = text.count("\n");
-      if (nl == 0) {
-        this.setSelection(pos["end_line"], pos["end_index"], pos["end_line"], pos["end_index"] + text.size);
-      } else {
-        var pl = text.rindex("\n");
-        this.setSelection(pos["end_line"], pos["end_index"], pos["end_line"] + nl, text.from(pl).size() - 1);
-      }
-    }
-  }
-
-  class Workspace < QMainWindow {
-    fields: editor, variables;
+  class CommandHistory {
+    fields: undo, redo, next;
     init new: fun() {
-      super.new();
-      @variables = {};
-
-      this.setWindowTitle("Workspace");
-
-      @editor = Editor.new(this, fun() { @variables },
-                           fun() { thisModule }, null,
-                           fun(env) { @variables = env + @variables; });
-
-      @editor.initActions();
-      this.setCentralWidget(@editor);
-
-      var execMenu = this.menuBar().addMenu("&Exploring");
-      @editor.actions().each(fun(action) {
-        execMenu.addAction(action)
-      });
+      @next = null;
+      @undo = null;
+      @redo = null;
+    }
+    instance_method add: fun(undo, redo) {
+      @undo = undo;
+      @redo = redo;
+      @next = "undo";
+    }
+    instance_method redo: fun() {
+      if (@next == "redo") {
+        @redo();
+        @next = "undo";
+      }
+    }
+    instance_method undo: fun() {
+      if (@next == "undo") {
+        @undo();
+        @next = "redo";
+      }
     }
   }
-
-  class Inspector  < QMainWindow {
-    fields: inspectee, variables, mirror, fieldList, textArea, lineEdit;
-    init new: fun(inspectee) {
-      super.new();
-
-      @variables = {"this":@inspectee};
-      @inspectee = inspectee;
-      @mirror = Mirror.new(@inspectee);
-
-      this.resize(300,250);
-      this.setWindowTitle("Inspector");
-      var centralWidget = QWidget.new(this);
-      var mainLayout = qt.QVBoxLayout.new(centralWidget);
-
-      var hbox = qt.QHBoxLayout.new(null);
-
-      @fieldList = qt.QListWidget.new(centralWidget);
-      @fieldList.setMaximumWidth(200);
-      hbox.addWidget(@fieldList);
-
-      @textArea = Editor.new(centralWidget,
-                             fun() { {"this" : @inspectee} },
-                             fun() { thisModule }, null, null);
-
-      hbox.addWidget(@textArea);
-
-      mainLayout.addLayout(hbox);
-
-      @lineEdit = LineEditor.new(centralWidget, @inspectee);
-      mainLayout.addWidget(@lineEdit);
-
-      @lineEdit.connect("returnPressed", fun() {
-        @lineEdit.selectAllAndDoit(@inspectee);
-      });
-
-      this.setCentralWidget(centralWidget);
-
-      this.loadValues();
-      @fieldList.connect("currentItemChanged", fun(item, prev) {
-          this.itemSelected(item);
-      });
-      @fieldList.connect("itemActivated", fun(item) {
-          this.itemActivated(item);
-      });
-
-      var execMenu = this.menuBar().addMenu("&Exploring");
-
-      var action = qt.QAction.new("&Do it", this);
-      action.setShortcut("ctrl+d");
-      action.connect("triggered", fun() {
-          this.doIt();
-      });
-      execMenu.addAction(action);
-
-      action = qt.QAction.new("&Print it", this);
-      action.setShortcut("ctrl+p");
-      action.connect("triggered", fun() {
-          this.printIt();
-      });
-      execMenu.addAction(action);
-
-      action = qt.QAction.new("&Inspect it", this);
-      action.setShortcut("ctrl+i");
-      action.connect("triggered", fun() {
-          this.inspectIt();
-      });
-      execMenu.addAction(action);
-
-      action = qt.QAction.new("De&bug it", this);
-      action.setShortcut("ctrl+b");
-      action.connect("triggered", fun() {
-          this.debugIt();
-      });
-      execMenu.addAction(action);
-
-      action = qt.QAction.new("Accept it", execMenu);
-      action.setShortcut("ctrl+s");
-      action.connect("triggered", fun() {
-          this.acceptIt();
-      });
-      execMenu.addAction(action);
-    }
-
-    instance_method loadValues: fun() {
-      qt.QListWidgetItem.new('*self', @fieldList);
-      @mirror.fields().each(fun(name) {
-          qt.QListWidgetItem.new(name, @fieldList);
-      });
-    }
-
-    instance_method itemSelected: fun(item) { //QListWidgetItem, curr from the signal
-      if (item.text() == '*self') {
-        @textArea.setText(@inspectee.toSource());
-      } else {
-        var value = @mirror.valueFor(item.text());
-        @textArea.setText(value.toSource());
-      }
-    }
-
-    instance_method itemActivated: fun(item) {
-      if (item.text() != '*self') {
-        var value = @mirror.valueFor(item.text());
-        Inspector.new(value).show();
-      }
-    }
-
-    instance_method doIt: fun() {
-      if (@lineEdit.hasFocus()) {
-        @lineEdit.doIt();
-      } else {
-        @textArea.doIt();
-      }
-    }
-
-    instance_method printIt: fun() {
-      if (@lineEdit.hasFocus()) {
-        @lineEdit.printIt();
-      } else {
-        @textArea.printIt();
-      }
-    }
-    instance_method inspectIt: fun() {
-      if (@lineEdit.hasFocus()) {
-        @lineEdit.inspectIt();
-      } else {
-        @textArea.inspectIt();
-      }
-    }
-    instance_method debugIt: fun() {
-      if (@lineEdit.hasFocus()) {
-        @lineEdit.debugIt();
-      } else {
-        @textArea.debugIt();
-      }
-    }
-    instance_method acceptIt: fun() {
-      var fn = evalWithVarsFn(@textArea.text(), {"this":@inspectee}, thisModule);
-      var new_value = fn.apply([]);
-      var slot = @fieldList.currentItem().text();
-      @mirror.setValueFor(slot, new_value);
-    }
-  }
-
-
-  class StackCombo < QComboBox {
-    fields: frames;
-    init new: fun(parent, execframes) {
-      super.new(parent);
-      @frames = execframes;
-    }
-    instance_method updateInfo: fun() {
-      this.clear();
-      @frames.names().each(fun(name) {
-        this.addItem(name);
-      });
-      this.setCurrentIndex(@frames.size() - 1);
-    }
-  }
-
-  class ExecutionFrames {
-    fields: vmproc;
-    init new: fun(vmproc) {
-      @vmproc = vmproc;
-    }
-    instance_method names: fun() {
-      return @vmproc.stackFrames().map(fun(frame) {
-        frame.contextPointer().compiledFunction().fullName() + ":" + frame.instructionPointer()["start_line"].toString()
-      });
-    }
-    instance_method codeFor: fun(i) {
-      var cp = @vmproc.stackFrames().get(i).contextPointer().compiledFunction();
-      if (cp.isTopLevel()) {
-        return cp.text();
-      } else {
-        if (cp.isEmbedded()) {
-          return cp.topLevelCompiledFunction().text();
-        } else {
-          return cp.text();
-        }
-      }
-    }
-    instance_method localsFor: fun(i) { // this is used for the local variable list widet
-      return @vmproc.stackFrames().get(i).localVars();
-    }
-    instance_method frame: fun(i) { // this is used for doIt/printIt/etc.
-      return @vmproc.stackFrames().get(i);
-    }
-    instance_method moduleVarsFor: fun(i) { // this is used for the module variables list wdiget
-      // var pnames = null;
-      // if (i < @vmproc.stackFrames().size()) {
-      //   pnames = @vmproc.stackFrames().get(i).modulePointer()._compiledModule().params();
-      // } else {
-      //   pnames = @vmproc.modulePointer()._compiledModule().params();
-      // }
-      // var ret = {};
-      // pnames.each(fun(name) {
-      //   ret[name] = @vmproc.modulePointer.entry(name);
-      // });
-      return {};
-    }
-    instance_method locationInfoFor: fun(i) {
-      return @vmproc.stackFrames().get(i).instructionPointer();
-    }
-    instance_method size: fun() {
-      return @vmproc.stackFrames().size();
-    }
-  }
-
-  class VariableListWidget < QTableWidget {
-    fields: variables;
-    init new: fun(parent) {
-      super.new(2, 2, parent);
-      this.verticalHeader().hide();
-      this.setSelectionMode(1);
-      var header = this.horizontalHeader();
-      header.setStretchLastSection(true);
-      this.setSortingEnabled(false);
-    }
-    instance_method setVariables: fun(vars) {
-      @variables = vars;
-      this.clear();
-      this.setHorizontalHeaderLabels(['Name', 'Value']);
-      var i = 0;
-      vars.each(fun(name,value) {
-        this.setItem(i, 0, qt.QTableWidgetItem.new(name));
-        this.setItem(i, 1, qt.QTableWidgetItem.new(value.toString()));
-        i = i + 1;
-      });
-    }
-  }
-
   class DebuggerUI < QMainWindow {
     fields: frame_index, process, execFrames, stackCombo, editor, localVarList, moduleVarList, statusLabel, eventloop, execMenu;
     init new: fun(process, eventloop) {
@@ -634,6 +221,16 @@ module idez(qt,io)
 
       @stackCombo.updateInfo();
     }
+    instance_method compileAndRewind: fun() {
+      var text = @editor.text();
+      @process.contextPointer().compiledFunction().setCode(text);
+      @process.rewind();
+      @stackCombo.updateInfo();
+    }
+    instance_method continue: fun() {
+      this.close();
+      @eventloop.exit(0);
+    }
     instance_method disableActions: fun() {
       @execMenu.actions.each(fun(ac) {
         ac.setEnabled(false);
@@ -644,13 +241,6 @@ module idez(qt,io)
         ac.setEnabled(true);
       });
     }
-
-    // instance_method closeEvent: fun() {
-    //   if (@cont_on_exit) {
-    //     @process.continue();
-    //   }
-    // }
-
     instance_method stepInto: fun() {
       @statusLabel.setText("Stepping into...");
       this.disableActions();
@@ -673,18 +263,408 @@ module idez(qt,io)
         this.continue();
       }
     }
-    instance_method continue: fun() {
-      this.close();
-      @eventloop.exit(0);
+  }
+  class Editor < QsciScintilla {
+    fields: getContext, getIModule, getFrame, afterEval;
+    init new: fun(parent, getContext, getIModule, getFrame, afterEval) {
+      super.new(parent);
+      if (parent == null) {
+        this.initActions();
+      }
+      @getContext = getContext;
+      @getIModule = getIModule;
+      @getFrame = getFrame;
+      @afterEval = afterEval;
     }
-    instance_method compileAndRewind: fun() {
-      var text = @editor.text();
-      @process.contextPointer().compiledFunction().setCode(text);
-      @process.rewind();
-      @stackCombo.updateInfo();
+    instance_method debugIt: fun() {
+      try {
+        var fn = null;
+        if (@getContext) {
+          fn = evalWithVarsFn(this.selectedText(), @getContext(), @getIModule());
+        } else {
+          fn = evalWithVarsFn(this.selectedText(), @getFrame(), @getIModule());
+        }
+        VMProcess.debug(fn,[]);
+        if (@afterEval) {
+          @afterEval(fn.getEnv());
+        }
+      } catch(e) {
+        this.insertSelectedText(e.value());
+      }
+    }
+    instance_method doIt: fun() {
+      try {
+        this.evalSelection();
+      } catch(e) {
+        this.insertSelectedText(e.value());
+      }
+    }
+    instance_method evalSelection: fun() {
+      var r = null;
+      if (@getContext) {
+        r = evalWithVars(this.selectedText(), @getContext(), @getIModule());
+      } else {
+        r = evalWithFrame(this.selectedText(), @getFrame(), @getIModule());
+      }
+      if (@afterEval) {
+        @afterEval(r["env"]);
+      }
+      return r["result"];
+    }
+    instance_method initActions: fun() {
+      var action = qt.QAction.new("&Do it", this);
+      action.setShortcut("ctrl+d");
+      action.connect("triggered", fun() {
+          this.doIt();
+      });
+      action.setShortcutContext(0); //widget context
+      this.addAction(action);
+
+      action = qt.QAction.new("&Print it", this);
+      action.setShortcut("ctrl+p");
+      action.connect("triggered", fun() {
+          this.printIt();
+      });
+      action.setShortcutContext(0); //widget context
+      this.addAction(action);
+
+      action = qt.QAction.new("&Inspect it", this);
+      action.setShortcut("ctrl+i");
+      action.connect("triggered", fun() {
+          this.inspectIt();
+      });
+      action.setShortcutContext(0); //widget context
+      this.addAction(action);
+
+      action = qt.QAction.new("De&bug it", this);
+      action.setShortcut("ctrl+b");
+      action.connect("triggered", fun() {
+          this.debugIt();
+      });
+      action.setShortcutContext(0); //widget context
+      this.addAction(action);
+    }
+    instance_method insertSelectedText: fun(text) {
+      var pos = this.getSelection();
+      this.insertAt(text, pos["end_line"], pos["end_index"]);
+      var nl = text.count("\n");
+      if (nl == 0) {
+        this.setSelection(pos["end_line"], pos["end_index"], pos["end_line"], pos["end_index"] + text.size);
+      } else {
+        var pl = text.rindex("\n");
+        this.setSelection(pos["end_line"], pos["end_index"], pos["end_line"] + nl, text.from(pl).size() - 1);
+      }
+    }
+    instance_method inspectIt: fun() {
+      try {
+        var res = this.evalSelection();
+        Inspector.new(res).show();
+      } catch(e) {
+        this.insertSelectedText(e.value());
+      }
+    }
+    instance_method printIt: fun() {
+      try {
+        var res = this.evalSelection();
+        this.insertSelectedText(res.toString());
+      } catch(e) {
+        this.insertSelectedText(e.value());
+      }
     }
   }
+  class ExecutionFrames {
+    fields: vmproc;
+    init new: fun(vmproc) {
+      @vmproc = vmproc;
+    }
+    instance_method codeFor: fun(i) {
+      var cp = @vmproc.stackFrames().get(i).contextPointer().compiledFunction();
+      if (cp.isTopLevel()) {
+        return cp.text();
+      } else {
+        if (cp.isEmbedded()) {
+          return cp.topLevelCompiledFunction().text();
+        } else {
+          return cp.text();
+        }
+      }
+    }
+    instance_method frame: fun(i) { // this is used for doIt/printIt/etc.
+      return @vmproc.stackFrames().get(i);
+    }
+    instance_method localsFor: fun(i) { // this is used for the local variable list widet
+      return @vmproc.stackFrames().get(i).localVars();
+    }
+    instance_method locationInfoFor: fun(i) {
+      return @vmproc.stackFrames().get(i).instructionPointer();
+    }
+    instance_method moduleVarsFor: fun(i) { // this is used for the module variables list wdiget
+      // var pnames = null;
+      // if (i < @vmproc.stackFrames().size()) {
+      //   pnames = @vmproc.stackFrames().get(i).modulePointer()._compiledModule().params();
+      // } else {
+      //   pnames = @vmproc.modulePointer()._compiledModule().params();
+      // }
+      // var ret = {};
+      // pnames.each(fun(name) {
+      //   ret[name] = @vmproc.modulePointer.entry(name);
+      // });
+      return {};
+    }
+    instance_method names: fun() {
+      return @vmproc.stackFrames().map(fun(frame) {
+        frame.contextPointer().compiledFunction().fullName() + ":" + frame.instructionPointer()["start_line"].toString()
+      });
+    }
+    instance_method size: fun() {
+      return @vmproc.stackFrames().size();
+    }
+  }
+  class ExplorerEditor < Editor {
+    fields: cfun;
+    init new: fun(cfun, parent, getContext, getIModule, getFrame, afterEval) {
+      super.new(parent, getContext, getIModule, getFrame, afterEval);
+      @cfun = cfun;
+    }
+    instance_method accept: fun() {
+        try {
+          @cfun.setCode(this.text());
+        } catch(ex) {
+          this.insertSelectedText(ex.value());
+        }
+    }
+    instance_method cfun: fun() {
+      return @cfun;
+    }
+  }
+  class Inspector < QMainWindow {
+    fields: inspectee, variables, mirror, fieldList, textArea, lineEdit;
+    init new: fun(inspectee) {
+      super.new();
 
+      @variables = {"this":@inspectee};
+      @inspectee = inspectee;
+      @mirror = Mirror.new(@inspectee);
+
+      this.resize(300,250);
+      this.setWindowTitle("Inspector");
+      var centralWidget = QWidget.new(this);
+      var mainLayout = qt.QVBoxLayout.new(centralWidget);
+
+      var hbox = qt.QHBoxLayout.new(null);
+
+      @fieldList = qt.QListWidget.new(centralWidget);
+      @fieldList.setMaximumWidth(200);
+      hbox.addWidget(@fieldList);
+
+      @textArea = Editor.new(centralWidget,
+                             fun() { {"this" : @inspectee} },
+                             fun() { thisModule }, null, null);
+
+      hbox.addWidget(@textArea);
+
+      mainLayout.addLayout(hbox);
+
+      @lineEdit = LineEditor.new(centralWidget, @inspectee);
+      mainLayout.addWidget(@lineEdit);
+
+      @lineEdit.connect("returnPressed", fun() {
+        @lineEdit.selectAllAndDoit(@inspectee);
+      });
+
+      this.setCentralWidget(centralWidget);
+
+      this.loadValues();
+      @fieldList.connect("currentItemChanged", fun(item, prev) {
+          this.itemSelected(item);
+      });
+      @fieldList.connect("itemActivated", fun(item) {
+          this.itemActivated(item);
+      });
+
+      var execMenu = this.menuBar().addMenu("&Exploring");
+
+      var action = qt.QAction.new("&Do it", this);
+      action.setShortcut("ctrl+d");
+      action.connect("triggered", fun() {
+          this.doIt();
+      });
+      execMenu.addAction(action);
+
+      action = qt.QAction.new("&Print it", this);
+      action.setShortcut("ctrl+p");
+      action.connect("triggered", fun() {
+          this.printIt();
+      });
+      execMenu.addAction(action);
+
+      action = qt.QAction.new("&Inspect it", this);
+      action.setShortcut("ctrl+i");
+      action.connect("triggered", fun() {
+          this.inspectIt();
+      });
+      execMenu.addAction(action);
+
+      action = qt.QAction.new("De&bug it", this);
+      action.setShortcut("ctrl+b");
+      action.connect("triggered", fun() {
+          this.debugIt();
+      });
+      execMenu.addAction(action);
+
+      action = qt.QAction.new("Accept it", execMenu);
+      action.setShortcut("ctrl+s");
+      action.connect("triggered", fun() {
+          this.acceptIt();
+      });
+      execMenu.addAction(action);
+    }
+    instance_method acceptIt: fun() {
+      var fn = evalWithVarsFn(@textArea.text(), {"this":@inspectee}, thisModule);
+      var new_value = fn.apply([]);
+      var slot = @fieldList.currentItem().text();
+      @mirror.setValueFor(slot, new_value);
+    }
+    instance_method debugIt: fun() {
+      if (@lineEdit.hasFocus()) {
+        @lineEdit.debugIt();
+      } else {
+        @textArea.debugIt();
+      }
+    }
+    instance_method doIt: fun() {
+      if (@lineEdit.hasFocus()) {
+        @lineEdit.doIt();
+      } else {
+        @textArea.doIt();
+      }
+    }
+    instance_method inspectIt: fun() {
+      if (@lineEdit.hasFocus()) {
+        @lineEdit.inspectIt();
+      } else {
+        @textArea.inspectIt();
+      }
+    }
+    instance_method itemActivated: fun(item) {
+      if (item.text() != '*self') {
+        var value = @mirror.valueFor(item.text());
+        Inspector.new(value).show();
+      }
+    }
+    instance_method itemSelected: fun(item) { //QListWidgetItem, curr from the signal
+      if (item.text() == '*self') {
+        @textArea.setText(@inspectee.toSource());
+      } else {
+        var value = @mirror.valueFor(item.text());
+        @textArea.setText(value.toSource());
+      }
+    }
+    instance_method loadValues: fun() {
+      qt.QListWidgetItem.new('*self', @fieldList);
+      @mirror.fields().each(fun(name) {
+          qt.QListWidgetItem.new(name, @fieldList);
+      });
+    }
+    instance_method printIt: fun() {
+      if (@lineEdit.hasFocus()) {
+        @lineEdit.printIt();
+      } else {
+        @textArea.printIt();
+      }
+    }
+  }
+  class LineEditor < QLineEdit {
+    fields: receiver;
+    init new: fun(parent, receiver) {
+      super.new(parent);
+      if (parent == null) {
+        this.initActions();
+      }
+      @receiver = receiver;
+    }
+    instance_method debugIt: fun() {
+      try {
+        var fn = evalWithVarsFn(this.selectedText(), {"this" : @receiver}, thisModule);
+        VMProcess.debug(fn,[]);
+      } catch(e) {
+        this.insertSelectedText(e.value());
+      }
+    }
+    instance_method doIt: fun() {
+      try {
+        this.evalSelection();
+      } catch(e) {
+        this.insertSelectedText(e.value());
+      }
+    }
+    instance_method evalSelection: fun() {
+      var r = evalWithVars(this.selectedText(), {"this" : @receiver}, thisModule);
+      return r["result"];
+    }
+    instance_method initActions: fun() {
+      this.connect("returnPressed", fun() {
+        this.selectAllAndDoit(null);
+      });
+
+      var action = qt.QAction.new("&Do it", this);
+      action.setShortcut("ctrl+d");
+      action.connect("triggered", fun() {
+          this.doIt();
+      });
+      action.setShortcutContext(0); //widget context
+      this.addAction(action);
+
+      action = qt.QAction.new("&Print it", this);
+      action.setShortcut("ctrl+p");
+      action.connect("triggered", fun() {
+          this.printIt();
+      });
+      action.setShortcutContext(0); //widget context
+      this.addAction(action);
+
+      action = qt.QAction.new("&Inspect it", this);
+      action.setShortcut("ctrl+i");
+      action.connect("triggered", fun() {
+          this.inspectIt();
+      });
+      action.setShortcutContext(0); //widget context
+      this.addAction(action);
+
+      action = qt.QAction.new("De&bug it", this);
+      action.setShortcut("ctrl+b");
+      action.connect("triggered", fun() {
+          this.debugIt();
+      });
+      action.setShortcutContext(0); //widget context
+      this.addAction(action);
+    }
+    instance_method insertSelectedText: fun(text) {
+      var len = this.text().size();
+      this.setText(this.text() + text);
+      this.setSelection(len, text.size());
+    }
+    instance_method inspectIt: fun() {
+      try {
+        var res = this.evalSelection();
+        Inspector.new(res).show();
+      } catch(e) {
+        this.insertSelectedText(e.value());
+      }
+    }
+    instance_method printIt: fun() {
+      try {
+        var res = this.evalSelection();
+        this.insertSelectedText(res.toString());
+      } catch(e) {
+        this.insertSelectedText(e.value());
+      }
+    }
+    instance_method selectAllAndDoit: fun(receiver) {
+        this.selectAll();
+        this.doIt();
+    }
+  }
   class MiniBuffer < QWidget {
     fields: label, lineEdit, callback;
     init new: fun(parent) {
@@ -708,7 +688,6 @@ module idez(qt,io)
         }
       });
     }
-
     instance_method prompt: fun(labelText, defaultValue, callback) {
       @callback = callback;
       @label.setText(labelText);
@@ -717,53 +696,6 @@ module idez(qt,io)
       @lineEdit.setFocus();
     }
   }
-
-  class CommandHistory {
-    fields: undo, redo, next;
-    init new: fun() {
-      @next = null;
-      @undo = null;
-      @redo = null;
-    }
-    instance_method add: fun(undo, redo) {
-      @undo = undo;
-      @redo = redo;
-      @next = "undo";
-    }
-    instance_method undo: fun() {
-      if (@next == "undo") {
-        @undo();
-        @next = "redo";
-      }
-    }
-    instance_method redo: fun() {
-      if (@next == "redo") {
-        @redo();
-        @next = "undo";
-      }
-    }
-  }
-
-  class ExplorerEditor < Editor {
-    fields: cfun;
-    init new: fun(cfun, parent, getContext, getIModule, getFrame, afterEval) {
-      super.new(parent, getContext, getIModule, getFrame, afterEval);
-      @cfun = cfun;
-    }
-
-    instance_method accept: fun() {
-        try {
-          @cfun.setCode(this.text());
-        } catch(ex) {
-          this.insertSelectedText(ex.value());
-        }
-    }
-
-    instance_method cfun: fun() {
-      return @cfun;
-    }
-  }
-
   class ModuleExplorer < QMainWindow {
     fields: webview, miniBuffer, current_cmodule, imodule, chistory, statusLabel, variables;
     init new: fun() {
@@ -860,7 +792,319 @@ module idez(qt,io)
       this.initActions();
       this.show_home();
     }
+    instance_method action_acceptCode: fun() {
+      if (@current_cmodule == null) {
+        @statusLabel.setText("No current module");
+        return true;
+      }
 
+      var e = qt.QApplication.focusWidget();
+      if (Mirror.vtFor(e) == ExplorerEditor) {
+        e.accept();
+        @statusLabel.setText("Code changed");
+      } else {
+        @statusLabel.setText("No function selected");
+      }
+    }
+    instance_method action_addClass: fun() {
+      if (@current_cmodule == null) {
+        @statusLabel.setText("No current module");
+        return true;
+      }
+
+      @miniBuffer.prompt("New class: ", "", fun(name) {
+        this.command(fun() {
+          @current_cmodule.newClass(name);
+          this.show_module(@current_cmodule.name);
+          @statusLabel.setText("Class added: " + name);
+        }, fun() {
+          @current_cmodule.removeClass(name);
+          this.show_module(@current_cmodule.name);
+          @statusLabel.setText("Class removed: " + name);
+        });
+      });
+    }
+    instance_method action_addFunction: fun() {
+      if (@current_cmodule == null) {
+        @statusLabel.setText("No current module");
+        return true;
+      }
+
+      @miniBuffer.prompt("Function name: ", "", fun(name) {
+        // TODO, check if function already exists
+
+        var cfun = CompiledFunction.newTopLevel(name, "fun() { return null; }", @current_cmodule, :module_function);
+        var doc = @webview.page().mainFrame().documentElement();
+        var mlist = doc.findFirst("#menu-listing .link-list");
+        this.command(fun() {
+          @current_cmodule.addFunction(cfun);
+          this.showEditorForFunction(cfun, "module", ".module-functions");
+          @statusLabel.setText("Function added: " + name);
+          mlist.appendInside("<li><a href='#" + cfun.fullName + "'>" + cfun.fullName + "</a></li>");
+        }, fun() {
+          mlist.findFirst("li a[href='#" + cfun.fullName + "']").setAttribute("style","display:none");
+          @current_cmodule.removeFunction(name);
+          @webview.page().mainFrame().documentElement().findFirst("div[id='" + cfun.fullName + "']").takeFromDocument();
+          @statusLabel.setText("Function removed: " + name);
+        });
+      });
+    }
+    instance_method action_addMethod: fun() {
+      if (@current_cmodule == null) {
+        @statusLabel.setText("No current module");
+        return true;
+      }
+
+      @miniBuffer.prompt("Method name (ex: Foo.bar, Foo::bar): ", "", fun(spec_name) {
+        var flag = null;
+        var split = null;
+        if (spec_name.count(".") == 1) { //instance method
+          split = spec_name.split(".");
+          flag = :instance_method;
+        } else { //class method
+          split = spec_name.split("::");
+          flag = :class_method;
+        }
+        var class_name = split[0];
+        var method_name = split[1];
+
+        if (!@current_cmodule.compiled_classes.has(class_name)) {
+          @statusLabel.setText("No class found: " + class_name);
+          return true;
+        }
+
+        //TODO, check if method already exists
+
+        var klass = @current_cmodule.compiled_classes[class_name];
+        var cfun = CompiledFunction.newTopLevel(method_name, "fun() { return null; }", klass, flag);
+        var doc = @webview.page().mainFrame().documentElement();
+        var mlist = doc.findFirst("#menu-listing .link-list");
+        this.command(fun() {
+          klass.addMethod(cfun, flag);
+          this.showEditorForFunction(cfun, flag.toString, "div[id='imethods_" + klass.name + "']");
+          @statusLabel.setText("Method added: " + cfun.fullName);
+          mlist.appendInside("<li><a href='#" + cfun.fullName + "'>" + cfun.fullName + "</a></li>");
+        }, fun() {
+          mlist.findFirst("li a[href='#" + cfun.fullName + "']").setAttribute("style","display:none");
+          klass.removeMethod(method_name, flag);
+          doc.findFirst("div[id='" + cfun.fullName + "']").takeFromDocument();
+          @statusLabel.setText("Method removed: " + cfun.fullName);
+        });
+      });
+
+    }
+    instance_method action_deleteClass: fun() {
+      if (@current_cmodule == null) {
+        @statusLabel.setText("No current module");
+        return true;
+      }
+
+      @miniBuffer.prompt("Delete class: ", "", fun(name) {
+        if (!@current_cmodule.compiled_classes.has(name)) {
+          @statusLabel.setText("No class found: " + name);
+          return true;
+        }
+        var klass = @current_cmodule.compiled_classes[name];
+        this.command(fun() {
+          @current_cmodule.removeClass(name);
+          this.show_module(@current_cmodule.name);
+        }, fun() {
+          @current_cmodule.addClass(klass);
+          this.show_module(@current_cmodule.name);
+        });
+      });
+    }
+    instance_method action_deleteFunction: fun() {
+      if (@current_cmodule == null) {
+        @statusLabel.setText("No current module");
+        return true;
+      }
+
+      var e = qt.QApplication.focusWidget();
+      if (Mirror.vtFor(e) == ExplorerEditor) {
+        var cfun = e.cfun();
+        var doc = @webview.page().mainFrame().documentElement();
+        var div = doc.findFirst("div[id='" + cfun.fullName + "']");
+        var mitem = doc.findFirst("#menu-listing .link-list").findFirst("li a[href='#" + cfun.fullName + "']");
+
+        var owner = cfun.owner;
+        var flag = null;
+        this.command(fun() {
+          if (Mirror.vtFor(owner) == CompiledModule) {
+            owner.removeFunction(cfun.name);
+          } else {
+            flag = owner.methodFlag(cfun);
+            owner.removeMethod(cfun.name, flag);
+          }
+          div.setAttribute("style","display:none");
+          mitem.setAttribute("style","display:none");
+          @statusLabel.setText("Function deleted: " + cfun.name);
+        }, fun() {
+          if (Mirror.vtFor(owner) == CompiledModule) {
+            owner.addFunction(cfun);
+          } else {
+            owner.addMethod(cfun, flag);
+          }
+          div.setAttribute("style","display:block");
+          mitem.setAttribute("style","display:block");
+          @statusLabel.setText("Function added: " + cfun.name);
+        });
+      } else {
+        @statusLabel.setText("No function selected");
+      }
+    }
+    instance_method action_editFields: fun() {
+      if (@current_cmodule == null) {
+        @statusLabel.setText("No current module");
+        return true;
+      }
+
+      @miniBuffer.prompt("Edit fields for class: ", "", fun(name) {
+        if (!@current_cmodule.compiled_classes.has(name)) {
+          @statusLabel.setText("No class found: " + name);
+          return true;
+        }
+        var klass = @current_cmodule.compiled_classes[name];
+        var doc = @webview.page().mainFrame().documentElement();
+        var old_fields = klass.fields;
+        @miniBuffer.prompt("Fields: ", klass.fields.toString, fun(fields) {
+          this.command(fun() {
+            klass.setFields(fields.split(","));
+            doc.findFirst("#" + klass.fullName + " .fields_list").setPlainText(fields.toString());
+          }, fun() {
+            klass.setFields(old_fields);
+            doc.findFirst("#" + klass.fullName + " .fields_list").setPlainText(old_fields.toString());
+          });
+        });
+        return false;
+      });
+    }
+    instance_method action_editModuleDefaultParameters: fun() {
+      if (@current_cmodule == null) {
+        @statusLabel.setText("No current module");
+        return true;
+      }
+      @miniBuffer.prompt("Edit default parameter for: ", "", fun(name) {
+        if (!@current_cmodule.params().has(name)) {
+          @statusLabel.setText("parameter not found:" + name);
+          return true;
+        }
+        var dp = @current_cmodule.defaultParameterFor(name);
+        var doc = @webview.page().mainFrame().documentElement();
+        @miniBuffer.prompt("value: ", dp.toString, fun(val) {
+          this.command(fun() {
+            @current_cmodule.setDefaultParameter(name, val);
+            var lis = @current_cmodule.default_parameters.map(fun(name,d) { "<li>" + name + " : memetalk/" + d["value"] + "/1.0</li>"; });
+            doc.findFirst(".default-parameters").setInnerXml(lis.join(""));
+          }, fun() {
+            @current_cmodule.setDefaultParameter(name, dp);
+            var lis = @current_cmodule.default_parameters.map(fun(name,d) { "<li>" + name + " : memetalk/" + d["value"] + "/1.0</li>"; });
+            doc.findFirst(".default-parameters").setInnerXml(lis.join(""));
+          });
+        });
+        return false;
+      });
+    }
+    instance_method action_editModuleParameters: fun() {
+      if (@current_cmodule == null) {
+        @statusLabel.setText("No current module");
+        return true;
+      }
+
+      var old_params = @current_cmodule.params;
+      var doc = @webview.page().mainFrame().documentElement();
+      @miniBuffer.prompt("Edit module parameters: ", old_params.toString(), fun(params) {
+        this.command(fun() {
+          @current_cmodule.setParams(params.split(","));
+          doc.findFirst(".module_title_params").setPlainText(params);
+        }, fun() {
+          @current_cmodule.setParams(old_params);
+          doc.findFirst(".module_title_params").setPlainText(old_params.toString);
+        });
+      });
+    }
+    instance_method action_eval: fun() {
+      @miniBuffer.prompt("eval: ", "", fun(expr) {
+        try {
+          var imod = null;
+          if (@imodule) {
+            imod = @imodule;
+          } else {
+            imod = thisModule;
+          }
+          var r = evalWithVars(expr, {}, imod);
+          @statusLabel.setText(r["result"].toString());
+        } catch(e) {
+          @statusLabel.setText(e.value);
+        }
+      });
+    }
+    instance_method action_instantiateModule: fun() {
+      if (@current_cmodule == null) {
+        @statusLabel.setText("No current module");
+        return true;
+      }
+      @imodule = @current_cmodule.instantiate({});
+      @statusLabel.setText("Module instantiated");
+    }
+    instance_method action_renameClass: fun() {
+      if (@current_cmodule == null) {
+        @statusLabel.setText("No current module");
+        return true;
+      }
+
+      @miniBuffer.prompt("Rename class: ", "", fun(name) {
+        if (!@current_cmodule.compiled_classes.has(name)) {
+          @statusLabel.setText("No class found: " + name);
+          return true;
+        }
+        var doc = @webview.page().mainFrame().documentElement();
+        var klass = @current_cmodule.compiled_classes[name];
+        @miniBuffer.prompt("to: ", "", fun(new_name) {
+          this.command(fun() {
+            klass.rename(new_name);
+            this.show_module(@current_cmodule.name);
+            @statusLabel.setText("Class " + name + " renamed to " + new_name);
+          }, fun() {
+            klass.rename(name);
+            this.show_module(@current_cmodule.name);
+            @statusLabel.setText("Class " + new_name + " renamed to " + name);
+          });
+        });
+        return false;
+      });
+    }
+    instance_method action_saveToFileSystem: fun() {
+      available_modules().each(save_module);
+    }
+    instance_method action_toggleCtor: fun() {
+      if (@current_cmodule == null) {
+        @statusLabel.setText("No current module");
+        return true;
+      }
+
+      var e = qt.QApplication.focusWidget();
+      if (Mirror.vtFor(e) == ExplorerEditor) {
+        e.cfun.setCtor(!e.cfun.is_constructor());
+        if (e.cfun.is_constructor()) {
+          @statusLabel.setText(e.cfun.fullName + " now is a constructor");
+        } else {
+          @statusLabel.setText(e.cfun.fullName + " now is not a constructor");
+        }
+      } else {
+        @statusLabel.setText("No function selected");
+      }
+    }
+    instance_method command: fun(redo, undo) {
+      redo();
+      @chistory.add(undo,redo);
+    }
+    instance_method currentIModule: fun() {
+      if (@imodule) {
+        return @imodule;
+      }
+      return thisModule;
+    }
     instance_method initActions: fun() {
       // System menu
 
@@ -1018,359 +1262,11 @@ module idez(qt,io)
       action.setShortcutContext(1);
       execMenu.addAction(action);
     }
-
-    instance_method currentIModule: fun() {
-      if (@imodule) {
-        return @imodule;
-      }
-      return thisModule;
-    }
-
-    instance_method command: fun(redo, undo) {
-      redo();
-      @chistory.add(undo,redo);
-    }
-
-    instance_method action_eval: fun() {
-      @miniBuffer.prompt("eval: ", "", fun(expr) {
-        try {
-          var imod = null;
-          if (@imodule) {
-            imod = @imodule;
-          } else {
-            imod = thisModule;
-          }
-          var r = evalWithVars(expr, {}, imod);
-          @statusLabel.setText(r["result"].toString());
-        } catch(e) {
-          @statusLabel.setText(e.value);
-        }
-      });
-    }
-
-    instance_method action_saveToFileSystem: fun() {
-      available_modules().each(save_module);
-    }
-
-    instance_method action_instantiateModule: fun() {
-      if (@current_cmodule == null) {
-        @statusLabel.setText("No current module");
-        return true;
-      }
-      @imodule = @current_cmodule.instantiate({});
-      @statusLabel.setText("Module instantiated");
-    }
-
-    instance_method action_toggleCtor: fun() {
-      if (@current_cmodule == null) {
-        @statusLabel.setText("No current module");
-        return true;
-      }
-
-      var e = qt.QApplication.focusWidget();
-      if (Mirror.vtFor(e) == ExplorerEditor) {
-        e.cfun.setCtor(!e.cfun.is_constructor());
-        if (e.cfun.is_constructor()) {
-          @statusLabel.setText(e.cfun.fullName + " now is a constructor");
-        } else {
-          @statusLabel.setText(e.cfun.fullName + " now is not a constructor");
-        }
-      } else {
-        @statusLabel.setText("No function selected");
-      }
-    }
-
-    instance_method action_addClass: fun() {
-      if (@current_cmodule == null) {
-        @statusLabel.setText("No current module");
-        return true;
-      }
-
-      @miniBuffer.prompt("New class: ", "", fun(name) {
-        this.command(fun() {
-          @current_cmodule.newClass(name);
-          this.show_module(@current_cmodule.name);
-          @statusLabel.setText("Class added: " + name);
-        }, fun() {
-          @current_cmodule.removeClass(name);
-          this.show_module(@current_cmodule.name);
-          @statusLabel.setText("Class removed: " + name);
-        });
-      });
-    }
-
-    instance_method action_deleteClass: fun() {
-      if (@current_cmodule == null) {
-        @statusLabel.setText("No current module");
-        return true;
-      }
-
-      @miniBuffer.prompt("Delete class: ", "", fun(name) {
-        if (!@current_cmodule.compiled_classes.has(name)) {
-          @statusLabel.setText("No class found: " + name);
-          return true;
-        }
-        var klass = @current_cmodule.compiled_classes[name];
-        this.command(fun() {
-          @current_cmodule.removeClass(name);
-          this.show_module(@current_cmodule.name);
-        }, fun() {
-          @current_cmodule.addClass(klass);
-          this.show_module(@current_cmodule.name);
-        });
-      });
-    }
-
-    instance_method action_renameClass: fun() {
-      if (@current_cmodule == null) {
-        @statusLabel.setText("No current module");
-        return true;
-      }
-
-      @miniBuffer.prompt("Rename class: ", "", fun(name) {
-        if (!@current_cmodule.compiled_classes.has(name)) {
-          @statusLabel.setText("No class found: " + name);
-          return true;
-        }
-        var doc = @webview.page().mainFrame().documentElement();
-        var klass = @current_cmodule.compiled_classes[name];
-        @miniBuffer.prompt("to: ", "", fun(new_name) {
-          this.command(fun() {
-            klass.rename(new_name);
-            this.show_module(@current_cmodule.name);
-            @statusLabel.setText("Class " + name + " renamed to " + new_name);
-          }, fun() {
-            klass.rename(name);
-            this.show_module(@current_cmodule.name);
-            @statusLabel.setText("Class " + new_name + " renamed to " + name);
-          });
-        });
-        return false;
-      });
-    }
-
-    instance_method action_editModuleDefaultParameters: fun() {
-      if (@current_cmodule == null) {
-        @statusLabel.setText("No current module");
-        return true;
-      }
-      @miniBuffer.prompt("Edit default parameter for: ", "", fun(name) {
-        if (!@current_cmodule.params().has(name)) {
-          @statusLabel.setText("parameter not found:" + name);
-          return true;
-        }
-        var dp = @current_cmodule.defaultParameterFor(name);
-        var doc = @webview.page().mainFrame().documentElement();
-        @miniBuffer.prompt("value: ", dp.toString, fun(val) {
-          this.command(fun() {
-            @current_cmodule.setDefaultParameter(name, val);
-            var lis = @current_cmodule.default_parameters.map(fun(name,d) { "<li>" + name + " : memetalk/" + d["value"] + "/1.0</li>"; });
-            doc.findFirst(".default-parameters").setInnerXml(lis.join(""));
-          }, fun() {
-            @current_cmodule.setDefaultParameter(name, dp);
-            var lis = @current_cmodule.default_parameters.map(fun(name,d) { "<li>" + name + " : memetalk/" + d["value"] + "/1.0</li>"; });
-            doc.findFirst(".default-parameters").setInnerXml(lis.join(""));
-          });
-        });
-        return false;
-      });
-    }
-
-    instance_method action_editModuleParameters: fun() {
-      if (@current_cmodule == null) {
-        @statusLabel.setText("No current module");
-        return true;
-      }
-
-      var old_params = @current_cmodule.params;
-      var doc = @webview.page().mainFrame().documentElement();
-      @miniBuffer.prompt("Edit module parameters: ", old_params.toString(), fun(params) {
-        this.command(fun() {
-          @current_cmodule.setParams(params.split(","));
-          doc.findFirst(".module_title_params").setPlainText(params);
-        }, fun() {
-          @current_cmodule.setParams(old_params);
-          doc.findFirst(".module_title_params").setPlainText(old_params.toString);
-        });
-      });
-    }
-
-    instance_method action_editFields: fun() {
-      if (@current_cmodule == null) {
-        @statusLabel.setText("No current module");
-        return true;
-      }
-
-      @miniBuffer.prompt("Edit fields for class: ", "", fun(name) {
-        if (!@current_cmodule.compiled_classes.has(name)) {
-          @statusLabel.setText("No class found: " + name);
-          return true;
-        }
-        var klass = @current_cmodule.compiled_classes[name];
-        var doc = @webview.page().mainFrame().documentElement();
-        var old_fields = klass.fields;
-        @miniBuffer.prompt("Fields: ", klass.fields.toString, fun(fields) {
-          this.command(fun() {
-            klass.setFields(fields.split(","));
-            doc.findFirst("#" + klass.fullName + " .fields_list").setPlainText(fields.toString());
-          }, fun() {
-            klass.setFields(old_fields);
-            doc.findFirst("#" + klass.fullName + " .fields_list").setPlainText(old_fields.toString());
-          });
-        });
-        return false;
-      });
-    }
-
-    instance_method action_acceptCode: fun() {
-      if (@current_cmodule == null) {
-        @statusLabel.setText("No current module");
-        return true;
-      }
-
-      var e = qt.QApplication.focusWidget();
-      if (Mirror.vtFor(e) == ExplorerEditor) {
-        e.accept();
-        @statusLabel.setText("Code changed");
-      } else {
-        @statusLabel.setText("No function selected");
-      }
-    }
-
-    instance_method action_addMethod: fun() {
-      if (@current_cmodule == null) {
-        @statusLabel.setText("No current module");
-        return true;
-      }
-
-      @miniBuffer.prompt("Method name (ex: Foo.bar, Foo::bar): ", "", fun(spec_name) {
-        var flag = null;
-        var split = null;
-        if (spec_name.count(".") == 1) { //instance method
-          split = spec_name.split(".");
-          flag = :instance_method;
-        } else { //class method
-          split = spec_name.split("::");
-          flag = :class_method;
-        }
-        var class_name = split[0];
-        var method_name = split[1];
-
-        if (!@current_cmodule.compiled_classes.has(class_name)) {
-          @statusLabel.setText("No class found: " + class_name);
-          return true;
-        }
-
-        //TODO, check if method already exists
-
-        var klass = @current_cmodule.compiled_classes[class_name];
-        var cfun = CompiledFunction.newTopLevel(method_name, "fun() { return null; }", klass, flag);
-        var doc = @webview.page().mainFrame().documentElement();
-        var mlist = doc.findFirst("#menu-listing .link-list");
-        this.command(fun() {
-          klass.addMethod(cfun, flag);
-          this.showEditorForFunction(cfun, flag.toString, "div[id='imethods_" + klass.name + "']");
-          @statusLabel.setText("Method added: " + cfun.fullName);
-          mlist.appendInside("<li><a href='#" + cfun.fullName + "'>" + cfun.fullName + "</a></li>");
-        }, fun() {
-          mlist.findFirst("li a[href='#" + cfun.fullName + "']").setAttribute("style","display:none");
-          klass.removeMethod(method_name, flag);
-          doc.findFirst("div[id='" + cfun.fullName + "']").takeFromDocument();
-          @statusLabel.setText("Method removed: " + cfun.fullName);
-        });
-      });
-
-    }
-
-    instance_method action_addFunction: fun() {
-      if (@current_cmodule == null) {
-        @statusLabel.setText("No current module");
-        return true;
-      }
-
-      @miniBuffer.prompt("Function name: ", "", fun(name) {
-        // TODO, check if function already exists
-
-        var cfun = CompiledFunction.newTopLevel(name, "fun() { return null; }", @current_cmodule, :module_function);
-        var doc = @webview.page().mainFrame().documentElement();
-        var mlist = doc.findFirst("#menu-listing .link-list");
-        this.command(fun() {
-          @current_cmodule.addFunction(cfun);
-          this.showEditorForFunction(cfun, "module", ".module-functions");
-          @statusLabel.setText("Function added: " + name);
-          mlist.appendInside("<li><a href='#" + cfun.fullName + "'>" + cfun.fullName + "</a></li>");
-        }, fun() {
-          mlist.findFirst("li a[href='#" + cfun.fullName + "']").setAttribute("style","display:none");
-          @current_cmodule.removeFunction(name);
-          @webview.page().mainFrame().documentElement().findFirst("div[id='" + cfun.fullName + "']").takeFromDocument();
-          @statusLabel.setText("Function removed: " + name);
-        });
-      });
-    }
-
-    instance_method action_deleteFunction: fun() {
-      if (@current_cmodule == null) {
-        @statusLabel.setText("No current module");
-        return true;
-      }
-
-      var e = qt.QApplication.focusWidget();
-      if (Mirror.vtFor(e) == ExplorerEditor) {
-        var cfun = e.cfun();
-        var doc = @webview.page().mainFrame().documentElement();
-        var div = doc.findFirst("div[id='" + cfun.fullName + "']");
-        var mitem = doc.findFirst("#menu-listing .link-list").findFirst("li a[href='#" + cfun.fullName + "']");
-
-        var owner = cfun.owner;
-        var flag = null;
-        this.command(fun() {
-          if (Mirror.vtFor(owner) == CompiledModule) {
-            owner.removeFunction(cfun.name);
-          } else {
-            flag = owner.methodFlag(cfun);
-            owner.removeMethod(cfun.name, flag);
-          }
-          div.setAttribute("style","display:none");
-          mitem.setAttribute("style","display:none");
-          @statusLabel.setText("Function deleted: " + cfun.name);
-        }, fun() {
-          if (Mirror.vtFor(owner) == CompiledModule) {
-            owner.addFunction(cfun);
-          } else {
-            owner.addMethod(cfun, flag);
-          }
-          div.setAttribute("style","display:block");
-          mitem.setAttribute("style","display:block");
-          @statusLabel.setText("Function added: " + cfun.name);
-        });
-      } else {
-        @statusLabel.setText("No function selected");
-      }
-    }
-
     instance_method show_home: fun() {
       @current_cmodule = null;
       @imodule = null;
       @webview.setUrl(modules_path() + "/module-explorer/index.html");
     }
-
-    instance_method show_tutorial: fun() {
-      @current_cmodule = null;
-      @imodule = null;
-      @webview.setUrl(modules_path() + "/module-explorer/tutorial.html");
-    }
-
-    instance_method show_modules: fun() {
-      @current_cmodule = null;
-      @imodule = null;
-      @webview.loadUrl(modules_path() + "/module-explorer/modules-index.html");
-      var modules = available_modules();
-      var ul = @webview.page().mainFrame().documentElement().findFirst("ul.modules");
-      modules.each(fun(name) {
-        ul.appendInside("<li><a href='/" + name + "'>" + name + "</a></li>")
-      });
-    }
-
     instance_method show_module: fun(name) {
       @current_cmodule = get_module(name);
       @webview.loadUrl(modules_path() + "/module-explorer/module-view.html");
@@ -1396,7 +1292,21 @@ module idez(qt,io)
         this.showClass(klass);
       });
     }
-
+    instance_method show_modules: fun() {
+      @current_cmodule = null;
+      @imodule = null;
+      @webview.loadUrl(modules_path() + "/module-explorer/modules-index.html");
+      var modules = available_modules();
+      var ul = @webview.page().mainFrame().documentElement().findFirst("ul.modules");
+      modules.each(fun(name) {
+        ul.appendInside("<li><a href='/" + name + "'>" + name + "</a></li>")
+      });
+    }
+    instance_method show_tutorial: fun() {
+      @current_cmodule = null;
+      @imodule = null;
+      @webview.setUrl(modules_path() + "/module-explorer/tutorial.html");
+    }
     instance_method showClass: fun(klass) {
       var doc = @webview.page().mainFrame().documentElement();
       var div = doc.findFirst("div[id=templates] .class_template").clone();
@@ -1434,7 +1344,6 @@ module idez(qt,io)
         this.showEditorForFunction(cfn, "class_method", "div[id='cmethods_" + klass.name + "']");
       });
     }
-
     instance_method showEditorForFunction: fun(cfn, function_type, parent_sel) {
       var doc = @webview.page().mainFrame().documentElement();
       var parent = doc.findFirst(parent_sel);
@@ -1453,28 +1362,61 @@ module idez(qt,io)
       parent.appendInside(div);
     }
   }
-
-  main: fun() {
-    var app = qt.QApplication.new();
-    var me = ModuleExplorer.new();
-    var w = Workspace.new();
-    w.show();
-    me.show();
-    return app.exec();
-  }
-
-  debug: fun(process) {
-    var eventloop = null;
-    if (!qt.qapp_running()) {
-      eventloop = qt.QApplication.new();
-    } else {
-      eventloop = qt.QEventLoop.new();
+  class StackCombo < QComboBox {
+    fields: frames;
+    init new: fun(parent, execframes) {
+      super.new(parent);
+      @frames = execframes;
     }
+    instance_method updateInfo: fun() {
+      this.clear();
+      @frames.names().each(fun(name) {
+        this.addItem(name);
+      });
+      this.setCurrentIndex(@frames.size() - 1);
+    }
+  }
+  class VariableListWidget < QTableWidget {
+    fields: variables;
+    init new: fun(parent) {
+      super.new(2, 2, parent);
+      this.verticalHeader().hide();
+      this.setSelectionMode(1);
+      var header = this.horizontalHeader();
+      header.setStretchLastSection(true);
+      this.setSortingEnabled(false);
+    }
+    instance_method setVariables: fun(vars) {
+      @variables = vars;
+      this.clear();
+      this.setHorizontalHeaderLabels(['Name', 'Value']);
+      var i = 0;
+      vars.each(fun(name,value) {
+        this.setItem(i, 0, qt.QTableWidgetItem.new(name));
+        this.setItem(i, 1, qt.QTableWidgetItem.new(value.toString()));
+        i = i + 1;
+      });
+    }
+  }
+  class Workspace < QMainWindow {
+    fields: editor, variables;
+    init new: fun() {
+      super.new();
+      @variables = {};
 
-    var dbg = DebuggerUI.new(process, eventloop);
-    dbg.show();
-    eventloop.exec();
-    io.print("debug:main left loop");
-    return "continue";
+      this.setWindowTitle("Workspace");
+
+      @editor = Editor.new(this, fun() { @variables },
+                           fun() { thisModule }, null,
+                           fun(env) { @variables = env + @variables; });
+
+      @editor.initActions();
+      this.setCentralWidget(@editor);
+
+      var execMenu = this.menuBar().addMenu("&Exploring");
+      @editor.actions().each(fun(action) {
+        execMenu.addAction(action)
+      });
+    }
   }
 }
