@@ -1075,19 +1075,6 @@ module idez(qt, io)
         }
       });
     }
-    instance_method action_reset: fun() {
-      if (@current_cmodule == null) {
-        @statusLabel.setText("No current module");
-        return true;
-      }
-
-      var e = qt.QApplication.focusWidget();
-      if (Mirror.vtFor(e) == ExplorerEditor) {
-        var cfun = e.cfun();
-        e.setText(cfun.text());
-        @statusLabel.setText("Function " + cfun.fullName + " was reset");
-      }
-    }
     instance_method action_instantiateModule: fun() {
       if (@current_cmodule == null) {
         @statusLabel.setText("No current module");
@@ -1122,6 +1109,19 @@ module idez(qt, io)
         });
         return false;
       });
+    }
+    instance_method action_reset: fun() {
+      if (@current_cmodule == null) {
+        @statusLabel.setText("No current module");
+        return true;
+      }
+
+      var e = qt.QApplication.focusWidget();
+      if (Mirror.vtFor(e) == ExplorerEditor) {
+        var cfun = e.cfun();
+        e.setText(cfun.text());
+        @statusLabel.setText("Function " + cfun.fullName + " was reset");
+      }
     }
     instance_method action_saveToFileSystem: fun() {
       available_modules().each(save_module);
