@@ -1275,9 +1275,10 @@ class Process(greenlet):
             elif mp['_delegate'] != None:
                 return lookup_in_modules(name, mp['_delegate'])
             else:
-                self.interpreter.throw_with_value("Undeclared function: " + name)
+                return self.interpreter.throw_with_value("Undeclared function: " + name)
         fn = lookup_in_modules(name, self.r_mp)
-        return self.setup_and_run_fun(self.r_mp, self.r_mp, name, fn, args, True)
+        if fn:
+            return self.setup_and_run_fun(self.r_mp, self.r_mp, name, fn, args, True)
 
     def eval_do_if(self, cond, yes):
         if cond: #False/None vs. *
