@@ -229,9 +229,10 @@ module cview(qt)
   <p>With the focus on the other window, type "ALT+C,A". In Emacs lingo, it is
   "M-c a", which means: hit "ALT+C", release both keys and type a single
   "a". Now, a prompt should appear at the bottom asking for a class name. Type
-  in "CommitViewer" and hit "enter". Next, it will ask for the super
-  class. Delete the "Object" in the line edit, type "QWidget" and hit
-  "enter". Our new empty class is now described in the screen. </p>
+  in "CommitViewer" (no quotes) and hit "enter". Next, it will ask for the
+  super class. Delete the "Object" in the line edit, type "QWidget" (again,
+  no quotes) and hit "enter". Our new empty class is now described in
+  the screen. </p>
 
   <p><strong>Tip:</strong> that prompt tries to emulate Emacs mini-buffer. At
   any time, if you change your mind facing the prompt or invoked the prompt by
@@ -252,7 +253,7 @@ module cview(qt)
   called "listWidget" to our class: type "ALT+C,F"; it will ask the name of
   the class we want to edit (which is "CommitViewer") and, after confirming
   with "enter", it will ask for a comma separated list of fields. Just inform
-  "listWidget" and hit "enter".</p>
+  "listWidget" (never with quotes) and hit "enter".</p>
 
   <h3>Adding the constructor</h3>
 
@@ -339,12 +340,12 @@ CommitViewer.new.show
  <p>Recapitulating our current practice, what we normally do in this situation
  when programming with our traditional languages and tools is to identify the
  bug, kill the process, open the offending source file, change its content and
- compile/execute the program again 'til we reach that point of execution again
- -- on a traditional settings, how fast and natural we can do all this depends
- on the nature of the program, but more often than not it is a very indirect,
- slow, repetitive and tiresome labor. The good news is that we won't have to
- cope with this practice here. So, how we will fix this? First off, don't
- close the debugger.</p>
+ compile/execute the program again 'til we reach that point of execution once
+ more (often only to find a neighbor bug!) -- on a traditional settings, how
+ fast and natural we can do all this depends on the nature of the program, but
+ more often than not it is a very indirect, slow, repetitive and tiresome
+ labor. The good news is that we won't have to cope with this practice
+ here. So, how we will fix this? First off, don't close the debugger.</p>
 
  <p>It's time to add the missing method. Going back to our module's page, type
  in "ALT+C,M" to add a new method and inform the name of the method in the
@@ -372,7 +373,7 @@ fun() {
  back to the debugger, we can reload that execution frame with (CTRL+R): this
  will effectively rewind one frame of the call stack and re-enter the
  function. Now, you can Step Over (F7) the expression until you reach
- "this.loadModule()" at line 4, where we can Step Into (F6) and see that the
+ "this.loadData()" at line 4, where we can Step Into (F6) and see that the
  debugger successfully entered our newly defined method. Now, don't get too
  crazy, there is still an error in this function: the URL is using "http://"
  where github requires "https". In the very same Debugger's editor, fix this
