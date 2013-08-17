@@ -1075,6 +1075,19 @@ module idez(qt, io)
         }
       });
     }
+    instance_method action_reset: fun() {
+      if (@current_cmodule == null) {
+        @statusLabel.setText("No current module");
+        return true;
+      }
+
+      var e = qt.QApplication.focusWidget();
+      if (Mirror.vtFor(e) == ExplorerEditor) {
+        var cfun = e.cfun();
+        e.setText(cfun.text());
+        @statusLabel.setText("Function " + cfun.fullName + " was reset");
+      }
+    }
     instance_method action_instantiateModule: fun() {
       if (@current_cmodule == null) {
         @statusLabel.setText("No current module");
@@ -1189,6 +1202,14 @@ module idez(qt, io)
       action.setShortcut("alt+r");
       action.connect("triggered", fun() {
         @chistory.redo();
+      });
+      action.setShortcutContext(1);
+      execMenu.addAction(action);
+
+      action = qt.QAction.new("Reset", execMenu);
+      action.setShortcut("alt+x,r");
+      action.connect("triggered", fun() {
+        this.action_reset()
       });
       action.setShortcutContext(1);
       execMenu.addAction(action);
