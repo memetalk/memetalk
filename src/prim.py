@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Copyright (c) 2012-2013 Thiago B. L. Silva <thiago@metareload.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
