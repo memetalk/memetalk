@@ -434,8 +434,8 @@ module core() {
     instance_method continue: fun() {
       <primitive "vmprocess_continue">
     }
-    instance_method rewind: fun() {
-      <primitive "vmprocess_rewind">
+    instance_method reloadFrame: fun() {
+      <primitive "vmprocess_reload_frame">
     }
     class_method debug: fun(fn, args) {
       <primitive "vmprocess_debug">

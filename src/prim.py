@@ -124,7 +124,7 @@ def prim_vmprocess_step_over(proc):
 #     print 'vmprocess/continue DONE'
 #     return True
 
-def prim_vmprocess_rewind(proc):
+def prim_vmprocess_reload_frame(proc):
     _proc = _lookup_field(proc, proc.r_rp, 'self')
     _proc.switch("rewind")
 

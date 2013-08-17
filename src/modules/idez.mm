@@ -172,10 +172,10 @@ module idez(qt, io)
       });
       execMenu.addAction(action);
 
-      action = qt.QAction.new("Compile and &Rewind", execMenu);
-      action.setShortcut("ctrl+s");
+      action = qt.QAction.new("Reload frame", execMenu);
+      action.setShortcut("ctrl+R");
       action.connect("triggered", fun() {
-        this.compileAndRewind()
+        this.reloadFrame()
       });
       execMenu.addAction(action);
 
@@ -225,10 +225,15 @@ module idez(qt, io)
 
       @stackCombo.updateInfo();
     }
-    instance_method compileAndRewind: fun() {
+    instance_method closeEvent: fun() {
+      @eventloop.exit(0);
+    }
+    instance_method acceptIt: fun() {
       var text = @editor.text();
-      @process.contextPointer().compiledFunction().setCode(text);
-      @process.rewind();
+      @execFrames.frame(@frame_index).contextPointer.compiledFunction.setCode(text);
+    }
+    instance_method reloadFrame: fun() {
+      @process.reloadFrame();
       @stackCombo.updateInfo();
     }
     instance_method continue: fun() {
