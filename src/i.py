@@ -54,6 +54,7 @@ def _create_compiled_module(data):
     template = {"_vt": core.CompiledModule,
                 "_delegate": None,
                 "name": "",
+                "license":"",
                 "filepath":"",
                 "params": [],
                 "default_params": {},
@@ -502,9 +503,10 @@ class ModuleLoader(ASTBuilder):
 
         return self.current_module
 
-    def l_module(self, name, p):
+    def l_module(self, name, p, l):
         self.current_module["name"] = name
         self.current_module["params"] = p
+        self.current_module["license"] = l
 
     def l_default_p_lib(self, name, spec, args):
         self.current_module['default_params'][name] = {'name': name, 'type':'lib','value':spec[1]}

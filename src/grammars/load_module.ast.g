@@ -1,9 +1,12 @@
 load_module = ['module' :name
+               license:l
                params:p
-               !(self.i.l_module(name, p))
+               !(self.i.l_module(name, p,l))
                default_params
                module_aliases
                module_definitions]
+
+license = ['license' :x] -> x
 
 default_params = ['default-params' [mparam*]]
 

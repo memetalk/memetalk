@@ -14,12 +14,16 @@ comment = "/*"  (~"*/" anything)* "*/"
 
 spaces = space*
 
-start = token("module") id:name module_params:p
+
+license = token(".license")  (~(token(".endlicense")) anything)+:x token(".endlicense") -> ''.join(x)
+        | -> ""
+
+start = license:l token("module") id:name module_params:p
            module_preamble*:pre
            module_alias*:aliases
          token("{")
            module_decl*:d
-         token("}") -> ["module", name, ["params", p],
+         token("}") -> ["module", name, ["license", l], ["params", p],
                         ["default-params", pre], ["aliases", aliases], ["defs", d]]
 
 module_params = params
