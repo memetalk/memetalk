@@ -18,4 +18,5 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 import os
-MODULES_PATH=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'modules')
+CURRENT_PATH=os.path.dirname(os.path.abspath(__file__))
+MODULES_PATH=os.path.join(CURRENT_PATH, 'modules')

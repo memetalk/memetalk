@@ -868,7 +868,7 @@ module idez(qt,io)
       var action = qt.QAction.new("&Save", execMenu);
       action.setShortcut("alt+x,s");
       action.connect("triggered", fun() {
-        io.print("save to filesystem");
+        this.action_saveToFileSystem();
       });
       action.setShortcutContext(1);
       execMenu.addAction(action);
@@ -1046,6 +1046,10 @@ module idez(qt,io)
           @statusLabel.setText(e.value);
         }
       });
+    }
+
+    instance_method action_saveToFileSystem: fun() {
+      available_modules().each(save_module);
     }
 
     instance_method action_instantiateModule: fun() {

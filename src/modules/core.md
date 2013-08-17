@@ -493,4 +493,8 @@ module core() {
   get_module: fun(name) {
     <primitive "get_module">
   }
+
+  save_module: fun(name) {
+    <primitive "save_module">
+  }
 }

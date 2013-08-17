@@ -31,8 +31,9 @@ import core_module as core
 from pprint import pprint, pformat
 from pdb import set_trace as br
 import traceback
-from config import MODULES_PATH
+from config import MODULES_PATH, CURRENT_PATH
 from astbuilder import *
+from jinja2 import Environment
 
 def P(obj, depth=1):
     if depth > 5:
@@ -648,6 +649,39 @@ class Interpreter():
         self.memory = []
         self.imods = []
         self.interned_symbols = {}
+
+    def module_to_text(self, cmod):
+        def if_ctor(lst, val):
+            return [(name, obj) for name, obj in lst if obj["is_ctor"] == val]
+
+        src = open(CURRENT_PATH + "/templates/module.tpl.mm").read()
+        env = Environment(trim_blocks=True, keep_trailing_newline=True)
+        env.filters['if_ctor'] = if_ctor
+        template = env.from_string(src)
+        defaults = [{"name":name,"value":spec["value"]} for name, spec in cmod["default_params"].iteritems()]
+        aliases = [{"list": ', '.join(alias[1]),"from":alias[0]} for alias in cmod["aliases"]]
+
+        fun_names = sorted(cmod['compiled_functions'].keys())
+        functions = [cmod["compiled_functions"][name] for name in fun_names]
+
+        class_names = sorted(cmod["compiled_classes"].keys())
+        classes = [cmod["compiled_classes"][name] for name in class_names]
+
+        args = {"module_name": cmod['name'],
+                'module_license': cmod['license'],
+                "module_parameters": ', '.join(cmod['params']),
+                "default_parameters": defaults,
+                "aliases": aliases,
+                "functions":functions,
+                "classes": classes}
+        return template.render(args)
+
+    def save_module(self, name):
+        print "saving module: " + name
+        cmod = self.compiled_module_by_filename(name + ".mm")
+        source = self.module_to_text(cmod)
+        print "saving to: " + os.path.join(MODULES_PATH, name + ".mm")
+        open(os.path.join(MODULES_PATH, name + ".mm"), "w").write(source)
 
     def open_module_file(self, filename):
         if os.path.isfile(filename):
