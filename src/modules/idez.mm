@@ -579,7 +579,7 @@ module idez(qt, io)
     init new: fun(parent, receiver) {
       super.new(parent);
       if (parent == null) {
-        this.initActions();
+        this.initActions(true);
       }
       @receiver = receiver;
     }
@@ -602,10 +602,12 @@ module idez(qt, io)
       var r = evalWithVars(this.selectedText(), {"this" : @receiver}, thisModule);
       return r["result"];
     }
-    instance_method initActions: fun() {
-      this.connect("returnPressed", fun() {
-        this.selectAllAndDoit(null);
-      });
+    instance_method initActions: fun(initReturnPressed) {
+      if (initReturnPressed) {
+        this.connect("returnPressed", fun() {
+          this.selectAllAndDoit(null);
+        });
+      }
 
       var action = qt.QAction.new("&Do it", this);
       action.setShortcut("ctrl+d");
@@ -673,7 +675,8 @@ module idez(qt, io)
       this.hide();
       this.setMaximumHeight(30);
       @callback = null;
-      @lineEdit = QLineEdit.new(this);
+      @lineEdit = LineEditor.new(this, thisModule);
+      @lineEdit.initActions(false);
       @lineEdit.setMinimumSize(200,30);
       @label = qt.QLabel.new(this);
       var l = qt.QHBoxLayout.new(this);
