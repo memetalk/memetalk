@@ -764,7 +764,13 @@ def prim_qt_qeventloop_exec(proc):
 
 def prim_qt_qeventloop_exit(proc):
     print 'done...exiting qevent'
-    eventloop_processes[-1]['qtobj'].exit(0)
+    eventloop_processes[-1]['qtobj'].exit(proc.locals['code'])
+    eventloop_processes[-1]['done'] = True
+    return proc.r_rdp['self'].exit(proc.locals['code'])
+
+def prim_qt_qapplication_exit(proc):
+    print 'done...exiting qevent'
+    eventloop_processes[-1]['qtobj'].exit(proc.locals['code'])
     eventloop_processes[-1]['done'] = True
     return proc.r_rdp['self'].exit(proc.locals['code'])
 

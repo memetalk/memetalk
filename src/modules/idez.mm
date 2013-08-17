@@ -238,7 +238,6 @@ module idez(qt, io)
     }
     instance_method continue: fun() {
       this.close();
-      @eventloop.exit(0);
     }
     instance_method disableActions: fun() {
       @execMenu.actions.each(fun(ac) {

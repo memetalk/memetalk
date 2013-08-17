@@ -53,6 +53,9 @@ module qt(io)
     instance_method exec: fun() {
       <primitive "qt_qapplication_exec">
     }
+    instance_method exit: fun(code) {
+      <primitive "qt_qapplication_exit">
+    }
     class_method focusWidget: fun() {
       <primitive "qt_qapplication_focus_widget">
     }
