@@ -1094,7 +1094,7 @@ module idez(qt, io)
         return true;
       }
       @imodule = @current_cmodule.instantiate({});
-      @statusLabel.setText("Module instantiated");
+      @statusLabel.setText("Module loaded");
     }
     instance_method action_renameClass: fun() {
       if (@current_cmodule == null) {
@@ -1219,7 +1219,7 @@ module idez(qt, io)
       execMenu = this.menuBar().addMenu("Module");
 
       action = qt.QAction.new("&Instantiate module", execMenu);
-      action.setShortcut("alt+m,i");
+      action.setShortcut("alt+m,l");
       action.connect("triggered", fun() {
         this.action_instantiateModule();
       });
