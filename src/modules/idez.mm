@@ -35,9 +35,13 @@ module idez(qt, io)
 
     var dbg = DebuggerUI.new(process, ex, eventloop);
     dbg.show();
-    eventloop.exec();
-    io.print("debug:main left loop");
-    return "continue";
+    var ret = eventloop.exec();
+    process.setDebuggerProcess(null);
+    if(ret == 0) {
+      return "continue";
+    } else {
+      return "continue_throw";
+    }
   }
 
   evalWithFrame: fun(text, frame, imod) {
@@ -98,12 +102,13 @@ module idez(qt, io)
     }
   }
   class DebuggerUI < QMainWindow {
-    fields: frame_index, process, execFrames, stackCombo, editor, localVarList, moduleVarList, statusLabel, eventloop, execMenu;
+    fields: frame_index, process, exception, execFrames, stackCombo, editor, localVarList, moduleVarList, statusLabel, eventloop, execMenu;
     init new: fun(process, ex, eventloop) {
       super.new();
       @process = process;
       @eventloop = eventloop;
       @frame_index = 0;
+      @exception = ex;
 
       this.resize(700,800);
       this.setWindowTitle("Debugger");
@@ -226,16 +231,16 @@ module idez(qt, io)
 
       @stackCombo.updateInfo();
     }
-    instance_method closeEvent: fun() {
-      @eventloop.exit(0);
-    }
     instance_method acceptIt: fun() {
       var text = @editor.text();
       @execFrames.frame(@frame_index).contextPointer.compiledFunction.setCode(text);
     }
-    instance_method reloadFrame: fun() {
-      @process.reloadFrame();
-      @stackCombo.updateInfo();
+    instance_method closeEvent: fun() {
+      if (@exception) {
+        @eventloop.exit(1);
+      } else {
+        @eventloop.exit(0);
+      }
     }
     instance_method continue: fun() {
       this.close();
@@ -250,7 +255,13 @@ module idez(qt, io)
         ac.setEnabled(true);
       });
     }
+    instance_method reloadFrame: fun() {
+      @exception = null;
+      @process.reloadFrame();
+      @stackCombo.updateInfo();
+    }
     instance_method stepInto: fun() {
+      @exception = null;
       @statusLabel.setText("Stepping into...");
       this.disableActions();
       var r = @process.stepInto();
@@ -266,6 +277,7 @@ module idez(qt, io)
       }
     }
     instance_method stepOver: fun() {
+      @exception = null;
       @statusLabel.setText("Stepping over...");
       this.disableActions();
       var r = @process.stepOver();

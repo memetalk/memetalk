@@ -298,9 +298,9 @@ class ModuleLoader(ASTBuilder):
             ast,_ = self.parser.apply("single_top_level_fun", name)
         except Exception as err:
             if hasattr(err,'formatError'):
-                i.throw_with_value(err.formatError(''.join(self.parser.input.data)))
+                i.throw_with_value(err.formatError(''.join(self.parser.input.data)), False)
             else:
-                i.throw_with_value(traceback.format_exc())
+                i.throw_with_value(traceback.format_exc(), False)
 
         if _should_dump_ast():
             print "---- AST ----"
@@ -349,9 +349,9 @@ class ModuleLoader(ASTBuilder):
             ast,_ = self.parser.apply("funliteral")
         except Exception as err:
             if hasattr(err,'formatError'):
-                i.throw_with_value(err.formatError(''.join(self.parser.input.data)))
+                i.throw_with_value(err.formatError(''.join(self.parser.input.data)), False)
             else:
-                i.throw_with_value(traceback.format_exc())
+                i.throw_with_value(traceback.format_exc(), False)
 
         if _should_dump_ast():
             print "---- AST ----"
@@ -386,9 +386,9 @@ class ModuleLoader(ASTBuilder):
             ast,_ = self.parser.apply("funliteral")
         except Exception as err:
             if hasattr(err,'formatError'):
-                i.throw_with_value(err.formatError(''.join(self.parser.input.data)))
+                i.throw_with_value(err.formatError(''.join(self.parser.input.data)), False)
             else:
-                i.throw_with_value(traceback.format_exc())
+                i.throw_with_value(traceback.format_exc(), False)
 
         if _should_dump_ast():
             print "---- AST ----"
@@ -430,9 +430,9 @@ class ModuleLoader(ASTBuilder):
             ast,_ = self.parser.apply("single_top_level_fun", name)
         except Exception as err:
             if hasattr(err,'formatError'):
-                i.throw_with_value(err.formatError(''.join(self.parser.input.data)))
+                i.throw_with_value(err.formatError(''.join(self.parser.input.data)), False)
             else:
-                i.throw_with_value(traceback.format_exc())
+                i.throw_with_value(traceback.format_exc(), False)
 
         if _should_dump_ast():
             print "---- AST ----"
@@ -677,6 +677,7 @@ class Interpreter():
         return template.render(args)
 
     def save_module(self, name):
+        ## Empty fields are being dumped as "fields ;"!!
         print "saving module: " + name
         cmod = self.compiled_module_by_filename(name + ".mm")
         source = self.module_to_text(cmod)
@@ -714,9 +715,11 @@ class Interpreter():
         target_process.debugger_process = Process(self)
         self.processes.append(target_process.debugger_process)
 
+        #print "process " + str(id(target_process)) + " has debugger: " + str(id(target_process.debugger_process))
+
         mmprocess = self.alloc_object(core.VMProcess, {'self':target_process})
         ret = target_process.debugger_process.switch('run_module', 'debug', imodule, [mmprocess, exception])
-        print('debug_process: switch back from debugger_process')
+        #print('debug_process: switch back from debugger_process')
         return ret
 
     def compiled_module_by_filename(self, filename):
@@ -760,15 +763,18 @@ class Interpreter():
     def py_memetalk_exception(self):
         return MemetalkException
 
-    def throw(self, mex):
+    def throw(self, mex, shouldStartDebugger = True):
         # MemetalkException encapsulates the memetalk exception:
-        if self.current_process.flag_stop_on_exception:
+        if shouldStartDebugger and self.current_process.flag_stop_on_exception:
             self.current_process.state = 'exception'
             self.current_process.last_exception = mex
+            r = self.current_process.dbg_control("throw", True);
+            if r == 'exception':
+                raise MemetalkException(mex)
         else:
             raise MemetalkException(mex)
 
-    def throw_with_value(self, value):
+    def throw_with_value(self, value, shouldStartDebugger = True):
         if _should_warn_of_exception():
             print "MemetalkException with value: \n" + value
             self.current_process.pp_stack_trace()
@@ -776,9 +782,18 @@ class Interpreter():
 
         # ...and this me being stupid:
         ex['value'] =  value
-        if self.current_process.flag_stop_on_exception:
+
+        #print "throw/w: " +  str(id(self.current_process)) +  " flagged? " + str(self.current_process.flag_stop_on_exception)
+        if shouldStartDebugger and self.current_process.flag_stop_on_exception:
             self.current_process.state = 'exception'
             self.current_process.last_exception = ex
+            #print "def throw: passing control"
+            r = self.current_process.dbg_control("throw", True);
+            #print "def throw is back. proc: " + str(id(self.current_process))
+            #print "def throw: state " + self.current_process.state
+            if self.current_process.state == r:
+                #print "RAISE"
+                raise MemetalkException(ex)
         else:
             # MemetalkException encapsulates the memetalk exception:
             raise MemetalkException(ex)
@@ -890,9 +905,14 @@ class Process(greenlet):
     def switch(self, *rest):
         # if self.interpreter.current_process:
         #     self.interpreter.current_process.state = 'paused'
+        #print "switching from " + str(id(self.interpreter.current_process)) + " to " + str(id(self))
+        parent_process = self.interpreter.current_process
         self.interpreter.current_process = self
-        #print "switching..."
-        return super(Process,self).switch(*rest)
+
+        ret = super(Process,self).switch(*rest)
+        self.interpreter.current_process = parent_process
+        #print "switching back from " + str(id(self)) + " to " + str(id(parent_process))
+        return ret
 
     def run_module(self, entry_name, module, args):
         # registers
@@ -922,7 +942,9 @@ class Process(greenlet):
         for frame in self.stack:
             if frame['r_cp']:
                 print (frame['r_cp']['compiled_function']['name'] + " :::" + str(frame['r_cp']['compiled_function']['body']))[0:80] + "..."
-        print (self.r_cp['compiled_function']['name'] + " ::: " + str(self.r_cp['compiled_function']['body']))[0:80] + "..."
+        P(self.r_cp,2)
+        if self.r_cp:
+            print (self.r_cp['compiled_function']['name'] + " ::: " + str(self.r_cp['compiled_function']['body']))[0:80] + "..."
 
     def _lookup(self, drecv, vt, selector):
         if vt == None:
@@ -1115,7 +1137,10 @@ class Process(greenlet):
             return getattr(self, name)(*rest)
         except StandardError as e:
             print "WARNING: python exception ocurred: " + str(e.__class__) + ":" + str(e)
-            self.interpreter.throw_with_value(traceback.format_exc())
+            if self.state == 'exception': # we know, let it propagate
+                raise
+            else:
+                self.interpreter.throw_with_value(traceback.format_exc())
 
     def eval_prim(self, prim_name, ast):
         self.r_ip = ast
@@ -1306,14 +1331,20 @@ class Process(greenlet):
             #print("process:: changed state to next")
             self.state = 'next'
         if cmd == 'continue':
-            print("process:: changed state to continue")
+            #print("process:: changed state to continue")
             self.state = 'running'
+        if cmd == 'continue_throw':
+            #print("process:: we are asked to raise the exception ")
+            self.state = 'exception'
         if cmd == 'rewind':
             #print("process: rewinding 1")
             raise RewindException(1)
+        #print "process: " + str(id(self)) + " is " + self.state
 
-    def dbg_control(self, name):
-        if self.state in ['paused', 'next', 'exception']:
+        return self.state
+    def dbg_control(self, name, force_debug = False):
+        if self.state in ['paused', 'next'] or force_debug:
+            #print self.state  + " on " + name
             if not self.debugger_process:
                 #print 'dbg_control: paused: initiating debugger...please wait'
                 if self.state == 'exception':
@@ -1327,8 +1358,8 @@ class Process(greenlet):
             else:
                 #print 'dbg_control paused: asking debugger for cmd...'
                 cmd = self.debugger_process.switch()
-            #print 'dbg_control got: ' + str(cmd)
-            self.dbg_cmd(cmd)
+            ret = self.dbg_cmd(cmd)
+            return ret
 
 if __name__ == "__main__":
     if len(sys.argv) == 1:

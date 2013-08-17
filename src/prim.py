@@ -79,32 +79,32 @@ def prim_vmprocess_stack_frames(proc):
         [proc.interpreter.alloc_object(VMStackFrameClass,{'self':_proc.top_frame()})]
 
 def prim_vmprocess_step_into(proc):
-    print '+ENTER prim_vmprocess_step_into'
+    #print '+ENTER prim_vmprocess_step_into'
     _proc = _lookup_field(proc, proc.r_rp, 'self')
-    print 'vmprocess: sending step_into'
+    #print 'vmprocess: sending step_into'
     ret = _proc.switch("step_into")
-    print 'vmprocess/step_into received: ' + pformat(ret,1,80,1)
+    #print 'vmprocess/step_into received: ' + pformat(ret,1,80,1)
     if 'done' in ret:
-        print 'done...exiting qevent'
+        #print 'done...exiting qevent'
         eventloop_processes[-1]['done'] = True
         return False
-    print 'vmprocess/step_over DONE'
+    #print 'vmprocess/step_over DONE'
     if 'exception' in ret:
         return ret[1]
     else:
         return True
 
 def prim_vmprocess_step_over(proc):
-    print '+ENTER prim_vmprocess_step_over'
+    #print '+ENTER prim_vmprocess_step_over'
     _proc = _lookup_field(proc, proc.r_rp, 'self')
-    print 'vmprocess: sending step_over'
+    #print 'vmprocess: sending step_over'
     ret = _proc.switch("step_over")
-    print 'vmprocess/step_over received: ' + pformat(ret,1,80,1)
+    #print 'vmprocess/step_over received: ' + pformat(ret,1,80,1)
     if 'done' in ret:
-        print 'done...exiting qevent'
+        #print 'done...exiting qevent'
         eventloop_processes[-1]['done'] = True
         return False
-    print 'vmprocess/step_over DONE'
+    #print 'vmprocess/step_over DONE'
     if 'exception' in ret:
         return ret[1]
     else:
@@ -127,6 +127,12 @@ def prim_vmprocess_step_over(proc):
 def prim_vmprocess_reload_frame(proc):
     _proc = _lookup_field(proc, proc.r_rp, 'self')
     _proc.switch("rewind")
+
+def prim_vmprocess_set_debugger_process(proc):
+    _proc = _lookup_field(proc, proc.r_rp, 'self')
+    #print 'set_dbg_proc: ' + str(proc.locals['arg'])
+    P(_proc.debugger_process)
+    _proc.debugger_process = proc.locals['arg']
 
 def prim_vmprocess_debug(proc):
     fn = proc.locals['fn']
@@ -726,7 +732,7 @@ def _meme_instance(proc, obj):
             return {"_vt":mapping[obj.__class__], 'self':obj}
     else:
         print "*** WARNING: object has no memetalk mapping specified:"
-        print obj
+        P(obj)
         return None
 
 def qstring_to_str(qstring):
@@ -763,13 +769,13 @@ def prim_qt_qeventloop_exec(proc):
     return proc.r_rdp['self'].exec_()
 
 def prim_qt_qeventloop_exit(proc):
-    print 'done...exiting qevent'
+    #print 'done...exiting qevent'
     eventloop_processes[-1]['qtobj'].exit(proc.locals['code'])
     eventloop_processes[-1]['done'] = True
     return proc.r_rdp['self'].exit(proc.locals['code'])
 
 def prim_qt_qapplication_exit(proc):
-    print 'done...exiting qevent'
+    #print 'done...exiting qevent'
     eventloop_processes[-1]['qtobj'].exit(proc.locals['code'])
     eventloop_processes[-1]['done'] = True
     return proc.r_rdp['self'].exit(proc.locals['code'])
@@ -985,19 +991,19 @@ def prim_qt_qaction_connect(proc):
         except proc.interpreter.py_memetalk_exception() as e:
             print "Exception raised: " + e.mmobj()['value']
             print traceback.format_exc()
-        print 'callback slot: ' + str(slot['compiled_function']['body'])
-        print 'callback: eventloop proc equal? ' + str(proc == eventloop_processes[-1]['proc'])
+        #print 'callback slot: ' + str(slot['compiled_function']['body'])
+        #print 'callback: eventloop proc equal? ' + str(proc == eventloop_processes[-1]['proc'])
         if proc != eventloop_processes[-1]['proc']:
             entry = eventloop_processes[-1]
             #entry['qtobj'].exit(0)
             entry['proc'].switch('done') # this is were the exit point of the debugger arrives
-            print 'debugger module ended'
+            #print 'debugger module ended'
             proc.interpreter.debugger_process = None
             proc.interpreter.processes.remove(entry['proc'])
         if eventloop_processes[-1]['done']:
-            print 'POPing eventloop'
+            #print 'POPing eventloop'
             eventloop_processes.pop()
-        print "END of callback"
+        #print "END of callback"
 
     getattr(qtobj,signal).connect(callback)
     return proc.r_rp
@@ -1038,20 +1044,20 @@ def prim_qt_qshortcut_new(proc):
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
     def callback(*rest):
         proc.setup_and_run_fun(None, None, '<?>', slot, [], True)
-        print 'callback slot: ' + str(slot['compiled_function']['body'])
-        print 'callback: eventloop proc equal? ' + str(proc == eventloop_processes[-1]['proc'])
+        #print 'callback slot: ' + str(slot['compiled_function']['body'])
+        #print 'callback: eventloop proc equal? ' + str(proc == eventloop_processes[-1]['proc'])
         if proc != eventloop_processes[-1]['proc']:
             entry = eventloop_processes[-1]
             #entry['qtobj'].exit(0)
             entry['proc'].switch('done') # this is were the exit point of the debugger arrives
-            print 'debugger module ended'
+            #print 'debugger module ended'
             proc.interpreter.debugger_process = None
             proc.interpreter.processes.remove(entry['proc'])
             proc.state = 'running'
         if eventloop_processes[-1]['done']:
-            print 'POPing eventloop'
+            #print 'POPing eventloop'
             eventloop_processes.pop()
-        print "END of callback"
+        #print "END of callback"
 
     qtobj.activated.connect(callback)
     return proc.r_rp
