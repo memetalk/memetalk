@@ -503,4 +503,11 @@ module core() {
   save_module: fun(name) {
     <primitive "save_module">
   }
+
+  http_get: fun(url) {
+    <primitive "http_get">
+  }
+  parse_json: fun(str) {
+    <primitive "parse_json">
+  }
 }

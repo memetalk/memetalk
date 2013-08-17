@@ -12,13 +12,54 @@
     <h1><a href="memetalk:/">Memetalk</a></h1>
     <hr/>
 
-    <p>Welcome to the Memetalk tutorial. The following walkthrough will guide
-    you on how to execute memetalk code and use the basic tools.
+    <p>Welcome to the Memetalk tutorial. The following will walk you through
+    on how to program in Memetalk and how to use the basic tools available to
+    explore the system.
     </p>
 
-    <h2>Basics</h2>
+    <p><i>Note #1: This text was written for experience programmers as
+    audience. This project is in its infancy and I wrote this to give a hand's
+    on demonstration of what this system is. Novice tutorials will follow with
+    the maturity of the project.</i></p>
 
-    <p>Like Smalltalk, the editors in memetalk offer a few commands to execute
+    <p><i>Note #2: This is an alpha release. The languages and tools described
+    here are either half-baked, quick-stand-ins, or simply quick and dirty
+    implementations that are so wrong that they should be revamped any time
+    soon. Bugs included, of course. If you run into erractic behavior using
+    this software, restart it and try again, following with precision the
+    activities described herein. As much as the goal is to have an exploratory
+    environment where experiments can run free without requiring restart, we
+    are not there yet.</i></p>
+
+    <p><i>Note #3: Tip for the occasional adventurer reading this who is not
+    familiar with Smalltalk et. al.: fool around trying to look for
+    the <strong>essence</strong>.</i></p>
+
+    <h2>MemeScript</h2>
+
+    <p>The Memetalk language, MemeScript, is somewhat similar to Javascript
+    (with some ruby temper). Though it support classes, the most important
+    syntax to be concerned are those related to expressions, ie, what goes in
+    the body of functions.</p>
+
+    <p>Here is a very brief outline:
+    <ul>
+      <li>Untyped variable declaration using <strong>var</strong>.</li>
+      <li>Message sending with "." operator.</li>
+      <li>Access to class attributes with "@".</li>
+      <li>Classes with single inheritance (as of the date of writing this
+      text).</li>
+      <li>Closures as <code>fun(arg) { }</code> blocks.</li>
+      <li>Arithmetic operations (so far, "-" and "+" :).</li>
+      <li><strong>if</strong> statements with <i>required</i> "{}" brackets</li>
+      <li>Literal lists as in <code>[3,"hello"]</code></li>
+      <li>Literal dictionaries as <code>{"key":"value"}</code></li>
+      <li>Literal symbols as <code>:asymbol</code></li>
+    </ul>
+
+    <h2>Basic exploring</h2>
+
+    <p>Like Smalltalk, the editors in Memetalk offer a few commands to execute
     and operate on the results. Select the following and type CTRL+D.
     <div class="code">
       <object type="x-pyqt/editor" width="600">
@@ -35,9 +76,24 @@
     </object>
   </div>
   <p>Notice the result of the expression is inserted right after the
-  expression and selected. It is also possible to declare variables and use
-  them latter. For example, select each line bellow separatelly and <strong>Do
-  it</strong> -- notice how "w" is remembered between executions.  .</p>
+  expression and selected.<p>
+
+  <p>But not every expression you "DoIt" or "PrintIt" will be a valid
+  MemeScript expression. When selecting an expression with invalid syntax and
+  evaluating it with any of the interactive commands, the error is displayed
+  as if it was the result of a "PrintIt": a message appears selected right
+  after the expression. Try selecting the following invalid code and hitting
+  "CTRL+D":
+
+  <div class="code">
+    <object type="x-pyqt/editor" width="600">
+        <param name="code" value="var a = ">
+    </object>
+  </div>
+
+   <p>Also, it is possible to declare variables and use them latter. For
+   example, select each line bellow separately and <strong>Do it</strong> --
+   notice how "w" is remembered between executions.  .</p>
   <div class="code">
     <object type="x-pyqt/editor" width="600">
         <param name="code" value="var w = QWidget.new(null);
@@ -46,9 +102,12 @@ w.show();
 io.print(w.isVisible());">
     </object>
   </div>
+  <p> Upon executing "w.show()", an empty widget should appear. You can also
+  select the entire code and "CTRL+D" it.</p>
 
+  <h3> The Inspector </h3>
   <p>Sometimes we want to explore complex objects, its properties and
-  methods. Memetalk offers a Inspector window -- through <strong>Inspect
+  methods. Memetalk offers a Basic Inspector window -- through <strong>Inspect
   It</strong> action -- that allows us to see the structure of an object,
   change its properties and send messages to it.  Try it, selecting the
   following code and typing CTRL+I.</p>
@@ -59,17 +118,301 @@ io.print(w.isVisible());">
   </div>
   <p>A new instance of the class Workspace should be created with the "new"
   message and a Inspector window should appear. The Inspector shows the
-  properties of that instance on the left pane, and their values on the right
-  (<i>currently, the cryptic strings appearing as property values are python
-  string representations for memetalk objects. In the future, a more readable
-  representation for them should appear there</i>). Double clicking on a
+  properties of that instance on the left pane, and their values (or some
+  human readable representation of them) on the right . Double clicking on a
   property name opens another Inspector for the object bound to that
   property. Messages can be sent to the Workspace instance on the line edit at
-  the bottom of the window. The instance is bound to "this" keyword. Try
-  typing "this.show()" on that field and hitting Enter. The Workspace window
-  should appear as response to that message.</p>
-  <p>A Workspace is an editor with all the features discussed above, useful for
-  exploring and executing code.</p>
+  the bottom of the window. The instance being inspected is bound to "this"
+  keyword in the Inspector. Try typing "this.show()" in the bottom field and
+  hitting Enter. The Workspace window should appear as response to that
+  message. "this" is also bound in the text area at the right, where you can
+  "DoIt" and "printIt". Try, in the editor, typing "this.hide()", selecting
+  that expression and hitting "CTRL+D": the Workspace window should
+  disappear. Don't worry about affecting the value of the text area, if you
+  select other properties in the left pane and go back to the property you
+  where, you will notice the value remained unchanged.</p>
+
+  <p>And what is that Workspace about? It is just an editor with all the
+  commands discussed above, useful for exploring and executing code.</p>
   </body>
+
+  <h3>The ModuleExplorer</h3>
+
+  <p>All modules in Memetalk (local or remote) together with their
+  documentation (and many other tools to be written in the future) should be
+  available in the <strong>ModuleExplorer</strong> (ME): a live hypertext
+  documentation system. It's widget is actually the one being displayed right
+  now. To help you walk through it without having to close this tutorial,
+  let's create a new instance of the ME; then you can follow this tutorial
+  without having to go back and forth. Select the following and hit "CTRL+D"
+  (yes, arity 0 sends with explicit receivers don't need parenthesis).
+
+  <div class="code">
+    <object type="x-pyqt/editor" width="600">
+        <param name="code" value="ModuleExplorer.new.show">
+    </object>
+  </div>
+
+  <p>A new window, just like the one that appeared for the first time when you
+  executed "idez.mm" should be visible now. In this new window, instead of
+  going to the tutorial, click on the "Modules Index" link. A list of all
+  modules available should appear. These modules are in "src/modules", and the
+  interpreter judges all files ending with ".mm" to be MemeScript module
+  files. Feel free to go around and check them out. If you need to go back to
+  the start, just click on the link labeled "Memetalk" or "Root" (in case you
+  are in a specific module page) at the top left.</p>
+
+  <p><i>Note</i>: The "idez" and "qt" modules take a pretty long time to load
+  if you click on it. Sorry.</p>
+
+  <h3>A Memetalk Module</h3>
+
+  <p>Currently, the module's main page has the following structure: A menu
+  with all the module entries (anchor links to the actual place where the
+  definitions lie) is displayed on the left: the "Menu". At the right is the
+  body of the module, with the following information (from the top):
+
+  <ul>
+    <li>The name of the module and and it's parameters inside parenthesis</li>
+    <li>The default bindings for module parameters in bullet items right below
+    the module name</li>
+    <li>The module description</li>
+    <li>A list of Module Functions (with the function's full name,
+    documentation and editable code in its own editor</li>
+    <li>A list of Classes and the respective fields, constructors, instance
+    methods and class methods</li>
+  </ul>
+
+  <p>The module page shows almost all aspects of a Memetalk module (minus the
+  parent module; memetalk supports module inheritance/delegation; more about
+  this later). Among the features still to be implemented are, to name a few,
+  displaying version info, authors, license, and proper documentation (with
+  editing capabilities for each) and the compiler module to be used to compile
+  that module.</p>
+
+  <p>Also, besides this module's apidoc page, the ModuleExplorer will
+  eventually feature other pages associated to each module : a proper home
+  page, its own tutorial page, its issues page, its Q&A page, and who knows
+  what else.<p>
+
+  <h2>Programming a Module: the Commit Viewer</h2>
+
+  <p>Now, for some hand's on experience, let's create a sample application:
+  the Commit Viewer. It will be a Qt widget that lists the last commits made
+  to Memetalk's github repository.</p>
+
+  <p><i>For the time being, we will be doing the programming solely in the
+  ModuleExplorer and the Debugger. Better tools for editing code shall come in
+  the future</i>.</p>
+
+  <p>So, lets get to it. Create a file named "cview.mm" in the memetalk's
+  "src/modules" folder. It should have the following contents:</p>
+
+<pre>
+module cview(qt)
+ qt: memetalk/qt/1.0();
+ [QWidget] <= qt;
+{
+}
+</pre>
+
+  <p><i>I know, I didn't explained what the heck are those lines...just keep
+  in mind for now that your module will import the module "qt" and that we
+  will have the name "QWidget" visible in our module's namespace.</i></p>
+
+  <p>By going to the "Modules Index" page again, you should see "cview"
+  listed. Go ahead and click on it to see an empty module. Now, let's create
+  the CommitViewer class.</p>
+
+  <h3>Creating the new class</h3>
+
+  <p>With the focus on the other window, type "ALT+C,A". In Emacs lingo, it is
+  "M-c a", which means: hit "ALT+C", release both keys and type a single
+  "a". Now, a prompt should appear at the bottom asking for a class name. Type
+  in "CommitViewer" and hit "enter". Next, it will ask for the super
+  class. Delete the "Object" in the line edit, type "QWidget" and hit
+  "enter". Our new empty class is now described in the screen. </p>
+
+  <p><strong>Tip:</strong> that prompt tries to emulate Emacs mini-buffer. At
+  any time, if you change your mind facing the prompt or invoked the prompt by
+  mistake, just type "CTRL+G" to cancel the request.</p>
+
+  <h3>Saving changes</h3>
+
+  <p>As you edit the modules in Memetalk, these are stored in the main memory
+  only. To store the changes in the source files, we save the system with
+  "ALT+X,S" at any place or time. All modules in memory are then saved to
+  their respective source files. I recomment you do this often as we never
+  know when this program might crash ;)</p>
+
+ <h3>Adding class fields</h3>
+
+  <p>Our CommitViewer will need a reference the QListWidget instance that will
+  display the list of commits. To make this convenient, lets add a field
+  called "listWidget" to our class: type "ALT+C,F"; it will ask the name of
+  the class we want to edit (which is "CommitViewer") and, after confirming
+  with "enter", it will ask for a comma separated list of fields. Just inform
+  "listWidget" and hit "enter".</p>
+
+  <h3>Adding the constructor</h3>
+
+  <p>Before we create instances of our class, we need a constructor. Add a
+  method to our class with "ALT+C,M". The prompt asks for the name of the
+  method according to a scheme:
+
+  <ul>
+    <li>"Foo.bar" creates an instance method "bar" in the class "Foo"</li>
+    <li>"Foo::bar" creates a class method "bar" for the class "Foo"</li>
+  </ul>
+
+  <p>We want a class method, so, inform in the prompt "CommitViewer::new". A
+  method returning "null" should have been created. But this method is not a
+  constructor yet. To make it a constructor, set the focus on the editor of
+  the method (say, by clicking inside the editor's area) and hit
+  "ALT+C,C". The status bar should say "cview/CommitViewer::new now is a
+  constructor".</p>
+
+  <p>For its body, instead of returning null, lets initialize the parent
+  (QWidget), create a list widget and call a function to load the remote
+  data. Here is what it should be:</p>
+
+<pre>
+fun() {
+  super.new(null);
+  this.resize(600,300);
+  @listWidget = qt.QListWidget.new(this);
+  this.loadData();
+}
+</pre>
+
+<p>Paste the code above in the constructor's editor and hit "ALT+X,A". This is
+the "Accept" command. Whenever we need to patch a function or method in our
+program, we use this command to do so. The difference between Accepting and
+Saving is that the former applies the changes instantaneously to the target
+structure in-memory, but does not persist it on disk. The latter will dump
+everything on memory to source files. Of course, not accepting a code in an
+editor will make no change whatsoever. So you generally wanna do them in
+sequence: first accept, then save.</p>
+
+<p><strong>Tip:</strong>If you make a mess in the editor and want it to get
+back to the original content, reset the code with  "ALT+X,R".</p>
+
+  <h3>Loading and debugging</h3>
+
+ <p>Now we are ready to create a new instance of our class (well, we didn't
+ define "loadData", but lets pretend we think we did). Before we can use our
+ new module, we need to load it in the context of the ModuleExplorer. To do
+ so, type "ALT+M,L", and a message in the status bar should inform you that
+ the module was loaded.</p>
+
+ <p>To eval an expression in the module's context just "doIt" it in any editor
+ in the module's page, eg: type the desired expression in the constructor's
+ editor, select it and execute "doIt" (you can reset the code later with
+ "ALT+X,R"). Don't try doing this in any editor of <strong>this</strong>
+ tutorial window though...that module is not in our scope.</p>
+
+ <p>So, let's execute the following expression:</p>
+
+<pre>
+CommitViewer.new.show
+</pre>
+
+ <p>...and here is the Debugger! He is pleased to meet you. The Debugger was
+ fired because the interpreter didn't find the method "loadData" -- I'm
+ assuming, delusional as I am, that the Debugger didn't fired at all until now
+ during this tutorial. The execution is now paused in that point of execution
+ of that missing send and we are allowed to do a few things while there. Here
+ are a few currently implemented:</p>
+
+
+ <ul>
+   <li>Examine the stack frames.</li>
+   <li>Step into, over and continue execution.</li>
+   <li>DoIt, printIt, InspectIt, and DebugIt <i>in the context of the frame</i>.</li>
+   <li>Accepting the current displayed code.</li>
+   <li>Reload the last frame.</li>
+ </ul>
+
+ <p><i>Sorry about the empty list views below in the debugger window, this is
+ a work in progress</i></p>
+
+ <p>Recapitulating our current practice, what we normally do in this situation
+ when programming with our traditional languages and tools is to identify the
+ bug, kill the process, open the offending source file, change its content and
+ compile/execute the program again 'til we reach that point of execution again
+ -- on a traditional settings, how fast and natural we can do all this depends
+ on the nature of the program, but more often than not it is a very indirect,
+ slow, repetitive and tiresome labor. The good news is that we won't have to
+ cope with this practice here. So, how we will fix this? First off, don't
+ close the debugger.</p>
+
+ <p>It's time to add the missing method. Going back to our module's page, type
+ in "ALT+C,M" to add a new method and inform the name of the method in the
+ prompt: "CommitViewer.loadData". </p>
+
+ <p>Now we need to have some real data loading here. Set the following code
+ for the "loadData" method:</p>
+
+<pre>
+fun() {
+  var url = "http://api.github.com/repos/thiago-silva/memetalk/commits";
+  var content = http_get(url);
+  var json = parse_json(content);
+  json.each(fun(item) {
+    var str = item['commit']['author']['date'] + " -- " + item['commit']['message'];
+    qt.QListWidgetItem.new(str, @listWidget);
+  });
+}
+</pre>
+
+ <p><i>http_get and parse_json are just functions I created for this tutorial</i></p>
+
+ <p>After pasting the code above for the new method, accept it (CTRL+X,A) --
+ in the status bar, the message "Code changed" should have appeared. Going
+ back to the debugger, we can reload that execution frame with (CTRL+R): this
+ will effectively rewind one frame of the call stack and re-enter the
+ function. Now, you can Step Over (F7) the expression until you reach
+ "this.loadModule()" at line 4, where we can Step Into (F6) and see that the
+ debugger successfully entered our newly defined method. Now, don't get too
+ crazy, there is still an error in this function: the URL is using "http://"
+ where github requires "https". In the very same Debugger's editor, fix this
+ bug changing the string containing the URL. Once you do this, Accept it
+ (CTRL+S) and reload (CTRL+R) the frame. Now feel free to continue. Hopefully,
+ our new widget will appear.
+
+  <h2>Changing the tools on the fly</h2>
+
+ <p>Now, for a last exercise, a simpler one this time, will change the other
+ ModuleExplorer displaying the "cview" module while it is running. Just for a
+ illustration, the task is to add a new menu item for that window that, when
+ triggered, should open the tutorial directly.</p>
+
+  <p>First, we need a hold on that ModuleExplorer's object. Focus on that
+  window (eg, clicking with the mouse on it), and type ALT+W,I to bring up
+  an inspector for its object.</p>
+
+  <p>The property we need is "sysmenu", which is the "System" menu object
+  where we will add a new item, and the latter is the QWebView. On the text
+  area of the inspector, type the following, select and "DoIt":</p>
+
+<pre>
+var action = qt.QAction.new("Go to Tutorial", this);
+action.connect("triggered", fun() {
+   this.show_tutorial();
+});
+@sysmenu.addAction(action);
+</pre>
+
+  <p>That's it. That ModuleExplorer window should have a new item under
+  "System" menu with the label "Goto tutorial". One thing to note though is
+  that, after exiting this software, the next time it runs that item won't be
+  there. For this change to be effective, all it takes is going to the
+  ModuleExplorer's constructor method, adding the code above to it, Accept and
+  Save. </p>
+
+  <p><i>Welcome to Memetalk</i></p>
+<hr>
+<p>Author: Thiago Silva</p>
+</body>
 
 </html>

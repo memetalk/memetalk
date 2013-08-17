@@ -1563,3 +1563,13 @@ def prim_test_files(proc):
 def prim_test_import(proc):
     cmod = proc.interpreter.compiled_module_by_filepath(proc.locals['filepath'])
     return proc.interpreter.instantiate_module(cmod, [], proc.r_cp['module'])
+
+
+def prim_http_get(proc):
+    import httplib2
+    resp, content = httplib2.Http().request(proc.locals['url'])
+    return content
+
+def prim_parse_json(proc):
+    import json
+    return json.loads(proc.locals['str'])
