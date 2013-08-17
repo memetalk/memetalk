@@ -771,6 +771,7 @@ class Interpreter():
     def throw_with_value(self, value):
         if _should_warn_of_exception():
             print "MemetalkException with value: \n" + value
+            self.current_process.pp_stack_trace()
         ex = self.create_instance(core.Exception)
 
         # ...and this me being stupid:
