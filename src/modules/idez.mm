@@ -1111,7 +1111,7 @@ module idez(qt, io)
     instance_method initActions: fun() {
       // System menu
 
-      var execMenu = this.menuBar().addMenu("&System");
+      var execMenu = this.menuBar().addMenu("System");
       var action = qt.QAction.new("&Save", execMenu);
       action.setShortcut("alt+x,s");
       action.connect("triggered", fun() {
@@ -1162,7 +1162,7 @@ module idez(qt, io)
 
       // Edit Menu
 
-      execMenu = this.menuBar().addMenu("&Module");
+      execMenu = this.menuBar().addMenu("Module");
 
       action = qt.QAction.new("&Instantiate module", execMenu);
       action.setShortcut("alt+m,i");
@@ -1214,7 +1214,7 @@ module idez(qt, io)
 
       // Class Menu
 
-      execMenu = this.menuBar().addMenu("&Class");
+      execMenu = this.menuBar().addMenu("Class");
       action = qt.QAction.new("&Add Class", execMenu);
       action.setShortcut("alt+c,a");
       action.connect("triggered", fun() {
