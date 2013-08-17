@@ -705,7 +705,7 @@ class Interpreter():
             ret = self.current_process.switch('run_module', 'main', imodule, [])
             print "RETVAL: " + pformat(ret,1,80,2)
 
-    def debug_process(self, target_process):
+    def debug_process(self, target_process, exception = None):
         target_process.state = 'paused'
 
         compiled_module = self.compiled_module_by_filename('idez.mm')
@@ -715,7 +715,7 @@ class Interpreter():
         self.processes.append(target_process.debugger_process)
 
         mmprocess = self.alloc_object(core.VMProcess, {'self':target_process})
-        ret = target_process.debugger_process.switch('run_module', 'debug', imodule, [mmprocess])
+        ret = target_process.debugger_process.switch('run_module', 'debug', imodule, [mmprocess, exception])
         print('debug_process: switch back from debugger_process')
         return ret
 
@@ -762,7 +762,11 @@ class Interpreter():
 
     def throw(self, mex):
         # MemetalkException encapsulates the memetalk exception:
-        raise MemetalkException(mex)
+        if self.current_process.flag_stop_on_exception:
+            self.current_process.state = 'exception'
+            self.current_process.last_exception = mex
+        else:
+            raise MemetalkException(mex)
 
     def throw_with_value(self, value):
         if _should_warn_of_exception():
@@ -771,9 +775,12 @@ class Interpreter():
 
         # ...and this me being stupid:
         ex['value'] =  value
-
-        # MemetalkException encapsulates the memetalk exception:
-        raise MemetalkException(ex)
+        if self.current_process.flag_stop_on_exception:
+            self.current_process.state = 'exception'
+            self.current_process.last_exception = ex
+        else:
+            # MemetalkException encapsulates the memetalk exception:
+            raise MemetalkException(ex)
 
     def create_compiled_function(self, data):
         return _create_compiled_function(data)
@@ -873,6 +880,8 @@ class Process(greenlet):
         self.interpreter = interpreter
         self.debugger_process = None
         self.state = None
+        self.flag_stop_on_exception = False
+        self.last_exception = None
 
     def greenlet_entry(self, cmd, *rest):
         return getattr(self, cmd)(*rest)
@@ -1311,10 +1320,17 @@ class Process(greenlet):
             raise RewindException(1)
 
     def dbg_control(self, name):
-        if self.state == 'paused' or self.state == 'next':
+        if self.state in ['paused', 'next', 'exception']:
             if not self.debugger_process:
                 #print 'dbg_control: paused: initiating debugger...please wait'
-                cmd = self.interpreter.debug_process(self)
+                if self.state == 'exception':
+                    print "An exception ocurred: starting debugger..."
+                    cmd = self.interpreter.debug_process(self, self.last_exception)
+                else:
+                    cmd = self.interpreter.debug_process(self)
+            elif self.state == 'exception':
+                print "An exception ocurred: starting debugger..."
+                cmd = self.debugger_process.switch("exception",self.last_exception)
             else:
                 #print 'dbg_control paused: asking debugger for cmd...'
                 cmd = self.debugger_process.switch()

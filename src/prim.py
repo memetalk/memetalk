@@ -83,33 +83,39 @@ def prim_vmprocess_step_into(proc):
     _proc = _lookup_field(proc, proc.r_rp, 'self')
     print 'vmprocess: sending step_into'
     ret = _proc.switch("step_into")
-    print 'vmprocess/step_into received: ' + str(ret)
+    print 'vmprocess/step_into received: ' + pformat(ret,1,80,1)
     if 'done' in ret:
         print 'done...exiting qevent'
         eventloop_processes[-1]['done'] = True
         return False
-    print 'vmprocess/step_into DONE'
-    return True
+    print 'vmprocess/step_over DONE'
+    if 'exception' in ret:
+        return ret[1]
+    else:
+        return True
 
 def prim_vmprocess_step_over(proc):
     print '+ENTER prim_vmprocess_step_over'
     _proc = _lookup_field(proc, proc.r_rp, 'self')
     print 'vmprocess: sending step_over'
     ret = _proc.switch("step_over")
-    print 'vmprocess/step_over received: ' + str(ret)
+    print 'vmprocess/step_over received: ' + pformat(ret,1,80,1)
     if 'done' in ret:
         print 'done...exiting qevent'
         eventloop_processes[-1]['done'] = True
         return False
     print 'vmprocess/step_over DONE'
-    return True
+    if 'exception' in ret:
+        return ret[1]
+    else:
+        return True
 
 # def prim_vmprocess_continue(proc):
 #     print '+ENTER prim_vmprocess_continue'
 #     _proc = _lookup_field(proc, proc.r_rp, 'self')
 #     print 'vmprocess: sending continue'
 #     ret = _proc.switch("continue")
-#     print 'vmprocess/continue received: ' + str(ret)
+#     print 'vmprocess/continue received: ' + pformat(ret,1,80,1)
 #     if 'done' in ret:
 #         print 'done...exiting qevent'
 #         eventloop_processes[-1]['qtobj'].exit(0)
@@ -127,6 +133,9 @@ def prim_vmprocess_debug(proc):
     args = proc.locals['args']
     proc.state = 'paused'
     return proc.setup_and_run_fun(None, None, fn['compiled_function']['name'], fn, args, True)
+
+def prim_vmprocess_stop_on_exception(proc):
+    proc.flag_stop_on_exception = True
 
 # dirty stuff ahead: I'm too lazy to create a memetalk class wrapper over ASTNode
 def prim_vmstackframe_instruction_pointer(proc):

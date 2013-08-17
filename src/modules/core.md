@@ -440,6 +440,9 @@ module core() {
     class_method debug: fun(fn, args) {
       <primitive "vmprocess_debug">
     }
+    class_method stopOnException: fun() {
+      <primitive "vmprocess_stop_on_exception">
+    }
   }
 
   class VMStackFrame {

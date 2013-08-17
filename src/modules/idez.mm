@@ -25,7 +25,7 @@ module idez(qt, io)
   io : memetalk/io/1.0();
   [QWidget, QMainWindow, QsciScintilla, QLineEdit, QComboBox, QTableWidget] <= qt;
 {
-  debug: fun(process) {
+  debug: fun(process, ex) {
     var eventloop = null;
     if (!qt.qapp_running()) {
       eventloop = qt.QApplication.new();
@@ -33,7 +33,7 @@ module idez(qt, io)
       eventloop = qt.QEventLoop.new();
     }
 
-    var dbg = DebuggerUI.new(process, eventloop);
+    var dbg = DebuggerUI.new(process, ex, eventloop);
     dbg.show();
     eventloop.exec();
     io.print("debug:main left loop");
@@ -98,7 +98,7 @@ module idez(qt, io)
   }
   class DebuggerUI < QMainWindow {
     fields: frame_index, process, execFrames, stackCombo, editor, localVarList, moduleVarList, statusLabel, eventloop, execMenu;
-    init new: fun(process, eventloop) {
+    init new: fun(process, ex, eventloop) {
       super.new();
       @process = process;
       @eventloop = eventloop;
@@ -133,6 +133,10 @@ module idez(qt, io)
           @editor.pausedAtLine(locInfo["start_line"]-1, locInfo["start_col"], locInfo["end_line"]-1, locInfo["end_col"]);
           @localVarList.setVariables(@execFrames.localsFor(i));
           @moduleVarList.setVariables(@execFrames.moduleVarsFor(i));
+        }
+
+        if (ex) {
+          @statusLabel.setText("An exception ocurred: " + ex.value);
         }
       });
 
@@ -244,23 +248,31 @@ module idez(qt, io)
     instance_method stepInto: fun() {
       @statusLabel.setText("Stepping into...");
       this.disableActions();
-      if(@process.stepInto()) {
-        @stackCombo.updateInfo();
-        this.enableActions();
-        @statusLabel.setText("done");
-      } else {
+      var r = @process.stepInto();
+      if(r == false) {
         this.continue();
+      }
+      @stackCombo.updateInfo();
+      this.enableActions();
+      if (Mirror.vtFor(r) == Exception) {
+        @statusLabel.setText("An exception ocurred: " + r.value);
+      } else {
+        @statusLabel.setText("done");
       }
     }
     instance_method stepOver: fun() {
       @statusLabel.setText("Stepping over...");
       this.disableActions();
-      if(@process.stepOver()) {
-        @stackCombo.updateInfo();
-        this.enableActions();
-        @statusLabel.setText("done");
-      } else {
+      var r = @process.stepOver();
+      if(r == false) {
         this.continue();
+      }
+      @stackCombo.updateInfo();
+      this.enableActions();
+      if (Mirror.vtFor(r) == Exception) {
+        @statusLabel.setText("An exception ocurred: " + r.value);
+      } else {
+        @statusLabel.setText("done");
       }
     }
   }
