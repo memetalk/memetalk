@@ -282,6 +282,7 @@ fun() {
   super.new(null);
   this.resize(600,300);
   @listWidget = qt.QListWidget.new(this);
+  qt.QHBoxLayout.new(this).addWidget(@listWidget);
   this.loadData();
 }
 </pre>
@@ -373,7 +374,7 @@ fun() {
  back to the debugger, we can reload that execution frame with (CTRL+R): this
  will effectively rewind one frame of the call stack and re-enter the
  function. Now, you can Step Over (F7) the expression until you reach
- "this.loadData()" at line 5, where we can Step Into (F6) and see that the
+ "this.loadData()" at line 6, where we can Step Into (F6) and see that the
  debugger successfully entered our newly defined method. Now, don't get too
  crazy, there is still an error in this function: the URL is using "http://"
  where github requires "https". In the very same Debugger's editor, fix this
