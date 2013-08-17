@@ -1518,7 +1518,7 @@ def prim_qapp_running(proc):
 
 ######
 
-
+_factories = []
 def prim_qt_extra_qwebpage_enable_plugins(proc):
     name = proc.locals['name']
     fn = proc.locals['fn']
@@ -1547,11 +1547,13 @@ def prim_qt_extra_qwebpage_enable_plugins(proc):
             plugin.mimeTypes = [mimeType]
             return [plugin]
 
-    global _factory # if this is local, webkit segfaults
-    _factory = WebPluginFactory()
+    global _factories # If this is gc'd, it segfaults
+    factory = WebPluginFactory()
+    _factories.append(factory) #we may have many instances of qwebpage
+
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
     QWebSettings.globalSettings().setAttribute(QWebSettings.PluginsEnabled, True)
-    qtobj.setPluginFactory(_factory)
+    qtobj.setPluginFactory(factory)
     return proc.r_rp
 
 def prim_test_files(proc):
