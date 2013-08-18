@@ -1112,8 +1112,8 @@ module idez(qt, io)
       }
       var e = qt.QApplication.focusWidget();
       if (Mirror.vtFor(e) != ExplorerEditor) {
-	@statusLabel.setText("No function selected");
-	return null;
+        @statusLabel.setText("No function selected");
+        return null;
       }
       @miniBuffer.prompt("Eval*: ", "", fun(expr) {
         try {
