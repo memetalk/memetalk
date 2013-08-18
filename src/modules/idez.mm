@@ -747,7 +747,7 @@ module idez(qt, io)
       @variables = {};
 
       this.setWindowTitle("Memetalk: ModuleExplorer");
-      this.resize(800,600);
+      this.resize(1000,600);
 
       var centralWidget = QWidget.new(this);
       this.setCentralWidget(centralWidget);
