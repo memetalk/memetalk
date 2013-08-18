@@ -1007,7 +1007,9 @@ class Process(greenlet):
                     #print("rewind more than one; tearing up and raising again")
                     self.tear_fun()
                     raise e
-                #print("Rewind: NO tear up stack; just resume")
+                # print "Rewind is resuming on..."
+                # P(fun['compiled_function'])
+                # print "++++++"
                 return self.run_fun(recv, drecv, fun, args, should_allocate)
             except MemetalkException:
                 self.tear_fun()
@@ -1026,6 +1028,17 @@ class Process(greenlet):
         # print "done fun:"
         # P(fun["compiled_function"]["body"],5)
         return ret
+
+    def frame_level(self, frame):
+        if frame['r_cp'] == self.r_cp and \
+                frame['r_rp'] == self.r_rp and \
+                frame['r_rdp'] == self.r_rdp and \
+                frame['r_ep'] == self.r_ep and \
+                frame['r_ip'] == self.r_ip and \
+                frame['locals'] == self.locals:
+            return 0
+        else:
+            return list(reversed(self.stack)).index(frame)
 
     def top_frame(self):
         return {"r_cp": self.r_cp,
@@ -1340,7 +1353,11 @@ class Process(greenlet):
             #print("process:: we are asked to raise the exception ")
             self.state = 'exception'
         if cmd[0] == 'rewind':
-            #print "process: rewinding to line " + str(cmd[1])
+            self.interpreter.break_at(self.r_cp['compiled_function'], cmd[2])
+            self.state = 'running'
+            raise RewindException(self.frame_level(cmd[1])+2)
+        if cmd[0] == 'reload':
+            #print "process: reload to line " + str(cmd[1])
             self.interpreter.break_at(self.r_cp['compiled_function'], cmd[1])
             self.state = 'running'
             raise RewindException(1)

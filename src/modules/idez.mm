@@ -185,6 +185,13 @@ module idez(qt, io)
       });
       execMenu.addAction(action);
 
+      action = qt.QAction.new("Rewind and go", execMenu);
+      action.setShortcut("ctrl+g");
+      action.connect("triggered", fun() {
+        this.rewindAndGo()
+      });
+      execMenu.addAction(action);
+
       action = qt.QAction.new("Run to line", execMenu);
       action.setShortcut("alt+l");
       action.connect("triggered", fun() {
@@ -266,6 +273,17 @@ module idez(qt, io)
       this.disableActions();
       var pos = @editor.getCursorPosition();
       @process.reloadFrame(pos["line"] + 1);
+      @stackCombo.updateInfo();
+      this.enableActions();
+    }
+    instance_method rewindAndGo: fun() {
+      @exception = null;
+      @statusLabel.setText("Rewinding...");
+      this.disableActions();
+      var fromFrame = @execFrames.frame(@frame_index);
+      var topFrame = @execFrames.topFrame();
+      var line = topFrame.instructionPointer["start_line"];
+      @process.rewindUntil(fromFrame, line);
       @stackCombo.updateInfo();
       this.enableActions();
     }
@@ -429,6 +447,9 @@ module idez(qt, io)
     }
     instance_method frame: fun(i) { // this is used for doIt/printIt/etc.
       return @vmproc.stackFrames().get(i);
+    }
+    instance_method topFrame: fun() {
+      return @vmproc.stackFrames().get(this.size()-1);
     }
     instance_method localsFor: fun(i) { // this is used for the local variable list widet
       return @vmproc.stackFrames().get(i).localVars();

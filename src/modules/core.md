@@ -437,6 +437,9 @@ module core() {
     instance_method reloadFrame: fun(line) {
       <primitive "vmprocess_reload_frame">
     }
+    instance_method rewindUntil: fun(fromFrame, to_line) {
+      <primitive "vmprocess_rewind_until">
+    }
     instance_method setDebuggerProcess: fun(arg) {
       <primitive "vmprocess_set_debugger_process">
     }

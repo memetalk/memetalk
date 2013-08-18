@@ -125,7 +125,12 @@ def prim_vmprocess_step_over(proc):
 
 def prim_vmprocess_reload_frame(proc):
     _proc = _lookup_field(proc, proc.r_rp, 'self')
-    _proc.switch("rewind", proc.locals['line'])
+    _proc.switch("reload", proc.locals['line'])
+
+def prim_vmprocess_rewind_until(proc):
+    _proc = _lookup_field(proc, proc.r_rp, 'self')
+    frame = _lookup_field(proc, proc.locals['fromFrame'], 'self')
+    _proc.switch("rewind", frame, proc.locals['to_line'])
 
 def prim_vmprocess_set_debugger_process(proc):
     _proc = _lookup_field(proc, proc.r_rp, 'self')
