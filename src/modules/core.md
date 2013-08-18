@@ -504,6 +504,10 @@ module core() {
     <primitive "save_module">
   }
 
+  break_at: fun(cfun, line) {
+    <primitive "break_at">
+  }
+
   http_get: fun(url) {
     <primitive "http_get">
   }

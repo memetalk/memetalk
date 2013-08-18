@@ -645,6 +645,7 @@ class Interpreter():
         self.memory = []
         self.imods = []
         self.interned_symbols = {}
+        self.volatile_breakpoints = []
 
     def module_to_text(self, cmod):
         def if_ctor(lst, val):
@@ -717,6 +718,9 @@ class Interpreter():
         ret = target_process.debugger_process.switch('run_module', 'debug', imodule, [mmprocess, exception])
         #print('debug_process: switch back from debugger_process')
         return ret
+
+    def break_at(self, cfun, line):
+        self.volatile_breakpoints.append({"cfun":cfun, "line":line})
 
     def compiled_module_by_filename(self, filename):
         module_name = filename[:-3]
@@ -1339,6 +1343,8 @@ class Process(greenlet):
 
         return self.state
     def dbg_control(self, name, force_debug = False):
+        self.process_breakpoints()
+
         if self.state in ['paused', 'next'] or force_debug:
             #print self.state  + " on " + name
             if not self.debugger_process:
@@ -1356,6 +1362,15 @@ class Process(greenlet):
                 cmd = self.debugger_process.switch()
             ret = self.dbg_cmd(cmd)
             return ret
+
+    def process_breakpoints(self):
+        for idx, bp in enumerate(self.interpreter.volatile_breakpoints):
+            line = self.r_ip.start_line - self.r_cp['compiled_function']['line']+1
+            if line == bp['line'] and self.r_cp['compiled_function'] == bp['cfun']:
+                print self.r_ip
+                self.state = 'paused'
+                del self.interpreter.volatile_breakpoints[idx]
+                return
 
 if __name__ == "__main__":
     if len(sys.argv) == 1:

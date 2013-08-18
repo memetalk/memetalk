@@ -51,6 +51,12 @@ def prim_get_module(proc):
 def prim_save_module(proc):
     return proc.interpreter.save_module(proc.locals['name'])
 
+def prim_break_at(proc):
+    cfun = proc.locals['cfun']
+    line = proc.locals['line']
+    proc.interpreter.break_at(cfun, line)
+    return proc.r_rdp
+
 def prim_import(proc):
     compiled_module = proc.interpreter.compiled_module_by_filename(proc.locals["mname"])
     args = dict(zip(compiled_module["params"],proc.locals["margs"]))
