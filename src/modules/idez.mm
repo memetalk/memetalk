@@ -1105,6 +1105,33 @@ module idez(qt, io)
         }
       });
     }
+    instance_method action_evalUntil: fun() {
+      if (@current_cmodule == null) {
+        @statusLabel.setText("No current module");
+        return null;
+      }
+      var e = qt.QApplication.focusWidget();
+      if (Mirror.vtFor(e) != ExplorerEditor) {
+	@statusLabel.setText("No function selected");
+	return null;
+      }
+      @miniBuffer.prompt("Eval*: ", "", fun(expr) {
+        try {
+          var imod = null;
+          if (@imodule) {
+            imod = @imodule;
+          } else {
+            imod = thisModule;
+          }
+
+          break_at(e.cfun, e.getCursorPosition["line"] + 1);
+          var r = evalWithVars(expr, {}, imod);
+          @statusLabel.setText(r["result"].toString());
+        } catch(ex) {
+          @statusLabel.setText(ex.value);
+        }
+      });
+}
     instance_method action_instantiateModule: fun() {
       if (@current_cmodule == null) {
         @statusLabel.setText("No current module");
@@ -1217,6 +1244,14 @@ module idez(qt, io)
       action.setShortcut("ctrl+e");
       action.connect("triggered", fun() {
         this.action_eval();
+      });
+      action.setShortcutContext(1);
+      execMenu.addAction(action);
+
+      action = qt.QAction.new("Eval Until", execMenu);
+      action.setShortcut("alt+e");
+      action.connect("triggered", fun() {
+        this.action_evalUntil();
       });
       action.setShortcutContext(1);
       execMenu.addAction(action);

@@ -51,6 +51,9 @@ module core() {
       ==: fun(other) {
           <primitive "object_equal">
       }
+      !=: fun(other) {
+          <primitive "object_not_equal">
+      }
     }
   }
 
