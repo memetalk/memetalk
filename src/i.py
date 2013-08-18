@@ -940,12 +940,14 @@ class Process(greenlet):
             print "exiting with memetalk exception: " + e.mmobj()['value']
 
     def pp_stack_trace(self):
+        print "\n**** Memetalk stack trace *** :\n"
         for frame in self.stack:
             if frame['r_cp']:
                 print (frame['r_cp']['compiled_function']['name'] + " :::" + str(frame['r_cp']['compiled_function']['body']))[0:80] + "..."
-        P(self.r_cp,2)
         if self.r_cp:
             print (self.r_cp['compiled_function']['name'] + " ::: " + str(self.r_cp['compiled_function']['body']))[0:80] + "..."
+        print "\n\n*** python stack trace ***: \n"
+        print traceback.format_exc()
 
     def _lookup(self, drecv, vt, selector):
         if vt == None:
