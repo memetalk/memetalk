@@ -25,6 +25,45 @@ from PyQt4.Qsci import QsciScintilla, QsciLexerJavaScript, QsciLexerPython, Qsci
 from PyQt4.QtCore import *
 from PyQt4.QtGui import *
 
+# QScintilla sample with PyQt
+#
+# Eli Bendersky (eliben@gmail.com)
+# This code is in the public domain
+#-------------------------------------------------------------------------
+import sys
+from PyQt4.QtCore import *
+from PyQt4.QtGui import *
+from PyQt4.Qsci import QsciScintilla, QsciLexerJavaScript
+from pdb import set_trace as br
+
+class QsciLexerMemeScript(QsciLexerJavaScript):
+    def __init__(self):
+        super(QsciLexerJavaScript, self).__init__()
+
+    def keywords(self, s):
+        if s != 1: return ""
+        return "fun var null this debug throw return if else while try catch or and super new true false thisModule thisContext"
+
+    def defaultFont(self, s):
+        font = QFont("Monospace",10)
+        if s == QsciLexerJavaScript.Keyword or\
+                s == QsciLexerJavaScript.InactiveKeyword or\
+                s == QsciLexerJavaScript.Operator or\
+                s == QsciLexerJavaScript.InactiveOperator:
+            font.setBold(True)
+        return font
+
+    def defaultColor(self, s):
+        if s == QsciLexerJavaScript.Keyword:
+            return QColor('#514CA6')
+        elif s == QsciLexerJavaScript.Comment or s == QsciLexerJavaScript.CommentLine:
+            return QColor('#29A349')
+        elif s == QsciLexerJavaScript.DoubleQuotedString:
+            return QColor('#DB0909')
+        elif s == QsciLexerJavaScript.Number:
+            return QColor('#961212')
+        return QColor('black')
+
 class MemeQsciScintilla(QsciScintilla):
 
     def __init__(self, meme_instance, parent=None):
@@ -42,10 +81,7 @@ class MemeQsciScintilla(QsciScintilla):
         ctrl_d.setKey(0)
 
         # Set the default font
-        font = QFont()
-        #font.setFamily('Courier')
-        #font.setFixedPitch(True)
-        #font.setPointSize(10)
+        font = QFont('Monospace',10)
         self.setFont(font)
         self.setMarginsFont(font)
 
@@ -54,18 +90,7 @@ class MemeQsciScintilla(QsciScintilla):
         self.setMarginsFont(font)
         self.setMarginWidth(0, fontmetrics.width("000") + 6)
         self.setMarginLineNumbers(0, True)
-        self.setMarginsBackgroundColor(QColor("#cccccc"))
-
-        # Clickable margin 1 for showing markers
-        self.setMarginSensitivity(1, True)
-        self.setMarginSensitivity(2, True)
-        # self.connect(self,
-        #     SIGNAL('marginClicked(int, int, Qt::KeyboardModifiers)'),
-        #     self.on_margin_clicked)
-        # self.markerDefine(QsciScintilla.RightTriangle,
-        #     self.ARROW_MARKER_NUM)
-        # self.setMarkerBackgroundColor(QColor("#ee1111"),
-        #     self.ARROW_MARKER_NUM)
+        self.setMarginsBackgroundColor(QColor("#C5CBE3"))
 
         self.markerDefine(QsciScintilla.RightArrow,self.CURRENT_LINE_MARKER)
         self.setMarkerBackgroundColor(QColor("blue"),self.CURRENT_LINE_MARKER)
@@ -77,16 +102,16 @@ class MemeQsciScintilla(QsciScintilla):
 
         # Current line visible with special background color
         self.setCaretLineVisible(True)
-        self.setCaretLineBackgroundColor(QColor("#ffe4e4"))
+        self.setCaretLineBackgroundColor(QColor("#F0F1F7"))
 
         # Set Python lexer
         # Set style for Python comments (style number 1) to a fixed-width
         # courier.
         #
-        lexer = QsciLexerJavaScript()#QsciLexerPython()
+        lexer = QsciLexerMemeScript()
         lexer.setDefaultFont(font)
         self.setLexer(lexer)
-        self.SendScintilla(QsciScintilla.SCI_STYLESETFONT, 1, 'Courier')
+        #self.SendScintilla(QsciScintilla.SCI_STYLESETFONT, 1, 'Monospace')
 
         # Don't want to see the horizontal scrollbar at all
         # Use raw message to Scintilla here (all messages are documented
@@ -105,12 +130,3 @@ class MemeQsciScintilla(QsciScintilla):
         self.indicators[self.CURRENT_RANGE_IND] = \
             {'start_line':start_line,'start_col':start_col,'end_line':end_line, 'end_col':end_col}
         self.ensureLineVisible(start_line)
-
-    def on_margin_clicked(self, nmargin, nline, modifiers):
-        print str(nmargin) + ":" + str(nline) + ":" + str(modifiers)
-
-        # Toggle marker for the line the margin was clicked on
-        if self.markersAtLine(nline) != 0:
-            self.markerDelete(nline, self.ARROW_MARKER_NUM)
-        else:
-            self.markerAdd(nline, self.ARROW_MARKER_NUM)
