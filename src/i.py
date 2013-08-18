@@ -720,6 +720,7 @@ class Interpreter():
         return ret
 
     def break_at(self, cfun, line):
+        #print "Breaking at: " + str(line) + " --- " + P(cfun,1,True)
         self.volatile_breakpoints.append({"cfun":cfun, "line":line})
 
     def compiled_module_by_filename(self, filename):
@@ -1324,25 +1325,28 @@ class Process(greenlet):
 
     def dbg_cmd(self, cmd):
         #print 'dbg_cmd received: ' + str(cmd)
-        if cmd == 'step_into':
+        if cmd[0] == 'step_into':
             #print("process:: changed state to paused")
             self.state = 'paused'
-        if cmd == 'step_over':
+        if cmd[0] == 'step_over':
             #print("process:: changed state to next")
             self.state = 'next'
-        if cmd == 'continue':
+        if cmd[0] == 'continue':
             #print("process:: changed state to continue")
             self.state = 'running'
-        if cmd == 'continue_throw':
+        if cmd[0] == 'continue_throw':
             #print("process:: we are asked to raise the exception ")
             self.state = 'exception'
-        if cmd == 'rewind':
-            #print("process: rewinding 1")
+        if cmd[0] == 'rewind':
+            #print "process: rewinding to line " + str(cmd[1])
+            self.interpreter.break_at(self.r_cp['compiled_function'], cmd[1])
+            self.state = 'running'
             raise RewindException(1)
         #print "process: " + str(id(self)) + " is " + self.state
 
         return self.state
     def dbg_control(self, name, force_debug = False):
+        #print self.r_ip
         self.process_breakpoints()
 
         if self.state in ['paused', 'next'] or force_debug:
@@ -1358,7 +1362,7 @@ class Process(greenlet):
                 print "An exception ocurred: starting debugger..."
                 cmd = self.debugger_process.switch("exception",self.last_exception)
             else:
-                print 'dbg_control paused: asking debugger for cmd...'
+                #print 'dbg_control paused: asking debugger for cmd...'
                 cmd = self.debugger_process.switch()
             ret = self.dbg_cmd(cmd)
             return ret
@@ -1366,8 +1370,9 @@ class Process(greenlet):
     def process_breakpoints(self):
         for idx, bp in enumerate(self.interpreter.volatile_breakpoints):
             line = self.r_ip.start_line - self.r_cp['compiled_function']['line']+1
+            #print "Checking line: " + str(line) + " --- " + str(self.r_ip)
             if line == bp['line'] and self.r_cp['compiled_function'] == bp['cfun']:
-                print self.r_ip
+                #print "BP activated at line: " + str(line) + " --- " + str(self.r_ip)
                 self.state = 'paused'
                 del self.interpreter.volatile_breakpoints[idx]
                 return

@@ -38,9 +38,9 @@ module idez(qt, io)
     var ret = eventloop.exec();
     process.setDebuggerProcess(null);
     if(ret == 0) {
-      return "continue";
+      return ["continue",null];
     } else {
-      return "continue_throw";
+      return ["continue_throw", null];
     }
   }
 
@@ -185,10 +185,10 @@ module idez(qt, io)
       });
       execMenu.addAction(action);
 
-      action = qt.QAction.new("Leave context", execMenu);
-      action.setShortcut("ctrl+o");
+      action = qt.QAction.new("Run to line", execMenu);
+      action.setShortcut("alt+l");
       action.connect("triggered", fun() {
-        //this.leaveContext(); //drop stack frame
+        this.runToLine();
       });
       execMenu.addAction(action);
       @execMenu = execMenu;
@@ -257,8 +257,18 @@ module idez(qt, io)
     }
     instance_method reloadFrame: fun() {
       @exception = null;
-      @process.reloadFrame();
+      @process.reloadFrame(0);
       @stackCombo.updateInfo();
+    }
+    instance_method runToLine: fun() {
+      @exception = null;
+      @statusLabel.setText("Run to line...");
+      this.disableActions();
+      var pos = @editor.getCursorPosition();
+      var cfun = @execFrames.frame(@frame_index).contextPointer.compiledFunction;
+      @process.reloadFrame(pos["line"] + 1);
+      @stackCombo.updateInfo();
+      this.enableActions();
     }
     instance_method stepInto: fun() {
       @exception = null;

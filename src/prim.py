@@ -81,7 +81,7 @@ def prim_vmprocess_step_into(proc):
     #print '+ENTER prim_vmprocess_step_into'
     _proc = _lookup_field(proc, proc.r_rp, 'self')
     #print 'vmprocess: sending step_into'
-    ret = _proc.switch("step_into")
+    ret = _proc.switch("step_into", None)
     #print 'vmprocess/step_into received: ' + P(ret,1,True)
     if 'done' in ret:
         #print 'done...exiting qevent'
@@ -97,7 +97,7 @@ def prim_vmprocess_step_over(proc):
     #print '+ENTER prim_vmprocess_step_over'
     _proc = _lookup_field(proc, proc.r_rp, 'self')
     #print 'vmprocess: sending step_over'
-    ret = _proc.switch("step_over")
+    ret = _proc.switch("step_over", None)
     #print 'vmprocess/step_over received: ' + P(ret,1,True)
     if 'done' in ret:
         #print 'done...exiting qevent'
@@ -125,7 +125,7 @@ def prim_vmprocess_step_over(proc):
 
 def prim_vmprocess_reload_frame(proc):
     _proc = _lookup_field(proc, proc.r_rp, 'self')
-    _proc.switch("rewind")
+    _proc.switch("rewind", proc.locals['line'])
 
 def prim_vmprocess_set_debugger_process(proc):
     _proc = _lookup_field(proc, proc.r_rp, 'self')
@@ -997,7 +997,7 @@ def prim_qt_qaction_connect(proc):
         if proc != eventloop_processes[-1]['proc']:
             entry = eventloop_processes[-1]
             #entry['qtobj'].exit(0)
-            entry['proc'].switch('done') # this is were the exit point of the debugger arrives
+            entry['proc'].switch('done', None) # this is were the exit point of the debugger arrives
             #print 'debugger module ended'
             proc.interpreter.debugger_process = None
             proc.interpreter.processes.remove(entry['proc'])
@@ -1050,7 +1050,7 @@ def prim_qt_qshortcut_new(proc):
         if proc != eventloop_processes[-1]['proc']:
             entry = eventloop_processes[-1]
             #entry['qtobj'].exit(0)
-            entry['proc'].switch('done') # this is were the exit point of the debugger arrives
+            entry['proc'].switch('done', None) # this is were the exit point of the debugger arrives
             #print 'debugger module ended'
             proc.interpreter.debugger_process = None
             proc.interpreter.processes.remove(entry['proc'])
