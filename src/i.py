@@ -1071,7 +1071,7 @@ class Process(greenlet):
     def setup_and_run_fun(self, recv, drecv, name, method, args, should_allocate):
         if isinstance(method, basestring):
             traceback.print_exc()
-            #print("function '" + name + "' lacks implementation. Receiver:");
+            print("function '" + name + "' lacks implementation. Receiver:");
             #P(recv)
             sys.exit(1)
         if len(method["compiled_function"]["params"]) != len(args):
