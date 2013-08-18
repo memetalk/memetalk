@@ -419,6 +419,28 @@ fun() {
 
  <p><i>(granted, this shortcut should be accessible from the debugger)</i></p>
 
+  <h3>Stand alone CommitViewer</h3>
+
+  <p>To make have our widget being executed as a stand alone program, we will
+  add a "main" function to our "cview" module. In the target ME, type
+  "ALT+M,F" to create the "main" function. Because Qt requires a QApplication
+  to be instantiated and to control the GUI loop, we will have to add those
+  things as well. So here is a main for all app:</p>
+<pre>
+fun() {
+  var app = qt.QApplication.new;
+  CommitViewer.new.show;
+  return app.exec;
+}
+</pre>
+
+  <p>Then, to run our app, go to the shell and execute the following command
+  in the memetalk "src" directory:<p>
+
+<pre>
+ $ python i.py modules/cview.mm
+</pre>
+
   <h2>On-the-fly changes</h2>
 
  <p>Now, for the last exercise, a simpler one this time, we will change the
