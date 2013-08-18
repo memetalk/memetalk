@@ -265,7 +265,6 @@ module idez(qt, io)
       @statusLabel.setText("Run to line...");
       this.disableActions();
       var pos = @editor.getCursorPosition();
-      var cfun = @execFrames.frame(@frame_index).contextPointer.compiledFunction;
       @process.reloadFrame(pos["line"] + 1);
       @stackCombo.updateInfo();
       this.enableActions();
