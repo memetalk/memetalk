@@ -29,18 +29,11 @@ import re
 from os import listdir
 from os.path import isfile, join
 from pdb import set_trace as br
-from pprint import pprint, pformat
 #import dbgui
 import scintilla_editor
 from config import MODULES_PATH
 import traceback
-
-def P(obj, depth=1):
-    if depth > 5:
-        depth = None
-    from pprint import pprint
-    pprint(obj, None, 1, 80, depth)
-
+from mmpprint import P
 
 _app = None
 _qapp_running = False
@@ -83,7 +76,7 @@ def prim_vmprocess_step_into(proc):
     _proc = _lookup_field(proc, proc.r_rp, 'self')
     #print 'vmprocess: sending step_into'
     ret = _proc.switch("step_into")
-    #print 'vmprocess/step_into received: ' + pformat(ret,1,80,1)
+    #print 'vmprocess/step_into received: ' + P(ret,1,True)
     if 'done' in ret:
         #print 'done...exiting qevent'
         eventloop_processes[-1]['done'] = True
@@ -99,7 +92,7 @@ def prim_vmprocess_step_over(proc):
     _proc = _lookup_field(proc, proc.r_rp, 'self')
     #print 'vmprocess: sending step_over'
     ret = _proc.switch("step_over")
-    #print 'vmprocess/step_over received: ' + pformat(ret,1,80,1)
+    #print 'vmprocess/step_over received: ' + P(ret,1,True)
     if 'done' in ret:
         #print 'done...exiting qevent'
         eventloop_processes[-1]['done'] = True
@@ -115,7 +108,7 @@ def prim_vmprocess_step_over(proc):
 #     _proc = _lookup_field(proc, proc.r_rp, 'self')
 #     print 'vmprocess: sending continue'
 #     ret = _proc.switch("continue")
-#     print 'vmprocess/continue received: ' + pformat(ret,1,80,1)
+#     print 'vmprocess/continue received: ' + P(ret,1, True)
 #     if 'done' in ret:
 #         print 'done...exiting qevent'
 #         eventloop_processes[-1]['qtobj'].exit(0)
@@ -201,7 +194,7 @@ def prim_object_to_string(proc):
     if obj == None:
         return "null"
     elif isinstance(obj, dict) and '_vt' in obj:
-        return pformat(obj,1,80,1) #dirt and limited, str does inifinite loop
+        return P(obj,1, True) #dirt and limited, str does inifinite loop
     else:
         return str(obj)
 
@@ -212,7 +205,7 @@ def prim_object_to_source(proc):
     elif isinstance(obj, dict) and '@tag' in obj:
         return  '<' + proc.r_rp['@tag'] + '>'
     else:
-        return pformat(obj,1,80,1)
+        return P(obj,1,True)
 
 def prim_object_equal(proc):
     return proc.r_rp == proc.locals['other']
@@ -473,7 +466,7 @@ def prim_compiled_class_add_method(proc):
     elif flag['self'] == 'class_method' or flag['self'] == 'constructor':
         proc.r_rdp['own_methods'][cfun['name']] = cfun
     else:
-        proc.interpreter.throw_with_value("Unknown flag: " + pformat(flag,1,80,2))
+        proc.interpreter.throw_with_value("Unknown flag: " + P(flag,1,True))
 
     # add the function to the instantiated classes:
     for imod in proc.interpreter.imodules():
@@ -568,7 +561,7 @@ def prim_list_to_string(proc):
         if hasattr(x,'__str__'):
             ret.append(str(x))
         else:
-            ret.append(pformat(x,1,80,2))
+            ret.append(P(x,1,True))
     return ', '.join(ret)
 
 def prim_io_file_contents(proc):

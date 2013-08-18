@@ -28,17 +28,13 @@ from loader import Loader
 from evaluator import Eval
 from prim import *
 import core_module as core
-from pprint import pprint, pformat
 from pdb import set_trace as br
 import traceback
 from config import MODULES_PATH, CURRENT_PATH
 from astbuilder import *
 from jinja2 import Environment
+from mmpprint import P
 
-def P(obj, depth=1):
-    if depth > 5:
-        depth = None
-    pprint(obj, None, 1, 80, depth)
 
 
 def _should_dump_mast():
@@ -704,7 +700,7 @@ class Interpreter():
             print traceback.format_exc()
         else:
             ret = self.current_process.switch('run_module', 'main', imodule, [])
-            print "RETVAL: " + pformat(ret,1,80,2)
+            print "RETVAL: " + P(ret,1,True)
 
     def debug_process(self, target_process, exception = None):
         target_process.state = 'paused'
@@ -1062,7 +1058,7 @@ class Process(greenlet):
             #P(method,3)
             self.interpreter.throw_with_value("arity error: " + method['compiled_function']['name'] +\
                                                   ", expecting " + str(len(method["compiled_function"]["params"])) +\
-                                                  ", got " + str(len(args)) + " -- "+pformat(args,1,80,2))
+                                                  ", got " + str(len(args)) + " -- "+ P(args,1,True))
 
         #backup frame
         self.push_stack_frame()
@@ -1214,7 +1210,7 @@ class Process(greenlet):
         elif mp['_delegate'] != None:
             return self.lookup_in_modules(name, mp['_delegate'])
         else:
-            self.interpreter.throw_with_value("Undeclared: " + name + " : "+pformat(self.r_cp['compiled_function'],1,80,1))
+            self.interpreter.throw_with_value("Undeclared: " + name + " : "+P(self.r_cp['compiled_function'],1,True))
 
     def eval_do_return(self, value, ast):
         self.r_ip = ast
@@ -1238,7 +1234,7 @@ class Process(greenlet):
         drecv, method = self._lookup(receiver, self.interpreter.get_vt(pklass), selector)
 
         if not method:
-            self.interpreter.throw_with_value("DoesNotUnderstand: " + selector + " -- " + pformat(instance,1,80,1))
+            self.interpreter.throw_with_value("DoesNotUnderstand: " + selector + " -- " + P(instance,1,True))
         elif not method["compiled_function"]["is_ctor"]:
             self.interpreter.throw_with_value("Method is not constructor: " + selector)
         else:
@@ -1249,7 +1245,7 @@ class Process(greenlet):
         self.dbg_control('eval_do_bin_send')
         drecv, method = self._lookup(receiver, self.interpreter.get_vt(receiver), selector)
         if not method:
-            self.interpreter.throw_with_value("DoesNotUnderstand: " + selector + " -- " + pformat(receiver,1,80,1))
+            self.interpreter.throw_with_value("DoesNotUnderstand: " + selector + " -- " + P(receiver,1,True))
         else:
             return self.setup_and_run_fun(receiver, drecv, selector, method, [arg], True)
 
@@ -1268,7 +1264,7 @@ class Process(greenlet):
         self.dbg_control('eval_do_send')
         drecv, method = self._lookup(receiver, self.interpreter.get_vt(receiver), selector)
         if not method:
-            self.interpreter.throw_with_value("DoesNotUnderstand: " + selector + " -- " + pformat(receiver,1,80,1))
+            self.interpreter.throw_with_value("DoesNotUnderstand: " + selector + " -- " + P(receiver,1,True))
         else:
             return self.setup_and_run_fun(receiver, drecv, selector, method, args, True)
 

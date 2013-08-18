@@ -18,11 +18,6 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 from pdb import set_trace as br
-def P(obj, depth=1):
-    if depth > 5:
-        depth = None
-    from pprint import pprint
-    pprint(obj, None, 1, 80, depth)
 
 class ASTBuilder:
     def ast(self, begin, ast):
