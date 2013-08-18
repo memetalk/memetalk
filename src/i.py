@@ -1342,7 +1342,7 @@ class Process(greenlet):
         if self.state in ['paused', 'next'] or force_debug:
             #print self.state  + " on " + name
             if not self.debugger_process:
-                #print 'dbg_control: paused: initiating debugger...please wait'
+                print 'dbg_control: paused: initiating debugger...please wait'
                 if self.state == 'exception':
                     print "An exception ocurred: starting debugger..."
                     cmd = self.interpreter.debug_process(self, self.last_exception)
@@ -1352,7 +1352,7 @@ class Process(greenlet):
                 print "An exception ocurred: starting debugger..."
                 cmd = self.debugger_process.switch("exception",self.last_exception)
             else:
-                #print 'dbg_control paused: asking debugger for cmd...'
+                print 'dbg_control paused: asking debugger for cmd...'
                 cmd = self.debugger_process.switch()
             ret = self.dbg_cmd(cmd)
             return ret
