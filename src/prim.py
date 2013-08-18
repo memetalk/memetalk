@@ -130,7 +130,6 @@ def prim_vmprocess_reload_frame(proc):
 def prim_vmprocess_set_debugger_process(proc):
     _proc = _lookup_field(proc, proc.r_rp, 'self')
     #print 'set_dbg_proc: ' + str(proc.locals['arg'])
-    P(_proc.debugger_process)
     _proc.debugger_process = proc.locals['arg']
 
 def prim_vmprocess_debug(proc):
