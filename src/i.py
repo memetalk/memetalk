@@ -52,7 +52,6 @@ def _create_compiled_module(data):
                 "_delegate": None,
                 "name": "",
                 "license":"",
-                "filepath":"",
                 "params": [],
                 "default_params": {},
                 "aliases": [],

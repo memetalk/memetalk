@@ -222,7 +222,7 @@ module core() {
   }
 
   class CompiledModule {
-    fields: _delegate, name, filepath, params, default_params, aliases, compiled_functions, compiled_classes;
+    fields: _delegate, name, params, default_params, aliases, compiled_functions, compiled_classes;
     instance_method name: fun() {
       return @name;
     }
@@ -231,9 +231,6 @@ module core() {
     }
     instance_method fullName: fun() {
       return this.name();
-    }
-    instance_method filepath: fun() {
-      return @filepath;
     }
     instance_method setParams: fun(params) {
       @params = params;
