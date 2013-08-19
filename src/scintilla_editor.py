@@ -20,20 +20,9 @@
 
 # Based on an example published by Eli Bendersky (eliben@gmail.com)
 
-from PyQt4 import QtGui
+from PyQt4.QtCore import *
+from PyQt4.QtGui import *
 from PyQt4.Qsci import QsciScintilla, QsciLexerJavaScript, QsciLexerPython, QsciCommand
-from PyQt4.QtCore import *
-from PyQt4.QtGui import *
-
-# QScintilla sample with PyQt
-#
-# Eli Bendersky (eliben@gmail.com)
-# This code is in the public domain
-#-------------------------------------------------------------------------
-import sys
-from PyQt4.QtCore import *
-from PyQt4.QtGui import *
-from PyQt4.Qsci import QsciScintilla, QsciLexerJavaScript
 from pdb import set_trace as br
 
 class QsciLexerMemeScript(QsciLexerJavaScript):
@@ -79,6 +68,9 @@ class MemeQsciScintilla(QsciScintilla):
         # so QsciScintilla doesn't ignore our QAction
         ctrl_d = self.standardCommands().find(QsciCommand.SelectionDuplicate)
         ctrl_d.setKey(0)
+
+        self.setIndentationsUseTabs(False)
+        self.setIndentationWidth(2)
 
         # Set the default font
         font = QFont('Monospace',10)
