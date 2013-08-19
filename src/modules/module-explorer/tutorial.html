@@ -17,10 +17,10 @@
     explore the system.
     </p>
 
-    <p><i>Note #1: This text was written for with experienced programmers as
-    audience in mind. This project is in its infancy and I wrote this to give
-    a hand's on demonstration of what this system is/will-be. Novice tutorials
-    will follow with the maturity of the project.</i></p>
+    <p><i>Note #1: The following text was written with experienced programmers
+    as audience in mind. This project is in its infancy and I wrote this to
+    give a hand's on demonstration of what this system is/will-be. Novice
+    tutorials will follow with the maturity of the project.</i></p>
 
     <p><i>Note #2: This is an alpha release. The languages and tools described
     here are either half-baked, quick-stand-ins, or plain dirty
@@ -38,7 +38,7 @@
     <h2>MemeScript</h2>
 
     <p>The Memetalk language, MemeScript, is somewhat similar to Javascript
-    (with some Rquby temper). Though it support classes and modules, the most
+    (with some Ruby temper). Though it support classes and modules, the most
     important syntax to be concerned are those related to expressions, ie,
     what goes inside the body of functions.</p>
 
@@ -134,16 +134,17 @@ io.print(w.isVisible());">
   of the property unless you "AcceptIt" (CTRL+S), in which case, the code is
   evaluated and the resulting value is bound to the selected property</p>
 
-  <p>Finally, clicking on a property name opens another Inspector for the
-  object bound to that property.</p>
+  <p>Finally, double clicking on a property name opens another Inspector for
+  the object bound to that property.</p>
 
   <p>And what is that Workspace? It is just a text editor with all the
-  functionalities covered so far and it is useful to execute arbitrary
+  functionalities covered so far; a place where we can execute arbitrary
   code. Type "this.show()" somewhere in the Inspector and "DoIt" (CTRL+D). The
-  Workspace window should have appeared. Next we will use the Workspace and
-  make some changes using the Inspector we are currently using.</p>
+  Workspace window should have appeared. Next we will use that Workspace
+  instance and make some changes using its Inspector visible in your
+  screen.</p>
 
-  <h4>Controlling running objects with the Inspector</h4>
+  <h4>Controlling live objects with the Inspector</h4>
 
   <p>To illustrate how to use the Inspector to change objects, type the
   following code in the Workspace and "DoIt":
@@ -199,13 +200,13 @@ var num = 42;
 
   <h3>A Memetalk Module</h3>
 
-  <p>Currently, the module's main page has the following structure: A menu
-  with all the module entries (anchor links to the actual place where the
-  definitions lie) is displayed on the left: the "Menu". At the right is the
-  body of the module, with the following information (from the top):
+  <p>Currently, the module's page the two main areas: a menu at the top left
+  with all the module entries as anchor links to the actual place where the
+  definitions lie; the body of the module at the right with the following
+  information (from the top):</p>
 
   <ul>
-    <li>The name of the module and and it's parameters inside parenthesis</li>
+    <li>The name of the module and it's parameters inside parenthesis</li>
     <li>The default bindings for module parameters in bullet items right below
     the module name</li>
     <li>The module description</li>
@@ -421,11 +422,11 @@ fun() {
 
   <h3>Stand alone CommitViewer</h3>
 
-  <p>To make have our widget being executed as a stand alone program, we will
-  add a "main" function to our "cview" module. In the target ME, type
-  "ALT+M,F" to create the "main" function. Because Qt requires a QApplication
-  to be instantiated and to control the GUI loop, we will have to add those
-  things as well. So here is a main for all app:</p>
+  <p>To have our widget being executed as a stand alone program, we will add a
+  "main" function to our "cview" module. In the target ME, type "ALT+M,F" to
+  create the "main" function. Because Qt requires a QApplication to be
+  instantiated and to control the GUI loop, we will have to add those things
+  as well. So here is a main for our app:</p>
 <pre>
 fun() {
   var app = qt.QApplication.new;
@@ -434,8 +435,8 @@ fun() {
 }
 </pre>
 
-  <p>Then, to run our app, go to the shell and execute the following command
-  in the memetalk "src" directory:<p>
+  <p>Then, to run this app, go to the shell and execute the following command
+  in memetalk's "src" directory:<p>
 
 <pre>
  $ python i.py modules/cview.mm
@@ -464,12 +465,11 @@ action.connect("triggered", fun() {
 @sysmenu.addAction(action);
 </pre>
 
-  <p>That's it. That ModuleExplorer window should have a new item under
-  "System" menu with the label "Goto tutorial". One thing to note though is
-  that, after exiting this software, the next time it runs that item won't be
-  there. For this change to be effective, all it takes is going to the
-  ModuleExplorer's constructor method, adding the code above to it, Accept it
-  and Save. </p>
+  <p>That's it. The target ME window should have a new item under "System"
+  menu with the label "Goto tutorial". One thing to note though is that, after
+  exiting this software, the next time it runs that item won't be there. For
+  this change to be effective, all it takes is going to the ModuleExplorer's
+  constructor method, adding the code above to it, Accept it and Save. </p>
 <hr>
 
 
