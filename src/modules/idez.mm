@@ -1333,7 +1333,7 @@ instance_method initActions: fun() {
   // System menu
   var execMenu = this.menuBar().addMenu("System");
   @sysmenu = execMenu;
-  action = qt.QAction.new("&Save", execMenu);
+  action = qt.QAction.new("Save", execMenu);
   action.setShortcut("alt+x,s");
   action.connect("triggered", fun() {
     this.action_saveToFileSystem();
@@ -1341,7 +1341,7 @@ instance_method initActions: fun() {
   action.setShortcutContext(1);
   execMenu.addAction(action);
 
-  action = qt.QAction.new("&Accept code", execMenu);
+  action = qt.QAction.new("Accept code", execMenu);
   action.setShortcut("alt+x,a");
   action.connect("triggered", fun() {
     this.action_acceptCode();
@@ -1409,7 +1409,7 @@ instance_method initActions: fun() {
 
   execMenu = this.menuBar().addMenu("Module");
 
-  action = qt.QAction.new("&Instantiate module", execMenu);
+  action = qt.QAction.new("Instantiate module", execMenu);
   action.setShortcut("alt+m,l");
   action.connect("triggered", fun() {
     this.action_instantiateModule();
@@ -1417,7 +1417,7 @@ instance_method initActions: fun() {
   action.setShortcutContext(1);
   execMenu.addAction(action);
 
-  action = qt.QAction.new("&Rename module", execMenu);
+  action = qt.QAction.new("Rename module", execMenu);
   action.setShortcut("alt+m,r");
   action.connect("triggered", fun() {
     io.print("rename module");
@@ -1425,7 +1425,7 @@ instance_method initActions: fun() {
   action.setShortcutContext(1);
   execMenu.addAction(action);
 
-  action = qt.QAction.new("Edit Module &Parameters", execMenu);
+  action = qt.QAction.new("Edit Module Parameters", execMenu);
   action.setShortcut("alt+m,p");
   action.connect("triggered", fun() {
     this.action_editModuleParameters();
@@ -1433,7 +1433,7 @@ instance_method initActions: fun() {
   action.setShortcutContext(1);
   execMenu.addAction(action);
 
-  action = qt.QAction.new("Edit Module &Default Parameters", execMenu);
+  action = qt.QAction.new("Edit Module Default Parameters", execMenu);
   action.setShortcut("alt+m,d");
   action.connect("triggered", fun() {
     this.action_editModuleDefaultParameters();
@@ -1441,7 +1441,7 @@ instance_method initActions: fun() {
   action.setShortcutContext(1);
   execMenu.addAction(action);
 
-  action = qt.QAction.new("Add Module &Function", execMenu);
+  action = qt.QAction.new("Add Module Function", execMenu);
   action.setShortcut("alt+m,f");
   action.connect("triggered", fun() {
     this.action_addFunction()
@@ -1449,7 +1449,7 @@ instance_method initActions: fun() {
   action.setShortcutContext(1);
   execMenu.addAction(action);
 
-  var del_fn_ac = qt.QAction.new("&Delete Function", execMenu);
+  var del_fn_ac = qt.QAction.new("Delete Function", execMenu);
   del_fn_ac.setShortcut("alt+f,d");
   del_fn_ac.connect("triggered", fun() {
     this.action_deleteFunction()
@@ -1460,7 +1460,7 @@ instance_method initActions: fun() {
   // Class Menu
 
   execMenu = this.menuBar().addMenu("Class");
-  action = qt.QAction.new("&Add Class", execMenu);
+  action = qt.QAction.new("Add Class", execMenu);
   action.setShortcut("alt+c,a");
   action.connect("triggered", fun() {
     this.action_addClass();
@@ -1484,7 +1484,7 @@ instance_method initActions: fun() {
   action.setShortcutContext(1);
   execMenu.addAction(action);
 
-  action = qt.QAction.new("Edit &Fields", execMenu);
+  action = qt.QAction.new("Edit Fields", execMenu);
   action.setShortcut("alt+c,f");
   action.connect("triggered", fun() {
     this.action_editFields();
@@ -1492,7 +1492,7 @@ instance_method initActions: fun() {
   action.setShortcutContext(1);
   execMenu.addAction(action);
 
-  action = qt.QAction.new("Add &Method", execMenu);
+  action = qt.QAction.new("Add Method", execMenu);
   action.setShortcut("alt+c,m");
   action.connect("triggered", fun() {
     this.action_addMethod();
