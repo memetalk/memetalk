@@ -64,8 +64,12 @@ class MemeQsciScintilla(QsciScintilla):
 
         self.indicators = {self.CURRENT_RANGE_IND: None}
 
-        # we need to clear up ctrl+d command
-        # so QsciScintilla doesn't ignore our QAction
+        # we need to clear up some commands
+        # so QsciScintilla doesn't shadow our QActions
+        ctrl_d = self.standardCommands().find(QsciCommand.SelectionDuplicate)
+        ctrl_d.setKey(0)
+        ctrl_l = self.standardCommands().find(QsciCommand.LineCut)
+        ctrl_l.setKey(0)
         ctrl_d = self.standardCommands().find(QsciCommand.SelectionDuplicate)
         ctrl_d.setKey(0)
 
