@@ -267,15 +267,6 @@ module idez(qt, io)
       @process.reloadFrame(0);
       @stackCombo.updateInfo();
     }
-    instance_method runToLine: fun() {
-      @exception = null;
-      @statusLabel.setText("Run to line...");
-      this.disableActions();
-      var pos = @editor.getCursorPosition();
-      @process.reloadFrame(pos["line"] + 1);
-      @stackCombo.updateInfo();
-      this.enableActions();
-    }
     instance_method rewindAndGo: fun() {
       @exception = null;
       @statusLabel.setText("Rewinding...");
@@ -284,6 +275,15 @@ module idez(qt, io)
       var topFrame = @execFrames.topFrame();
       var line = topFrame.instructionPointer["start_line"];
       @process.rewindUntil(fromFrame, line);
+      @stackCombo.updateInfo();
+      this.enableActions();
+    }
+    instance_method runToLine: fun() {
+      @exception = null;
+      @statusLabel.setText("Run to line...");
+      this.disableActions();
+      var pos = @editor.getCursorPosition();
+      @process.reloadFrame(pos["line"] + 1);
       @stackCombo.updateInfo();
       this.enableActions();
     }
@@ -448,9 +448,6 @@ module idez(qt, io)
     instance_method frame: fun(i) { // this is used for doIt/printIt/etc.
       return @vmproc.stackFrames().get(i);
     }
-    instance_method topFrame: fun() {
-      return @vmproc.stackFrames().get(this.size()-1);
-    }
     instance_method localsFor: fun(i) { // this is used for the local variable list widet
       return @vmproc.stackFrames().get(i).localVars();
     }
@@ -477,6 +474,9 @@ module idez(qt, io)
     }
     instance_method size: fun() {
       return @vmproc.stackFrames().size();
+    }
+    instance_method topFrame: fun() {
+      return @vmproc.stackFrames().get(this.size()-1);
     }
   }
   class ExplorerEditor < Editor {
@@ -959,6 +959,22 @@ module idez(qt, io)
       });
 
     }
+    instance_method action_debug: fun() {
+      @miniBuffer.prompt("debug: ", "", fun(expr) {
+        try {
+          var imod = null;
+          if (@imodule) {
+            imod = @imodule;
+          } else {
+            imod = thisModule;
+          }
+          var fn = evalWithVarsFn(expr, {}, imod);
+          VMProcess.debug(fn,[]);
+        } catch(e) {
+          @statusLabel.setText(e.value);
+        }
+      });
+    }
     instance_method action_deleteClass: fun() {
       if (@current_cmodule == null) {
         @statusLabel.setText("No current module");
@@ -1100,22 +1116,6 @@ module idez(qt, io)
           }
           var r = evalWithVars(expr, {}, imod);
           @statusLabel.setText(r["result"].toString());
-        } catch(e) {
-          @statusLabel.setText(e.value);
-        }
-      });
-    }
-    instance_method action_debug: fun() {
-      @miniBuffer.prompt("debug: ", "", fun(expr) {
-        try {
-          var imod = null;
-          if (@imodule) {
-            imod = @imodule;
-          } else {
-            imod = thisModule;
-          }
-          var fn = evalWithVarsFn(expr, {}, imod);
-          VMProcess.debug(fn,[]);
         } catch(e) {
           @statusLabel.setText(e.value);
         }
