@@ -1,7 +1,7 @@
-.license{{module_license}}
+.license{{module.license}}
 .endlicense
 
-module {{module_name}}({{module_parameters}})
+module {{module.name}}({{module_parameters}})
 {% for default in default_parameters %}
   {{default.name}} : memetalk/{{default.value}}/1.0();
 {% endfor %}
@@ -9,11 +9,11 @@ module {{module_name}}({{module_parameters}})
   [{{alias.list}}] <= {{alias.from}};
 {% endfor %}
 {
-{% for function in functions %}
+{% for name, function in module["compiled_functions"] | dictsort %}
   {{function.name}}: {{function.text}}
 
 {% endfor %}
-{%for class in classes%}
+{% for name, class in module["compiled_classes"] | dictsort %}
   {% if class.super_class_name ==  "Object" %}
 class {{class.name}} {
   {% else %}

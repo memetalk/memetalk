@@ -658,19 +658,10 @@ class Interpreter():
         defaults = [{"name":name,"value":spec["value"]} for name, spec in cmod["default_params"].iteritems()]
         aliases = [{"list": ', '.join(alias[1]),"from":alias[0]} for alias in cmod["aliases"]]
 
-        fun_names = sorted(cmod['compiled_functions'].keys())
-        functions = [cmod["compiled_functions"][name] for name in fun_names]
-
-        class_names = sorted(cmod["compiled_classes"].keys())
-        classes = [cmod["compiled_classes"][name] for name in class_names]
-
-        args = {"module_name": cmod['name'],
-                'module_license': cmod['license'],
-                "module_parameters": ', '.join(cmod['params']),
+        args = {"module_parameters": ', '.join(cmod['params']),
                 "default_parameters": defaults,
                 "aliases": aliases,
-                "functions":functions,
-                "classes": classes}
+                "module": cmod}
         return template.render(args)
 
     def save_module(self, name):
