@@ -1105,6 +1105,22 @@ module idez(qt, io)
         }
       });
     }
+    instance_method action_debug: fun() {
+      @miniBuffer.prompt("debug: ", "", fun(expr) {
+        try {
+          var imod = null;
+          if (@imodule) {
+            imod = @imodule;
+          } else {
+            imod = thisModule;
+          }
+          var fn = evalWithVarsFn(expr, {}, imod);
+          VMProcess.debug(fn,[]);
+        } catch(e) {
+          @statusLabel.setText(e.value);
+        }
+      });
+    }
     instance_method action_evalUntil: fun() {
       if (@current_cmodule == null) {
         @statusLabel.setText("No current module");
@@ -1252,6 +1268,14 @@ module idez(qt, io)
       action.setShortcut("alt+e");
       action.connect("triggered", fun() {
         this.action_evalUntil();
+      });
+      action.setShortcutContext(1);
+      execMenu.addAction(action);
+
+      action = qt.QAction.new("Debug", execMenu);
+      action.setShortcut("alt+b");
+      action.connect("triggered", fun() {
+        this.action_debug();
       });
       action.setShortcutContext(1);
       execMenu.addAction(action);
