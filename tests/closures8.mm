@@ -1,12 +1,24 @@
-module foo() {
-  main: fun() {
-    var cmod = get_compiled_module(thisModule);
+.license
+.endlicense
 
-    var cfn = CompiledFunction.newTopLevel(
-      "bar", "fun(a) { return fun() { a }; }", cmod, :module_function);
+.preamble()
 
-    var fn = cfn.instantiate(thisModule);
+.code
 
-    assert(fn(9)() == 9, "Compiling top leve function returning closure");
-  }
+// -- module functions --
+
+main: fun() {
+  var cmod = get_compiled_module(thisModule);
+
+  var cfn = CompiledFunction.newTopLevel(
+    "bar", "fun(a) { return fun() { a }; }", cmod, :module_function);
+
+  var fn = cfn.instantiate(thisModule);
+
+  assert(fn(9)() == 9, "Compiling top leve function returning closure");
 }
+
+// -- module classes --
+
+
+.end

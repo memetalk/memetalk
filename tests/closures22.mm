@@ -1,18 +1,29 @@
-module foo() {
+.license
+.endlicense
 
-  bar: fun() {
-    return 50;
-  }
+.preamble()
 
-  main: fun() {
-    var cmod = get_compiled_module(thisModule);
+.code
 
-    var cfn = bar.compiledFunction();
+// -- module functions --
 
-    var x = bar();
-
-    cfn.setCode("fun(a,b) { return a + b; }");
-
-    assert(x + bar(2,3) == 55, "Changing module function");
-  }
+bar: fun() {
+  return 50;
 }
+
+main: fun() {
+  var cmod = get_compiled_module(thisModule);
+
+  var cfn = bar.compiledFunction();
+
+  var x = bar();
+
+  cfn.setCode("fun(a,b) { return a + b; }");
+
+  assert(x + bar(2,3) == 55, "Changing module function");
+}
+
+// -- module classes --
+
+
+.end

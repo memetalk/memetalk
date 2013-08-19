@@ -1,27 +1,24 @@
-load_module = ['module' :name
-               license:l
-               params:p
-               !(self.i.l_module(name, p,l))
-               default_params
-               module_aliases
-               module_definitions]
+load_module = ['module' license_sec meta_sec preamble_sec code_sec]
 
-license = ['license' :x] -> x
+license_sec = ['.license' :l] -> self.i.l_module_license(l)
 
-default_params = ['default-params' [mparam*]]
+meta_sec = ['.meta' :x] -> x
 
-mparam = ['param' :name ['library' :spec :args]] -> self.i.l_default_p_lib(name,spec,args)
-       | ['param' :name ['uri' :uri :args]]      -> self.i.l_default_p_uri(name, uri, args)
+preamble_sec = ['.preamble'
+                :params
+                 !(self.i.l_module_params(params))
+                [module_default_param*] [module_alias*]]
 
 
-module_aliases = ['aliases' [module_alias*]]
+module_default_param = ['param' :name ['library' :spec :args]]
+                         -> self.i.l_default_p_lib(name,spec,args)
+                     | ['param' :name ['uri' :uri :args]]
+                         -> self.i.l_default_p_uri(name, uri, args)
 
 module_alias = ['alias' :libname :alias] -> self.i.l_module_alias(libname, alias)
 
+code_sec = ['.code' [definition*]]
 
-
-module_definitions = ['defs' []]
-                   | ['defs' [definition+]]
 
 definition = class_definition
            | function_definition("toplevel")

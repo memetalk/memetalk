@@ -457,7 +457,7 @@ class ModuleLoader(ASTBuilder):
         else:
             return self.current_module["compiled_functions"][name]
 
-    def compile_module(self, i, filename, src):
+    def compile_module(self, i, name, src):
         self.line_offset = 0
         self.pos_stack = []
         #self.function_line_offset = 0
@@ -477,7 +477,7 @@ class ModuleLoader(ASTBuilder):
             print ast
             print "//---- AST ----"
 
-        self.current_module = _create_compiled_module({"filepath": filename,
+        self.current_module = _create_compiled_module({"name": name,
                                                        "ast": ast,
                                                        "parent_module":"memetalk/kernel",
                                                        "@tag":"a compiled module"})
@@ -496,13 +496,13 @@ class ModuleLoader(ASTBuilder):
                 i.throw_with_value(err.formatError(''.join(self.parser.input.data)))
             else:
                 i.throw_with_value(traceback.format_exc())
-
         return self.current_module
 
-    def l_module(self, name, p, l):
-        self.current_module["name"] = name
-        self.current_module["params"] = p
-        self.current_module["license"] = l
+    def l_module_license(self, lic):
+        self.current_module["license"] = lic
+
+    def l_module_params(self, params):
+        self.current_module["params"] = params
 
     def l_default_p_lib(self, name, spec, args):
         self.current_module['default_params'][name] = {'name': name, 'type':'lib','value':spec[1]}
@@ -650,9 +650,19 @@ class Interpreter():
         def if_ctor(lst, val):
             return [(name, obj) for name, obj in lst if obj["is_ctor"] == val]
 
+        def comment(text, module_name, cname, name):
+            if text.count("\n") > 40:
+                if cname:
+                    return text + "\n" + "//end " + module_name + ":" + cname + ":" + name
+                else:
+                    return text + "\n" + "//end " + module_name + ":" + name
+            else:
+                return text
+
         src = open(CURRENT_PATH + "/templates/module.tpl.mm").read()
         env = Environment(trim_blocks=True, keep_trailing_newline=True)
         env.filters['if_ctor'] = if_ctor
+        env.filters['comment'] = comment
         template = env.from_string(src)
         defaults = [{"name":name,"value":spec["value"]} for name, spec in cmod["default_params"].iteritems()]
         aliases = [{"list": ', '.join(alias[1]),"from":alias[0]} for alias in cmod["aliases"]]
@@ -717,14 +727,14 @@ class Interpreter():
         module_name = filename[:-3]
         if module_name not in self.compiled_modules:
             source = self.open_module_file(filename).read()
-            self.compiled_modules[module_name] =  ModuleLoader().compile_module(self,filename,source)
+            self.compiled_modules[module_name] =  ModuleLoader().compile_module(self,module_name,source)
         return self.compiled_modules[module_name]
 
     def compiled_module_by_filepath(self, filepath):
         module_name = filepath
         if module_name not in self.compiled_modules:
             source = open(filepath).read()
-            self.compiled_modules[module_name] =  ModuleLoader().compile_module(self,filepath,source)
+            self.compiled_modules[module_name] =  ModuleLoader().compile_module(self,module_name,source)
         return self.compiled_modules[module_name]
 
     def instantiate_module(self, compiled_module, args, imodule):

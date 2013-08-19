@@ -15,21 +15,31 @@ comment = "/*"  (~"*/" anything)* "*/"
 spaces = space*
 
 
-license = token(".license")  (~(token(".endlicense")) anything)*:x token(".endlicense") -> ''.join(x)
-        | -> ""
+license = token(".license")  (~(token(".endlicense")) anything)*:x
+          token(".endlicense") -> [".license", ''.join(x)]
+        | -> [".license", '']
 
-start = license:l token("module") id:name module_params:p
-           module_preamble*:pre
-           module_alias*:aliases
-         token("{")
-           module_decl*:d
-         token("}") -> ["module", name, ["license", l], ["params", p],
-                        ["default-params", pre], ["aliases", aliases], ["defs", d]]
+meta_section = token(".meta") -> [".meta", None]
+             |                -> [".meta", None]
+
+preamble_section = spaces token(".preamble") module_params:params
+                  preamble_entry*:entries
+                  module_alias*:aliases -> [".preamble", params, entries, aliases]
+
+code_section = spaces token(".code")
+               module_decl*:d
+               token(".end") -> [".code", d]
+
+start = license:lic
+        meta_section:meta
+        preamble_section:pre
+        code_section:code
+       -> ["module", lic, meta, pre, code]
 
 module_params = params
               | -> []
 
-module_preamble = id:name token(":") module_spec:s token(";") -> ["param", name, s]
+preamble_entry = id:name token(":") module_spec:s token(";") -> ["param", name, s]
 
 module_spec = library_identifier:lid params:a -> ["library", lid, a]
             | uri:uri params:a -> ["uri", uri, a]
@@ -45,14 +55,14 @@ module_alias = spaces token("[") idlist:lst token("]") token("<=") id:x token(";
 
 module_decl = class_decl | top_level_fun | top_level_fn
 
-class_decl = token("class") id:name (token("<") id | token("<") token("null") | -> "Object"):parent token("{")
+class_decl = token("class") id:name (token("<") id | token("<") token("null") | -> "Object"):parent
                 fields:f
                 constructors:c
                 instance_method_decl*:im
                 class_method_decl*:cm
-              token("}") -> ['class', [name, parent], f, c, im, cm]
+              token("end") -> ['class', [name, parent], f, c, im, cm]
 
-fields = token("fields") token(":") idlist:xs token(";") -> ['fields', xs]
+fields = spaces token("fields") token(":") idlist:xs token(";") -> ['fields', xs]
       | -> ["fields", []]
 
 constructors = constructor*:c -> ["ctors", c]

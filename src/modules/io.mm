@@ -20,14 +20,21 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 .endlicense
 
-module io()
-{
-  file_contents: fun(path) {
-    <primitive "io_file_contents">
-  }
+.preamble()
 
-  print: fun(arg) {
-    <primitive "io_print">
-  }
+.code
 
+// -- module functions --
+
+file_contents: fun(path) {
+  <primitive "io_file_contents">
 }
+
+print: fun(arg) {
+  <primitive "io_print">
+}
+
+// -- module classes --
+
+
+.end
