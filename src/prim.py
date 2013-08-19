@@ -716,6 +716,7 @@ def _meme_instance(proc, obj):
         QtWebKit.QWebElement: _qt_imodule['QWebElement'],
         QtGui.QAction: _qt_imodule['QAction'],
         QtCore.QUrl: _qt_imodule['QUrl'],
+        QtGui.QMenuBar: _qt_imodule['QMenuBar'],
         scintilla_editor.MemeQsciScintilla: _qt_imodule['QsciScintilla']}
 
     if obj == None:
@@ -1441,6 +1442,14 @@ def prim_qt_qurl_has_fragment(proc):
 def prim_qt_qurl_fragment(proc):
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
     return qstring_to_str(qtobj.fragment())
+
+def prim_qt_qurl_query_item_value(proc):
+    qtobj = _lookup_field(proc, proc.r_rp, 'self')
+    return qstring_to_str(qtobj.queryItemValue(proc.locals['name']))
+
+def prim_qt_qurl_path(proc):
+    qtobj = _lookup_field(proc, proc.r_rp, 'self')
+    return qstring_to_str(qtobj.path())
 
 def prim_qt_qurl_to_string(proc):
     qtobj = _lookup_field(proc, proc.r_rp, 'self')

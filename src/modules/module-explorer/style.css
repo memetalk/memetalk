@@ -870,7 +870,7 @@ border-bottom: none;
 
 h2 a, h2 a:visited , h2 a:link {
 /*color: #fff!important; */
-color: #fff;
+/*color: #fff;*/
 text-decoration: none!important;
 border-bottom: none;
 }
@@ -883,7 +883,7 @@ border-bottom: none;
 
 
 h1 a, h1 a:visited , h1 a:link {
-color: #fff!important;
+/*color: #fff!important;*/
 text-decoration: none!important;
 border-bottom: none;
 }

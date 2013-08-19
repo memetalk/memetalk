@@ -896,28 +896,36 @@ init new: fun() {
   @webview.connect('linkClicked', fun(url) {
     io.print("URL selected: " + url.toString());
 
-    if (url.toString() == "memetalk:/") {
+    if (url.path() == "/") {
       this.show_home();
       return null;
     }
 
-    if (url.toString() == "memetalk:/tutorial") {
+    if (url.path() == "/tutorial") {
       this.show_tutorial();
       return null;
     }
-    if (url.toString() == "memetalk:/modules-index") {
+    if (url.path() == "/modules-index") {
       this.show_modules();
       return null;
     }
-    if (url.hasFragment()) {
-      @webview.page().mainFrame().scrollToAnchor(url.fragment());
+    if (url.path() == "/module") {
+      var name = url.queryItemValue("name");
+      @current_cmodule = get_module(name);
+      this.show_module(name);
       return null;
     }
 
-    var modules = available_modules();
-    var name = url.toString().from(1);
-    if (modules.has(name)) {
-      this.show_module(name);
+    if (url.path() == "/class") {
+      var module_name = url.queryItemValue("module");
+      var class_name = url.queryItemValue("class");
+      @current_cmodule = get_module(module_name);
+      this.show_class(module_name, class_name);
+      return null;
+    }
+
+    if (url.hasFragment()) {
+      @webview.page().mainFrame().scrollToAnchor(url.fragment());
       return null;
     }
   });
@@ -1512,57 +1520,13 @@ instance_method initActions: fun() {
 }
 //end idez:ModuleExplorer:initActions
 
-instance_method show_home: fun() {
-  @current_cmodule = null;
-  @imodule = null;
-  @webview.setUrl(modules_path() + "/module-explorer/index.html");
-}
-
-instance_method show_module: fun(name) {
-  @current_cmodule = get_module(name);
-  @webview.loadUrl(modules_path() + "/module-explorer/module-view.html");
+instance_method show_class: fun(module_name, class_name) {
+  this.show_module_basic(module_name);
   var doc = @webview.page().mainFrame().documentElement();
-  doc.findFirst("head").appendInside('<link rel="stylesheet" href="file://' + modules_path() + '/module-explorer/style.css" type="text/css">');
-
-  doc.findFirst("#module_title").setPlainText(@current_cmodule.name());
-
-  doc.findFirst(".module_title_params").setPlainText(@current_cmodule.params.toString());
-
-  var dp = @current_cmodule.default_parameters.map(fun(name,d) { "<li>" + name + " : memetalk/" + d["value"] + "/1.0</li>"; });
-  doc.findFirst(".default-parameters").appendInside(dp.join(""));
-
   var mlist = doc.findFirst("#menu-listing .link-list");
 
-  var fns = @current_cmodule.compiled_functions();
-  fns.each(fun(name,cfn) {
-    mlist.appendInside("<li><a href='#" + cfn.fullName + "'>" + cfn.fullName + "</a></li>");
-    this.showEditorForFunction(cfn, "module", ".module-functions");
-  });
+  var klass = @current_cmodule.compiled_classes[class_name];
 
-  @current_cmodule.compiled_classes().each(fun(name, klass) {
-    this.showClass(klass);
-  });
-}
-
-instance_method show_modules: fun() {
-  @current_cmodule = null;
-  @imodule = null;
-  @webview.loadUrl(modules_path() + "/module-explorer/modules-index.html");
-  var modules = available_modules();
-  var ul = @webview.page().mainFrame().documentElement().findFirst("ul.modules");
-  modules.each(fun(name) {
-    ul.appendInside("<li><a href='/" + name + "'>" + name + "</a></li>")
-  });
-}
-
-instance_method show_tutorial: fun() {
-  @current_cmodule = null;
-  @imodule = null;
-  @webview.setUrl(modules_path() + "/module-explorer/tutorial.html");
-}
-
-instance_method showClass: fun(klass) {
-  var doc = @webview.page().mainFrame().documentElement();
   var div = doc.findFirst("div[id=templates] .class_template").clone();
   doc.findFirst(".module-classes").appendInside(div);
   div.setStyleProperty("display","block");
@@ -1572,8 +1536,6 @@ instance_method showClass: fun(klass) {
   div.findFirst(".super_class").setPlainText(klass.super_class_name);
 
   div.findFirst(".fields_list").setPlainText(klass.fields.toString());
-
-  var mlist = doc.findFirst("#menu-listing .link-list");
 
   var ctors = div.findFirst(".constructors");
   ctors.setAttribute("id", "ctors_" + klass.name);
@@ -1586,8 +1548,8 @@ instance_method showClass: fun(klass) {
   ims.setAttribute("id", "imethods_" + klass.name);
 
   klass.instanceMethods.each(fun(name, cfn) {
-    mlist.appendInside("<li><a href='#" + cfn.fullName + "'>" + cfn.fullName + "</a></li>");
-    this.showEditorForFunction(cfn, "instance_method", "div[id='imethods_" + klass.name + "']");
+   mlist.appendInside("<li><a href='#" + cfn.fullName + "'>" + cfn.fullName + "</a></li>");
+   this.showEditorForFunction(cfn, "instance_method", "div[id='imethods_" + klass.name + "']");
   });
 
   var cms = div.findFirst(".class_methods");
@@ -1597,6 +1559,60 @@ instance_method showClass: fun(klass) {
     mlist.appendInside("<li><a href='#" + cfn.fullName + "'>" + cfn.fullName + "</a></li>");
     this.showEditorForFunction(cfn, "class_method", "div[id='cmethods_" + klass.name + "']");
   });
+}
+
+instance_method show_home: fun() {
+  @current_cmodule = null;
+  @imodule = null;
+  @webview.setUrl(modules_path() + "/module-explorer/index.html");
+}
+
+instance_method show_module: fun(name) {
+  this.show_module_basic(name);
+
+  var doc = @webview.page().mainFrame().documentElement();
+  var mlist = doc.findFirst("#menu-listing .link-list");
+  var fns = @current_cmodule.compiled_functions();
+  fns.each(fun(name,cfn) {
+    mlist.appendInside("<li><a href='#" + cfn.fullName + "'>" + cfn.fullName + "</a></li>");
+    this.showEditorForFunction(cfn, "module", ".module-functions");
+  });
+
+  doc.findFirst(".module-functions").setAttribute("style","display:block");
+  @current_cmodule.compiled_classes().each(fun(name, klass) {
+    mlist.appendInside("<li><a href='/class?module=" + klass.module.name + "&class=" + klass.name + "'>" + klass.fullName + "</a></li>");
+  });
+}
+
+instance_method show_module_basic: fun(name) {
+  @webview.loadUrl(modules_path() + "/module-explorer/module-view.html");
+  var doc = @webview.page().mainFrame().documentElement();
+  doc.findFirst("head").appendInside('<link rel="stylesheet" href="file://' + modules_path() + '/module-explorer/style.css" type="text/css">');
+
+  var name = @current_cmodule.name;
+  doc.findFirst("#module_title").setInnerXml("<a href='/module?name=" + name + "'>" + name + "</a>");
+
+  doc.findFirst(".module_title_params").setPlainText(@current_cmodule.params.toString());
+
+  var dp = @current_cmodule.default_parameters.map(fun(name,d) { "<li>" + name + " : memetalk/" + d["value"] + "/1.0</li>"; });
+  doc.findFirst(".default-parameters").appendInside(dp.join(""));
+}
+
+instance_method show_modules: fun() {
+  @current_cmodule = null;
+  @imodule = null;
+  @webview.loadUrl(modules_path() + "/module-explorer/modules-index.html");
+  var modules = available_modules();
+  var ul = @webview.page().mainFrame().documentElement().findFirst("ul.modules");
+  modules.each(fun(name) {
+    ul.appendInside("<li><a href='/module?name=" + name + "'>" + name + "</a></li>")
+  });
+}
+
+instance_method show_tutorial: fun() {
+  @current_cmodule = null;
+  @imodule = null;
+  @webview.setUrl(modules_path() + "/module-explorer/tutorial.html");
 }
 
 instance_method showEditorForFunction: fun(cfn, function_type, parent_sel) {
