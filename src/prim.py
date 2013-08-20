@@ -757,7 +757,7 @@ def _meme_instance(proc, obj):
     #     return qstring_to_str(obj.toString()) # TODO: currently ignoring QUrl objects
     elif obj.__class__ in mapping: # NOTE: should be a qt instance
         if hasattr(obj, 'meme_instance'): # all qt objetcs should have this one day
-            print "Returning meme_instance for " + str(obj)
+            #print "Returning meme_instance for " + str(obj)
             return obj.meme_instance
         else:
             return {"_vt":mapping[obj.__class__], 'self':obj}
