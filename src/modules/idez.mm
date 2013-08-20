@@ -904,7 +904,7 @@ init new: fun() {
   l.addWidget(@miniBuffer);
 
   @statusLabel = qt.QLabel.new(this.statusBar());
-  @statusLabel.setMinimumWidth(600);
+  @statusLabel.setMinimumWidth(800);
 
   @webview.page().setLinkDelegationPolicy(2);
 
