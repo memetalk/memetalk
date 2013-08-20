@@ -23,7 +23,7 @@ SOFTWARE.
 .preamble(qt, io)
   qt : memetalk/qt/1.0();
   io : memetalk/io/1.0();
-  [QWidget, QMainWindow, QsciScintilla, QLineEdit, QComboBox, QTableWidget] <= qt;
+  [QWidget, QMainWindow, QsciScintilla, QLineEdit, QComboBox, QTableWidget, QTableWidgetItem] <= qt;
 
 .code
 
@@ -113,7 +113,7 @@ instance_method undo: fun() {
 end //idez:CommandHistory
 
 class DebuggerUI < QMainWindow
-fields: frame_index, process, exception, execFrames, stackCombo, editor, localVarList, moduleVarList, statusLabel, eventloop, execMenu;
+fields: frame_index, process, exception, execFrames, stackCombo, editor, localVarList, fieldVarList, statusLabel, eventloop, execMenu;
 init new: fun(process, ex, eventloop) {
   super.new();
   @process = process;
@@ -148,8 +148,8 @@ init new: fun(process, ex, eventloop) {
       @editor.setText(@execFrames.codeFor(i));
       var locInfo = @execFrames.locationInfoFor(i);
       @editor.pausedAtLine(locInfo["start_line"]-1, locInfo["start_col"], locInfo["end_line"]-1, locInfo["end_col"]);
-      @localVarList.setVariables(@execFrames.localsFor(i));
-      @moduleVarList.setVariables(@execFrames.moduleVarsFor(i));
+      @localVarList.loadFrame(@execFrames.frame(i));
+      @fieldVarList.loadReceiver(@execFrames.frame(i));
     }
 
     if (ex) {
@@ -161,8 +161,8 @@ init new: fun(process, ex, eventloop) {
   @localVarList = VariableListWidget.new(centralWidget);
   hbox.addWidget(@localVarList);
 
-  @moduleVarList = VariableListWidget.new(centralWidget);
-  hbox.addWidget(@moduleVarList);
+  @fieldVarList = VariableListWidget.new(centralWidget);
+  hbox.addWidget(@fieldVarList);
 
   mainLayout.addLayout(hbox);
   this.setCentralWidget(centralWidget);
@@ -530,30 +530,12 @@ instance_method codeFor: fun(i) {
   }
 }
 
-instance_method frame: fun(i) { // this is used for doIt/printIt/etc.
+instance_method frame: fun(i) {
   return @vmproc.stackFrames().get(i);
-}
-
-instance_method localsFor: fun(i) { // this is used for the local variable list widet
-  return @vmproc.stackFrames().get(i).localVars();
 }
 
 instance_method locationInfoFor: fun(i) {
   return @vmproc.stackFrames().get(i).instructionPointer();
-}
-
-instance_method moduleVarsFor: fun(i) { // this is used for the module variables list wdiget
-  // var pnames = null;
-  // if (i < @vmproc.stackFrames().size()) {
-  //   pnames = @vmproc.stackFrames().get(i).modulePointer()._compiledModule().params();
-  // } else {
-  //   pnames = @vmproc.modulePointer()._compiledModule().params();
-  // }
-  // var ret = {};
-  // pnames.each(fun(name) {
-  //   ret[name] = @vmproc.modulePointer.entry(name);
-  // });
-  return {};
 }
 
 instance_method names: fun() {
@@ -1761,25 +1743,100 @@ instance_method updateInfo: fun() {
 
 end //idez:StackCombo
 
+class VariableItem < QTableWidgetItem
+fields: obj;
+init new: fun(text, obj) {
+  super.new(text);
+  this.setFlags(33);
+  @obj = obj;
+}
+
+instance_method object: fun() {
+  return @obj;
+}
+
+end //idez:VariableItem
+
 class VariableListWidget < QTableWidget
-fields: variables;
+fields: ;
 init new: fun(parent) {
-  super.new(2, 2, parent);
+  super.new(parent);
   this.verticalHeader().hide();
   this.setSelectionMode(1);
   var header = this.horizontalHeader();
   header.setStretchLastSection(true);
   this.setSortingEnabled(false);
+  this.setColumnCount(2);
+
+  this.connect("itemDoubleClicked", fun(item) {
+    Inspector.inspect(item.object);
+  });
 }
 
-instance_method setVariables: fun(vars) {
-  @variables = vars;
+instance_method loadFrame: fun(frame) {
   this.clear();
   this.setHorizontalHeaderLabels(['Name', 'Value']);
+
+  if (frame.environmentPointer) {
+    var env = frame.environmentPointer;
+    var table = frame.contextPointer.compiledFunction.env_table;
+
+    this.setRowCount(env.size);
+
+    var _this = env['r_rp'];
+    this.setItem(0, 0, VariableItem.new("this", _this));
+    this.setItem(0, 1, VariableItem.new(_this.toString, _this));
+
+    var _dthis = env['r_rdp'];
+    this.setItem(1, 0, VariableItem.new("@this", _dthis));
+    this.setItem(1, 1, VariableItem.new(_dthis.toString, _dthis));
+
+    var i = 2;
+    table.each(fun(idx, varname) {
+      var entry = env[idx];
+      this.setItem(i, 0, VariableItem.new(varname, entry));
+      this.setItem(i, 1, VariableItem.new(entry.toString, entry));
+      i = i + 1;
+    });
+  } else {
+    this.setRowCount(2 + frame.locals.size);
+
+    var _this = frame.receiverPointer;
+    this.setItem(0, 0, VariableItem.new("this", _this));
+    this.setItem(0, 1, VariableItem.new(_this.toString, _this));
+
+    var _dthis = frame.receiverDataPointer;
+    this.setItem(1, 0, VariableItem.new("@this", _dthis));
+    this.setItem(1, 1, VariableItem.new(_dthis.toString, _dthis));
+
+    var i = 2;
+    frame.locals.each(fun(name,val) {
+      this.setItem(i, 0, VariableItem.new(name, frame.locals[name]));
+      this.setItem(i, 1, VariableItem.new(val.toString, frame.locals[name]));
+      i = i + 1;
+    });
+  }
+}
+//end idez:VariableListWidget:loadFrame
+
+instance_method loadReceiver: fun(frame) {
+  this.clear();
+  this.setHorizontalHeaderLabels(['Name', 'Value']);
+
+  var _dthis = null;
+  if (frame.environmentPointer) {
+    _dthis = frame.environmentPointer['r_rdp'];
+  } else {
+    _dthis = frame.receiverDataPointer;
+  }
+  var mirror = Mirror.new(_dthis);
+  var fields = mirror.fields();
+  this.setRowCount(fields.size);
+
   var i = 0;
-  vars.each(fun(name,value) {
-    this.setItem(i, 0, qt.QTableWidgetItem.new(name));
-    this.setItem(i, 1, qt.QTableWidgetItem.new(value.toString()));
+  fields.each(fun(name) {
+    this.setItem(i, 0, VariableItem.new(name, mirror.valueFor(name)));
+    this.setItem(i, 1, VariableItem.new(mirror.valueFor(name).toString, mirror.valueFor(name)));
     i = i + 1;
   });
 }

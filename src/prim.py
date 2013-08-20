@@ -179,22 +179,24 @@ def prim_vmstackframe_receiver_pointer(proc):
     frame = _lookup_field(proc, proc.r_rp, 'self')
     return frame['r_rp']
 
+def prim_vmstackframe_receiver_data_pointer(proc):
+    frame = _lookup_field(proc, proc.r_rp, 'self')
+    return frame['r_rdp']
+
 def prim_vmstackframe_environment_pointer(proc):
     frame = _lookup_field(proc, proc.r_rp, 'self')
     return frame['r_ep']
 
-def prim_vmstackframe_local_vars(proc):
+def prim_vmstackframe_locals(proc):
     frame = _lookup_field(proc, proc.r_rp, 'self')
     return frame['locals']
 
 def prim_io_print(proc):
     arg = proc.locals['arg']
-    if isinstance(arg, basestring):
-        print arg
-    elif isinstance(arg, dict) and '_vt' not in arg:
-        print arg
+    if isinstance(arg, dict):
+        P(arg,4)
     else:
-        P(proc.locals["arg"],4)
+        print arg
 
 def prim_ast_line(proc):
     br()
@@ -393,6 +395,9 @@ def prim_number_grteq(proc):
 
 def prim_dictionary_plus(proc):
     return dict(proc.r_rp.items() + proc.locals['arg'].items())
+
+def prim_dictionary_size(proc):
+    return len(proc.r_rp)
 
 def prim_dictionary_each(proc):
     for key,val in proc.r_rdp.iteritems():
@@ -717,6 +722,7 @@ def _meme_instance(proc, obj):
         QtGui.QAction: _qt_imodule['QAction'],
         QtCore.QUrl: _qt_imodule['QUrl'],
         QtGui.QMenuBar: _qt_imodule['QMenuBar'],
+        _QTableWidgetItem: _qt_imodule['QTableWidgetItem'],
         scintilla_editor.MemeQsciScintilla: _qt_imodule['QsciScintilla']}
 
     if obj == None:
@@ -733,6 +739,7 @@ def _meme_instance(proc, obj):
     #     return qstring_to_str(obj.toString()) # TODO: currently ignoring QUrl objects
     elif obj.__class__ in mapping: # NOTE: should be a qt instance
         if hasattr(obj, 'meme_instance'): # all qt objetcs should have this one day
+            print "Returning meme_instance for " + str(obj)
             return obj.meme_instance
         else:
             return {"_vt":mapping[obj.__class__], 'self':obj}
@@ -1276,13 +1283,13 @@ def prim_qt_qcombobox_clear(proc):
 
 def prim_qt_qtablewidget_new(proc):
     parent = proc.locals['parent']
-    rows = proc.locals['rows']
-    cols = proc.locals['cols']
+    #rows = proc.locals['rows']
+    #cols = proc.locals['cols']
     if parent != None:
         qtobj = _lookup_field(proc, parent, 'self')
-        proc.r_rdp['self'] = QtGui.QTableWidget(rows, cols, qtobj)
+        proc.r_rdp['self'] = QtGui.QTableWidget(qtobj)
     else:
-        proc.r_rdp['self'] = QtGui.QTableWidget(rows, cols)
+        proc.r_rdp['self'] = QtGui.QTableWidget()
     return proc.r_rp
 
 def prim_qt_qtablewidget_set_horizontal_header_labels(proc):
@@ -1323,15 +1330,30 @@ def prim_qt_qtablewidget_clear(proc):
     qtobj.clear()
     return proc.r_rp
 
+def prim_qt_qtablewidget_set_row_count(proc):
+    qtobj = _lookup_field(proc, proc.r_rp, 'self')
+    qtobj.setRowCount(proc.locals['count'])
+    return proc.r_rp
+
+def prim_qt_qtablewidget_set_column_count(proc):
+    qtobj = _lookup_field(proc, proc.r_rp, 'self')
+    qtobj.setColumnCount(proc.locals['count'])
+    return proc.r_rp
+
+
 # QTableWidgetItem
+class _QTableWidgetItem(QTableWidgetItem):
+    def __init__(self, meme, label):
+        super(QTableWidgetItem, self).__init__(label)
+        self.meme_instance = meme
 
 def prim_qt_qtablewidgetitem_new(proc):
-    proc.r_rdp['self'] = QtGui.QTableWidgetItem(proc.locals['label'])
+    proc.r_rdp['self'] = _QTableWidgetItem(proc.r_rp, proc.locals['label'])
     return proc.r_rp
 
 def prim_qt_qtablewidgetitem_set_flags(proc):
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
-    qtobj.setFlags(proc.locals['flags'])
+    qtobj.setFlags(Qt.ItemFlag(proc.locals['flags']))
     return proc.r_rp
 
 

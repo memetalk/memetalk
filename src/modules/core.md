@@ -166,6 +166,9 @@ module core() {
     instance_method ast: fun() {
       return @body;
     }
+    instance_method env_table: fun() {
+      return @env_table;
+    }
     instance_method isEmbedded: fun() {
       return @is_embedded;
     }
@@ -282,6 +285,7 @@ module core() {
   object ModuleBehavior { //the behavior of module instances
     _vt: Behavior;
     parent: ObjectBehavior;
+    dict: {};
   }
 
   class String {
@@ -332,6 +336,9 @@ module core() {
     }
     instance_method remove: fun(key) {
       <primitive "dictionary_remove">
+    }
+    instance_method size: fun() {
+      <primitive "dictionary_size">
     }
   }
 
@@ -464,20 +471,17 @@ module core() {
     instance_method receiverPointer: fun() {
       <primitive "vmstackframe_receiver_pointer">
     }
+    instance_method receiverDataPointer: fun() {
+      <primitive "vmstackframe_receiver_data_pointer">
+    }
     instance_method environmentPointer: fun() {
       <primitive "vmstackframe_environment_pointer">
     }
     instance_method instructionPointer: fun() {
       <primitive "vmstackframe_instruction_pointer">
     }
-    instance_method localVars: fun() {
-      <primitive "vmstackframe_local_vars">
-    }
-    instance_method instanceVars: fun() {
-      <primitive "vmstackframe_instance_vars">
-    }
-    instance_method moduleVars: fun() {
-      <primitive "vmstackframe_module_vars">
+    instance_method locals: fun() {
+      <primitive "vmstackframe_locals">
     }
   }
 

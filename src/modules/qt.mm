@@ -351,7 +351,7 @@ end //qt:QShortcut
 
 class QTableWidget < QWidget
 fields: ;
-init new: fun(rows, cols, parent) {
+init new: fun(parent) {
     <primitive "qt_qtablewidget_new">
 }
 
@@ -363,12 +363,20 @@ instance_method horizontalHeader: fun() {
   <primitive "qt_qtablewidget_horizontal_header">
 }
 
+instance_method setColumnCount: fun(count) {
+  <primitive "qt_qtablewidget_set_column_count">
+}
+
 instance_method setHorizontalHeaderLabels: fun(labels) {
   <primitive "qt_qtablewidget_set_horizontal_header_labels">
 }
 
 instance_method setItem: fun(line,col,item) {
   <primitive "qt_qtablewidget_set_item">
+}
+
+instance_method setRowCount: fun(count) {
+  <primitive "qt_qtablewidget_set_row_count">
 }
 
 instance_method setSelectionMode: fun(mode) {
