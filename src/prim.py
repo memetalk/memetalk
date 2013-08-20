@@ -1447,6 +1447,10 @@ def prim_qt_qurl_query_item_value(proc):
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
     return qstring_to_str(qtobj.queryItemValue(proc.locals['name']))
 
+def prim_qt_qurl_has_query_item(proc):
+    qtobj = _lookup_field(proc, proc.r_rp, 'self')
+    return qtobj.hasQueryItem(proc.locals['name'])
+
 def prim_qt_qurl_path(proc):
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
     return qstring_to_str(qtobj.path())

@@ -419,6 +419,10 @@ instance_method queryItemValue: fun(name) {
   <primitive "qt_qurl_query_item_value">
 }
 
+instance_method hasQueryItem: fun(name) {
+  <primitive "qt_qurl_has_query_item">
+}
+
 instance_method toString: fun() {
   <primitive "qt_qurl_to_string">
 }
