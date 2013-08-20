@@ -405,6 +405,12 @@ def prim_dictionary_plus(proc):
 def prim_dictionary_size(proc):
     return len(proc.r_rp)
 
+def prim_dictionary_sorted_each(proc):
+    d = proc.r_rdp
+    dsorted = [(key,d[key]) for key in sorted(d.keys())]
+    for t in dsorted:
+        proc.setup_and_run_fun(None, None, 'fn', proc.locals['fn'], [t[0],t[1]], True)
+
 def prim_dictionary_each(proc):
     for key,val in proc.r_rdp.iteritems():
         proc.setup_and_run_fun(None, None, 'fn', proc.locals['fn'], [key,val], True)

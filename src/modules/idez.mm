@@ -1606,14 +1606,14 @@ instance_method show_class: fun(module_name, class_name) {
   var ctors = div.findFirst(".constructors");
   ctors.setAttribute("id", "ctors_" + klass.name);
 
-  klass.constructors.each(fun(name, cfn) {
-    mlist.appendInside("<li><a href='#" + cfn.fullName + "'>" + cfn.fullName + "</a></li>");
+  klass.constructors.sortedEach(fun(name, cfn) {
+    mlist.appendInside("<li><a href='#" + cfn.fullName + "'>*" + cfn.fullName + "</a></li>");
     this.show_function(cfn, "ctor_method", "div[id='ctors_" + klass.name + "']");
   });
   var ims = div.findFirst(".instance_methods");
   ims.setAttribute("id", "imethods_" + klass.name);
 
-  klass.instanceMethods.each(fun(name, cfn) {
+  klass.instanceMethods.sortedEach(fun(name, cfn) {
    mlist.appendInside("<li><a href='#" + cfn.fullName + "'>" + cfn.fullName + "</a></li>");
    this.show_function(cfn, "instance_method", "div[id='imethods_" + klass.name + "']");
   });
@@ -1621,8 +1621,8 @@ instance_method show_class: fun(module_name, class_name) {
   var cms = div.findFirst(".class_methods");
   cms.setAttribute("id", "cmethods_" + klass.name);
 
-  klass.classMethods.each(fun(name, cfn) {
-    mlist.appendInside("<li><a href='#" + cfn.fullName + "'>" + cfn.fullName + "</a></li>");
+  klass.classMethods.sortedEach(fun(name, cfn) {
+    mlist.appendInside("<li><a href='#" + cfn.fullName + "'>[" + cfn.fullName + "]</a></li>");
     this.show_function(cfn, "class_method", "div[id='cmethods_" + klass.name + "']");
   });
 }
@@ -1693,13 +1693,13 @@ instance_method show_module: fun(name) {
   var doc = @webview.page().mainFrame().documentElement();
   var mlist = doc.findFirst("#menu-listing .link-list");
   var fns = @current_cmodule.compiled_functions();
-  fns.each(fun(name,cfn) {
+  fns.sortedEach(fun(name,cfn) {
     mlist.appendInside("<li><a href='#" + cfn.fullName + "'>" + cfn.fullName + "</a></li>");
     this.show_function(cfn, "module", ".module-functions");
   });
 
   doc.findFirst(".module-functions").setAttribute("style","display:block");
-  @current_cmodule.compiled_classes().each(fun(name, klass) {
+  @current_cmodule.compiled_classes().sortedEach(fun(name, klass) {
     mlist.appendInside("<li><a href='/class?module=" + klass.module.name + "&class=" + klass.name + "'>" + klass.fullName + "</a></li>");
   });
 }

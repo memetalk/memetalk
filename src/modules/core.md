@@ -346,6 +346,9 @@ module core() {
     instance_method size: fun() {
       <primitive "dictionary_size">
     }
+    instance_method sortedEach: fun(fn) {
+      <primitive "dictionary_sorted_each">
+    }
   }
 
   class List {
