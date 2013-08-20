@@ -1480,6 +1480,26 @@ def prim_qt_scintilla_text(proc):
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
     return qstring_to_str(qtobj.text())
 
+def prim_qt_scintilla_cut(proc):
+    qtobj = _lookup_field(proc, proc.r_rp, 'self')
+    qtobj.cut()
+    return proc.r_rp
+
+def prim_qt_scintilla_copy(proc):
+    qtobj = _lookup_field(proc, proc.r_rp, 'self')
+    qtobj.copy()
+    return proc.r_rp
+
+def prim_qt_scintilla_paste(proc):
+    qtobj = _lookup_field(proc, proc.r_rp, 'self')
+    qtobj.paste()
+    return proc.r_rp
+
+def prim_qt_scintilla_redo(proc):
+    qtobj = _lookup_field(proc, proc.r_rp, 'self')
+    qtobj.redo()
+    return proc.r_rp
+
 
 def prim_qt_scintilla_set_text(proc):
     qtobj = _lookup_field(proc, proc.r_rp, 'self')

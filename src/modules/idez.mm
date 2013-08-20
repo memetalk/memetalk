@@ -167,73 +167,73 @@ init new: fun(process, ex, eventloop) {
   mainLayout.addLayout(hbox);
   this.setCentralWidget(centralWidget);
 
-  var execMenu = this.menuBar().addMenu("&Debugging");
-  var action = qt.QAction.new("Step &Into", execMenu);
+  var execMenu = this.menuBar().addMenu("Debugging");
+  var action = qt.QAction.new("Step Into", execMenu);
   action.setShortcut("F6");
   action.connect("triggered", fun() {
     this.stepInto();
   });
   execMenu.addAction(action);
 
-  action = qt.QAction.new("Step &Over", execMenu);
+  action = qt.QAction.new("Step Over", execMenu);
   action.setShortcut("F7");
   action.connect("triggered", fun() {
     this.stepOver()
   });
   execMenu.addAction(action);
 
-  action = qt.QAction.new("&Continue", execMenu);
+  action = qt.QAction.new("Continue", execMenu);
   action.setShortcut("F5");
   action.connect("triggered", fun() {
     this.continue()
   });
   execMenu.addAction(action);
 
-  action = qt.QAction.new("Reload frame", execMenu);
-  action.setShortcut("ctrl+R");
+  action = qt.QAction.new("Reload Frame", execMenu);
+  action.setShortcut("ctrl+r");
   action.connect("triggered", fun() {
     this.reloadFrame()
   });
   execMenu.addAction(action);
 
-  action = qt.QAction.new("Rewind and go", execMenu);
+  action = qt.QAction.new("Rewind And Go", execMenu);
   action.setShortcut("ctrl+g");
   action.connect("triggered", fun() {
     this.rewindAndGo()
   });
   execMenu.addAction(action);
 
-  action = qt.QAction.new("Run to line", execMenu);
-  action.setShortcut("alt+l");
+  action = qt.QAction.new("Run To Line", execMenu);
+  action.setShortcut("ctrl+l");
   action.connect("triggered", fun() {
     this.runToLine();
   });
   execMenu.addAction(action);
   @execMenu = execMenu;
 
-  execMenu = this.menuBar().addMenu("&Exploring");
-  action = qt.QAction.new("&Do it", this);
+  execMenu = this.menuBar().addMenu("Exploring");
+  action = qt.QAction.new("Do it", this);
   action.setShortcut("ctrl+d");
   action.connect("triggered", fun() {
     @editor.doIt();
   });
   execMenu.addAction(action);
 
-  action = qt.QAction.new("&Print it", this);
+  action = qt.QAction.new("Print it", this);
   action.setShortcut("ctrl+p");
   action.connect("triggered", fun() {
       @editor.printIt();
   });
   execMenu.addAction(action);
 
-  action = qt.QAction.new("&Inspect it", this);
+  action = qt.QAction.new("Inspect it", this);
   action.setShortcut("ctrl+i");
   action.connect("triggered", fun() {
       @editor.inspectIt();
   });
   execMenu.addAction(action);
 
-  action = qt.QAction.new("De&bug it", this);
+  action = qt.QAction.new("Debug it", this);
   action.setShortcut("ctrl+b");
   action.connect("triggered", fun() {
       @editor.debugIt();
@@ -241,9 +241,16 @@ init new: fun(process, ex, eventloop) {
   execMenu.addAction(action);
 
   action = qt.QAction.new("Accept it", execMenu);
-  action.setShortcut("ctrl+s");
+  action.setShortcut("ctrl+x,a");
   action.connect("triggered", fun() {
       this.acceptIt();
+  });
+  execMenu.addAction(action);
+
+  action = qt.QAction.new("Save", execMenu);
+  action.setShortcut("ctrl+x,s");
+  action.connect("triggered", fun() {
+      this.save();
   });
   execMenu.addAction(action);
 
@@ -308,6 +315,10 @@ instance_method runToLine: fun() {
   this.enableActions();
 }
 
+instance_method save: fun() {
+  available_modules().each(save_module);
+}
+
 instance_method stepInto: fun() {
   @exception = null;
   @statusLabel.setText("Stepping into...");
@@ -349,8 +360,11 @@ fields: getContext, getIModule, getFrame, afterEval;
 init new: fun(parent, getContext, getIModule, getFrame, afterEval) {
   super.new(parent);
   if (parent == null) {
-    this.initActions();
+    this.initExtraActions();
   }
+
+  this.initEditActions();
+
   @getContext = getContext;
   @getIModule = getIModule;
   @getFrame = getFrame;
@@ -395,8 +409,43 @@ instance_method evalSelection: fun() {
   return r["result"];
 }
 
-instance_method initActions: fun() {
-  var action = qt.QAction.new("&Do it", this);
+instance_method initEditActions: fun() {
+  io.print("YO");
+  var action = qt.QAction.new("Cut", this);
+  action.setShortcut("ctrl+w");
+  action.connect("triggered", fun() {
+      this.cut();
+  });
+  //action.setShortcutContext(0); //widget context
+  this.addAction(action);
+
+  action = qt.QAction.new("Copy", this);
+  action.setShortcut("alt+w");
+  action.connect("triggered", fun() {
+      this.copy();
+  });
+  //action.setShortcutContext(0); //widget context
+  this.addAction(action);
+
+  action = qt.QAction.new("Paste", this);
+  action.setShortcut("ctrl+y");
+  action.connect("triggered", fun() {
+      this.paste();
+  });
+  //action.setShortcutContext(0); //widget context
+  this.addAction(action);
+
+  action = qt.QAction.new("Redo", this);
+  action.setShortcut("ctrl+shift+z");
+  action.connect("triggered", fun() {
+      this.redo();
+  });
+  //action.setShortcutContext(0); //widget context
+  this.addAction(action);
+}
+
+instance_method initExtraActions: fun() {
+  var action = qt.QAction.new("Do it", this);
   action.setShortcut("ctrl+d");
   action.connect("triggered", fun() {
       this.doIt();
@@ -404,7 +453,7 @@ instance_method initActions: fun() {
   action.setShortcutContext(0); //widget context
   this.addAction(action);
 
-  action = qt.QAction.new("&Print it", this);
+  action = qt.QAction.new("Print it", this);
   action.setShortcut("ctrl+p");
   action.connect("triggered", fun() {
       this.printIt();
@@ -412,7 +461,7 @@ instance_method initActions: fun() {
   action.setShortcutContext(0); //widget context
   this.addAction(action);
 
-  action = qt.QAction.new("&Inspect it", this);
+  action = qt.QAction.new("Inspect it", this);
   action.setShortcut("ctrl+i");
   action.connect("triggered", fun() {
       this.inspectIt();
@@ -420,7 +469,7 @@ instance_method initActions: fun() {
   action.setShortcutContext(0); //widget context
   this.addAction(action);
 
-  action = qt.QAction.new("De&bug it", this);
+  action = qt.QAction.new("Debug it", this);
   action.setShortcut("ctrl+b");
   action.connect("triggered", fun() {
       this.debugIt();
@@ -590,28 +639,28 @@ init new: fun(inspectee) {
 
   var execMenu = this.menuBar().addMenu("&Exploring");
 
-  var action = qt.QAction.new("&Do it", this);
+  var action = qt.QAction.new("Do it", this);
   action.setShortcut("ctrl+d");
   action.connect("triggered", fun() {
       this.doIt();
   });
   execMenu.addAction(action);
 
-  action = qt.QAction.new("&Print it", this);
+  action = qt.QAction.new("Print it", this);
   action.setShortcut("ctrl+p");
   action.connect("triggered", fun() {
       this.printIt();
   });
   execMenu.addAction(action);
 
-  action = qt.QAction.new("&Inspect it", this);
+  action = qt.QAction.new("Inspect it", this);
   action.setShortcut("ctrl+i");
   action.connect("triggered", fun() {
       this.inspectIt();
   });
   execMenu.addAction(action);
 
-  action = qt.QAction.new("De&bug it", this);
+  action = qt.QAction.new("Debug it", this);
   action.setShortcut("ctrl+b");
   action.connect("triggered", fun() {
       this.debugIt();
@@ -619,7 +668,7 @@ init new: fun(inspectee) {
   execMenu.addAction(action);
 
   action = qt.QAction.new("Accept it", execMenu);
-  action.setShortcut("ctrl+s");
+  action.setShortcut("ctrl+x,s");
   action.connect("triggered", fun() {
       this.acceptIt();
   });
@@ -730,7 +779,7 @@ instance_method initActions: fun(initReturnPressed) {
     });
   }
 
-  var action = qt.QAction.new("&Do it", this);
+  var action = qt.QAction.new("Do it", this);
   action.setShortcut("ctrl+d");
   action.connect("triggered", fun() {
       this.doIt();
@@ -738,7 +787,7 @@ instance_method initActions: fun(initReturnPressed) {
   action.setShortcutContext(0); //widget context
   this.addAction(action);
 
-  action = qt.QAction.new("&Print it", this);
+  action = qt.QAction.new("Print it", this);
   action.setShortcut("ctrl+p");
   action.connect("triggered", fun() {
       this.printIt();
@@ -746,7 +795,7 @@ instance_method initActions: fun(initReturnPressed) {
   action.setShortcutContext(0); //widget context
   this.addAction(action);
 
-  action = qt.QAction.new("&Inspect it", this);
+  action = qt.QAction.new("Inspect it", this);
   action.setShortcut("ctrl+i");
   action.connect("triggered", fun() {
       this.inspectIt();
@@ -754,7 +803,7 @@ instance_method initActions: fun(initReturnPressed) {
   action.setShortcutContext(0); //widget context
   this.addAction(action);
 
-  action = qt.QAction.new("De&bug it", this);
+  action = qt.QAction.new("Debug it", this);
   action.setShortcut("ctrl+b");
   action.connect("triggered", fun() {
       this.debugIt();
@@ -1338,7 +1387,7 @@ instance_method currentIModule: fun() {
 
 instance_method initActions: fun() {
 
-  var action = qt.QAction.new("Inspect", this);
+  var action = qt.QAction.new("Inspect Window", this);
   action.setShortcut("alt+w,i");
   action.connect("triggered", fun() {
     Inspector.new(this).show()
@@ -1350,7 +1399,7 @@ instance_method initActions: fun() {
   var execMenu = this.menuBar().addMenu("System");
   @sysmenu = execMenu;
   action = qt.QAction.new("Save", execMenu);
-  action.setShortcut("alt+x,s");
+  action.setShortcut("ctrl+x,s");
   action.connect("triggered", fun() {
     this.action_saveToFileSystem();
   });
@@ -1358,7 +1407,7 @@ instance_method initActions: fun() {
   execMenu.addAction(action);
 
   action = qt.QAction.new("Accept code", execMenu);
-  action.setShortcut("alt+x,a");
+  action.setShortcut("ctrl+x,a");
   action.connect("triggered", fun() {
     this.action_acceptCode();
   });
@@ -1374,7 +1423,7 @@ instance_method initActions: fun() {
   execMenu.addAction(action);
 
   action = qt.QAction.new("Eval Until", execMenu);
-  action.setShortcut("alt+e");
+  action.setShortcut("ctrl+x,e");
   action.connect("triggered", fun() {
     this.action_evalUntil();
   });
@@ -1382,7 +1431,7 @@ instance_method initActions: fun() {
   execMenu.addAction(action);
 
   action = qt.QAction.new("Debug", execMenu);
-  action.setShortcut("alt+b");
+  action.setShortcut("ctrl+b");
   action.connect("triggered", fun() {
     this.action_debug();
   });
@@ -1398,7 +1447,7 @@ instance_method initActions: fun() {
   execMenu.addAction(action);
 
   action = qt.QAction.new("Undo", execMenu);
-  action.setShortcut("alt+u");
+  action.setShortcut("alt+z");
   action.connect("triggered", fun() {
     @chistory.undo();
   });
@@ -1406,7 +1455,7 @@ instance_method initActions: fun() {
   execMenu.addAction(action);
 
   action = qt.QAction.new("Redo", execMenu);
-  action.setShortcut("alt+r");
+  action.setShortcut("alt+y");
   action.connect("triggered", fun() {
     @chistory.redo();
   });
@@ -1414,7 +1463,7 @@ instance_method initActions: fun() {
   execMenu.addAction(action);
 
   action = qt.QAction.new("Reset", execMenu);
-  action.setShortcut("alt+x,r");
+  action.setShortcut("ctrl+r");
   action.connect("triggered", fun() {
     this.action_reset()
   });
@@ -1426,7 +1475,7 @@ instance_method initActions: fun() {
   execMenu = this.menuBar().addMenu("Module");
 
   action = qt.QAction.new("Instantiate module", execMenu);
-  action.setShortcut("alt+m,l");
+  action.setShortcut("ctrl+m,l");
   action.connect("triggered", fun() {
     this.action_instantiateModule();
   });
@@ -1434,7 +1483,7 @@ instance_method initActions: fun() {
   execMenu.addAction(action);
 
   action = qt.QAction.new("Rename module", execMenu);
-  action.setShortcut("alt+m,r");
+  action.setShortcut("ctrl+m,r");
   action.connect("triggered", fun() {
     io.print("rename module");
   });
@@ -1442,7 +1491,7 @@ instance_method initActions: fun() {
   execMenu.addAction(action);
 
   action = qt.QAction.new("Edit Module Parameters", execMenu);
-  action.setShortcut("alt+m,p");
+  action.setShortcut("ctrl+m,p");
   action.connect("triggered", fun() {
     this.action_editModuleParameters();
   });
@@ -1450,15 +1499,15 @@ instance_method initActions: fun() {
   execMenu.addAction(action);
 
   action = qt.QAction.new("Edit Module Default Parameters", execMenu);
-  action.setShortcut("alt+m,d");
+  action.setShortcut("ctrl+m,d");
   action.connect("triggered", fun() {
     this.action_editModuleDefaultParameters();
   });
   action.setShortcutContext(1);
   execMenu.addAction(action);
 
-  action = qt.QAction.new("Add Module Function", execMenu);
-  action.setShortcut("alt+m,f");
+  action = qt.QAction.new("New Module Function", execMenu);
+  action.setShortcut("ctrl+m,f");
   action.connect("triggered", fun() {
     this.action_addFunction()
   });
@@ -1466,7 +1515,7 @@ instance_method initActions: fun() {
   execMenu.addAction(action);
 
   var del_fn_ac = qt.QAction.new("Delete Function", execMenu);
-  del_fn_ac.setShortcut("alt+f,d");
+  del_fn_ac.setShortcut("ctrl+f,k");
   del_fn_ac.connect("triggered", fun() {
     this.action_deleteFunction()
   });
@@ -1476,8 +1525,8 @@ instance_method initActions: fun() {
   // Class Menu
 
   execMenu = this.menuBar().addMenu("Class");
-  action = qt.QAction.new("Add Class", execMenu);
-  action.setShortcut("alt+c,a");
+  action = qt.QAction.new("New Class", execMenu);
+  action.setShortcut("ctrl+c,n");
   action.connect("triggered", fun() {
     this.action_addClass();
   });
@@ -1485,7 +1534,7 @@ instance_method initActions: fun() {
   execMenu.addAction(action);
 
   action = qt.QAction.new("Delete Class", execMenu);
-  action.setShortcut("alt+c,k");
+  action.setShortcut("ctrl+c,k");
   action.connect("triggered", fun() {
     this.action_deleteClass();
   });
@@ -1493,7 +1542,7 @@ instance_method initActions: fun() {
   execMenu.addAction(action);
 
   action = qt.QAction.new("Rename Class", execMenu);
-  action.setShortcut("alt+c,r");
+  action.setShortcut("ctrl+c,r");
   action.connect("triggered", fun() {
     this.action_renameClass();
   });
@@ -1501,15 +1550,15 @@ instance_method initActions: fun() {
   execMenu.addAction(action);
 
   action = qt.QAction.new("Edit Fields", execMenu);
-  action.setShortcut("alt+c,f");
+  action.setShortcut("ctrl+c,f");
   action.connect("triggered", fun() {
     this.action_editFields();
   });
   action.setShortcutContext(1);
   execMenu.addAction(action);
 
-  action = qt.QAction.new("Add Method", execMenu);
-  action.setShortcut("alt+c,m");
+  action = qt.QAction.new("New Method", execMenu);
+  action.setShortcut("ctrl+c,m");
   action.connect("triggered", fun() {
     this.action_addMethod();
   });
@@ -1519,7 +1568,7 @@ instance_method initActions: fun() {
   execMenu.addAction(del_fn_ac);
 
   action = qt.QAction.new("Toggle Method as Constructor", execMenu);
-  action.setShortcut("alt+c,c");
+  action.setShortcut("ctrl+c,c");
   action.connect("triggered", fun() {
     this.action_toggleCtor();
   });

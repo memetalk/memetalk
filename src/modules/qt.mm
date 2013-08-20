@@ -283,6 +283,14 @@ init new: fun(parent) {
     <primitive "qt_scintilla_editor_new">
 }
 
+instance_method copy: fun() {
+    <primitive "qt_scintilla_copy">
+}
+
+instance_method cut: fun() {
+    <primitive "qt_scintilla_cut">
+}
+
 instance_method getCursorPosition: fun() {
     <primitive "qt_scintilla_get_cursor_position">
 }
@@ -295,8 +303,16 @@ instance_method insertAt: fun(text, line, index) {
     <primitive "qt_scintilla_insert_at">
 }
 
+instance_method paste: fun() {
+    <primitive "qt_scintilla_paste">
+}
+
 instance_method pausedAtLine: fun(start_line, start_col, end_line, end_col) {
     <primitive "qt_scintilla_paused_at_line">
+}
+
+instance_method redo: fun() {
+    <primitive "qt_scintilla_redo">
 }
 
 instance_method selectedText: fun() {

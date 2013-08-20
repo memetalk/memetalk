@@ -64,14 +64,27 @@ class MemeQsciScintilla(QsciScintilla):
 
         self.indicators = {self.CURRENT_RANGE_IND: None}
 
-        # we need to clear up some commands
-        # so QsciScintilla doesn't shadow our QActions
+        # On idez/Editor;
+        # select all (ctrl+x,h)
+        # cut (ctrl+w)
+        # copy (alt+w)
+        # paste (ctrl+k
+
+
+        # Clearing up some default commands
+        # as we will rebind them
         ctrl_d = self.standardCommands().find(QsciCommand.SelectionDuplicate)
         ctrl_d.setKey(0)
         ctrl_l = self.standardCommands().find(QsciCommand.LineCut)
         ctrl_l.setKey(0)
-        ctrl_d = self.standardCommands().find(QsciCommand.SelectionDuplicate)
-        ctrl_d.setKey(0)
+        ctrl_x = self.standardCommands().find(QsciCommand.SelectionCut)
+        ctrl_x.setKey(0)
+        ctrl_c = self.standardCommands().find(QsciCommand.SelectionCopy)
+        ctrl_c.setKey(0)
+        ctrl_y = self.standardCommands().find(QsciCommand.Redo)
+        ctrl_y.setKey(0)
+        # ctrl_v = self.standardCommands().find(QsciCommand.Paste)
+        # ctrl_v.setKey(0)
 
         self.setIndentationsUseTabs(False)
         self.setIndentationWidth(2)
@@ -114,6 +127,8 @@ class MemeQsciScintilla(QsciScintilla):
         # here: http://www.scintilla.org/ScintillaDoc.html)
         self.SendScintilla(QsciScintilla.SCI_SETHSCROLLBAR, 0)
 
+        self.installEventFilter(self)
+
     def paused_at_line(self, start_line, start_col, end_line, end_col):
         # margin arrow
         self.markerDeleteAll(self.CURRENT_LINE_MARKER)
@@ -126,3 +141,11 @@ class MemeQsciScintilla(QsciScintilla):
         self.indicators[self.CURRENT_RANGE_IND] = \
             {'start_line':start_line,'start_col':start_col,'end_line':end_line, 'end_col':end_col}
         self.ensureLineVisible(start_line)
+
+    def eventFilter(self, widget, event):
+        # keeps the QMenuBar from stealing the focus if the user
+        # presses ALT
+        if (widget is self and event.type() == QEvent.ShortcutOverride and\
+                event.key() == Qt.Key_Alt and event.modifiers() == Qt.AltModifier):
+            event.accept()
+        return QsciScintilla.eventFilter(self, widget, event)
