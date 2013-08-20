@@ -11,6 +11,7 @@ expr = ['super-ctor-send' :s args:a]:ast     -> self.i.do_eval('eval_do_super_ct
      | ['return' expr:x]:ast                 -> self.i.do_eval('eval_do_return',x,ast)
      | ['not' expr:x]:ast                    -> self.i.do_eval('eval_do_un_not',x,ast)
      | ['negative' expr:x]:ast               -> self.i.do_eval('eval_do_un_neg',x,ast)
+     | ['and' expr:x expr:y]:ast             -> self.i.do_eval('eval_do_and',x,y,ast)
      | ['++' expr:x expr:y]                  -> self.i.todo6()
      | ['+' expr:x expr:y]:ast               -> self.i.do_eval('eval_do_bin_send','+',x,y,ast)
      | ['-' expr:x expr:y]:ast               -> self.i.do_eval('eval_do_bin_send','-',x,y,ast)
