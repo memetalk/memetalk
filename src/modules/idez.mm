@@ -113,13 +113,15 @@ instance_method undo: fun() {
 end //idez:CommandHistory
 
 class DebuggerUI < QMainWindow
-fields: frame_index, process, exception, execFrames, stackCombo, editor, localVarList, fieldVarList, statusLabel, eventloop, execMenu;
+fields: frame_index, process, exception, execFrames, stackCombo, editor, localVarList, fieldVarList, statusLabel, eventloop, execMenu, shouldUpdateVars;
 init new: fun(process, ex, eventloop) {
   super.new();
   @process = process;
   @eventloop = eventloop;
   @frame_index = 0;
   @exception = ex;
+
+  @shouldUpdateVars = false;
 
   this.resize(700,800);
   this.setWindowTitle("Debugger");
@@ -148,8 +150,10 @@ init new: fun(process, ex, eventloop) {
       @editor.setText(@execFrames.codeFor(i));
       var locInfo = @execFrames.locationInfoFor(i);
       @editor.pausedAtLine(locInfo["start_line"]-1, locInfo["start_col"], locInfo["end_line"]-1, locInfo["end_col"]);
-      @localVarList.loadFrame(@execFrames.frame(i));
-      @fieldVarList.loadReceiver(@execFrames.frame(i));
+      if (@shouldUpdateVars) {
+        @localVarList.loadFrame(@execFrames.frame(i));
+        @fieldVarList.loadReceiver(@execFrames.frame(i));
+      }
     }
 
     if (ex) {
@@ -211,6 +215,14 @@ init new: fun(process, ex, eventloop) {
   execMenu.addAction(action);
   @execMenu = execMenu;
 
+  action = qt.QAction.new("Toggle Var Update", execMenu);
+  action.setShortcut("ctrl+u");
+  action.connect("triggered", fun() {
+    this.toggleVarUpdate();
+  });
+  execMenu.addAction(action);
+  @execMenu = execMenu;
+
   execMenu = this.menuBar().addMenu("Exploring");
   action = qt.QAction.new("Do it", this);
   action.setShortcut("ctrl+d");
@@ -257,6 +269,10 @@ init new: fun(process, ex, eventloop) {
   @stackCombo.updateInfo();
 }
 //end idez:DebuggerUI:new
+
+instance_method toggleVarUpdate: fun() {
+  @shouldUpdateVars = !@shouldUpdateVars;
+}
 
 instance_method acceptIt: fun() {
   var text = @editor.text();

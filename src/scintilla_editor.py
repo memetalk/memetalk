@@ -86,6 +86,8 @@ class MemeQsciScintilla(QsciScintilla):
         ctrl_c.setKey(0)
         ctrl_y = self.standardCommands().find(QsciCommand.Redo)
         ctrl_y.setKey(0)
+        ctrl_u = self.standardCommands().find(QsciCommand.SelectionLowerCase)
+        ctrl_u.setKey(0)
         # ctrl_v = self.standardCommands().find(QsciCommand.Paste)
         # ctrl_v.setKey(0)
 
