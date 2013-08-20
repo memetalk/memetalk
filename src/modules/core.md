@@ -364,14 +364,20 @@ module core() {
     instance_method has: fun(value) {
       <primitive "list_has">
     }
-    instance_method add: fun(value) {
-      <primitive "list_add">
-    }
     instance_method toString: fun() {
       <primitive "list_to_string">
     }
     instance_method join: fun(sep) {
       <primitive "list_join">
+    }
+    instance_method first: fun() {
+      <primitive "list_first">
+    }
+    instance_method rest: fun() {
+      <primitive "list_rest">
+    }
+    instance_method reversed: fun() {
+      <primitive "list_reversed">
     }
   }
 

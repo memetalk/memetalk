@@ -554,6 +554,15 @@ def prim_list_each(proc):
     for x in proc.r_rdp:
         proc.setup_and_run_fun(None, None, 'fn', proc.locals['fn'], [x], True)
 
+def prim_list_first(proc):
+    return proc.r_rdp[0]
+
+def prim_list_rest(proc):
+    return proc.r_rdp[1:]
+
+def prim_list_reversed(proc):
+    return reversed(proc.r_rdp)
+
 def prim_list_get(proc):
     return proc.r_rdp[proc.locals['n']]
 
@@ -569,9 +578,6 @@ def prim_list_plus(proc):
 
 def prim_list_has(proc):
     return proc.locals['value'] in proc.r_rdp
-
-def prim_list_add(proc):
-    return proc.r_rdp.append(proc.locals['value'])
 
 def prim_list_join(proc):
     return proc.locals['sep'].join(proc.r_rdp)
