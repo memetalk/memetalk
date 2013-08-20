@@ -205,6 +205,7 @@ KernelModule = {"_vt": ModuleBehavior,
                 "'name': "+to_source(name)+","+\
                 "'params': "+to_source(params)+","+\
                 "'body': "+to_source(body)+","+\
+                "'owner': kernel_cmodule,"+\
                 "'@tag': '"+name+" compiled function'}),kernel_imodule)"
 
     def add_fun(self, name, params, body, is_ctor):
