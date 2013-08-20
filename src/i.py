@@ -640,7 +640,7 @@ class Interpreter():
     def __init__(self):
         self.compiled_modules = {}
         self.processes = []
-        self.current_process = None
+        self.current_process = Process(self) #dummy
         self.memory = []
         self.imods = []
         self.interned_symbols = {}
@@ -895,10 +895,24 @@ class Process(greenlet):
         super(Process, self).__init__(self.greenlet_entry)
 
         self.interpreter = interpreter
+        self.stack = []
         self.debugger_process = None
         self.state = None
         self.flag_stop_on_exception = False
         self.last_exception = None
+        self.init_data()
+
+    def init_data(self):
+        # registers
+        self.r_mp  = None  # module pointer
+        self.r_cp  = None  # context pointer
+        self.r_rp  = None  # receiver pointer
+        self.r_rdp = None  # receiver data pointer
+        self.r_ep  = None  # environment pointer
+        self.r_ip  = None  # instruction pointer / ast info
+
+        self.locals = {}
+        self.stack = []
 
     def greenlet_entry(self, cmd, *rest):
         return getattr(self, cmd)(*rest)
@@ -916,21 +930,8 @@ class Process(greenlet):
         return ret
 
     def run_module(self, entry_name, module, args):
-        # registers
-        # self.r_mp  = module
-        # self.r_rp  = module # ie. module.main()
-        # self.r_rdp = module
 
-        # registers
-        self.r_mp  = None  # module pointer
-        self.r_cp  = None  # context pointer
-        self.r_rp  = None  # receiver pointer
-        self.r_rdp = None  # receiver data pointer
-        self.r_ep  = None  # environment pointer
-        self.r_ip  = None  # instruction pointer / ast info
-
-        self.locals = {}
-        self.stack = []
+        self.init_data()
 
         self.state = 'running' # process state
 
