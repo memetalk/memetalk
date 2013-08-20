@@ -155,10 +155,6 @@ init new: fun(process, ex, eventloop) {
         @fieldVarList.loadReceiver(@execFrames.frame(i));
       }
     }
-
-    if (ex) {
-      @statusLabel.setText("An exception ocurred: " + ex.value);
-    }
   });
 
   var hbox = qt.QHBoxLayout.new(null);
