@@ -738,6 +738,10 @@ instance_method printIt: fun() {
   }
 }
 
+class_method inspect: fun(target) {
+  return Inspector.new(target).show();
+}
+
 end //idez:Inspector
 
 class LineEditor < QLineEdit
