@@ -70,7 +70,7 @@ constructors = constructor*:c -> ["ctors", c]
 constructor = spaces
               token("init") alpha_name:name token(":")
               spaces !(self.input.position):begin
-              token("fun") params:p token("{")
+              token("fun") fparams:p token("{")
                   top_fun_body:body !(self.input.position):end
                 token("}")
              -> self.i.ast(begin,['ctor', name, ["params", p],
@@ -82,7 +82,7 @@ top_level_fn = spaces alpha_name:name token(":") !(self.input.position):begin
 
 top_level_fun = spaces alpha_name:name token(":")
                 spaces !(self.input.position):begin
-                token("fun")  params:p token("{")
+                token("fun")  fparams:p token("{")
                   top_fun_body:body !(self.input.position):end
                 token("}")
                   -> self.i.ast(begin,['fun', name, ["params", p],
@@ -90,7 +90,7 @@ top_level_fun = spaces alpha_name:name token(":")
 
 instance_method_decl = spaces token("instance_method") alpha_name:name token(":")
                        spaces !(self.input.position):begin
-                         token("fun") params:p token("{")
+                         token("fun") fparams:p token("{")
                            top_fun_body:body !(self.input.position):end
                          token("}")
                       -> self.i.ast(begin,['fun', name, ["params", p],
@@ -98,13 +98,19 @@ instance_method_decl = spaces token("instance_method") alpha_name:name token(":"
 
 class_method_decl = spaces token("class_method") alpha_name:name token(":")
                     spaces !(self.input.position):begin
-                      token("fun") params:p token("{")
+                      token("fun") fparams:p token("{")
                         top_fun_body:body !(self.input.position):end
                       token("}")
                     -> self.i.ast(begin,['fun', name, ["params", p],
                        ['body', body + [self.i.sint_ast(end,['return-this'])]]])
 
 params = token("(") idlist:xs token(")") -> xs
+
+fparams = token("(") token(")") -> []
+        | token("(")  id:x (token(",") id)*:xs token(")") -> [x]+xs
+        | token("(")  id:x (token(",") id)*:xs pvar:y token(")") -> [x]+xs+[y]
+
+pvar = token(",") token("*") id:x -> ['var-arg', x]
 
 idlist = id:x (token(",") id)*:xs -> [x]+xs
           | -> []
@@ -260,7 +266,8 @@ lit_string  = spaces '"' ('\\' '"' | ~'"' :x)*:xs '"'
 field_name = spaces '@' letter_or_digit_string:x -> x
 
 
-single_top_level_fun :name = spaces !(self.input.position):begin token("fun")  params:p token("{")
+single_top_level_fun :name = spaces !(self.input.position):begin token("fun")
+                             fparams:p token("{")
                          top_fun_body:body !(self.input.position):end
                        token("}")
                        -> self.i.ast(begin,['fun', name, ["params", p],

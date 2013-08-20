@@ -1068,13 +1068,22 @@ class Process(greenlet):
         if self.r_cp: #if we are exiting main, this will be null
             self.r_mp = self.r_cp["module"]
 
+    def has_vararg(self, params):
+        return len(params) > 0 and len(params[-1]) == 2 and params[-1][0] == 'var-arg'
+
+    def ok_arity(self, params, arglen):
+        if self.has_vararg(params):
+            return arglen >= (len(params)-1)
+        else:
+            return arglen == len(params)
+
     def setup_and_run_fun(self, recv, drecv, name, method, args, should_allocate):
         if isinstance(method, basestring):
             traceback.print_exc()
             print("function '" + name + "' lacks implementation. Receiver:");
             #P(recv)
             sys.exit(1)
-        if len(method["compiled_function"]["params"]) != len(args):
+        if not self.ok_arity(method["compiled_function"]["params"], len(args)):
             #P(method,3)
             self.interpreter.throw_with_value("arity error: " + method['compiled_function']['name'] +\
                                                   ", expecting " + str(len(method["compiled_function"]["params"])) +\
@@ -1096,8 +1105,16 @@ class Process(greenlet):
             if not method["compiled_function"]["uses_env"] and \
                     self.interpreter.get_vt(method) == core.Function:
                 # normal fun, put args in the stack
-                for k,v in zip(method["compiled_function"]["params"],args):
-                    self.locals[k] = v
+                if self.has_vararg(method["compiled_function"]["params"]):
+                    regular = method["compiled_function"]["params"][0:-1]
+                    reg_len = len(regular)
+                    for k,v in zip(regular,args):
+                        self.locals[k] = v
+                    va_name = method["compiled_function"]["params"][-1][1]
+                    self.locals[va_name] = args[reg_len:]
+                else:
+                    for k,v in zip(method["compiled_function"]["params"],args):
+                        self.locals[k] = v
             # normal fun using env, initialize one
             elif method["compiled_function"]["uses_env"] and \
                     self.interpreter.get_vt(method) == core.Function:
