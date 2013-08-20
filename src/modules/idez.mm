@@ -1049,8 +1049,8 @@ instance_method action_addFunction: fun() {
     this.command(fun() {
       @current_cmodule.addFunction(cfun);
       this.show_function(cfun, "module", ".module-functions");
-      @statusLabel.setText("Function added: " + name);
       mlist.appendInside("<li><a href='#" + cfun.fullName + "'>" + cfun.fullName + "</a></li>");
+      @statusLabel.setText("Function added: " + name);
     }, fun() {
       mlist.findFirst("li a[href='#" + cfun.fullName + "']").setAttribute("style","display:none");
       @current_cmodule.removeFunction(name);
@@ -1093,8 +1093,8 @@ instance_method action_addMethod: fun() {
     this.command(fun() {
       klass.addMethod(cfun, flag);
       this.show_function(cfun, flag.toString, "div[id='imethods_" + klass.name + "']");
-      @statusLabel.setText("Method added: " + cfun.fullName);
       mlist.appendInside("<li><a href='#" + cfun.fullName + "'>" + cfun.fullName + "</a></li>");
+      @statusLabel.setText("Method added: " + cfun.fullName);
     }, fun() {
       mlist.findFirst("li a[href='#" + cfun.fullName + "']").setAttribute("style","display:none");
       klass.removeMethod(method_name, flag);
@@ -1138,9 +1138,11 @@ instance_method action_deleteClass: fun() {
     this.command(fun() {
       @current_cmodule.removeClass(name);
       this.show_module(@current_cmodule.name);
+      @statusLabel.setText("Class deleted: " + name);
     }, fun() {
       @current_cmodule.addClass(klass);
       this.show_module(@current_cmodule.name);
+      @statusLabel.setText("Class added: " + name);
     });
   });
 }
@@ -1203,9 +1205,11 @@ instance_method action_editFields: fun() {
       this.command(fun() {
         klass.setFields(fields.split(","));
         doc.findFirst("div[id='" + klass.fullName + "'] .fields_list").setPlainText(fields.toString());
+        @statusLabel.setText("Fields accepted: " + fields);
       }, fun() {
         klass.setFields(old_fields);
         doc.findFirst("div[id='" + klass.fullName + "'] .fields_list").setPlainText(old_fields.toString());
+        @statusLabel.setText("Fields accepted: " + old_fields.toString);
       });
     });
     return false;
@@ -1229,10 +1233,12 @@ instance_method action_editModuleDefaultParameters: fun() {
         @current_cmodule.setDefaultParameter(name, val);
         var lis = @current_cmodule.default_parameters.map(fun(name,d) { "<li>" + name + " : memetalk/" + d["value"] + "/1.0</li>"; });
         doc.findFirst(".default-parameters").setInnerXml(lis.join(""));
+        @statusLabel.setText("Default parameter for '" + name + "' now is: " + val);
       }, fun() {
         @current_cmodule.setDefaultParameter(name, dp);
         var lis = @current_cmodule.default_parameters.map(fun(name,d) { "<li>" + name + " : memetalk/" + d["value"] + "/1.0</li>"; });
         doc.findFirst(".default-parameters").setInnerXml(lis.join(""));
+        @statusLabel.setText("Default parameter for '" + name + "' now is: " + dp.toString);
       });
     });
     return false;
@@ -1251,9 +1257,11 @@ instance_method action_editModuleParameters: fun() {
     this.command(fun() {
       @current_cmodule.setParams(params.split(","));
       doc.findFirst(".module_title_params").setPlainText(params);
+        @statusLabel.setText("Module parameters: " + params);
     }, fun() {
       @current_cmodule.setParams(old_params);
       doc.findFirst(".module_title_params").setPlainText(old_params.toString);
+      @statusLabel.setText("Module parameters: " + old_params.toString);
     });
   });
 }
@@ -1356,6 +1364,7 @@ instance_method action_reset: fun() {
 
 instance_method action_saveToFileSystem: fun() {
   available_modules().each(save_module);
+  @statusLabel.setText("System saved");
 }
 
 instance_method action_toggleCtor: fun() {
