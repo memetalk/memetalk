@@ -127,7 +127,7 @@ init new: fun(process, ex, eventloop) {
   var mainLayout = qt.QVBoxLayout.new(centralWidget);
 
   @statusLabel = qt.QLabel.new(this.statusBar());
-  @statusLabel.setMinimumWidth(300);
+  @statusLabel.setMinimumWidth(600);
 
   @execFrames = ExecutionFrames.new(process);
 
@@ -851,7 +851,7 @@ init new: fun() {
   l.addWidget(@miniBuffer);
 
   @statusLabel = qt.QLabel.new(this.statusBar());
-  @statusLabel.setMinimumWidth(300);
+  @statusLabel.setMinimumWidth(600);
 
   @webview.page().setLinkDelegationPolicy(2);
 
