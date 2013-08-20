@@ -1358,8 +1358,11 @@ class Process(greenlet):
             raise RewindException(self.frame_level(cmd[1])+2)
         if cmd[0] == 'reload':
             #print "process: reload to line " + str(cmd[1])
-            self.interpreter.break_at(self.r_cp['compiled_function'], cmd[1])
-            self.state = 'running'
+            if cmd[1] == 0:
+                self.state = 'paused'
+            else:
+                self.interpreter.break_at(self.r_cp['compiled_function'], cmd[1])
+                self.state = 'running'
             raise RewindException(1)
         #print "process: " + str(id(self)) + " is " + self.state
 
