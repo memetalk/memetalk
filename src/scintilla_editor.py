@@ -159,9 +159,7 @@ class MemeQsciScintilla(QsciScintilla):
         self.setMarginsBackgroundColor(self.bg_margin_saved)
 
     def slot_text_changed(self):
-        print self.bg_margin_changed
         self.setMarginsBackgroundColor(self.bg_margin_changed)
 
     def saved(self):
-        print self.bg_margin_saved
         self.setMarginsBackgroundColor(self.bg_margin_saved)

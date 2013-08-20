@@ -411,7 +411,6 @@ instance_method evalSelection: fun() {
 }
 
 instance_method initEditActions: fun() {
-  io.print("YO");
   var action = qt.QAction.new("Cut", this);
   action.setShortcut("ctrl+w");
   action.connect("triggered", fun() {
