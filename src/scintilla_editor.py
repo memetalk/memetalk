@@ -59,6 +59,9 @@ class MemeQsciScintilla(QsciScintilla):
         super(MemeQsciScintilla, self).__init__(parent)
         self.meme_instance = meme_instance
 
+        self.bg_margin_changed  = QColor("#FF9933")
+        self.bg_margin_saved =  QColor("#C5CBE3")
+
         self.CURRENT_LINE_MARKER = 8
         self.CURRENT_RANGE_IND = self.indicatorDefine(self.INDIC_DOTBOX)
 
@@ -99,7 +102,7 @@ class MemeQsciScintilla(QsciScintilla):
         self.setMarginsFont(font)
         self.setMarginWidth(0, fontmetrics.width("000") + 6)
         self.setMarginLineNumbers(0, True)
-        self.setMarginsBackgroundColor(QColor("#C5CBE3"))
+        self.setMarginsBackgroundColor(self.bg_margin_saved)
 
         self.markerDefine(QsciScintilla.RightArrow,self.CURRENT_LINE_MARKER)
         self.setMarkerBackgroundColor(QColor("blue"),self.CURRENT_LINE_MARKER)
@@ -128,6 +131,7 @@ class MemeQsciScintilla(QsciScintilla):
         self.SendScintilla(QsciScintilla.SCI_SETHSCROLLBAR, 0)
 
         self.installEventFilter(self)
+        self.textChanged.connect(self.slot_text_changed)
 
     def paused_at_line(self, start_line, start_col, end_line, end_col):
         # margin arrow
@@ -149,3 +153,15 @@ class MemeQsciScintilla(QsciScintilla):
                 event.key() == Qt.Key_Alt and event.modifiers() == Qt.AltModifier):
             event.accept()
         return QsciScintilla.eventFilter(self, widget, event)
+
+    def set_text(self, text):
+        self.setText(text)
+        self.setMarginsBackgroundColor(self.bg_margin_saved)
+
+    def slot_text_changed(self):
+        print self.bg_margin_changed
+        self.setMarginsBackgroundColor(self.bg_margin_changed)
+
+    def saved(self):
+        print self.bg_margin_saved
+        self.setMarginsBackgroundColor(self.bg_margin_saved)

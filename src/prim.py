@@ -1503,7 +1503,12 @@ def prim_qt_scintilla_redo(proc):
 
 def prim_qt_scintilla_set_text(proc):
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
-    qtobj.setText(proc.locals['text'])
+    qtobj.set_text(proc.locals['text'])
+    return proc.r_rp
+
+def prim_qt_scintilla_saved(proc):
+    qtobj = _lookup_field(proc, proc.r_rp, 'self')
+    qtobj.saved()
     return proc.r_rp
 
 def prim_qt_scintilla_paused_at_line(proc):

@@ -261,6 +261,7 @@ init new: fun(process, ex, eventloop) {
 instance_method acceptIt: fun() {
   var text = @editor.text();
   @execFrames.frame(@frame_index).contextPointer.compiledFunction.setCode(text);
+  @editor.saved();
 }
 
 instance_method closeEvent: fun() {
@@ -581,6 +582,7 @@ init new: fun(cfun, parent, getContext, getIModule, getFrame, afterEval) {
 instance_method accept: fun() {
     try {
       @cfun.setCode(this.text());
+      this.saved();
     } catch(ex) {
       this.insertSelectedText(ex.value());
     }
@@ -681,6 +683,7 @@ instance_method acceptIt: fun() {
   var new_value = fn.apply([]);
   var slot = @fieldList.currentItem().text();
   @mirror.setValueFor(slot, new_value);
+  @textArea.saved();
 }
 
 instance_method debugIt: fun() {

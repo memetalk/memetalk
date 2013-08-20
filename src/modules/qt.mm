@@ -315,6 +315,10 @@ instance_method redo: fun() {
     <primitive "qt_scintilla_redo">
 }
 
+instance_method saved: fun() {
+    <primitive "qt_scintilla_saved">
+}
+
 instance_method selectedText: fun() {
     <primitive "qt_scintilla_selected_text">
 }
