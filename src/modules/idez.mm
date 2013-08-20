@@ -428,7 +428,7 @@ instance_method initEditActions: fun() {
   action.connect("triggered", fun() {
       this.cut();
   });
-  //action.setShortcutContext(0); //widget context
+  action.setShortcutContext(0); //widget context
   this.addAction(action);
 
   action = qt.QAction.new("Copy", this);
@@ -436,7 +436,7 @@ instance_method initEditActions: fun() {
   action.connect("triggered", fun() {
       this.copy();
   });
-  //action.setShortcutContext(0); //widget context
+  action.setShortcutContext(0); //widget context
   this.addAction(action);
 
   action = qt.QAction.new("Paste", this);
@@ -444,7 +444,7 @@ instance_method initEditActions: fun() {
   action.connect("triggered", fun() {
       this.paste();
   });
-  //action.setShortcutContext(0); //widget context
+  action.setShortcutContext(0); //widget context
   this.addAction(action);
 
   action = qt.QAction.new("Redo", this);
@@ -452,7 +452,7 @@ instance_method initEditActions: fun() {
   action.connect("triggered", fun() {
       this.redo();
   });
-  //action.setShortcutContext(0); //widget context
+  action.setShortcutContext(0); //widget context
   this.addAction(action);
 }
 
