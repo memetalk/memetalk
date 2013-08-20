@@ -1618,6 +1618,60 @@ instance_method show_class: fun(module_name, class_name) {
   });
 }
 
+instance_method show_editor: fun(id, name, type, class_name) {
+  var doc = @webview.page().mainFrame().documentElement();
+  var div = doc.findFirst("div[id='" + id + "']");
+  var cfn = null;
+
+  div.findFirst(".method-click-advice").takeFromDocument();
+
+  var divcode = div.findFirst(".function-source-code");
+  divcode.appendInside("<object width=800></object>");
+  var obj = divcode.findFirst("object");
+  obj.takeFromDocument;
+  obj.setInnerXml("<param name='class_name'/><param name='function_type'/><param name='module_name'/><param name='function_name'/><param name='code'/>");
+
+  if (type == "module") {
+    cfn = @current_cmodule.compiled_functions[name];
+  }
+  if (type == "ctor_method") {
+    cfn = @current_cmodule.compiled_classes[class_name].constructors[name];
+    obj.findFirst("param[name='class_name']").setAttribute("value",cfn.owner.name);
+  }
+  if (type == "class_method") {
+    cfn = @current_cmodule.compiled_classes[class_name].classMethods[name];
+    obj.findFirst("param[name='class_name']").setAttribute("value",cfn.owner.name);
+  }
+  if (type == "instance_method") {
+    cfn = @current_cmodule.compiled_classes[class_name].instanceMethods[name];
+    obj.findFirst("param[name='class_name']").setAttribute("value",cfn.owner.name);
+  }
+
+  obj.findFirst("param[name='function_type']").setAttribute("value",type);
+  obj.findFirst("param[name='module_name']").setAttribute("value",@current_cmodule.name);
+  obj.findFirst("param[name='function_name']").setAttribute("value",cfn.name);
+  obj.findFirst("param[name='code']").setAttribute("value",cfn.text);
+  obj.setAttribute("type","x-pyqt/editor");
+  divcode.appendInside(obj);
+}
+
+instance_method show_function: fun(cfn, function_type, parent_sel) {
+  var doc = @webview.page().mainFrame().documentElement();
+  var parent = doc.findFirst(parent_sel);
+  var div = doc.findFirst("div[id=templates] .function_template").clone();
+  div.setAttribute("id", cfn.fullName);
+  div.setStyleProperty("display","block");
+  div.findFirst(".function_name").setPlainText(cfn.fullName);
+  div.findFirst(".function_name").setAttribute("name",cfn.fullName);
+
+  if (Mirror.vtFor(cfn.owner) == CompiledClass) {
+    div.findFirst(".method-click-advice").setAttribute("href","/show-editor?class=" + cfn.owner.name + "&name=" + cfn.name + "&type=" + function_type + "&id=" + cfn.fullName);
+  } else {
+    div.findFirst(".method-click-advice").setAttribute("href","/show-editor?name=" + cfn.name  + "&id=" + cfn.fullName + "&type=" + function_type);
+  }
+  parent.appendInside(div);
+}
+
 instance_method show_home: fun() {
   @current_cmodule = null;
   @imodule = null;
@@ -1670,60 +1724,6 @@ instance_method show_tutorial: fun() {
   @current_cmodule = null;
   @imodule = null;
   @webview.setUrl(modules_path() + "/module-explorer/tutorial.html");
-}
-
-instance_method show_function: fun(cfn, function_type, parent_sel) {
-  var doc = @webview.page().mainFrame().documentElement();
-  var parent = doc.findFirst(parent_sel);
-  var div = doc.findFirst("div[id=templates] .function_template").clone();
-  div.setAttribute("id", cfn.fullName);
-  div.setStyleProperty("display","block");
-  div.findFirst(".function_name").setPlainText(cfn.fullName);
-  div.findFirst(".function_name").setAttribute("name",cfn.fullName);
-
-  if (Mirror.vtFor(cfn.owner) == CompiledClass) {
-    div.findFirst(".method-click-advice").setAttribute("href","/show-editor?class=" + cfn.owner.name + "&name=" + cfn.name + "&type=" + function_type + "&id=" + cfn.fullName);
-  } else {
-    div.findFirst(".method-click-advice").setAttribute("href","/show-editor?name=" + cfn.name  + "&id=" + cfn.fullName + "&type=" + function_type);
-  }
-  parent.appendInside(div);
-}
-
-instance_method show_editor: fun(id, name, type, class_name) {
-  var doc = @webview.page().mainFrame().documentElement();
-  var div = doc.findFirst("div[id='" + id + "']");
-  var cfn = null;
-
-  div.findFirst(".method-click-advice").takeFromDocument();
-
-  var divcode = div.findFirst(".function-source-code");
-  divcode.appendInside("<object width=800></object>");
-  var obj = divcode.findFirst("object");
-  obj.takeFromDocument;
-  obj.setInnerXml("<param name='class_name'/><param name='function_type'/><param name='module_name'/><param name='function_name'/><param name='code'/>");
-
-  if (type == "module") {
-    cfn = @current_cmodule.compiled_functions[name];
-  }
-  if (type == "ctor_method") {
-    cfn = @current_cmodule.compiled_classes[class_name].constructors[name];
-    obj.findFirst("param[name='class_name']").setAttribute("value",cfn.owner.name);
-  }
-  if (type == "class_method") {
-    cfn = @current_cmodule.compiled_classes[class_name].classMethods[name];
-    obj.findFirst("param[name='class_name']").setAttribute("value",cfn.owner.name);
-  }
-  if (type == "instance_method") {
-    cfn = @current_cmodule.compiled_classes[class_name].instanceMethods[name];
-    obj.findFirst("param[name='class_name']").setAttribute("value",cfn.owner.name);
-  }
-
-  obj.findFirst("param[name='function_type']").setAttribute("value",type);
-  obj.findFirst("param[name='module_name']").setAttribute("value",@current_cmodule.name);
-  obj.findFirst("param[name='function_name']").setAttribute("value",cfn.name);
-  obj.findFirst("param[name='code']").setAttribute("value",cfn.text);
-  obj.setAttribute("type","x-pyqt/editor");
-  divcode.appendInside(obj);
 }
 
 end //idez:ModuleExplorer

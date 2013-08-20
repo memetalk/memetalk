@@ -427,16 +427,16 @@ instance_method hasFragment: fun() {
   <primitive "qt_qurl_has_fragment">
 }
 
+instance_method hasQueryItem: fun(name) {
+  <primitive "qt_qurl_has_query_item">
+}
+
 instance_method path: fun() {
   <primitive "qt_qurl_path">
 }
 
 instance_method queryItemValue: fun(name) {
   <primitive "qt_qurl_query_item_value">
-}
-
-instance_method hasQueryItem: fun(name) {
-  <primitive "qt_qurl_has_query_item">
 }
 
 instance_method toString: fun() {
