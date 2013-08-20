@@ -1119,6 +1119,13 @@ class Process(greenlet):
             for k,v in zip(method["compiled_function"]["params"],args):
                 self.env_set_value(k, v)
 
+    def do_send(self, receiver, selector, args):
+        drecv, method = self._lookup(receiver, self.interpreter.get_vt(receiver), selector)
+        if not method:
+            self.interpreter.throw_with_value("DoesNotUnderstand: " + selector + " -- " + P(receiver,1,True))
+        else:
+            return self.setup_and_run_fun(receiver, drecv, selector, method, args, True)
+
     ## env auxiliary
     def env_lookup(self, name):
         #the idx of name in self.r_ep or None
@@ -1285,11 +1292,7 @@ class Process(greenlet):
     def eval_do_send(self, receiver, selector, args, ast):
         self.r_ip = ast
         self.dbg_control('eval_do_send')
-        drecv, method = self._lookup(receiver, self.interpreter.get_vt(receiver), selector)
-        if not method:
-            self.interpreter.throw_with_value("DoesNotUnderstand: " + selector + " -- " + P(receiver,1,True))
-        else:
-            return self.setup_and_run_fun(receiver, drecv, selector, method, args, True)
+        return self.do_send(receiver, selector, args)
 
     def eval_do_call(self, fun, args, ast):
         self.r_ip = ast

@@ -219,6 +219,12 @@ def prim_object_to_source(proc):
     else:
         return P(obj,1,True)
 
+def prim_object_send(proc):
+    selector_str = proc.locals['selector']['self'] # should be a symbol
+    args = proc.locals['args']
+    receiver = proc.r_rp
+    return proc.do_send(receiver, selector_str, args)
+
 def prim_object_equal(proc):
     return proc.r_rp == proc.locals['other']
 

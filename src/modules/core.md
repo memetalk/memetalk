@@ -85,6 +85,9 @@ module core() {
       !=: fun(other) {
           <primitive "object_not_equal">
       }
+      send: fun(selector, args) {
+          <primitive "object_send">
+      }
     }
   }
 
