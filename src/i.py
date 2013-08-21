@@ -831,10 +831,30 @@ class Interpreter():
         else:
             return False
 
+    def is_wrapper_class(self, klass):
+        return klass == core.String or\
+            klass == core.Dictionary or\
+            klass == core.List or\
+            klass == core.Number
+
+    def new_wrapper_object_for(self, klass):
+        if klass == core.String:
+            return str()
+        if klass == core.Dictionary:
+            return dict()
+        if klass == core.List:
+            return list()
+        if klass.Number:
+            return 0
+
     def create_instance(self, klass):
         p = None
         if klass["parent"] != None:
             p = self.create_instance(klass["parent"])
+
+        if self.is_wrapper_class(klass):
+            return self.new_wrapper_object_for(klass)
+
         fields = klass["compiled_class"]["fields"]
         name = klass["compiled_class"]["name"]
         res = dict([(x,None) for x in fields] + {"_vt": klass, "_delegate":p, "@tag": name + " instance"}.items() )

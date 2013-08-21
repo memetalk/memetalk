@@ -352,6 +352,9 @@ module core() {
   }
 
   class List {
+    init new: fun(lst) {
+      <primitive "list_ctor">
+    }
     instance_method each: fun(fn) {
       <primitive "list_each">
     }

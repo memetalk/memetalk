@@ -559,6 +559,10 @@ def prim_mirror_set_value_for(proc):
 def prim_mirror_vt(proc):
     return proc.interpreter.get_vt(proc.locals['obj'])
 
+def prim_list_ctor(proc):
+    proc.r_rdp.extend(proc.locals['lst'])
+    return proc.r_rp
+
 def prim_list_each(proc):
     for x in proc.r_rdp:
         proc.setup_and_run_fun(None, None, 'fn', proc.locals['fn'], [x], True)
