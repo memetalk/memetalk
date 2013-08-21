@@ -130,7 +130,10 @@ init new: fun(process, ex, eventloop) {
 
   @statusLabel = qt.QLabel.new(this.statusBar());
   @statusLabel.setMinimumWidth(600);
-  @statusLabel.setText(ex.message);
+
+  if (@exception) {
+    @statusLabel.setText(@exception.message);
+  }
   @execFrames = ExecutionFrames.new(process);
 
   @stackCombo = StackCombo.new(centralWidget, @execFrames);
