@@ -1799,17 +1799,17 @@ instance_method loadFrame: fun(frame) {
 
     var _this = env['r_rp'];
     this.setItem(0, 0, VariableItem.new("this", _this));
-    this.setItem(0, 1, VariableItem.new(_this.toString, _this));
+    this.setItem(0, 1, VariableItem.new(_this.toSource, _this));
 
     var _dthis = env['r_rdp'];
     this.setItem(1, 0, VariableItem.new("@this", _dthis));
-    this.setItem(1, 1, VariableItem.new(_dthis.toString, _dthis));
+    this.setItem(1, 1, VariableItem.new(_dthis.toSource, _dthis));
 
     var i = 2;
     table.each(fun(idx, varname) {
       var entry = env[idx];
       this.setItem(i, 0, VariableItem.new(varname, entry));
-      this.setItem(i, 1, VariableItem.new(entry.toString, entry));
+      this.setItem(i, 1, VariableItem.new(entry.toSource, entry));
       i = i + 1;
     });
   } else {
@@ -1817,16 +1817,16 @@ instance_method loadFrame: fun(frame) {
 
     var _this = frame.receiverPointer;
     this.setItem(0, 0, VariableItem.new("this", _this));
-    this.setItem(0, 1, VariableItem.new(_this.toString, _this));
+    this.setItem(0, 1, VariableItem.new(_this.toSource, _this));
 
     var _dthis = frame.receiverDataPointer;
     this.setItem(1, 0, VariableItem.new("@this", _dthis));
-    this.setItem(1, 1, VariableItem.new(_dthis.toString, _dthis));
+    this.setItem(1, 1, VariableItem.new(_dthis.toSource, _dthis));
 
     var i = 2;
     frame.locals.each(fun(name,val) {
       this.setItem(i, 0, VariableItem.new(name, frame.locals[name]));
-      this.setItem(i, 1, VariableItem.new(val.toString, frame.locals[name]));
+      this.setItem(i, 1, VariableItem.new(val.toSource, frame.locals[name]));
       i = i + 1;
     });
   }
