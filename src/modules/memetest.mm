@@ -53,7 +53,7 @@ main: fun() {
     try {
       m.main();
     } catch(e) {
-      io.print(e.value + " on " + path);
+      io.print(e.message + " on " + path);
       Exception.throw("test:interrupted");
     }
   });
