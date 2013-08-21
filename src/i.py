@@ -1245,6 +1245,23 @@ class Process(greenlet):
         self.dbg_control('eval_do_return')
         raise ReturnException(value)
 
+    def eval_do_super_send(self, args, ast):
+        self.r_ip = ast
+        self.dbg_control('eval_do_super_send')
+
+        instance = self.r_rdp
+        klass = self.interpreter.get_vt(instance)
+        pklass = klass["parent"]
+        receiver = instance["_delegate"]
+
+        selector = self.r_cp['compiled_function']['name']
+        drecv, method = self._lookup(receiver, pklass, selector)
+
+        if not method:
+            self.throw_with_message("DoesNotUnderstand: " + selector + " -- " + P(instance,1,True))
+        else:
+            return self.setup_and_run_fun(self.r_rp, drecv, selector, method, args, False)
+
     def eval_do_super_ctor_send(self, selector, args, ast):
         self.r_ip = ast
         self.dbg_control('eval_do_super_ctor_send')

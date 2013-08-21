@@ -211,6 +211,8 @@ suffix_expr = !(self.input.position):begin token("super") token(".") alpha_name:
 
 call_expr =  !(self.input.position):begin call_expr:r args:p
             -> self.i.ast(begin, ['call', r, ['args', p]])
+          |  spaces !(self.input.position):begin token("super") args:p
+            -> self.i.ast(begin, ['super-send', ['args',p]])
           |  spaces !(self.input.position):begin id:r args:p
             -> self.i.ast(begin, ['send-or-call', r, ['args',p]])
           | prim_expr

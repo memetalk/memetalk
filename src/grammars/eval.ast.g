@@ -6,6 +6,7 @@ exprlist = [(expr:x)+] -> x
 pair = ['pair' expr:key expr:val] -> (key,val)
 
 expr = ['super-ctor-send' :s args:a]:ast     -> self.i.do_eval('eval_do_super_ctor_send',s,a,ast)
+     | ['super-send' args:a]:ast             -> self.i.do_eval('eval_do_super_send',a,ast)
      | ['var-def' :id expr:e]:ast            -> self.i.do_eval('eval_do_var_def',id,e,ast)
      | ['debug']:ast                         -> self.i.do_eval('eval_do_debug',ast)
      | ['return' expr:x]:ast                 -> self.i.do_eval('eval_do_return',x,ast)
