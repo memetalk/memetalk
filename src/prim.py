@@ -264,6 +264,12 @@ def prim_string_substring(proc):
 def prim_string_split(proc):
     return proc.r_rp.split(proc.locals['sep'])
 
+def prim_string_to_symbol(proc):
+    return proc.interpreter.interned_symbol_for(proc.r_rdp)
+
+def prim_string_char_code(proc):
+    return ord(proc.r_rdp)
+
 def prim_module_instance_compiled_module(proc):
     return proc.r_rdp['_vt']['compiled_module']
 
@@ -574,7 +580,10 @@ def prim_list_rest(proc):
     return proc.r_rdp[1:]
 
 def prim_list_reversed(proc):
-    return reversed(proc.r_rdp)
+    return list(reversed(proc.r_rdp))
+
+def prim_list_prepend(proc):
+    return proc.locals['arg'] + proc.r_rdp
 
 def prim_list_get(proc):
     return proc.r_rdp[proc.locals['n']]

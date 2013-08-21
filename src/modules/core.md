@@ -320,6 +320,12 @@ module core() {
     instance_method split: fun(sep) {
       <primitive "string_split">
     }
+    instance_method toSymbol: fun() {
+      <primitive "string_to_symbol">
+    }
+    instance_method charCode: fun() {
+      <primitive "string_char_code">
+    }
   }
   class Symbol {
    fields: self;
@@ -373,6 +379,9 @@ module core() {
     }
     instance_method +: fun(arg) {
       <primitive "list_plus">
+    }
+    instance_method prepend: fun(arg) {
+      <primitive "list_prepend">
     }
     instance_method has: fun(value) {
       <primitive "list_has">
