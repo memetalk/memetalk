@@ -1309,6 +1309,13 @@ class Process(greenlet):
         else:
             self.evaluator.apply("exprlist", no)
 
+    def eval_do_while(self, cond_expr, yes_expr, ast):
+        while True:
+            cond_res = self.evaluator.apply("expr", cond_expr)[0]
+            if cond_res == False:
+                break
+            self.evaluator.apply("exprlist", yes_expr)
+
     def eval_do_try(self, ast, tr, bind, ct):
         self.r_ip = ast
         try:
