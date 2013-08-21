@@ -18,6 +18,7 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 from pdb import set_trace as br
+from mmpprint import P
 
 class ASTBuilder:
     def ast(self, begin, ast):
@@ -56,4 +57,4 @@ class ASTNode(list):
     def __repr__(self):
         # this should be easy on the eyes
         # it should be used for stack traces and AST debugging
-        return str(self.lst)
+        return P(self.lst,1, True)
