@@ -203,7 +203,11 @@ module core() {
     }
     instance_method fullName: fun() {
       if (this.isTopLevel()) {
-        return @owner.fullName() + "::" + @name;
+        if (@owner) {
+          return @owner.fullName() + "::" + @name;
+        } else {
+          return "<deep-sea>::" + @name; //We have no class [eg. Behavior function]
+        }
       } else {
         return this.topLevelCompiledFunction().fullName() + "[" + @name + "]";
       }
