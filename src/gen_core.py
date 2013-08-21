@@ -36,6 +36,12 @@ def P(obj, depth=1):
 def to_source(x):
     return pformat(x)
 
+# use a __repr__ that allows us to reconstruct the ast instance
+def astnode_repr(self):
+    return "ASTNode(" + str(self.lst) + "," + self.text.__repr__() + "," + \
+        str(self.start_line) + "," + str(self.start_col) + "," + str(self.end_line) + ","+ str(self.end_col) + ")"
+ASTNode.__repr__ = astnode_repr
+
 class CoreGenerator(ASTBuilder):
     def __init__(self):
         self.parser = None

@@ -63,8 +63,11 @@ def prim_import(proc):
     imodule = proc.interpreter.instantiate_module(compiled_module, args, proc.interpreter.kernel_module_instance())
     return imodule
 
-def prim_exception_raise(proc):
-    proc.interpreter.throw(proc.r_rp)
+def prim_exception_throw(proc):
+    proc.throw(proc.r_rp)
+
+def prim_exception_type(proc):
+    return proc.r_rp['_vt']
 
 def prim_vmprocess(proc):
     VMProcessClass = proc.interpreter.get_vt(proc)
@@ -493,7 +496,7 @@ def prim_compiled_class_add_method(proc):
     elif flag['self'] == 'class_method' or flag['self'] == 'constructor':
         proc.r_rdp['own_methods'][cfun['name']] = cfun
     else:
-        proc.interpreter.throw_with_value("Unknown flag: " + P(flag,1,True))
+        proc.throw_with_message("Unknown flag: " + P(flag,1,True))
 
     # add the function to the instantiated classes:
     for imod in proc.interpreter.imodules():
@@ -713,7 +716,7 @@ def prim_compiled_module_instantiate(proc):
 # its leaf object, not to the delegated QWidget
 def _lookup_field(proc, mobj, name):
     if mobj == None:
-        proc.interpreter.throw_with_value('field not found: ' + name)
+        proc.throw_with_message('field not found: ' + name)
     if name in mobj and mobj[name] != None:
         return mobj[name]
     else:
@@ -887,8 +890,11 @@ def prim_qt_qwidget_connect(proc):
         try:
             proc.setup_and_run_fun(None, None, '<?>', slot, args, True)
         except proc.interpreter.py_memetalk_exception() as e:
-            print "Exception raised: " + e.mmobj()['value']
-            print traceback.format_exc()
+            print "Exception raised: " + e.mmobj()['message']
+            print "Python trace:"
+            print e.mmobj()['py_trace']
+            print "Memetalk trace:"
+            print e.mmobj()['mtrace']
 
     getattr(qtobj,signal).connect(callback)
     return proc.r_rp
@@ -1020,8 +1026,11 @@ def prim_qt_qaction_connect(proc):
         try:
             proc.setup_and_run_fun(None, None, '<?>', slot, [], True)
         except proc.interpreter.py_memetalk_exception() as e:
-            print "Exception raised: " + e.mmobj()['value']
-            print traceback.format_exc()
+            print "Exception raised: " + e.mmobj()['message']
+            print "Python trace:"
+            print e.mmobj()['py_trace']
+            print "Memetalk trace:"
+            print e.mmobj()['mtrace']
         #print 'callback slot: ' + str(slot['compiled_function']['body'])
         #print 'callback: eventloop proc equal? ' + str(proc == eventloop_processes[-1]['proc'])
         if proc != eventloop_processes[-1]['proc']:
@@ -1614,8 +1623,11 @@ def prim_qt_extra_qwebpage_enable_plugins(proc):
                     mobj = proc.setup_and_run_fun(None, None, '<?>', fn, [dict(zip(names,values))], True)
                     return _lookup_field(proc, mobj, 'self')
                 except proc.interpreter.py_memetalk_exception() as e:
-                    print "Exception raised: " + e.mmobj()['value']
-                    print traceback.format_exc()
+                    print "Exception raised: " + e.mmobj()['message']
+                    print "Python trace:"
+                    print e.mmobj()['py_trace']
+                    print "Memetalk trace:"
+                    print e.mmobj()['mtrace']
 
         def plugins(self):
             plugin = QWebPluginFactory.Plugin()

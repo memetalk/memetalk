@@ -130,7 +130,7 @@ init new: fun(process, ex, eventloop) {
 
   @statusLabel = qt.QLabel.new(this.statusBar());
   @statusLabel.setMinimumWidth(600);
-
+  @statusLabel.setText(ex.message);
   @execFrames = ExecutionFrames.new(process);
 
   @stackCombo = StackCombo.new(centralWidget, @execFrames);
@@ -397,7 +397,7 @@ instance_method debugIt: fun() {
       @afterEval(fn.getEnv());
     }
   } catch(e) {
-    this.insertSelectedText(e.value());
+    this.insertSelectedText(e.message());
   }
 }
 
@@ -405,7 +405,7 @@ instance_method doIt: fun() {
   try {
     this.evalSelection();
   } catch(e) {
-    this.insertSelectedText(e.value());
+    this.insertSelectedText(e.message());
   }
 }
 
@@ -507,7 +507,7 @@ instance_method inspectIt: fun() {
     var res = this.evalSelection();
     Inspector.new(res).show();
   } catch(e) {
-    this.insertSelectedText(e.value());
+    this.insertSelectedText(e.message());
   }
 }
 
@@ -516,7 +516,7 @@ instance_method printIt: fun() {
     var res = this.evalSelection();
     this.insertSelectedText(res.toString());
   } catch(e) {
-    this.insertSelectedText(e.value());
+    this.insertSelectedText(e.message());
   }
 }
 
@@ -577,7 +577,7 @@ instance_method accept: fun() {
       @cfun.setCode(this.text());
       this.saved();
     } catch(ex) {
-      this.insertSelectedText(ex.value());
+      this.insertSelectedText(ex.message());
     }
 }
 
@@ -755,7 +755,7 @@ instance_method debugIt: fun() {
     var fn = evalWithVarsFn(this.selectedText(), {"this" : @receiver}, thisModule);
     VMProcess.debug(fn,[]);
   } catch(e) {
-    this.insertSelectedText(e.value());
+    this.insertSelectedText(e.message());
   }
 }
 
@@ -763,7 +763,7 @@ instance_method doIt: fun() {
   try {
     this.evalSelection();
   } catch(e) {
-    this.insertSelectedText(e.value());
+    this.insertSelectedText(e.message());
   }
 }
 
@@ -823,7 +823,7 @@ instance_method inspectIt: fun() {
     var res = this.evalSelection();
     Inspector.new(res).show();
   } catch(e) {
-    this.insertSelectedText(e.value());
+    this.insertSelectedText(e.message());
   }
 }
 
@@ -832,7 +832,7 @@ instance_method printIt: fun() {
     var res = this.evalSelection();
     this.insertSelectedText(res.toString());
   } catch(e) {
-    this.insertSelectedText(e.value());
+    this.insertSelectedText(e.message());
   }
 }
 
@@ -1114,7 +1114,7 @@ instance_method action_debug: fun() {
       var fn = evalWithVarsFn(expr, {}, imod);
       VMProcess.debug(fn,[]);
     } catch(e) {
-      @statusLabel.setText(e.value);
+      @statusLabel.setText(e.message);
     }
   });
 }
@@ -1274,7 +1274,7 @@ instance_method action_eval: fun() {
       var r = evalWithVars(expr, {}, imod);
       @statusLabel.setText(r["result"].toString());
     } catch(e) {
-      @statusLabel.setText(e.value);
+      @statusLabel.setText(e.message);
     }
   });
 }
@@ -1302,7 +1302,7 @@ instance_method action_evalUntil: fun() {
       var r = evalWithVars(expr, {}, imod);
       @statusLabel.setText(r["result"].toString());
     } catch(ex) {
-      @statusLabel.setText(ex.value);
+      @statusLabel.setText(ex.message);
     }
   });
 }

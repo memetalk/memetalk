@@ -406,19 +406,25 @@ module core() {
   }
 
   class Exception {
-    fields: value;
-    init new: fun(value) {
-      @value = value;
+    fields: message, py_exception, py_trace;
+    init new: fun(message) {
+      @message = message;
     }
-    instance_method raise: fun() {
-       <primitive "exception_raise">
+    instance_method throw: fun() {
+       <primitive "exception_throw">
     }
-    instance_method value: fun() {
-      return @value;
+    instance_method message: fun() {
+      return @message;
+    }
+    instance_method py_trace: fun() {
+      return @py_trace;
+    }
+    instance_method type: fun() {
+      <primitive "exception_type">
     }
     class_method throw: fun(value) {
       var self = Exception.new(value);
-      self.raise();
+      self.throw();
     }
   }
 

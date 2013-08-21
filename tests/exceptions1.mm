@@ -38,8 +38,8 @@ init new: fun(x) {
   @x = x;
 }
 
-instance_method raise: fun() {
-   <primitive "exception_raise">
+instance_method throw: fun() {
+   <primitive "exception_throw">
 }
 
 instance_method x: fun() {
@@ -48,7 +48,7 @@ instance_method x: fun() {
 
 class_method throw: fun(x) {
   var self = MyException.new(x);
-  self.raise();
+  self.throw();
 }
 
 end //exceptions1:MyException

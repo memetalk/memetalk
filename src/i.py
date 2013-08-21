@@ -153,9 +153,9 @@ def _instantiate_module(i, compiled_module, _args, parent_module):
                 elif dp['type'] == 'uri':
                     args[name] = i.compile_module_uri(dp['value'])
                 else:
-                    i.throw_with_value('Unknown module spec')
+                    i.current_process.throw_with_message('Unknown module spec')
         if args.keys().sort() != compiled_module['params'].sort():
-            i.throw_with_value('arity error on module parameters')
+            i.current_process.throw_with_message('arity error on module parameters')
 
         # module's aliases. dirty: using arg to set it
         for alias in compiled_module['aliases']:
@@ -219,7 +219,7 @@ def _instantiate_module(i, compiled_module, _args, parent_module):
         elif super_name in compiled_module["compiled_classes"]:
             super_later[c["name"]] = super_name
         else:
-            i.throw_with_value("super class not found: " + super_name)
+            i.current_process.throw_with_message("super class not found: " + super_name)
 
         # superclass BarClass found
         if super_class:
@@ -293,9 +293,9 @@ class ModuleLoader(ASTBuilder):
             ast,_ = self.parser.apply("single_top_level_fun", name)
         except Exception as err:
             if hasattr(err,'formatError'):
-                i.throw_with_value(err.formatError(''.join(self.parser.input.data)), False)
+                i.current_process.throw_with_message(err.formatError(''.join(self.parser.input.data)), False)
             else:
-                i.throw_with_value(traceback.format_exc(), False)
+                i.current_process.throw_py_exception(err, traceback.format_exc())
 
         if _should_dump_ast():
             print "---- AST ----"
@@ -329,9 +329,9 @@ class ModuleLoader(ASTBuilder):
                 return cfun
         except Exception as err:
             if hasattr(err,'formatError'):
-                i.throw_with_value(err.formatError(''.join(self.parser.input.data)))
+                i.current_process.throw_with_message(err.formatError(''.join(self.parser.input.data)))
             else:
-                i.throw_with_value(traceback.format_exc())
+                i.current_process.throw_py_exception(err, traceback.format_exc())
 
 
     def recompile_closure(self, i, cfun, src):
@@ -344,9 +344,9 @@ class ModuleLoader(ASTBuilder):
             ast,_ = self.parser.apply("funliteral")
         except Exception as err:
             if hasattr(err,'formatError'):
-                i.throw_with_value(err.formatError(''.join(self.parser.input.data)), False)
+                i.current_process.throw_with_message(err.formatError(''.join(self.parser.input.data)), False)
             else:
-                i.throw_with_value(traceback.format_exc(), False)
+                i.current_process.throw_py_exception(err, traceback.format_exc())
 
         if _should_dump_ast():
             print "---- AST ----"
@@ -366,9 +366,9 @@ class ModuleLoader(ASTBuilder):
             loader.apply("load_fun_lit")
         except Exception as err:
             if hasattr(err,'formatError'):
-                i.throw_with_value(err.formatError(''.join(self.parser.input.data)))
+                i.current_process.throw_with_message(err.formatError(''.join(self.parser.input.data)))
             else:
-                i.throw_with_value(traceback.format_exc())
+                i.current_process.throw_py_exception(err, traceback.format_exc())
         return cfun
 
     def compile_closure(self, i, src, outer):
@@ -381,9 +381,9 @@ class ModuleLoader(ASTBuilder):
             ast,_ = self.parser.apply("funliteral")
         except Exception as err:
             if hasattr(err,'formatError'):
-                i.throw_with_value(err.formatError(''.join(self.parser.input.data)), False)
+                i.current_process.throw_with_message(err.formatError(''.join(self.parser.input.data)), False)
             else:
-                i.throw_with_value(traceback.format_exc(), False)
+                i.current_process.throw_py_exception(err, traceback.format_exc())
 
         if _should_dump_ast():
             print "---- AST ----"
@@ -403,9 +403,9 @@ class ModuleLoader(ASTBuilder):
             loader.apply("load_fun_lit")
         except Exception as err:
             if hasattr(err,'formatError'):
-                i.throw_with_value(err.formatError(''.join(self.parser.input.data)))
+                i.current_process.throw_with_message(err.formatError(''.join(self.parser.input.data)))
             else:
-                i.throw_with_value(traceback.format_exc())
+                i.current_process.throw_py_exception(err, traceback.format_exc())
 
         return self.first_fnlit
 
@@ -425,9 +425,9 @@ class ModuleLoader(ASTBuilder):
             ast,_ = self.parser.apply("single_top_level_fun", name)
         except Exception as err:
             if hasattr(err,'formatError'):
-                i.throw_with_value(err.formatError(''.join(self.parser.input.data)), False)
+                i.current_process.throw_with_message(err.formatError(''.join(self.parser.input.data)), False)
             else:
-                i.throw_with_value(traceback.format_exc(), False)
+                i.current_process.throw_py_exception(err, traceback.format_exc())
 
         if _should_dump_ast():
             print "---- AST ----"
@@ -446,9 +446,9 @@ class ModuleLoader(ASTBuilder):
             loader.apply("function_definition", flag['self'])
         except Exception as err:
             if hasattr(err,'formatError'):
-                i.throw_with_value(err.formatError(''.join(self.parser.input.data)))
+                i.current_process.throw_with_message(err.formatError(''.join(self.parser.input.data)))
             else:
-                i.throw_with_value(traceback.format_exc())
+                i.current_process.throw_py_exception(err, traceback.format_exc())
 
         if flag['self'] == "class_method" or flag['self'] == "constructor":
             return self.current_class["own_methods"][name]
@@ -468,9 +468,9 @@ class ModuleLoader(ASTBuilder):
             ast,_ = self.parser.apply("start")
         except Exception as err:
             if hasattr(err,'formatError'):
-                i.throw_with_value(err.formatError(''.join(self.parser.input.data)))
+                i.current_process.throw_with_message(err.formatError(''.join(self.parser.input.data)))
             else:
-                i.throw_with_value(traceback.format_exc())
+                i.current_process.throw_py_exception(err, traceback.format_exc())
 
         if _should_dump_mast():
             print "---- AST ----"
@@ -493,9 +493,10 @@ class ModuleLoader(ASTBuilder):
             loader.apply("load_module")
         except Exception as err:
             if hasattr(err,'formatError'):
-                i.throw_with_value(err.formatError(''.join(self.parser.input.data)))
+                i.current_process.throw_with_message(err.formatError(''.join(self.parser.input.data)))
             else:
-                i.throw_with_value(traceback.format_exc())
+                i.current_process.throw_py_exception(err, traceback.format_exc())
+
         return self.current_module
 
     def l_module_license(self, lic):
@@ -631,8 +632,14 @@ class RewindException(VMException):
         self.count = count
 
 class MemetalkException(VMException):
-    def __init__(self, mmobj):
+    def __init__(self, mmobj, mtrace, pytrace = None):
         self._mmobj = mmobj
+        self._mmobj['mtrace'] = mtrace
+        self._mmobj['py_exception'] = self
+        if pytrace == None:
+            self._mmobj['py_trace'] = "".join(traceback.format_stack()[:-1])
+        else:
+            self._mmobj['py_trace'] = pytrace
     def mmobj(self):
         return self._mmobj
 
@@ -697,8 +704,8 @@ class Interpreter():
             self.current_process = Process(self)
             self.processes.append(self.current_process)
         except MemetalkException as e:
-            print "Exception raised during the boot: " + e.mmobj()['value']
-            print traceback.format_exc()
+            print "Exception raised during the boot: " + e.mmobj()['message']
+            print e.mmobj()['py_trace']
         else:
             ret = self.current_process.switch('run_module', 'main', imodule, [])
             print "RETVAL: " + P(ret,1,True)
@@ -750,7 +757,7 @@ class Interpreter():
         return self.instantiate_module(compiled_module, {}, core.kernel_imodule)
 
     def compile_module_uri(self, uri):
-        self.throw_with_value('TODO: compile_module_uri')
+        self.current_process.throw_with_message('TODO: compile_module_uri')
 
     def kernel_module_instance(self):
         return core.kernel_imodule
@@ -763,41 +770,6 @@ class Interpreter():
 
     def py_memetalk_exception(self):
         return MemetalkException
-
-    def throw(self, mex, shouldStartDebugger = True):
-        # MemetalkException encapsulates the memetalk exception:
-        if shouldStartDebugger and self.current_process.flag_stop_on_exception:
-            self.current_process.state = 'exception'
-            self.current_process.last_exception = mex
-            r = self.current_process.dbg_control("throw", True);
-            if r == 'exception':
-                raise MemetalkException(mex)
-        else:
-            raise MemetalkException(mex)
-
-    def throw_with_value(self, value, shouldStartDebugger = True):
-        if _should_warn_of_exception():
-            print "MemetalkException with value: \n" + value
-            self.current_process.pp_stack_trace()
-        ex = self.create_instance(core.Exception)
-
-        # ...and this me being stupid:
-        ex['value'] =  value
-
-        #print "throw/w: " +  str(id(self.current_process)) +  " flagged? " + str(self.current_process.flag_stop_on_exception)
-        if shouldStartDebugger and self.current_process.flag_stop_on_exception:
-            self.current_process.state = 'exception'
-            self.current_process.last_exception = ex
-            #print "def throw: passing control"
-            r = self.current_process.dbg_control("throw", True);
-            #print "def throw is back. proc: " + str(id(self.current_process))
-            #print "def throw: state " + self.current_process.state
-            if self.current_process.state == r:
-                #print "RAISE"
-                raise MemetalkException(ex)
-        else:
-            # MemetalkException encapsulates the memetalk exception:
-            raise MemetalkException(ex)
 
     def create_compiled_function(self, data):
         return _create_compiled_function(data)
@@ -938,17 +910,9 @@ class Process(greenlet):
         try:
             return self.setup_and_run_fun(module, module, entry_name, module[entry_name], args, True)
         except MemetalkException as e:
-            print "exiting with memetalk exception: " + e.mmobj()['value']
-
-    def pp_stack_trace(self):
-        print "\n**** Memetalk stack trace *** :\n"
-        for frame in self.stack:
-            if frame['r_cp']:
-                print (frame['r_cp']['compiled_function']['name'] + " :::" + str(frame['r_cp']['compiled_function']['body']))[0:80] + "..."
-        if self.r_cp:
-            print (self.r_cp['compiled_function']['name'] + " ::: " + str(self.r_cp['compiled_function']['body']))[0:80] + "..."
-        print "\n\n*** python stack trace ***: \n"
-        print traceback.format_exc()
+            print "* Exiting with Memetalk exception: " + e.mmobj()['message']
+            print "* Python stack trace: \n" + e.mmobj()["py_trace"]
+            print "* Memetalk stack trace: \n" + e.mmobj()["mtrace"]
 
     def _lookup(self, drecv, vt, selector):
         if vt == None:
@@ -1018,7 +982,7 @@ class Process(greenlet):
             except Exception as e:
                 self.tear_fun()
                 print "WARNING: python exception ocurred: " + str(e.__class__) + ":" + str(e)
-                self.interpreter.throw_with_value(traceback.format_exc())
+                self.throw_py_exception(e, traceback.format_exc())
                 raise
             self.tear_fun()
             if skip:
@@ -1080,13 +1044,12 @@ class Process(greenlet):
 
     def setup_and_run_fun(self, recv, drecv, name, method, args, should_allocate):
         if isinstance(method, basestring):
-            traceback.print_exc()
-            print("function '" + name + "' lacks implementation. Receiver:");
+            print("*ERROR: function '" + name + "' lacks implementation. Receiver:");
             #P(recv)
             sys.exit(1)
         if not self.ok_arity(method["compiled_function"]["params"], len(args)):
             #P(method,3)
-            self.interpreter.throw_with_value("arity error: " + method['compiled_function']['name'] +\
+            self.throw_with_message("arity error: " + method['compiled_function']['name'] +\
                                                   ", expecting " + str(len(method["compiled_function"]["params"])) +\
                                                   ", got " + str(len(args)) + " -- "+ P(args,1,True))
 
@@ -1140,7 +1103,7 @@ class Process(greenlet):
     def do_send(self, receiver, selector, args):
         drecv, method = self._lookup(receiver, self.interpreter.get_vt(receiver), selector)
         if not method:
-            self.interpreter.throw_with_value("DoesNotUnderstand: " + selector + " -- " + P(receiver,1,True))
+            self.throw_with_message("DoesNotUnderstand: " + selector + " -- " + P(receiver,1,True))
         else:
             return self.setup_and_run_fun(receiver, drecv, selector, method, args, True)
 
@@ -1163,7 +1126,7 @@ class Process(greenlet):
         if idx != None:
             self.r_ep[idx] = value
         else:
-            self.interpreter.throw_with_value('Undeclared env variable: ' + name)
+            self.throw_with_message('Undeclared env variable: ' + name)
 
     def set_local_value(self, name, expr):
         if self.r_ep != None:
@@ -1181,7 +1144,7 @@ class Process(greenlet):
             if self.state == 'exception': # we know, let it propagate
                 raise
             else:
-                self.interpreter.throw_with_value(traceback.format_exc())
+                self.throw_py_exception(e, traceback.format_exc())
 
     def eval_prim(self, prim_name, ast):
         self.r_ip = ast
@@ -1193,7 +1156,7 @@ class Process(greenlet):
         self.dbg_control('eval_do_field_assign')
 
         if not field in self.r_rdp:
-            self.interpreter.throw_with_value("object has no field " + field)
+            self.throw_with_message("object has no field " + field)
         else:
             self.r_rdp[field] = rhs
 
@@ -1217,7 +1180,7 @@ class Process(greenlet):
         if field in self.r_rdp:
             return self.r_rdp[field]
         else:
-            self.interpreter.throw_with_value("object has no field " + field)
+            self.throw_with_message("object has no field " + field)
 
     def eval_do_access_index(self, left, idx, ast):
         return left[idx]
@@ -1255,7 +1218,7 @@ class Process(greenlet):
         elif mp['_delegate'] != None:
             return self.lookup_in_modules(name, mp['_delegate'])
         else:
-            self.interpreter.throw_with_value("Undeclared: " + name + " : "+P(self.r_cp['compiled_function'],1,True))
+            self.throw_with_message("Undeclared: " + name + " : "+P(self.r_cp['compiled_function'],1,True))
 
     def eval_do_return(self, value, ast):
         self.r_ip = ast
@@ -1269,7 +1232,7 @@ class Process(greenlet):
         # -normal methods can invoke super() to get its superclass version.
         # -A method m() cannot invoke a super method of different name.
         if not self.r_cp["compiled_function"]["is_ctor"]:
-            self.interpreter.throw_with_value("Cannot use super.m() outside ctor");
+            self.throw_with_message("Cannot use super.m() outside ctor");
 
         instance = self.r_rdp
         klass = self.interpreter.get_vt(instance)
@@ -1279,9 +1242,9 @@ class Process(greenlet):
         drecv, method = self._lookup(receiver, self.interpreter.get_vt(pklass), selector)
 
         if not method:
-            self.interpreter.throw_with_value("DoesNotUnderstand: " + selector + " -- " + P(instance,1,True))
+            self.throw_with_message("DoesNotUnderstand: " + selector + " -- " + P(instance,1,True))
         elif not method["compiled_function"]["is_ctor"]:
-            self.interpreter.throw_with_value("Method is not constructor: " + selector)
+            self.hrow_with_message("Method is not constructor: " + selector)
         else:
             return self.setup_and_run_fun(self.r_rp, drecv, selector, method, args, False)
 
@@ -1290,7 +1253,7 @@ class Process(greenlet):
         self.dbg_control('eval_do_bin_send')
         drecv, method = self._lookup(receiver, self.interpreter.get_vt(receiver), selector)
         if not method:
-            self.interpreter.throw_with_value("DoesNotUnderstand: " + selector + " -- " + P(receiver,1,True))
+            self.throw_with_message("DoesNotUnderstand: " + selector + " -- " + P(receiver,1,True))
         else:
             return self.setup_and_run_fun(receiver, drecv, selector, method, [arg], True)
 
@@ -1422,6 +1385,79 @@ class Process(greenlet):
                 self.state = 'paused'
                 del self.interpreter.volatile_breakpoints[idx]
                 return
+
+    def throw(self, mex, shouldStartDebugger = True):
+        # MemetalkException encapsulates the memetalk exception:
+        if shouldStartDebugger and self.flag_stop_on_exception:
+            self.state = 'exception'
+            self.last_exception = mex
+            r = self.dbg_control("throw", True);
+            if r == 'exception':
+                if 'py_exception' in mex and mex['py_exception'] != None:
+                    raise mex['py_exception']
+                else:
+                    raise MemetalkException(mex, self.pp_stack_trace())
+        else:
+            if 'py_exception' in mex and mex['py_exception'] != None:
+                raise mex['py_exception']
+            else:
+                raise MemetalkException(mex, self.pp_stack_trace())
+
+    def throw_py_exception(self, pyex, tb, shouldStartDebugger = True):
+        if _should_warn_of_exception():
+            print "Python exception with message: \n" + pyex.message
+        ex = self.interpreter.create_instance(core.Exception)
+
+        # ...and this me being stupid:
+        ex['message'] =  "Python exception: " + pyex.message
+
+        #print "throw/w: " +  str(id(self.current_process)) +  " flagged? " + str(self.current_process.flag_stop_on_exception)
+        if shouldStartDebugger and self.flag_stop_on_exception:
+            self.state = 'exception'
+            self.last_exception = ex
+            #print "def throw: passing control"
+            r = self.dbg_control("throw", True);
+            #print "def throw is back. proc: " + str(id(self.current_process))
+            #print "def throw: state " + self.current_process.state
+            if self.state == r:
+                #print "RAISE"
+                raise MemetalkException(ex, self.pp_stack_trace(), tb)
+        else:
+            # MemetalkException encapsulates the memetalk exception:
+            raise MemetalkException(ex, self.pp_stack_trace(), tb)
+
+    def throw_with_message(self, msg, shouldStartDebugger = True):
+        if _should_warn_of_exception():
+            print "MemetalkException with message: \n" + msg
+            self.pp_stack_trace()
+        ex = self.interpreter.create_instance(core.Exception)
+
+        # ...and this me being stupid:
+        ex['message'] =  msg
+
+        #print "throw/w: " +  str(id(self.current_process)) +  " flagged? " + str(self.current_process.flag_stop_on_exception)
+        if shouldStartDebugger and self.flag_stop_on_exception:
+            self.state = 'exception'
+            self.last_exception = ex
+            #print "def throw: passing control"
+            r = self.dbg_control("throw", True);
+            #print "def throw is back. proc: " + str(id(self.current_process))
+            #print "def throw: state " + self.current_process.state
+            if self.state == r:
+                #print "RAISE"
+                raise MemetalkException(ex, self.pp_stack_trace())
+        else:
+            # MemetalkException encapsulates the memetalk exception:
+            raise MemetalkException(ex, self.pp_stack_trace())
+
+    def pp_stack_trace(self):
+        st =  "\n**** Memetalk stack trace *** :\n"
+        for frame in self.stack:
+            if frame['r_cp']:
+                st = st +  (frame['r_cp']['compiled_function']['name'] + " :::" + str(frame['r_cp']['compiled_function']['body']))[0:80] + "...\n"
+        if self.r_cp:
+            st = st + (self.r_cp['compiled_function']['name'] + " ::: " + str(self.r_cp['compiled_function']['body']))[0:80] + "...\n"
+        return st
 
 if __name__ == "__main__":
     if len(sys.argv) == 1:
