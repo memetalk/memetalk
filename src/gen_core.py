@@ -111,7 +111,7 @@ class CoreGenerator(ASTBuilder):
 
         for k,v in self.classes.iteritems():
             append(k + " = {}")
-            append(k+"Behavior = {'_vt': Behavior,'parent':"+self.supers[k]+"Behavior, 'dict':{}, '@tag':'"+self.supers[k]+"Behavior'}")
+            append(k+"Behavior = {'_vt': Behavior,'parent':"+self.supers[k]+"Behavior, 'dict':{}, '@tag':'"+k+"Behavior'}")
 
         for name,obj in self.objects.iteritems():
             for key,v in obj.iteritems():
