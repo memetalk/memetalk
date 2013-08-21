@@ -559,6 +559,10 @@ module core() {
     <primitive "exception_unprotected">
   }
 
+  exit: fun(code) {
+    <primitive "exit">
+  }
+
   http_get: fun(url) {
     <primitive "http_get">
   }

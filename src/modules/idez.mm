@@ -20,7 +20,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 .endlicense
 
-.preamble(qt, io)
+.preamble(qt, foo, io)
+  foo : memetalk/foo/1.0();
   qt : memetalk/qt/1.0();
   io : memetalk/io/1.0();
   [QWidget, QMainWindow, QsciScintilla, QLineEdit, QComboBox, QTableWidget, QTableWidgetItem] <= qt;
@@ -30,22 +31,10 @@ SOFTWARE.
 // -- module functions --
 
 debug: fun(process, ex) {
-  var eventloop = null;
-  if (!qt.qapp_running()) {
-    eventloop = qt.QApplication.new();
-  } else {
-    eventloop = qt.QEventLoop.new();
-  }
-
-  var dbg = DebuggerUI.new(process, ex, eventloop);
-  dbg.show();
-  var ret = eventloop.exec();
   process.setDebuggerProcess(null);
-  if(ret == 0) {
-    return ["continue",null];
-  } else {
-    return ["continue_throw", null];
-  }
+  var dbg = DebuggerUI.new(process, ex);
+  dbg.show();
+  return null;
 }
 
 evalWithFrame: fun(text, frame, imod) {
@@ -71,13 +60,13 @@ evalWithVarsFn: fun(text, vars, imod) {
 }
 
 main: fun() {
-  var app = qt.QApplication.new();
-  var me = ModuleExplorer.new();
   VMProcess.stopOnException();
-  //var w = Workspace.new();
-  //w.show();
-  me.show();
-  return app.exec();
+  qt.start();
+  //var me = ModuleExplorer.new();
+  //me.show();
+  var w = Workspace.new();
+  w.show();
+  return null;
 }
 
 // -- module classes --
@@ -113,11 +102,10 @@ instance_method undo: fun() {
 end //idez:CommandHistory
 
 class DebuggerUI < QMainWindow
-fields: frame_index, process, exception, execFrames, stackCombo, editor, localVarList, fieldVarList, statusLabel, eventloop, execMenu, shouldUpdateVars;
-init new: fun(process, ex, eventloop) {
+fields: frame_index, process, exception, execFrames, stackCombo, editor, localVarList, fieldVarList, statusLabel, execMenu, shouldUpdateVars;
+init new: fun(process, ex) {
   super.new();
   @process = process;
-  @eventloop = eventloop;
   @frame_index = 0;
   @exception = ex;
 
@@ -279,13 +267,13 @@ instance_method acceptIt: fun() {
   @editor.saved();
 }
 
-instance_method closeEvent: fun() {
-  if (@exception) {
-    @eventloop.exit(1);
-  } else {
-    @eventloop.exit(0);
-  }
-}
+// instance_method closeEvent: fun() {
+//   if (@exception) {
+//     @eventloop.exit(1);
+//   } else {
+//     @eventloop.exit(0);
+//   }
+// }
 
 instance_method continue: fun() {
   this.close();
@@ -1749,10 +1737,16 @@ init new: fun(parent, execframes) {
 
 instance_method updateInfo: fun() {
   this.clear();
+  io.print(@frames);
+  io.print("---");
   @frames.names().each(fun(name) {
+    io.print(name);
     this.addItem(name);
+    io.print("* added " + name);
   });
+  io.print("setting idx");
   this.setCurrentIndex(@frames.size() - 1);
+  io.print("done update");
 }
 
 end //idez:StackCombo
@@ -1869,13 +1863,37 @@ init new: fun() {
                        fun() { thisModule }, null,
                        fun(env) { @variables = env + @variables; });
 
-  @editor.initActions();
   this.setCentralWidget(@editor);
 
-  var execMenu = this.menuBar().addMenu("&Exploring");
-  @editor.actions().each(fun(action) {
-    execMenu.addAction(action)
+
+  var execMenu = this.menuBar().addMenu("Exploring");
+  var action = qt.QAction.new("Do it", this);
+  action.setShortcut("ctrl+d");
+  action.connect("triggered", fun() {
+    @editor.doIt();
   });
+  execMenu.addAction(action);
+
+  action = qt.QAction.new("Print it", this);
+  action.setShortcut("ctrl+p");
+  action.connect("triggered", fun() {
+      @editor.printIt();
+  });
+  execMenu.addAction(action);
+
+  action = qt.QAction.new("Inspect it", this);
+  action.setShortcut("ctrl+i");
+  action.connect("triggered", fun() {
+      @editor.inspectIt();
+  });
+  execMenu.addAction(action);
+
+  action = qt.QAction.new("Debug it", this);
+  action.setShortcut("ctrl+b");
+  action.connect("triggered", fun() {
+      @editor.debugIt();
+  });
+  execMenu.addAction(action);
 }
 
 end //idez:Workspace

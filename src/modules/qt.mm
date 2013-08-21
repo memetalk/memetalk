@@ -27,8 +27,8 @@ SOFTWARE.
 
 // -- module functions --
 
-qapp_running: fun() {
-  <primitive "qapp_running">
+start: fun() {
+  <primitive "start_qt">
 }
 
 // -- module classes --
@@ -59,20 +59,11 @@ end //qt:QAction
 
 class QApplication
 fields: self;
-init new: fun() {
-  <primitive "qt_qapplication_new">
-}
-
-instance_method exec: fun() {
-  <primitive "qt_qapplication_exec">
-}
-
-instance_method exit: fun(code) {
-  <primitive "qt_qapplication_exit">
-}
-
 class_method focusWidget: fun() {
   <primitive "qt_qapplication_focus_widget">
+}
+class_method exit: fun(code) {
+  <primitive "qt_qapplication_exit">
 }
 
 end //qt:QApplication

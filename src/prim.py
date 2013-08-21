@@ -34,6 +34,8 @@ import scintilla_editor
 from config import MODULES_PATH
 import traceback
 from mmpprint import P
+import t_qt
+from t_qt import on_qt_thread
 
 _app = None
 _qapp_running = False
@@ -81,20 +83,8 @@ def prim_vmprocess_stack_frames(proc):
         [proc.interpreter.alloc_object(VMStackFrameClass,{'self':_proc.top_frame()})]
 
 def prim_vmprocess_step_into(proc):
-    #print '+ENTER prim_vmprocess_step_into'
     _proc = _lookup_field(proc, proc.r_rp, 'self')
-    #print 'vmprocess: sending step_into'
-    ret = _proc.switch("step_into", None)
-    #print 'vmprocess/step_into received: ' + P(ret,1,True)
-    if 'done' in ret:
-        #print 'done...exiting qevent'
-        eventloop_processes[-1]['done'] = True
-        return False
-    #print 'vmprocess/step_over DONE'
-    if 'exception' in ret:
-        return ret[1]
-    else:
-        return True
+    _proc.resume("paused")
 
 def prim_vmprocess_step_over(proc):
     #print '+ENTER prim_vmprocess_step_over'
@@ -143,8 +133,8 @@ def prim_vmprocess_set_debugger_process(proc):
 def prim_vmprocess_debug(proc):
     fn = proc.locals['fn']
     args = proc.locals['args']
-    proc.state = 'paused'
-    return proc.setup_and_run_unprotected(None, None, fn['compiled_function']['name'], fn, args, True)
+    proc.interpreter.spawn(None, None, fn['compiled_function']['name'], fn, args, 'paused')
+    #return proc.setup_and_run_unprotected(None, None, fn['compiled_function']['name'], fn, args, True)
 
 def prim_vmprocess_stop_on_exception(proc):
     proc.flag_stop_on_exception = True
@@ -786,50 +776,47 @@ def qstring_to_str(qstring):
     #return str(qstring.toUtf8()).decode("utf-8")
     return unicode(qstring.toUtf8(), "utf-8")
 
-eventloop_processes = []
 
-def prim_qt_qapplication_new(proc):
-    global _app, _qt_imodule
-    _app = QtGui.QApplication(sys.argv)
+def prim_exit(proc):
+    proc.exit(proc.locals['code'])
+
+#################### Qt bindings ####################
+
+
+def prim_start_qt(proc):
+    global _qt_imodule
     _qt_imodule = proc.r_mp
-    proc.r_rdp['self'] = _app
-    return proc.r_rp
+    t_qt.start_qt(proc.lock)
 
-def prim_qt_qapplication_exec(proc):
-    global _qapp_running
-    _qapp_running = True
-    eventloop_processes.append({'proc':proc, 'qtobj':proc.r_rdp['self'], 'done': False})
-    return proc.r_rdp['self'].exec_()
+    def bla():
+        t_qt.exit(proc,0)
+    t_qt._qt_qapp.lastWindowClosed.connect(bla)
 
+# QApplication
+
+@on_qt_thread
 def prim_qt_qapplication_focus_widget(proc):
     w = QApplication.focusWidget()
     return _meme_instance(proc,w)
 
+def prim_qt_qapplication_exit(proc):
+    t_qt.exit(proc.locals["code"])
+
 
 def prim_qt_qeventloop_new(proc):
-    qev = QtCore.QEventLoop()
+    qev = QEventLoop()
     proc.r_rdp['self'] = qev
     return proc.r_rp
 
 def prim_qt_qeventloop_exec(proc):
-    eventloop_processes.append({'proc':proc, 'qtobj':proc.r_rdp['self'], 'done': False})
     return proc.r_rdp['self'].exec_()
 
 def prim_qt_qeventloop_exit(proc):
-    #print 'done...exiting qevent'
-    eventloop_processes[-1]['qtobj'].exit(proc.locals['code'])
-    eventloop_processes[-1]['done'] = True
-    return proc.r_rdp['self'].exit(proc.locals['code'])
-
-def prim_qt_qapplication_exit(proc):
-    #print 'done...exiting qevent'
-    eventloop_processes[-1]['qtobj'].exit(proc.locals['code'])
-    eventloop_processes[-1]['done'] = True
     return proc.r_rdp['self'].exit(proc.locals['code'])
 
 # QWidget
+@on_qt_thread
 def prim_qt_qwidget_new(proc):
-    # new(QWidget parent)
     parent = proc.locals['parent']
     if parent != None:
         qt_parent = _lookup_field(proc, parent, 'self')
@@ -838,42 +825,50 @@ def prim_qt_qwidget_new(proc):
         proc.r_rdp['self'] = QtGui.QWidget()
     return proc.r_rp
 
+@on_qt_thread
 def prim_qt_qwidget_set_focus(proc):
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
     qtobj.setFocus()
     return proc.r_rp
 
+@on_qt_thread
 def prim_qt_qwidget_set_maximum_height(proc):
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
     qtobj.setMaximumHeight(proc.locals['h'])
     return proc.r_rp
 
+@on_qt_thread
 def prim_qt_qwidget_set_minimum_size(proc):
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
     qtobj.setMinimumSize(proc.locals['w'],proc.locals['h'])
     return proc.r_rp
 
+@on_qt_thread
 def prim_qt_qwidget_set_minimum_width(proc):
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
     qtobj.setMinimumWidth(proc.locals['w'])
     return proc.r_rp
 
 
+@on_qt_thread
 def prim_qt_qwidget_show(proc):
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
     qtobj.show()
     return proc.r_rp
 
+@on_qt_thread
 def prim_qt_qwidget_hide(proc):
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
     qtobj.hide()
     return proc.r_rp
 
+@on_qt_thread
 def prim_qt_qwidget_set_window_title(proc):
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
     qtobj.setWindowTitle(proc.locals['title'])
     return proc.r_rp
 
+@on_qt_thread
 def prim_qt_qwidget_resize(proc):
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
     w = proc.locals["w"]
@@ -881,17 +876,20 @@ def prim_qt_qwidget_resize(proc):
     qtobj.resize(w,h)
     return proc.r_rp
 
+@on_qt_thread
 def prim_qt_qwidget_add_action(proc):
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
     qt_action = _lookup_field(proc, proc.locals["action"], 'self')
     qtobj.addAction(qt_action)
     return proc.r_rp
 
+@on_qt_thread
 def prim_qt_qwidget_set_maximum_width(proc):
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
     qtobj.setMaximumWidth(proc.locals['w'])
     return proc.r_rp
 
+@on_qt_thread
 def prim_qt_qwidget_connect(proc):
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
     signal = proc.locals['signal']
@@ -903,7 +901,7 @@ def prim_qt_qwidget_connect(proc):
         try:
             proc.setup_and_run_fun(None, None, '<?>', slot, args, True)
         except proc.interpreter.py_memetalk_exception() as e:
-            print "Exception raised: " + e.mmobj()['message']
+            print "prim_qt_qwidget_connect: Exception raised: " + e.mmobj()['message']
             print "Python trace:"
             print e.mmobj()['py_trace']
             print "Memetalk trace:"
@@ -912,22 +910,27 @@ def prim_qt_qwidget_connect(proc):
     getattr(qtobj,signal).connect(callback)
     return proc.r_rp
 
+@on_qt_thread
 def prim_qt_qwidget_actions(proc):
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
     r = [_meme_instance(proc, x) for x in qtobj.actions()]
     return r
 
+@on_qt_thread
 def prim_qt_qwidget_set_stylesheet(proc):
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
     qtobj.setStyleSheet(proc.locals['s'])
     return proc.r_rp
 
+@on_qt_thread
 def prim_qt_qwidget_is_visible(proc):
     return _lookup_field(proc, proc.r_rp, 'self').isVisible()
 
+@on_qt_thread
 def prim_qt_qwidget_close(proc):
     return _lookup_field(proc, proc.r_rp, 'self').close()
 
+@on_qt_thread
 def prim_qt_qwidget_has_focus(proc):
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
     return qtobj.hasFocus()
@@ -945,10 +948,12 @@ class _QMainWindow(QtGui.QMainWindow):
             fn = self.meme_obj['_vt']['dict']['closeEvent']
             self.proc.setup_and_run_fun(self.meme_obj, self.meme_obj, 'closeEvent', fn, [], True)
 
+@on_qt_thread
 def prim_qt_qmainwindow_new(proc):
     proc.r_rdp['self'] = _QMainWindow(proc, proc.r_rp)
     return proc.r_rp
 
+@on_qt_thread
 def prim_qt_qmainwindow_set_central_widget(proc):
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
     qtobj.setCentralWidget(_lookup_field(proc, proc.locals['widget'],'self'))
@@ -957,12 +962,14 @@ def prim_qt_qmainwindow_set_central_widget(proc):
 # Warning! QMenuBar inherits QWidget!
 # however we did not create the QWidget instance delegate
 # here.
+@on_qt_thread
 def prim_qt_qmainwindow_menu_bar(proc):
     QMenuBarClass = proc.r_mp["QMenuBar"]
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
     qt_bar_instance = qtobj.menuBar()
     return proc.interpreter.alloc_object(QMenuBarClass, {'self':qt_bar_instance})
 
+@on_qt_thread
 def prim_qt_qmainwindow_status_bar(proc):
     QWidgetClass = proc.r_mp["QWidget"]
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
@@ -970,6 +977,7 @@ def prim_qt_qmainwindow_status_bar(proc):
     return proc.interpreter.alloc_object(QWidgetClass, {'self':qt_bar_instance})
 
 # QPlainTextEdit
+@on_qt_thread
 def prim_qt_qplaintextedit_new(proc):
     # new(QWidget parent)
     parent = proc.locals['parent']
@@ -980,29 +988,34 @@ def prim_qt_qplaintextedit_new(proc):
     proc.r_rdp["self"] = QtGui.QPlainTextEdit(qt_parent)
     return proc.r_rp
 
+@on_qt_thread
 def prim_qt_qplaintextedit_set_tabstop_width(proc):
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
     qtobj.setTabStopWidth(proc.locals["val"])
     return proc.r_rp
 
+@on_qt_thread
 def prim_qt_qplaintextedit_text_cursor(proc):
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
     qt_cursor = qtobj.textCursor()
     QTextCursorClass = proc.r_mp["QTextCursor"]
     return proc.interpreter.alloc_object(QTextCursorClass, {'self':qt_cursor})
 
+@on_qt_thread
 def prim_qt_qplaintextedit_set_text_cursor(proc):
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
     cursor = _lookup_field(proc, proc.locals['cursor'], 'self')
     qtobj.setTextCursor(cursor)
     return proc.r_rp
 
+@on_qt_thread
 def prim_qt_qplaintextedit_set_plain_text(proc):
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
     qtobj.setPlainText(proc.locals['text'])
     return proc.r_rp
 
 
+@on_qt_thread
 def prim_qt_qplaintextedit_to_plain_text(proc):
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
     return qstring_to_str(qtobj.toPlainText())
@@ -1013,6 +1026,7 @@ def prim_qt_qplaintextedit_to_plain_text(proc):
 # Warning! QMenuBar inherits QWidget!
 # however we did not create the QWidget instance delegate
 # here.
+@on_qt_thread
 def prim_qt_qmenubar_add_menu(proc):
     label = proc.locals["str"]
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
@@ -1021,6 +1035,7 @@ def prim_qt_qmenubar_add_menu(proc):
     return proc.interpreter.alloc_object(QMenuClass, {'self':qt_menu_instance})
 
 # QAction
+@on_qt_thread
 def prim_qt_qaction_new(proc):
     label = proc.locals['label']
     parent = proc.locals['parent']
@@ -1031,6 +1046,7 @@ def prim_qt_qaction_new(proc):
     proc.r_rdp["self"] = QtGui.QAction(label,qt_parent)
     return proc.r_rp
 
+@on_qt_thread
 def prim_qt_qaction_connect(proc):
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
     signal = proc.locals["signal"]
@@ -1044,43 +1060,35 @@ def prim_qt_qaction_connect(proc):
             print e.mmobj()['py_trace']
             print "Memetalk trace:"
             print e.mmobj()['mtrace']
-        #print 'callback slot: ' + str(slot['compiled_function']['body'])
-        #print 'callback: eventloop proc equal? ' + str(proc == eventloop_processes[-1]['proc'])
-        if proc != eventloop_processes[-1]['proc']:
-            entry = eventloop_processes[-1]
-            #entry['qtobj'].exit(0)
-            entry['proc'].switch('done', None) # this is were the exit point of the debugger arrives
-            #print 'debugger module ended'
-            proc.interpreter.debugger_process = None
-            proc.interpreter.processes.remove(entry['proc'])
-        if eventloop_processes[-1]['done']:
-            #print 'POPing eventloop'
-            eventloop_processes.pop()
-        #print "END of callback"
 
     getattr(qtobj,signal).connect(callback)
     return proc.r_rp
 
+@on_qt_thread
 def prim_qt_qaction_set_shortcut(proc):
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
     qtobj.setShortcut(proc.locals["shortcut"]);
     return proc.r_rp
 
+@on_qt_thread
 def prim_qt_qaction_set_shortcut_context(proc):
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
     qtobj.setShortcutContext(proc.locals["context"]);
     return proc.r_rp
 
+@on_qt_thread
 def prim_qt_qaction_set_enabled(proc):
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
     qtobj.setEnabled(proc.locals["val"]);
     return proc.r_rp
 
+@on_qt_thread
 def prim_qt_qshortcut_set_context(proc):
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
     qtobj.setContext(proc.locals["context"]);
     return proc.r_rp
 
+@on_qt_thread
 def prim_qt_qshortcut_new(proc):
     keys = proc.locals['sc']
     parent = proc.locals['parent']
@@ -1124,6 +1132,7 @@ def prim_qt_qshortcut_new(proc):
 
 # QTextCursor
 
+@on_qt_thread
 def prim_qt_qtextcursor_selected_text(proc):
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
 
@@ -1132,16 +1141,19 @@ def prim_qt_qtextcursor_selected_text(proc):
     # here.
     return qstring_to_str(qtobj.selectedText()).replace(u'\u2029', '\n')
 
+@on_qt_thread
 def prim_qt_qtextcursor_selection_end(proc):
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
     return qtobj.selectionEnd()
 
+@on_qt_thread
 def prim_qt_qtextcursor_set_position(proc):
     pos = proc.locals['pos']
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
     qtobj.setPosition(pos)
     return proc.r_rp
 
+@on_qt_thread
 def prim_qt_qtextcursor_insert_text(proc):
     text = proc.locals['text']
     string = text.decode('string_escape')
@@ -1149,6 +1161,7 @@ def prim_qt_qtextcursor_insert_text(proc):
     qtobj.insertText(string)
     return proc.r_rp
 
+@on_qt_thread
 def prim_qt_qtextcursor_drag_right(proc):
     length = proc.locals['len']
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
@@ -1158,6 +1171,7 @@ def prim_qt_qtextcursor_drag_right(proc):
 
 #QLayout
 
+@on_qt_thread
 def prim_qt_qlayout_add_widget(proc):
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
     parent = _lookup_field(proc, proc.locals['widget'], 'self')
@@ -1165,6 +1179,7 @@ def prim_qt_qlayout_add_widget(proc):
     return proc.r_rp
 
 # QVBoxLayout
+@on_qt_thread
 def prim_qt_qvboxlayout_new(proc):
     parent = proc.locals['parent']
     if parent != None:
@@ -1174,12 +1189,14 @@ def prim_qt_qvboxlayout_new(proc):
         proc.r_rdp['self'] = QtGui.QVBoxLayout()
     return proc.r_rp
 
+@on_qt_thread
 def prim_qt_qvboxlayout_add_layout(proc):
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
     parent = _lookup_field(proc, proc.locals['layout'], 'self')
     qtobj.addLayout(parent)
     return proc.r_rp
 
+@on_qt_thread
 def prim_qt_qvboxlayout_add_widget(proc):
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
     w = _lookup_field(proc, proc.locals['widget'], 'self')
@@ -1189,6 +1206,7 @@ def prim_qt_qvboxlayout_add_widget(proc):
 
 
 # QHBoxLayout
+@on_qt_thread
 def prim_qt_qhboxlayout_new(proc):
     parent = proc.locals['parent']
     if parent != None:
@@ -1198,18 +1216,21 @@ def prim_qt_qhboxlayout_new(proc):
         proc.r_rdp['self'] = QtGui.QHBoxLayout()
     return proc.r_rp
 
+@on_qt_thread
 def prim_qt_qhboxlayout_add_widget(proc):
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
     w = _lookup_field(proc, proc.locals['widget'], 'self')
     qtobj.addWidget(w)
     return proc.r_rp
 
+@on_qt_thread
 def prim_qt_qhboxlayout_set_contents_margins(proc):
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
     qtobj.setContentsMargins(proc.locals['l'],proc.locals['t'],proc.locals['r'],proc.locals['b'])
     return proc.r_rp
 
 # QListWidget
+@on_qt_thread
 def prim_qt_qlistwidget_new(proc):
     parent = proc.locals['parent']
     if parent != None:
@@ -1219,11 +1240,13 @@ def prim_qt_qlistwidget_new(proc):
         proc.r_rdp['self'] = QtGui.QListWidget()
     return proc.r_rp
 
+@on_qt_thread
 def prim_qt_qlistwidget_current_item(proc):
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
     return _meme_instance(proc,qtobj.currentItem())
 
 # QListWidgetItem
+@on_qt_thread
 def prim_qt_qlistwidgetitem_new(proc):
     txt = proc.locals['text']
     parent = proc.locals['parent']
@@ -1231,12 +1254,14 @@ def prim_qt_qlistwidgetitem_new(proc):
     proc.r_rdp['self'] = QtGui.QListWidgetItem(txt,qtparent)
     return proc.r_rp
 
+@on_qt_thread
 def prim_qt_qlistwidgetitem_text(proc):
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
     return qstring_to_str(qtobj.text())
 
 
 #QLineEdit
+@on_qt_thread
 def prim_qt_qlineedit_new(proc):
     parent = proc.locals['parent']
     if parent != None:
@@ -1246,30 +1271,36 @@ def prim_qt_qlineedit_new(proc):
         proc.r_rdp['self'] = QtGui.QLineEdit()
     return proc.r_rp
 
+@on_qt_thread
 def prim_qt_qlineedit_text(proc):
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
     return qstring_to_str(qtobj.text())
 
+@on_qt_thread
 def prim_qt_qlineedit_set_text(proc):
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
     qtobj.setText(proc.locals['text'])
     return proc.r_rp
 
+@on_qt_thread
 def prim_qt_qlineedit_selected_text(proc):
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
     return qstring_to_str(qtobj.selectedText())
 
+@on_qt_thread
 def prim_qt_qlineedit_select_all(proc):
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
     qtobj.selectAll()
     return proc.r_rp
 
+@on_qt_thread
 def prim_qt_qlineedit_set_selection(proc):
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
     qtobj.setSelection(proc.locals['start'], proc.locals['length'])
     return proc.r_rp
 
 
+@on_qt_thread
 def prim_qt_qlabel_new(proc):
     parent = proc.locals['parent']
     if parent != None:
@@ -1279,22 +1310,26 @@ def prim_qt_qlabel_new(proc):
         proc.r_rdp['self'] = QtGui.QLabel()
     return proc.r_rp
 
+@on_qt_thread
 def prim_qt_qlabel_set_text(proc):
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
     qtobj.setText(proc.locals['text'])
     return proc.r_rp
 
+@on_qt_thread
 def prim_qt_qheaderview_hide(proc):
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
     qtobj.hide()
     return proc.r_rp
 
+@on_qt_thread
 def prim_qt_qheaderview_set_stretch_last_section(proc):
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
     qtobj.setStretchLastSection(proc.locals['val'])
     return proc.r_rp
 
 
+@on_qt_thread
 def prim_qt_qcombobox_new(proc):
     parent = proc.locals['parent']
     if parent != None:
@@ -1304,16 +1339,19 @@ def prim_qt_qcombobox_new(proc):
         proc.r_rdp['self'] = QtGui.QComboBox()
     return proc.r_rp
 
+@on_qt_thread
 def prim_qt_qcombobox_add_item(proc):
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
     qtobj.addItem(proc.locals['item'])
     return proc.r_rp
 
+@on_qt_thread
 def prim_qt_qcombobox_set_current_index(proc):
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
     qtobj.setCurrentIndex(proc.locals['i'])
     return proc.r_rp
 
+@on_qt_thread
 def prim_qt_qcombobox_clear(proc):
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
     qtobj.clear()
@@ -1321,6 +1359,7 @@ def prim_qt_qcombobox_clear(proc):
 
 ## QTableWidget
 
+@on_qt_thread
 def prim_qt_qtablewidget_new(proc):
     parent = proc.locals['parent']
     #rows = proc.locals['rows']
@@ -1332,49 +1371,58 @@ def prim_qt_qtablewidget_new(proc):
         proc.r_rdp['self'] = QtGui.QTableWidget()
     return proc.r_rp
 
+@on_qt_thread
 def prim_qt_qtablewidget_set_horizontal_header_labels(proc):
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
     qtobj.setHorizontalHeaderLabels(proc.locals['labels'])
     return proc.r_rp
 
+@on_qt_thread
 def prim_qt_qtablewidget_vertical_header(proc):
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
     header = qtobj.verticalHeader()
     QHeaderViewClass = proc.r_mp['QHeaderView']
     return proc.interpreter.alloc_object(QHeaderViewClass, {'self':header})
 
+@on_qt_thread
 def prim_qt_qtablewidget_set_selection_mode(proc):
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
     qtobj.setSelectionMode(proc.locals['mode'])
     return proc.r_rp
 
+@on_qt_thread
 def prim_qt_qtablewidget_horizontal_header(proc):
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
     header = qtobj.horizontalHeader()
     QHeaderViewClass = proc.r_mp['QHeaderView']
     return proc.interpreter.alloc_object(QHeaderViewClass, {'self':header})
 
+@on_qt_thread
 def prim_qt_qtablewidget_set_item(proc):
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
     item = _lookup_field(proc, proc.locals['item'], 'self')
     qtobj.setItem(proc.locals['line'], proc.locals['col'], item)
     return proc.r_rp
 
+@on_qt_thread
 def prim_qt_qtablewidget_set_sorting_enabled(proc):
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
     qtobj.setSortingEnabled(proc.locals['val'])
     return proc.r_rp
 
+@on_qt_thread
 def prim_qt_qtablewidget_clear(proc):
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
     qtobj.clear()
     return proc.r_rp
 
+@on_qt_thread
 def prim_qt_qtablewidget_set_row_count(proc):
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
     qtobj.setRowCount(proc.locals['count'])
     return proc.r_rp
 
+@on_qt_thread
 def prim_qt_qtablewidget_set_column_count(proc):
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
     qtobj.setColumnCount(proc.locals['count'])
@@ -1387,16 +1435,19 @@ class _QTableWidgetItem(QTableWidgetItem):
         super(QTableWidgetItem, self).__init__(label)
         self.meme_instance = meme
 
+@on_qt_thread
 def prim_qt_qtablewidgetitem_new(proc):
     proc.r_rdp['self'] = _QTableWidgetItem(proc.r_rp, proc.locals['label'])
     return proc.r_rp
 
+@on_qt_thread
 def prim_qt_qtablewidgetitem_set_flags(proc):
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
     qtobj.setFlags(Qt.ItemFlag(proc.locals['flags']))
     return proc.r_rp
 
 
+@on_qt_thread
 def prim_qt_qwebview_new(proc):
     parent = proc.locals['parent']
     if parent != None:
@@ -1406,6 +1457,7 @@ def prim_qt_qwebview_new(proc):
         proc.r_rdp['self'] = QtWebKit.QWebView()
     return proc.r_rp
 
+@on_qt_thread
 def prim_qt_qwebview_set_url(proc):
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
     qtobj.setUrl(QtCore.QUrl(proc.locals['url']))
@@ -1417,37 +1469,45 @@ def prim_qt_qwebview_set_url(proc):
 #     qtobj.setHtml(open(proc.locals['url']).read())
 #     return proc.r_rp
 
+@on_qt_thread
 def prim_qt_qwebview_set_html(proc):
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
     qtobj.setHtml(proc.locals['html'])
     return proc.r_rp
 
+@on_qt_thread
 def prim_qt_qwebview_page(proc):
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
     return _meme_instance(proc,qtobj.page())
 
+@on_qt_thread
 def prim_qt_qwebpage_set_link_delegation_policy(proc):
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
     qtobj.setLinkDelegationPolicy(proc.locals['policy'])
     return proc.r_rp
 
+@on_qt_thread
 def prim_qt_qwebpage_main_frame(proc):
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
     return _meme_instance(proc,qtobj.mainFrame())
 
+@on_qt_thread
 def prim_qt_qwebframe_document_element(proc):
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
     x = _meme_instance(proc,qtobj.documentElement())
     return x
 
+@on_qt_thread
 def prim_qt_qwebframe_scroll_to_anchor(proc):
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
     return qtobj.scrollToAnchor(proc.locals['anchor'])
 
+@on_qt_thread
 def prim_qt_qwebelement_find_first(proc):
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
     return _meme_instance(proc,qtobj.findFirst(proc.locals['str']))
 
+@on_qt_thread
 def prim_qt_qwebelement_append_outside(proc):
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
     if isinstance(proc.locals['val'], basestring):
@@ -1456,6 +1516,7 @@ def prim_qt_qwebelement_append_outside(proc):
         qtobj.appendOutside(_lookup_field(proc, proc.locals['val'], 'self'))
     return proc.r_rp
 
+@on_qt_thread
 def prim_qt_qwebelement_append_inside(proc):
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
     if isinstance(proc.locals['val'], basestring):
@@ -1464,59 +1525,72 @@ def prim_qt_qwebelement_append_inside(proc):
         qtobj.appendInside(_lookup_field(proc, proc.locals['val'], 'self'))
     return proc.r_rp
 
+@on_qt_thread
 def prim_qt_qwebelement_set_plain_text(proc):
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
     qtobj.setPlainText(proc.locals['str'])
     return proc.r_rp
 
+@on_qt_thread
 def prim_qt_qwebelement_clone(proc):
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
     return _meme_instance(proc,qtobj.clone())
 
+@on_qt_thread
 def prim_qt_qwebelement_set_style_property(proc):
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
     qtobj.setStyleProperty(proc.locals['name'], proc.locals['val'])
     return proc.r_rp
 
+@on_qt_thread
 def prim_qt_qwebelement_set_attribute(proc):
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
     qtobj.setAttribute(proc.locals['name'], proc.locals['val'])
     return proc.r_rp
 
 
+@on_qt_thread
 def prim_qt_qwebelement_to_outer_xml(proc):
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
     return qstring_to_str(qtobj.toOuterXml())
 
+@on_qt_thread
 def prim_qt_qwebelement_set_inner_xml(proc):
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
     qtobj.setInnerXml(proc.locals['xml'])
     return proc.r_rp
 
+@on_qt_thread
 def prim_qt_qwebelement_take_from_document(proc):
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
     return qtobj.takeFromDocument()
 
+@on_qt_thread
 def prim_qt_qurl_has_fragment(proc):
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
     return qtobj.hasFragment()
 
+@on_qt_thread
 def prim_qt_qurl_fragment(proc):
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
     return qstring_to_str(qtobj.fragment())
 
+@on_qt_thread
 def prim_qt_qurl_query_item_value(proc):
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
     return qstring_to_str(qtobj.queryItemValue(proc.locals['name']))
 
+@on_qt_thread
 def prim_qt_qurl_has_query_item(proc):
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
     return qtobj.hasQueryItem(proc.locals['name'])
 
+@on_qt_thread
 def prim_qt_qurl_path(proc):
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
     return qstring_to_str(qtobj.path())
 
+@on_qt_thread
 def prim_qt_qurl_to_string(proc):
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
     return qstring_to_str(qtobj.toString())
@@ -1524,6 +1598,7 @@ def prim_qt_qurl_to_string(proc):
 
 
 # scintilla
+@on_qt_thread
 def prim_qt_scintilla_editor_new(proc):
     parent = proc.locals['parent']
     if parent != None:
@@ -1533,70 +1608,84 @@ def prim_qt_scintilla_editor_new(proc):
         proc.r_rdp['self'] = scintilla_editor.MemeQsciScintilla(proc.r_rp)
     return proc.r_rp
 
+@on_qt_thread
 def prim_qt_scintilla_editor_set_text(proc):
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
     qtobj.setText(proc.locals['text'])
     return proc.r_rp
 
+@on_qt_thread
 def prim_qt_scintilla_text(proc):
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
     return qstring_to_str(qtobj.text())
 
+@on_qt_thread
 def prim_qt_scintilla_cut(proc):
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
     qtobj.cut()
     return proc.r_rp
 
+@on_qt_thread
 def prim_qt_scintilla_copy(proc):
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
     qtobj.copy()
     return proc.r_rp
 
+@on_qt_thread
 def prim_qt_scintilla_paste(proc):
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
     qtobj.paste()
     return proc.r_rp
 
+@on_qt_thread
 def prim_qt_scintilla_redo(proc):
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
     qtobj.redo()
     return proc.r_rp
 
 
+@on_qt_thread
 def prim_qt_scintilla_set_text(proc):
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
     qtobj.set_text(proc.locals['text'])
     return proc.r_rp
 
+@on_qt_thread
 def prim_qt_scintilla_saved(proc):
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
     qtobj.saved()
     return proc.r_rp
 
+@on_qt_thread
 def prim_qt_scintilla_paused_at_line(proc):
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
     qtobj.paused_at_line(proc.locals['start_line'], proc.locals['start_col'], proc.locals['end_line'], proc.locals['end_col'])
     return proc.r_rp
 
+@on_qt_thread
 def prim_qt_scintilla_selected_text(proc):
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
     return qstring_to_str(qtobj.selectedText())
 
+@on_qt_thread
 def prim_qt_scintilla_get_cursor_position(proc):
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
     line, idx = qtobj.getCursorPosition()
     return {"line": line, "index":idx}
 
+@on_qt_thread
 def prim_qt_scintilla_insert_at(proc):
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
     qtobj.insertAt(proc.locals['text'], proc.locals['line'], proc.locals['index'])
     return proc.r_rp
 
+@on_qt_thread
 def prim_qt_scintilla_get_selection(proc):
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
     start_line, start_index, end_line, end_index = qtobj.getSelection()
     return {"start_line":start_line, "start_index": start_index, 'end_line': end_line, 'end_index': end_index}
 
+@on_qt_thread
 def prim_qt_scintilla_set_selection(proc):
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
     qtobj.setSelection(proc.locals['start_line'], proc.locals['start_index'], proc.locals['end_line'], proc.locals['end_index'])
@@ -1604,24 +1693,8 @@ def prim_qt_scintilla_set_selection(proc):
 
 
 
-# def prim_debugger_ui_new(proc):
-#     qloop = _lookup_field(proc, proc.locals['qloop'], 'self')
-#     proc = proc.locals['proc']
-#     proc.r_rdp['self'] = dbgui.DebuggerUI(qloop,proc)
-#     return proc.r_rp
-
-# def prim_debugger_ui_show(proc):
-#     qtobj = _lookup_field(proc, proc.r_rp, 'self')
-#     qtobj.show()
-#     return proc.r_rp
-
-def prim_qapp_running(proc):
-    global _qapp_running
-    return  _qapp_running
-
-######
-
 _factories = []
+@on_qt_thread
 def prim_qt_extra_qwebpage_enable_plugins(proc):
     name = proc.locals['name']
     fn = proc.locals['fn']

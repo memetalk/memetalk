@@ -19,7 +19,6 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 
-from greenlet import greenlet
 import parser
 import sys
 import os
@@ -34,8 +33,8 @@ from config import MODULES_PATH, CURRENT_PATH
 from astbuilder import *
 from jinja2 import Environment
 from mmpprint import P
-
-
+import t_qt
+import threading
 
 def _should_dump_mast():
     return 'DEBUG' in os.environ and os.environ['DEBUG'] == 'full'
@@ -647,7 +646,7 @@ class Interpreter():
     def __init__(self):
         self.compiled_modules = {}
         self.processes = []
-        self.current_process = Process(self) #dummy
+        self.current_process = None
         self.memory = []
         self.imods = []
         self.interned_symbols = {}
@@ -695,36 +694,21 @@ class Interpreter():
             return open(os.path.join(MODULES_PATH, filename))
 
     def start(self, filename):
-        #self.load_modules()
-        try:
-            compiled_module = self.compiled_module_by_filename(filename)
+        self.current_process = Process(self, True)
+        self.processes.append(self.current_process)
+        self.current_process.exec_module(filename, 'main', [])
 
-            imodule = self.instantiate_module(compiled_module, {}, core.kernel_imodule)
+    def spawn(self, drecv, recv, name, fn, args, state = 'running'):
+        process = Process(self)
+        self.processes.append(process)
+        process.exec_fun(drecv, recv, name, fn, args, state)
 
-            self.current_process = Process(self)
-            self.processes.append(self.current_process)
-        except MemetalkException as e:
-            print "Exception raised during the boot: " + e.mmobj()['message']
-            print e.mmobj()['py_trace']
-        else:
-            ret = self.current_process.switch('run_module', 'main', imodule, [])
-            print "RETVAL: " + P(ret,1,True)
-
-    def debug_process(self, target_process, exception = None):
-        target_process.state = 'paused'
-
-        compiled_module = self.compiled_module_by_filename('idez.mm')
-        imodule = self.instantiate_module(compiled_module, {}, core.kernel_imodule)
-
+    def debugger_for_process(self, target_process, exception = None):
         target_process.debugger_process = Process(self)
         self.processes.append(target_process.debugger_process)
 
-        #print "process " + str(id(target_process)) + " has debugger: " + str(id(target_process.debugger_process))
-
         mmprocess = self.alloc_object(core.VMProcess, {'self':target_process})
-        ret = target_process.debugger_process.switch('run_module', 'debug', imodule, [mmprocess, exception])
-        #print('debug_process: switch back from debugger_process')
-        return ret
+        target_process.debugger_process.exec_module("idez.mm", 'debug', [mmprocess, exception])
 
     def break_at(self, cfun, line):
         #print "Breaking at: " + str(line) + " --- " + P(cfun,1,True)
@@ -882,17 +866,26 @@ class Interpreter():
         return outer_cfun
 
 
-class Process(greenlet):
-    def __init__(self, interpreter):
-        super(Process, self).__init__(self.greenlet_entry)
+class Process(threading.Thread):
+    def __init__(self, interpreter, main_proc = False):
+        super(Process, self).__init__()
+        self.lock = threading.Semaphore(0)
+
+        self.is_main = main_proc
 
         self.interpreter = interpreter
+
+        self.entry = {}
+
         self.stack = []
-        self.debugger_process = None
         self.state = None
+
+        self.debugger_process = None
+
         self.flag_stop_on_exception = False
         self.exception_protection = [False]
         self.last_exception = None
+
         self.init_data()
 
     def init_data(self):
@@ -907,33 +900,71 @@ class Process(greenlet):
         self.locals = {}
         self.stack = []
 
-    def greenlet_entry(self, cmd, *rest):
-        return getattr(self, cmd)(*rest)
+    def exit(self, code):
+        t_qt.exit(self, code)
+        sys.exit(code)
 
-    def switch(self, *rest):
-        # if self.interpreter.current_process:
-        #     self.interpreter.current_process.state = 'paused'
-        #print "switching from " + str(id(self.interpreter.current_process)) + " to " + str(id(self))
-        parent_process = self.interpreter.current_process
-        self.interpreter.current_process = self
+    def maybe_exit(self, code = 0):
+        if not t_qt._qt_qapp and self.is_main:
+            if isinstance(code, (int, long)):
+                self.exit(code)
+            else:
+                self.exit(0)
 
-        ret = super(Process,self).switch(*rest)
-        self.interpreter.current_process = parent_process
-        #print "switching back from " + str(id(self)) + " to " + str(id(parent_process))
-        return ret
+    # def _exec_paused(self, fn, args):
+    #     return self.setup_and_run_unprotected(None, None, fn['compiled_function']['name'], fn, args, True)
 
-    def run_module(self, entry_name, module, args):
+    def exec_fun(self, drecv, recv, name, fn, args, state = 'running'):
+        self.state = state
+        self.entry = {'drecv': drecv, 'recv': recv,
+                      'name': name,
+                      'fn': fn,
+                      'args': args}
 
-        self.init_data()
+        self.start() # start thread
 
-        self.state = 'running' # process state
+    def exec_module(self, filename, entry, args, state = 'running'):
+        self.state = state
+        compiled_module = self.interpreter.compiled_module_by_filename(filename)
+        imodule = self.interpreter.instantiate_module(compiled_module, {}, core.kernel_imodule)
+        self.entry = {'drecv': imodule, 'recv': imodule,
+                      'name': entry,
+                      'fn': imodule[entry],
+                      'args': args}
 
+        self.start() # start thread
+
+    def run(self): # running thread
         try:
-            return self.setup_and_run_fun(module, module, entry_name, module[entry_name], args, True)
+            self.init_data()
+
+            ret = self.setup_and_run_fun(self.entry['drecv'],
+                                         self.entry['recv'],
+                                         self.entry['name'],
+                                         self.entry['fn'],
+                                         self.entry['args'],
+                                         True)
+
+            print "RETVAL: " + P(ret,1,True)
+            self.maybe_exit(ret)
         except MemetalkException as e:
-            print "* Exiting with Memetalk exception: " + e.mmobj()['message']
-            print "* Python stack trace: \n" + e.mmobj()["py_trace"]
-            print "* Memetalk stack trace: \n" + e.mmobj()["mtrace"]
+            print "Exception raised during the boot: " + e.mmobj()['message']
+            print e.mmobj()['py_trace']
+            self.maybe_exit()
+
+    def pause_execution(self):
+        self.state = 'paused'
+        from PyQt4 import QtGui, QtCore, QtWebKit
+        print 'PAUSING EXECUTION'
+        self.qev = QEventLoop()
+        self.qev.exec_()
+        print 'RESUMED EXECUTION'
+
+    def resume(self, new_state = 'running'):
+        self.state = new_state
+        print 'RESUMING EXECUTION'
+        self.qev.exit(0)
+        print 'RESUMED'
 
     def _lookup(self, drecv, vt, selector):
         if vt == None:
@@ -1158,6 +1189,7 @@ class Process(greenlet):
         if idx != None:
             self.r_ep[idx] = value
         else:
+            br()
             self.throw_with_message('Undeclared env variable: ' + name)
 
     def set_local_value(self, name, expr):
@@ -1415,26 +1447,32 @@ class Process(greenlet):
 
         return self.state
     def dbg_control(self, name, force_debug = False):
-        #print self.r_ip
-        self.process_breakpoints()
-
         if self.state in ['paused', 'next'] or force_debug:
-            #print self.state  + " on " + name
+            print "dbg_control pausing: " + name
+            print self.r_ip
             if not self.debugger_process:
                 print 'dbg_control: paused: initiating debugger...please wait'
-                if self.state == 'exception':
-                    print "An exception ocurred: starting debugger..."
-                    cmd = self.interpreter.debug_process(self, self.last_exception)
-                else:
-                    cmd = self.interpreter.debug_process(self)
-            elif self.state == 'exception':
-                print "An exception ocurred: starting debugger..."
-                cmd = self.debugger_process.switch("exception",self.last_exception)
-            else:
-                #print 'dbg_control paused: asking debugger for cmd...'
-                cmd = self.debugger_process.switch()
-            ret = self.dbg_cmd(cmd)
-            return ret
+                self.interpreter.debugger_for_process(self, self.last_exception)
+            self.pause_execution()
+            print "EXITING dbg_control"
+
+        #self.process_breakpoints()
+        # if self.state in ['paused', 'next'] or force_debug:
+        #     if not self.debugger_process:
+        #         print 'dbg_control: paused: initiating debugger...please wait'
+        #         if self.state == 'exception':
+        #             print "An exception ocurred: starting debugger..."
+        #             self.interpreter.debugger_for_process(self, self.last_exception)
+        #         else:
+        #             self.interpreter.debugger_for_process(self)
+        #     elif self.state == 'exception':
+        #         print "An exception ocurred: starting debugger..."
+        #         self.debugger_process.switch("exception",self.last_exception)
+        #     else:
+        #         #print 'dbg_control paused: asking debugger for cmd...'
+        #         self.debugger_process.switch()
+        #     ret = self.dbg_cmd(cmd)
+        #     return ret
 
     def process_breakpoints(self):
         for idx, bp in enumerate(self.interpreter.volatile_breakpoints):
@@ -1523,10 +1561,24 @@ class Process(greenlet):
             st = st + (self.r_cp['compiled_function']['name'] + " ::: " + str(self.r_cp['compiled_function']['body']))[0:80] + "...\n"
         return st
 
+###################################################
+
+_qt_thread = threading.current_thread()
+
+_meme_thread = None
+def memetalk_main():
+    def _start():
+        Interpreter().start(sys.argv[1])
+
+    _meme_thread = threading.Thread(target=_start)
+    _meme_thread.start()
+
 if __name__ == "__main__":
+    sys.setrecursionlimit(10000) # yes, really
+
     if len(sys.argv) == 1:
         print "i.py filename"
         sys.exit(0)
 
-    sys.setrecursionlimit(10000)
-    Interpreter().start(sys.argv[1])
+    memetalk_main()
+    t_qt.qt_main() # the main thread is the Qt thread
