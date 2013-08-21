@@ -293,7 +293,7 @@ class ModuleLoader(ASTBuilder):
             ast,_ = self.parser.apply("single_top_level_fun", name)
         except Exception as err:
             if hasattr(err,'formatError'):
-                i.current_process.throw_with_message(err.formatError(''.join(self.parser.input.data)), False)
+                i.current_process.throw_with_message(err.formatError(''.join(self.parser.input.data)))
             else:
                 i.current_process.throw_py_exception(err, traceback.format_exc())
 
@@ -344,7 +344,7 @@ class ModuleLoader(ASTBuilder):
             ast,_ = self.parser.apply("funliteral")
         except Exception as err:
             if hasattr(err,'formatError'):
-                i.current_process.throw_with_message(err.formatError(''.join(self.parser.input.data)), False)
+                i.current_process.throw_with_message(err.formatError(''.join(self.parser.input.data)))
             else:
                 i.current_process.throw_py_exception(err, traceback.format_exc())
 
@@ -381,7 +381,7 @@ class ModuleLoader(ASTBuilder):
             ast,_ = self.parser.apply("funliteral")
         except Exception as err:
             if hasattr(err,'formatError'):
-                i.current_process.throw_with_message(err.formatError(''.join(self.parser.input.data)), False)
+                i.current_process.throw_with_message(err.formatError(''.join(self.parser.input.data)))
             else:
                 i.current_process.throw_py_exception(err, traceback.format_exc())
 
@@ -425,7 +425,7 @@ class ModuleLoader(ASTBuilder):
             ast,_ = self.parser.apply("single_top_level_fun", name)
         except Exception as err:
             if hasattr(err,'formatError'):
-                i.current_process.throw_with_message(err.formatError(''.join(self.parser.input.data)), False)
+                i.current_process.throw_with_message(err.formatError(''.join(self.parser.input.data)))
             else:
                 i.current_process.throw_py_exception(err, traceback.format_exc())
 
@@ -891,6 +891,7 @@ class Process(greenlet):
         self.debugger_process = None
         self.state = None
         self.flag_stop_on_exception = False
+        self.exception_protection = [False]
         self.last_exception = None
         self.init_data()
 
@@ -1119,6 +1120,17 @@ class Process(greenlet):
             # put args in the env
             for k,v in zip(method["compiled_function"]["params"],args):
                 self.env_set_value(k, v)
+
+
+    def setup_and_run_unprotected(self, recv, drecv, name, method, args, should_allocate):
+        self.exception_protection.append(False)
+        #print "saru: running fn with no protection -- " + str(self.exception_protection)
+        try:
+            return self.setup_and_run_fun(recv, drecv, name, method, args, should_allocate)
+        except:
+            #print "saru: fn raised: popping and reraise -- " + str(self.exception_protection)
+            self.exception_protection.pop()
+            raise
 
     def do_send(self, receiver, selector, args):
         drecv, method = self._lookup(receiver, self.interpreter.get_vt(receiver), selector)
@@ -1356,10 +1368,14 @@ class Process(greenlet):
     def eval_do_try(self, ast, tr, bind, ct):
         self.r_ip = ast
         try:
+            #print "try: protecting block..."
+            self.exception_protection.append(True)
             ev = Eval([tr])
             ev.i = self
             return ev.apply("exprlist")[0]
         except MemetalkException as e:
+            #print "catch: removing protection..."
+            self.exception_protection.pop()
             self.set_local_value(bind, e.mmobj())
             return self.evaluator.apply("exprlist", ct)[0]
 
@@ -1430,9 +1446,13 @@ class Process(greenlet):
                 del self.interpreter.volatile_breakpoints[idx]
                 return
 
-    def throw(self, mex, shouldStartDebugger = True):
+    def is_exception_protected(self):
+        #print "is_exception_protected?: " + str(self.exception_protection[-1])
+        return self.exception_protection[-1]
+
+    def throw(self, mex):
         # MemetalkException encapsulates the memetalk exception:
-        if shouldStartDebugger and self.flag_stop_on_exception:
+        if not self.is_exception_protected() and self.flag_stop_on_exception:
             self.state = 'exception'
             self.last_exception = mex
             r = self.dbg_control("throw", True);
@@ -1447,7 +1467,7 @@ class Process(greenlet):
             else:
                 raise MemetalkException(mex, self.pp_stack_trace())
 
-    def throw_py_exception(self, pyex, tb, shouldStartDebugger = True):
+    def throw_py_exception(self, pyex, tb):
         if _should_warn_of_exception():
             print "Python exception with message: \n" + pyex.message
         ex = self.interpreter.create_instance(core.Exception)
@@ -1456,7 +1476,7 @@ class Process(greenlet):
         ex['message'] =  "Python exception: " + pyex.message
 
         #print "throw/w: " +  str(id(self.current_process)) +  " flagged? " + str(self.current_process.flag_stop_on_exception)
-        if shouldStartDebugger and self.flag_stop_on_exception:
+        if not self.is_exception_protected() and self.flag_stop_on_exception:
             self.state = 'exception'
             self.last_exception = ex
             #print "def throw: passing control"
@@ -1470,7 +1490,7 @@ class Process(greenlet):
             # MemetalkException encapsulates the memetalk exception:
             raise MemetalkException(ex, self.pp_stack_trace(), tb)
 
-    def throw_with_message(self, msg, shouldStartDebugger = True):
+    def throw_with_message(self, msg):
         if _should_warn_of_exception():
             print "MemetalkException with message: \n" + msg
             self.pp_stack_trace()
@@ -1480,7 +1500,7 @@ class Process(greenlet):
         ex['message'] =  msg
 
         #print "throw/w: " +  str(id(self.current_process)) +  " flagged? " + str(self.current_process.flag_stop_on_exception)
-        if shouldStartDebugger and self.flag_stop_on_exception:
+        if not self.is_exception_protected() and self.flag_stop_on_exception:
             self.state = 'exception'
             self.last_exception = ex
             #print "def throw: passing control"
@@ -1507,4 +1527,6 @@ if __name__ == "__main__":
     if len(sys.argv) == 1:
         print "i.py filename"
         sys.exit(0)
+
+    sys.setrecursionlimit(10000)
     Interpreter().start(sys.argv[1])

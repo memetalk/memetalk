@@ -144,7 +144,7 @@ def prim_vmprocess_debug(proc):
     fn = proc.locals['fn']
     args = proc.locals['args']
     proc.state = 'paused'
-    return proc.setup_and_run_fun(None, None, fn['compiled_function']['name'], fn, args, True)
+    return proc.setup_and_run_unprotected(None, None, fn['compiled_function']['name'], fn, args, True)
 
 def prim_vmprocess_stop_on_exception(proc):
     proc.flag_stop_on_exception = True
@@ -1665,6 +1665,9 @@ def prim_qt_extra_qwebpage_enable_plugins(proc):
 def prim_test_files(proc):
     path = MODULES_PATH + "/../../tests"
     return [path + "/" + f for f in listdir(path) if isfile(join(path,f))]
+
+def prim_exception_unprotected(proc):
+    return proc.setup_and_run_unprotected(None, None, 'fn', proc.locals['fn'], [], True)
 
 def prim_test_import(proc):
     cmod = proc.interpreter.compiled_module_by_filepath(proc.locals['filepath'])

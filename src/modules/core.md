@@ -555,6 +555,10 @@ module core() {
     <primitive "break_at">
   }
 
+  exception_unprotected: fun(fn) {
+    <primitive "exception_unprotected">
+  }
+
   http_get: fun(url) {
     <primitive "http_get">
   }

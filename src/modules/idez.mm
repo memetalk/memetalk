@@ -53,13 +53,13 @@ evalWithFrame: fun(text, frame, imod) {
   var code = "fun() {" + text + "}";
   var cfn = CompiledFunction.newClosure(code, thisContext.compiledFunction(), false);
   var fn = cfn.asContextWithFrame(imod, frame);
-  var res = fn();
+  var res = exception_unprotected(fn);
   return {"result": res, "env": fn.getEnv()};
 }
 
 evalWithVars: fun(text, vars, imod) {
   var fn = evalWithVarsFn(text, vars, imod);
-  var res = fn();
+  var res = exception_unprotected(fn);
   return {"result": res, "env": fn.getEnv()};
 }
 
