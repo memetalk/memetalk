@@ -33,8 +33,7 @@ from config import MODULES_PATH, CURRENT_PATH
 from astbuilder import *
 from jinja2 import Environment
 from mmpprint import P
-import t_qt
-import threading
+import multiprocessing
 
 def _should_dump_mast():
     return 'DEBUG' in os.environ and os.environ['DEBUG'] == 'full'
@@ -645,12 +644,18 @@ class MemetalkException(VMException):
 class Interpreter():
     def __init__(self):
         self.compiled_modules = {}
-        self.processes = []
-        self.current_process = None
-        self.memory = []
         self.imods = []
         self.interned_symbols = {}
+        self.memory = []
+
+        self.processes = {}
+        self.procids = 0
+
         self.volatile_breakpoints = []
+
+        self.manager = multiprocessing.Manager()
+
+        self.my_channel = self.manager.Queue()
 
     def module_to_text(self, cmod):
         def if_ctor(lst, val):
@@ -693,22 +698,77 @@ class Interpreter():
         else:
             return open(os.path.join(MODULES_PATH, filename))
 
+    def spawn(self, target_procid = None):
+        if target_procid != None:
+            print 'spawn: creating debugger for: ' + str(target_procid)
+            print 'target process channel is: ' + str(self.processes[target_procid].channels['my'])
+            process = Process(self, self.procids, self.processes[target_procid].channels['my'])
+        else:
+            print 'spawn: creating regular proc'
+            process = Process(self, self.procids)
+        self.processes[self.procids] = process
+        self.procids += 1
+        return process
+
     def start(self, filename):
-        self.current_process = Process(self, True)
-        self.processes.append(self.current_process)
-        self.current_process.exec_module(filename, 'main', [])
+        proc = self.spawn()
+        print 'start:exec_module: ' + str(proc.procid)
+        proc.exec_module(filename, 'main', [])
+        self.interpreter_loop()
 
-    def spawn(self, drecv, recv, name, fn, args, state = 'running'):
-        process = Process(self)
-        self.processes.append(process)
-        process.exec_fun(drecv, recv, name, fn, args, state)
+    def interpreter_loop(self):
+        # Note: we can't receive nor send recursive/structured data here,as
+        # this would inject alien meme objects and comparisions would overflow
+        # the stack.
 
-    def debugger_for_process(self, target_process, exception = None):
-        target_process.debugger_process = Process(self)
-        self.processes.append(target_process.debugger_process)
+        while True:
+            print "interpreter_loop: waiting...."
+            msg = self.my_channel.get()
+            print "interpreter_loop: got: " + msg['name']
+            if msg['name'] == 'spawn':
+                self.my_channel.put(self.spawn().procid)
+            elif msg['name'] == 'exec_module':
+                getattr(self, 'cmdproc_' + msg['name'])(*msg['args'])
+            elif msg['name'] == 'debug':
+                getattr(self, 'cmdproc_' + msg['name'])(*msg['args'])
+                self.my_channel.put('done')
+            elif msg['name'] == 'step_into':
+                pass
+            elif msg['name'] == 'step_over':
+                pass
+            elif msg['name'] == 'step_out':
+                pass
+            elif msg['name'] == 'continue':
+                pass
 
-        mmprocess = self.alloc_object(core.VMProcess, {'self':target_process})
-        target_process.debugger_process.exec_module("idez.mm", 'debug', [mmprocess, exception])
+    def cmdproc_exec_module(self, procid, mname, fname, args):
+        proc = self.processes[procid]
+        proc.exec_module(mname + ".mm", fname, args)
+
+    def cmdproc_debug(self, procid):
+        # 1) pause procid
+        # 2) create debugger with procid as target
+
+        print 'cmdproc_debug: spawning debugger for target: ' + str(procid)
+        dbgproc = self.spawn(procid)
+        print 'cmdproc_debug: debugger procid: ' + str(dbgproc.procid)
+
+        print 'cmdproc_debug: changing state of target to paused...'
+        proc = self.processes[procid]
+        proc.channels['dbg'] = dbgproc.channels['my']
+        proc.channels['my'].put({'cmd': 'set_state', "value": "paused"})
+        print 'cmdproc_debug: telling debugger to run idez::debug()'
+        dbgproc.exec_module('idez.mm', 'debug', [procid, ""])
+        print 'cmdproc_debug: done'
+
+    # def debugger_for_process(self, target_process, exception = None):
+    #     target_process.debugger_process = Process(self)
+    #     self.processes.append(target_process.debugger_process)
+
+    #     mmprocess = self.alloc_object(core.VMProcess, {'self':target_process})
+    #     target_process.debugger_process.exec_module("idez.mm", 'debug', [mmprocess, exception])
+    #     #target_process.debugger_process.join()
+    #     #print "DONE debugger for process"
 
     def break_at(self, cfun, line):
         #print "Breaking at: " + str(line) + " --- " + P(cfun,1,True)
@@ -866,21 +926,36 @@ class Interpreter():
         return outer_cfun
 
 
-class Process(threading.Thread):
-    def __init__(self, interpreter, main_proc = False):
+class Process(multiprocessing.Process):
+    def __init__(self, interpreter, procid, target_channel = None):
         super(Process, self).__init__()
-        self.lock = threading.Semaphore(0)
 
-        self.is_main = main_proc
+        self.procid = procid
 
         self.interpreter = interpreter
 
-        self.entry = {}
+        self.channels = multiprocessing.Manager().dict()
+        self.channels['interpreter'] = interpreter.my_channel
+        self.channels['my'] = interpreter.manager.Queue()
+        self.channels['target'] = target_channel
+        self.channels['dbg'] = None
+
+        # # channel where I send commands to the interpreter
+        # self.int_channel = interpreter.my_channel
+
+        # # channel where I receive data
+        # self.my_channel = interpreter.manager.Queue()
+
+        # # channel to command the process I'm debugging
+        # self.target_channel = target_channel
+
+        # # channel to receive commands from my debugger process
+        # self.dbg_channel = interpreter.manager.Queue()
+
+        self.entry = {} # data for executing the entry point
 
         self.stack = []
         self.state = None
-
-        self.debugger_process = None
 
         self.flag_stop_on_exception = False
         self.exception_protection = [False]
@@ -900,19 +975,25 @@ class Process(threading.Thread):
         self.locals = {}
         self.stack = []
 
-    def exit(self, code):
-        t_qt.exit(self, code)
-        sys.exit(code)
-
-    def maybe_exit(self, code = 0):
-        if not t_qt._qt_qapp and self.is_main:
-            if isinstance(code, (int, long)):
-                self.exit(code)
-            else:
-                self.exit(0)
-
-    # def _exec_paused(self, fn, args):
-    #     return self.setup_and_run_unprotected(None, None, fn['compiled_function']['name'], fn, args, True)
+    def call_target_process(self, block, procid, name, *args):
+        print 'this process: ' + str(self.procid)
+        print 'call_target_process: ' + str(procid)
+        self.channels['target'].put({"cmd":name})
+        if block:
+            print 'call_target_process waiting for debugged process to answer'
+            msg = self.channels['my'].get()
+            print 'debugger got msg from target: ' + P(msg,2,True)
+            return []
+    def call_interpreter(self, block, name, *args):
+        print 'call_interpreter: ' + name
+        self.channels['interpreter'].put({"name":name, "args":args})
+        if block:
+            print 'call_interpreter waiting for result'
+            res = self.channels['interpreter'].get()
+            print 'call_interpreter got result: ' + str(res)
+            return res
+        else:
+            return None
 
     def exec_fun(self, drecv, recv, name, fn, args, state = 'running'):
         self.state = state
@@ -921,10 +1002,12 @@ class Process(threading.Thread):
                       'fn': fn,
                       'args': args}
 
-        self.start() # start thread
+        self.start() # start process
 
     def exec_module(self, filename, entry, args, state = 'running'):
+        print 'exec_module: ' + filename
         self.state = state
+        print 'exec_module: getting compiled module...'
         compiled_module = self.interpreter.compiled_module_by_filename(filename)
         imodule = self.interpreter.instantiate_module(compiled_module, {}, core.kernel_imodule)
         self.entry = {'drecv': imodule, 'recv': imodule,
@@ -932,9 +1015,11 @@ class Process(threading.Thread):
                       'fn': imodule[entry],
                       'args': args}
 
-        self.start() # start thread
+        print 'exec_module:start..'
+        self.start() # start process
 
-    def run(self): # running thread
+    def run(self):
+        print 'RUN!!!!'
         try:
             self.init_data()
 
@@ -946,19 +1031,13 @@ class Process(threading.Thread):
                                          True)
 
             print "RETVAL: " + P(ret,1,True)
-            self.maybe_exit(ret)
         except MemetalkException as e:
             print "Exception raised during the boot: " + e.mmobj()['message']
             print e.mmobj()['py_trace']
-            self.maybe_exit()
 
     def pause_execution(self):
-        self.state = 'paused'
-        from PyQt4 import QtGui, QtCore, QtWebKit
-        print 'PAUSING EXECUTION'
-        self.qev = QEventLoop()
-        self.qev.exec_()
-        print 'RESUMED EXECUTION'
+        print 'pause_execution'
+        pass
 
     def resume(self, new_state = 'running'):
         self.state = new_state
@@ -1115,6 +1194,7 @@ class Process(threading.Thread):
         self.r_ep = None
         self.locals = {}
         # binding up arguments to parameters
+        self.interpreter.get_vt(method) != core.Context
         if self.interpreter.get_vt(method) != core.Context:
             self.r_rp  = recv
             self.r_rdp = drecv
@@ -1446,15 +1526,22 @@ class Process(threading.Thread):
         #print "process: " + str(id(self)) + " is " + self.state
 
         return self.state
+
     def dbg_control(self, name, force_debug = False):
+
+        if not self.channels['my'].empty():
+            msg = self.channels['my'].get()
+            if msg['cmd'] == 'set_state':
+                self.state = msg['value']
+
         if self.state in ['paused', 'next'] or force_debug:
-            print "dbg_control pausing: " + name
-            print self.r_ip
-            if not self.debugger_process:
-                print 'dbg_control: paused: initiating debugger...please wait'
-                self.interpreter.debugger_for_process(self, self.last_exception)
-            self.pause_execution()
-            print "EXITING dbg_control"
+            print "dbg_control paused! state: " + self.state
+            while True:
+                msg = self.channels['my'].get()
+                print 'received from debugger: ' + str(msg)
+                if msg['cmd'] == 'get_frames':
+                    print 'sending frames'
+                    self.channels['dbg'].put(self.stack)
 
         #self.process_breakpoints()
         # if self.state in ['paused', 'next'] or force_debug:
@@ -1530,7 +1617,7 @@ class Process(threading.Thread):
 
     def throw_with_message(self, msg):
         if _should_warn_of_exception():
-            print "MemetalkException with message: \n" + msg
+            #print "MemetalkException with message: \n" + msg
             self.pp_stack_trace()
         ex = self.interpreter.create_instance(core.Exception)
 
@@ -1563,15 +1650,6 @@ class Process(threading.Thread):
 
 ###################################################
 
-_qt_thread = threading.current_thread()
-
-_meme_thread = None
-def memetalk_main():
-    def _start():
-        Interpreter().start(sys.argv[1])
-
-    _meme_thread = threading.Thread(target=_start)
-    _meme_thread.start()
 
 if __name__ == "__main__":
     sys.setrecursionlimit(10000) # yes, really
@@ -1580,5 +1658,4 @@ if __name__ == "__main__":
         print "i.py filename"
         sys.exit(0)
 
-    memetalk_main()
-    t_qt.qt_main() # the main thread is the Qt thread
+    Interpreter().start(sys.argv[1])

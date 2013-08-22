@@ -30,11 +30,12 @@ SOFTWARE.
 
 // -- module functions --
 
-debug: fun(process, ex) {
-  process.setDebuggerProcess(null);
-  var dbg = DebuggerUI.new(process, ex);
+debug: fun(procid, exception) {
+  io.print("idez:debug()");
+  var app = qt.QApplication.new;
+  var dbg = DebuggerUI.new(VMProcess.new(procid), exception, app);
   dbg.show();
-  return null;
+  return app.exec();
 }
 
 evalWithFrame: fun(text, frame, imod) {
@@ -61,12 +62,14 @@ evalWithVarsFn: fun(text, vars, imod) {
 
 main: fun() {
   VMProcess.stopOnException();
-  qt.start();
+  io.print("new qapp");
+  var app = qt.QApplication.new();
   //var me = ModuleExplorer.new();
   //me.show();
+  io.print("Workspace.new");
   var w = Workspace.new();
   w.show();
-  return null;
+  return app.exec();
 }
 
 // -- module classes --
@@ -102,12 +105,13 @@ instance_method undo: fun() {
 end //idez:CommandHistory
 
 class DebuggerUI < QMainWindow
-fields: frame_index, process, exception, execFrames, stackCombo, editor, localVarList, fieldVarList, statusLabel, execMenu, shouldUpdateVars;
-init new: fun(process, ex) {
+fields: frame_index, process, exception, execFrames, stackCombo, editor, localVarList, fieldVarList, statusLabel, execMenu, shouldUpdateVars, eventloop;
+init new: fun(process, ex, eventloop) {
   super.new();
   @process = process;
   @frame_index = 0;
   @exception = ex;
+  @eventloop = eventloop;
 
   @shouldUpdateVars = false;
 
@@ -267,13 +271,14 @@ instance_method acceptIt: fun() {
   @editor.saved();
 }
 
-// instance_method closeEvent: fun() {
-//   if (@exception) {
-//     @eventloop.exit(1);
-//   } else {
-//     @eventloop.exit(0);
-//   }
-// }
+instance_method closeEvent: fun() {
+  io.print("CLOSE EVENT");
+  if (@exception) {
+    @eventloop.exit(1);
+  } else {
+    @eventloop.exit(0);
+  }
+}
 
 instance_method continue: fun() {
   this.close();
@@ -1737,8 +1742,6 @@ init new: fun(parent, execframes) {
 
 instance_method updateInfo: fun() {
   this.clear();
-  io.print(@frames);
-  io.print("---");
   @frames.names().each(fun(name) {
     io.print(name);
     this.addItem(name);

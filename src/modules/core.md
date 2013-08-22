@@ -466,6 +466,20 @@ module core() {
   }
 
   class VMProcess {
+    fields: self, id;
+    init new: fun(id) {
+      @id = id;
+    }
+    init spawn: fun() {
+      <primitive "vmprocess_spawn">
+    }
+    instance_method exec_module: fun(mname, fname, args) {
+      <primitive "vmprocess_exec_module">
+    }
+    instance_method debug: fun() {
+      <primitive "vmprocess_debug">
+    }
+    ///
     instance_method stackFrames: fun() {
       <primitive "vmprocess_stack_frames">
     }
@@ -490,12 +504,13 @@ module core() {
     instance_method setDebuggerProcess: fun(arg) {
       <primitive "vmprocess_set_debugger_process">
     }
-    class_method debug: fun(fn, args) {
-      <primitive "vmprocess_debug">
+    //
+    class_method current: fun() {
+      <primitive "vmprocess_current">
     }
-    class_method stopOnException: fun() {
-      <primitive "vmprocess_stop_on_exception">
-    }
+    // class_method stopOnException: fun() {
+    //   <primitive "vmprocess_stop_on_exception">
+    // }
   }
 
   class VMStackFrame {
@@ -523,9 +538,6 @@ module core() {
   }
 
   //temporary home for some infrastructure functions
-  get_current_process: fun() {
-    <primitive "get_current_process">
-  }
 
   get_compiled_module: fun(module) {
     <primitive "get_compiled_module">
