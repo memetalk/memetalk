@@ -29,14 +29,13 @@ import re
 from os import listdir
 from os.path import isfile, join
 from pdb import set_trace as br
-#import dbgui
 import scintilla_editor
 from config import MODULES_PATH
 import traceback
 from mmpprint import P
+from dcmp import dcmp as equal
 
 _app = None
-_qapp_running = False
 _qt_imodule = None
 
 def prim_modules_path(proc):
@@ -69,56 +68,12 @@ def prim_exception_throw(proc):
 def prim_exception_type(proc):
     return proc.r_rp['_vt']
 
-# def prim_vmprocess_step_into(proc):
-#     _proc = _lookup_field(proc, proc.r_rp, 'self')
-#     _proc.resume("paused")
-
-# def prim_vmprocess_step_over(proc):
-#     #print '+ENTER prim_vmprocess_step_over'
-#     _proc = _lookup_field(proc, proc.r_rp, 'self')
-#     #print 'vmprocess: sending step_over'
-#     ret = _proc.switch("step_over", None)
-#     #print 'vmprocess/step_over received: ' + P(ret,1,True)
-#     if 'done' in ret:
-#         #print 'done...exiting qevent'
-#         eventloop_processes[-1]['done'] = True
-#         return False
-#     #print 'vmprocess/step_over DONE'
-#     if 'exception' in ret:
-#         return ret[1]
-#     else:
-#         return True
-
-# def prim_vmprocess_continue(proc):
-#     print '+ENTER prim_vmprocess_continue'
-#     _proc = _lookup_field(proc, proc.r_rp, 'self')
-#     print 'vmprocess: sending continue'
-#     ret = _proc.switch("continue")
-#     print 'vmprocess/continue received: ' + P(ret,1, True)
-#     if 'done' in ret:
-#         print 'done...exiting qevent'
-#         eventloop_processes[-1]['qtobj'].exit(0)
-#         eventloop_processes[-1]['done'] = True
-#         return False
-#     print 'vmprocess/continue DONE'
-#     return True
-
-# def prim_vmprocess_reload_frame(proc):
-#     _proc = _lookup_field(proc, proc.r_rp, 'self')
-#     _proc.switch("reload", proc.locals['line'])
-
-# def prim_vmprocess_rewind_until(proc):
-#     _proc = _lookup_field(proc, proc.r_rp, 'self')
-#     frame = _lookup_field(proc, proc.locals['fromFrame'], 'self')
-#     _proc.switch("rewind", frame, proc.locals['to_line'])
-
 def prim_vmprocess_current(proc):
     VMProcess = proc.interpreter.get_core_class('VMProcess')
     return proc.interpreter.alloc_object(VMProcess, {'self': proc, 'id':proc.procid})
 
 def prim_vmprocess_spawn(proc):
     print 'prim_vmprocess_spawn'
-    #imod = proc.locals['imodule']
     procid = proc.call_interpreter(True, 'spawn')
     print 'prim_vmprocess_spawn got id:'
     proc.r_rdp['id'] = procid
@@ -136,38 +91,49 @@ def prim_vmprocess_debug(proc):
     print "prim_vmprocess_debug"
     proc.call_interpreter(True, 'debug', proc.r_rdp['id'])
 
+def prim_vmprocess_step_into(proc):
+    proc.call_target_process(False, proc.r_rdp['id'], 'step_into')
+
+def prim_vmprocess_step_over(proc):
+    proc.call_target_process(False, proc.r_rdp['id'], 'step_over')
+
+def prim_vmprocess_continue(proc):
+    proc.call_target_process(False, proc.r_rdp['id'], 'continue')
+
+# def prim_vmprocess_reload_frame(proc):
+#     _proc = _lookup_field(proc, proc.r_rp, 'self')
+#     _proc.switch("reload", proc.locals['line'])
+
+# def prim_vmprocess_rewind_until(proc):
+#     _proc = _lookup_field(proc, proc.r_rp, 'self')
+#     frame = _lookup_field(proc, proc.locals['fromFrame'], 'self')
+#     _proc.switch("rewind", frame, proc.locals['to_line'])
+
 def prim_vmprocess_stack_frames(proc):
-    frames = proc.call_target_process(True, proc.r_rdp['id'], 'get_frames')
-    print 'prim_vmprocess_stack_frames: DONE'
-    P(frames)
-    return frames
-    # _proc = _lookup_field(proc, proc.r_rp, 'self')
-    # VMStackFrameClass = proc.interpreter.get_core_class('VMStackFrame')
-    # # first r_cp on stack is None
-    # return [proc.interpreter.alloc_object(VMStackFrameClass,{'self':x}) for x in _proc.stack if x['r_cp']] +\
-    #     [proc.interpreter.alloc_object(VMStackFrameClass,{'self':_proc.top_frame()})]
+    raw_frames = proc.call_target_process(True, proc.r_rdp['id'], 'get_frames')
+    VMStackFrameClass = proc.interpreter.get_core_class('VMStackFrame')
+    return [proc.interpreter.alloc_object(VMStackFrameClass,{'self':x}) for x in raw_frames if x['r_cp']]
+
+def prim_vmstackframe_instruction_pointer(proc):
+    frame = _lookup_field(proc, proc.r_rp, 'self')
+    ast = frame['r_ip']
+    if ast == None: #first frame is none
+        return None
+
+    # ast has the line numbering relative to the entire module filre.
+    # we need to make it relative to the toplevel function
+
+    outer_cfun = proc.interpreter.shitty_get_module_from_cfunction(frame['r_cp']['compiled_function'])
+    start_line = ast.start_line - outer_cfun['line']+1
+    start_col = ast.start_col
+    end_line = ast.end_line - outer_cfun['line']+1
+    end_col = ast.end_col
+    res = {"start_line":start_line, "start_col": start_col, "end_line": end_line, "end_col":end_col}
+    return res
 
 
-# def prim_vmprocess_stop_on_exception(proc):
-#     proc.flag_stop_on_exception = True
-
-# # dirty stuff ahead: I'm too lazy to create a memetalk class wrapper over ASTNode
-# def prim_vmstackframe_instruction_pointer(proc):
-#     frame = _lookup_field(proc, proc.r_rp, 'self')
-#     ast = frame['r_ip']
-#     if ast == None: #first frame is none
-#         return None
-
-#     # ast has the line numbering relative to the entire module filre.
-#     # we need to make it relative to the toplevel function
-
-#     outer_cfun = proc.interpreter.shitty_get_module_from_cfunction(frame['r_cp']['compiled_function'])
-#     start_line = ast.start_line - outer_cfun['line']+1
-#     start_col = ast.start_col
-#     end_line = ast.end_line - outer_cfun['line']+1
-#     end_col = ast.end_col
-#     res = {"start_line":start_line, "start_col": start_col, "end_line": end_line, "end_col":end_col}
-#     return res
+def prim_vmprocess_stop_on_exception(proc):
+    proc.flag_stop_on_exception = True
 
 def prim_vmstackframe_module_pointer(proc):
     frame = _lookup_field(proc, proc.r_rp, 'self')
@@ -231,10 +197,10 @@ def prim_object_send(proc):
     return proc.do_send(receiver, selector_str, args)
 
 def prim_object_equal(proc):
-    return proc.r_rp == proc.locals['other']
+    return equal(proc.r_rp, proc.locals['other'])
 
 def prim_object_not_equal(proc):
-    return proc.r_rp != proc.locals['other']
+    return not equal(proc.r_rp, proc.locals['other'])
 
 # def prim_string_replace(i):
 #     return re.sub(i.locals['what'],i.locals['for'],i.r_rp)
@@ -299,6 +265,7 @@ def prim_compiled_function_set_code(proc):
         # NOTE: if a Function of this cfun already exists, its env should
         # be updated, otherwise calling it will screw up var access.
         return proc.interpreter.recompile_closure(proc.r_rdp, proc.locals['code'])
+
 
 
 # hackutility for as_context..
@@ -461,7 +428,7 @@ def prim_compiled_class_rename(proc):
     del cmod['compiled_classes'][old_name]
     cmod['compiled_classes'][new_name] = klass
     for imod in proc.interpreter.imodules():
-        if imod['_vt']['compiled_module'] == cmod:
+        if equal(imod['_vt']['compiled_module'], cmod):
             iklass = imod[old_name]
             del imod[old_name]
             imod[new_name] = iklass
@@ -481,7 +448,7 @@ def prim_compiled_class_set_fields(proc):
     add = diff(fields, klass['fields'])
 
     for obj in proc.interpreter.memory:
-        if 'compiled_class' in obj['_vt'] and obj['_vt']['compiled_class'] == klass:
+        if 'compiled_class' in obj['_vt'] and equal(obj['_vt']['compiled_class'], klass):
             for f in rm: del obj[f]
             for f in add: obj[f] = None
     klass['fields'] = fields
@@ -504,7 +471,7 @@ def prim_compiled_class_add_method(proc):
 
     # add the function to the instantiated classes:
     for imod in proc.interpreter.imodules():
-        if imod['_vt']['compiled_module'] == proc.r_rdp['module']:
+        if equal(imod['_vt']['compiled_module'], proc.r_rdp['module']):
             fun = proc.interpreter.create_function_from_cfunction(cfun, imod)
             if flag['self'] == 'instance_method':
                 imod[proc.r_rdp['name']]['dict'][cfun['name']] = fun
@@ -525,7 +492,7 @@ def prim_compiled_class_remove_method(proc):
 
     # removing function from instances:
     for imod in proc.interpreter.imodules():
-        if imod['_vt']['compiled_module'] == proc.r_rdp['module']:
+        if equal(imod['_vt']['compiled_module'], proc.r_rdp['module']):
             if flag['self'] == 'instance_method':
                 del imod[proc.r_rdp['name']]['dict'][name]
             else:
@@ -623,7 +590,7 @@ def prim_compiled_module_remove_function(proc):
 
     # removing function from instances:
     for imod in proc.interpreter.imodules():
-        if imod['_vt']['compiled_module'] == cmod:
+        if equal(imod['_vt']['compiled_module'], cmod):
             # remove the getter...
             del imod['_vt']['dict'][name]
             # ...and the python dict field
@@ -638,7 +605,7 @@ def prim_compiled_module_add_function(proc):
 
     # add the function to the module instances:
     for imod in proc.interpreter.imodules():
-        if imod['_vt']['compiled_module'] == cmod:
+        if equal(imod['_vt']['compiled_module'], cmod):
             fun = proc.interpreter.create_function_from_cfunction(cfun, imod)
             # add the getter
             imod['_vt']['dict'][cfun['name']] = fun
@@ -656,7 +623,7 @@ def prim_compiled_module_new_class(proc):
     cmod['compiled_classes'][name] = klass
 
     for imod in proc.interpreter.imodules():
-        if imod['_vt']['compiled_module'] == cmod:
+        if equal(imod['_vt']['compiled_module'], cmod):
             cb = {"_vt": proc.interpreter.get_core_class("Behavior"),
                   "parent": proc.interpreter.get_core_class("ObjectBehavior")['_vt'],
                   "dict": {},
@@ -677,7 +644,7 @@ def prim_compiled_module_add_class(proc):
 
     cmod['compiled_classes'][name] = klass
     for imod in proc.interpreter.imodules():
-        if imod['_vt']['compiled_module'] == cmod:
+        if equal(imod['_vt']['compiled_module'], cmod):
             cb = {"_vt": proc.interpreter.get_core_class("Behavior"),
                   "parent": proc.lookup_in_modules(klass["super_class_name"], imod)['_vt'],
                   "dict": proc.interpreter.compiled_functions_to_functions(klass["own_methods"], imod),
@@ -698,7 +665,7 @@ def prim_compiled_module_remove_class(proc):
 
     # removing function from instances:
     for imod in proc.interpreter.imodules():
-        if imod['_vt']['compiled_module'] == cmod:
+        if equal(imod['_vt']['compiled_module'], cmod):
             del imod[name]
             del imod['_vt']['dict'][name]
     return proc.r_rp
@@ -1116,7 +1083,7 @@ def prim_qt_qshortcut_new(proc):
         proc.setup_and_run_fun(None, None, '<?>', slot, [], True)
         #print 'callback slot: ' + str(slot['compiled_function']['body'])
         #print 'callback: eventloop proc equal? ' + str(proc == eventloop_processes[-1]['proc'])
-        if proc != eventloop_processes[-1]['proc']:
+        if not equal(proc, eventloop_processes[-1]['proc']):
             entry = eventloop_processes[-1]
             #entry['qtobj'].exit(0)
             entry['proc'].switch('done', None) # this is were the exit point of the debugger arrives

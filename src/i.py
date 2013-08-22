@@ -34,6 +34,7 @@ from astbuilder import *
 from jinja2 import Environment
 from mmpprint import P
 import multiprocessing
+from dcmp import dcmp as equal
 
 def _should_dump_mast():
     return 'DEBUG' in os.environ and os.environ['DEBUG'] == 'full'
@@ -311,7 +312,7 @@ class ModuleLoader(ASTBuilder):
 
         try:
             owner = cfun['owner']
-            if owner['_vt'] == core.CompiledClass:
+            if equal(owner['_vt'], core.CompiledClass):
                 self.current_class = owner
                 self.current_module = owner['module']
                 if cfun in owner['methods'].values():
@@ -411,7 +412,7 @@ class ModuleLoader(ASTBuilder):
         self.line_offset = 0
         self.pos_stack = []
 
-        if owner['_vt'] == core.CompiledClass:
+        if equal(owner['_vt'], core.CompiledClass):
             self.current_class = owner
             self.current_module = owner["module"]
         else:
@@ -876,17 +877,17 @@ class Interpreter():
             return False
 
     def is_wrapper_class(self, klass):
-        return klass == core.String or\
-            klass == core.Dictionary or\
-            klass == core.List or\
-            klass == core.Number
+        return equal(klass, core.String) or\
+            equal(klass, core.Dictionary) or\
+            equal(klass, core.List) or\
+            equal(klass, core.Number)
 
     def new_wrapper_object_for(self, klass):
-        if klass == core.String:
+        if equal(klass, core.String):
             return str()
-        if klass == core.Dictionary:
+        if equal(klass, core.Dictionary):
             return dict()
-        if klass == core.List:
+        if equal(klass, core.List):
             return list()
         if klass.Number:
             return 0
@@ -981,9 +982,10 @@ class Process(multiprocessing.Process):
         self.channels['target'].put({"cmd":name})
         if block:
             print 'call_target_process waiting for debugged process to answer'
-            msg = self.channels['my'].get()
-            print 'debugger got msg from target: ' + P(msg,2,True)
-            return []
+            data = self.channels['my'].get()
+            print 'debugger got data from target'
+            return data
+
     def call_interpreter(self, block, name, *args):
         print 'call_interpreter: ' + name
         self.channels['interpreter'].put({"name":name, "args":args})
@@ -1065,7 +1067,7 @@ class Process(multiprocessing.Process):
             raise Exception("No rdp for ctor. Probably a bug")
 
         klass = self.interpreter.get_vt(rp)['compiled_class']
-        if klass == fun['compiled_function']['owner']:
+        if equal(klass, fun['compiled_function']['owner']):
             return rp
         else:
             return self.ctor_rdp_for(rp['_delegate'], fun)
@@ -1126,12 +1128,12 @@ class Process(multiprocessing.Process):
         return ret
 
     def frame_level(self, frame):
-        if frame['r_cp'] == self.r_cp and \
-                frame['r_rp'] == self.r_rp and \
-                frame['r_rdp'] == self.r_rdp and \
-                frame['r_ep'] == self.r_ep and \
-                frame['r_ip'] == self.r_ip and \
-                frame['locals'] == self.locals:
+        if equal(frame['r_cp'], self.r_cp) and \
+                equal(frame['r_rp']. self.r_rp) and \
+                equal(['r_rdp'], self.r_rdp) and \
+                equal(frame['r_ep'], self.r_ep) and \
+                equal(frame['r_ip'], self.r_ip) and \
+                equal(frame['locals'], self.locals):
             return 0
         else:
             return list(reversed(self.stack)).index(frame)
@@ -1194,12 +1196,11 @@ class Process(multiprocessing.Process):
         self.r_ep = None
         self.locals = {}
         # binding up arguments to parameters
-        self.interpreter.get_vt(method) != core.Context
-        if self.interpreter.get_vt(method) != core.Context:
+        if not equal(self.interpreter.get_vt(method), core.Context):
             self.r_rp  = recv
             self.r_rdp = drecv
             if not method["compiled_function"]["uses_env"] and \
-                    self.interpreter.get_vt(method) == core.Function:
+                    equal(self.interpreter.get_vt(method), core.Function):
                 # normal fun, put args in the stack
                 if self.has_vararg(method["compiled_function"]["params"]):
                     regular = method["compiled_function"]["params"][0:-1]
@@ -1213,7 +1214,7 @@ class Process(multiprocessing.Process):
                         self.locals[k] = v
             # normal fun using env, initialize one
             elif method["compiled_function"]["uses_env"] and \
-                    self.interpreter.get_vt(method) == core.Function:
+                    equal(self.interpreter.get_vt(method), core.Function):
                 self.r_ep = dict(method["compiled_function"]['env_table_skel'])
                 self.r_ep["r_rp"] = self.r_rp
                 self.r_ep["r_rdp"] = self.r_rdp # usually receivers are on stack.
@@ -1541,7 +1542,16 @@ class Process(multiprocessing.Process):
                 print 'received from debugger: ' + str(msg)
                 if msg['cmd'] == 'get_frames':
                     print 'sending frames'
-                    self.channels['dbg'].put(self.stack)
+                    self.channels['dbg'].put(self.stack + [self.top_frame()])
+                if msg['cmd'] == 'step_into':
+                    self.state = 'paused'
+                    break
+                if msg['cmd'] == 'step_over':
+                    self.state = 'next'
+                    break
+                if msg['cmd'] == 'continue':
+                    self.state = 'running'
+                    break
 
         #self.process_breakpoints()
         # if self.state in ['paused', 'next'] or force_debug:
@@ -1565,7 +1575,7 @@ class Process(multiprocessing.Process):
         for idx, bp in enumerate(self.interpreter.volatile_breakpoints):
             line = self.r_ip.start_line - self.r_cp['compiled_function']['line']+1
             #print "Checking line: " + str(line) + " --- " + str(self.r_ip)
-            if line == bp['line'] and self.r_cp['compiled_function'] == bp['cfun']:
+            if line == bp['line'] and equal(self.r_cp['compiled_function'], bp['cfun']):
                 #print "BP activated at line: " + str(line) + " --- " + str(self.r_ip)
                 self.state = 'paused'
                 del self.interpreter.volatile_breakpoints[idx]
@@ -1652,7 +1662,7 @@ class Process(multiprocessing.Process):
 
 
 if __name__ == "__main__":
-    sys.setrecursionlimit(10000) # yes, really
+    sys.setrecursionlimit(10000000) # yes, really
 
     if len(sys.argv) == 1:
         print "i.py filename"

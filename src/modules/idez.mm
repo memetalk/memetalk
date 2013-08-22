@@ -1743,13 +1743,9 @@ init new: fun(parent, execframes) {
 instance_method updateInfo: fun() {
   this.clear();
   @frames.names().each(fun(name) {
-    io.print(name);
     this.addItem(name);
-    io.print("* added " + name);
   });
-  io.print("setting idx");
   this.setCurrentIndex(@frames.size() - 1);
-  io.print("done update");
 }
 
 end //idez:StackCombo
@@ -1778,6 +1774,9 @@ init new: fun(parent) {
   header.setStretchLastSection(true);
   this.setSortingEnabled(false);
   this.setColumnCount(2);
+
+  this.clear();
+  this.setHorizontalHeaderLabels(['Name', 'Value']);
 
   this.connect("itemDoubleClicked", fun(item) {
     Inspector.inspect(item.object);
