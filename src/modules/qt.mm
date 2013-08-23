@@ -92,6 +92,10 @@ instance_method setCurrentIndex: fun(i) {
   <primitive "qt_qcombobox_set_current_index">
 }
 
+instance_method count: fun() {
+  <primitive "qt_qcombobox_count">
+}
+
 end //qt:QComboBox
 
 class QEventLoop

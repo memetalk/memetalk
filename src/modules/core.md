@@ -145,7 +145,7 @@ module core() {
     init newTopLevel: fun(name, text, owner, flag) {
       <primitive "compiled_function_new_top_level">
     }
-    init newClosure: fun(text, cfun, is_embedded) {
+    init newClosure: fun(text, outer_cfun, is_embedded) {
       <primitive "compiled_function_new_closure">
     }
     instance_method asContextWithFrame: fun(imodule, frame) {
@@ -466,7 +466,7 @@ module core() {
   }
 
   class VMProcess {
-    fields: self, id;
+    fields: self, id, frames;
     init new: fun(id) {
       @id = id;
     }
@@ -479,7 +479,6 @@ module core() {
     instance_method debug: fun() {
       <primitive "vmprocess_debug">
     }
-    ///
     instance_method stackFrames: fun() {
       <primitive "vmprocess_stack_frames">
     }
@@ -495,12 +494,19 @@ module core() {
     instance_method continue: fun() {
       <primitive "vmprocess_continue">
     }
+    instance_method updateObject: fun(obj) {
+      <primitive "vmprocess_update_object">
+    }
     instance_method reloadFrame: fun(line) {
       <primitive "vmprocess_reload_frame">
     }
-    instance_method rewindUntil: fun(fromFrame, to_line) {
-      <primitive "vmprocess_rewind_until">
+    instance_method rewindAndBreak: fun(frames_count, to_line) {
+      <primitive "vmprocess_rewind_and_break">
     }
+    instance_method eval: fun(text, frame_level) {
+      <primitive "vmprocess_eval">
+    }
+    //
     instance_method setDebuggerProcess: fun(arg) {
       <primitive "vmprocess_set_debugger_process">
     }

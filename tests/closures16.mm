@@ -17,7 +17,7 @@ main: fun() {
       thisContext.compiledFunction(), false);
 
     var fn = cfn.asContextWithFrame(
-      thisModule, get_current_process().stackFrames()[-2]);
+      thisModule, VMProcess.current.stackFrames()[-2]);
 
     assert(fn(1) + x == 140,
            "Closure with frame accessing outer closure and top level vars");

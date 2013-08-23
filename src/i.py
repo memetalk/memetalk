@@ -26,6 +26,7 @@ from parser import MemeParser
 from loader import Loader
 from evaluator import Eval
 from prim import *
+from prim import _create_closure, _compiled_function_as_context_with_frame
 import core_module as core
 from pdb import set_trace as br
 import traceback
@@ -36,6 +37,10 @@ from mmpprint import P
 import multiprocessing
 from dcmp import dcmp as equal
 
+import atexit
+import sys
+import time
+
 def _should_dump_mast():
     return 'DEBUG' in os.environ and os.environ['DEBUG'] == 'full'
 
@@ -45,6 +50,23 @@ def _should_dump_ast():
 def _should_warn_of_exception():
     return 'DEBUG' in os.environ
 
+IDX = 0
+MEMORY = {}
+def ALLOC(obj):
+    global IDX, MEMORY
+    obj['@id'] = IDX
+    MEMORY[IDX] = obj
+    IDX += 1
+    return obj
+
+def UPDATE_OBJECT(remote_obj):
+    global IDX, MEMORY
+    local_obj = MEMORY[remote_obj['@id']]
+
+    if sorted(local_obj.keys()) != sorted(remote_obj.keys()):
+        for k,v in local_obj.iteritems(): del local_obj[k]
+
+    local_obj.update(remote_obj)
 
 def _create_compiled_module(data):
     template = {"_vt": core.CompiledModule,
@@ -58,7 +80,7 @@ def _create_compiled_module(data):
                 "compiled_classes": {},
                 "@tag":" a CompiledModule"}
 
-    return dict(template.items() + data.items())
+    return ALLOC(dict(template.items() + data.items()))
 
 def _create_compiled_function(data):
     template = {"_vt": core.CompiledFunction,
@@ -80,7 +102,7 @@ def _create_compiled_function(data):
                 "is_top_level": True,
                 "is_embedded": True,
                 "@tag": "a CompiledFunction"}
-    return dict(template.items() + data.items())
+    return ALLOC(dict(template.items() + data.items()))
 
 def _create_compiled_class(data):
     template = {"_vt": core.CompiledClass,
@@ -92,7 +114,7 @@ def _create_compiled_class(data):
                 "methods": {},
                 "own_methods":{},
                 "@tag":"a CompiledClass"}
-    return dict(template.items() + data.items())
+    return ALLOC(dict(template.items() + data.items()))
 
 def _create_module(data):
     template = {"_vt": core.ModuleBehavior,
@@ -101,7 +123,7 @@ def _create_module(data):
                 "dict": {},
                 "compiled_module": None,
                 "@tag": "a Module"}
-    return dict(template.items() + data.items())
+    return ALLOC(dict(template.items() + data.items()))
 
 def _create_class(data):
     template = {"_vt": None, #it should be given by data [FooClassBehavior]
@@ -110,7 +132,7 @@ def _create_class(data):
                 "dict": {},
                 "compiled_class":None,
                 "@tag":"a class"}
-    return dict(template.items() + data.items())
+    return ALLOC(dict(template.items() + data.items()))
 
 
 def _create_accessor_method(imodule, name):
@@ -120,19 +142,19 @@ def _create_accessor_method(imodule, name):
     return _function_from_cfunction(cf, imodule)
 
 def _function_from_cfunction(cfun, imodule):
-    return {"_vt": core.Function,
-            "_delegate": None,
-            "compiled_function": cfun,
-            "module": imodule,
-            "@tag": "a Function"}
+    return ALLOC({"_vt": core.Function,
+                  "_delegate": None,
+                  "compiled_function": cfun,
+                  "module": imodule,
+                  "@tag": "a Function"})
 
 def _compiled_function_to_context(cfun, env, imodule):
-    return {"_vt": core.Context,
-            "_delegate": None,
-            "compiled_function": cfun,
-            "env":env,
-            "module": imodule,
-            "@tag": "a Context"}
+    return ALLOC({"_vt": core.Context,
+                  "_delegate": None,
+                  "compiled_function": cfun,
+                  "env":env,
+                  "module": imodule,
+                  "@tag": "a Context"})
 
 def _compiled_functions_to_functions(cfuns, imodule):
     funs = {}
@@ -185,9 +207,9 @@ def _instantiate_module(i, compiled_module, _args, parent_module):
                              "@tag":"Module " + compiled_module["name"]})
 
     # module instance
-    imodule = {"_vt": module,
-               "_delegate": parent_module,
-               "@tag":"Module instance: " + compiled_module["name"]}
+    imodule = ALLOC({"_vt": module,
+                     "_delegate": parent_module,
+                     "@tag":"Module instance: " + compiled_module["name"]})
 
     # accessors
     for cname, cclass in compiled_module["compiled_classes"].items():
@@ -223,10 +245,10 @@ def _instantiate_module(i, compiled_module, _args, parent_module):
         # superclass BarClass found
         if super_class:
             # FooClassBehavior
-            cbehavior = {"_vt": core.Behavior,
-                         "parent": super_class["_vt"],
-                         "dict": _compiled_functions_to_functions(c["own_methods"], imodule),
-                         "@tag":c["name"]+" Behavior"}
+            cbehavior = ALLOC({"_vt": core.Behavior,
+                               "parent": super_class["_vt"],
+                               "dict": _compiled_functions_to_functions(c["own_methods"], imodule),
+                               "@tag":c["name"]+" Behavior"})
 
             classes[c["name"]] = _create_class({"_vt": cbehavior,
                                                 "parent": super_class,
@@ -236,10 +258,10 @@ def _instantiate_module(i, compiled_module, _args, parent_module):
             bclasses[c["name"]] = cbehavior
         else:
             # FooClassBehavior
-            cbehavior = {"_vt": core.Behavior,
-                         "parent": "*replace-me*", #latter below
-                         "dict": _compiled_functions_to_functions(c["own_methods"],imodule),
-                         "@tag":c["name"]+" Behavior"}
+            cbehavior = ALLOC({"_vt": core.Behavior,
+                               "parent": "*replace-me*", #latter below
+                               "dict": _compiled_functions_to_functions(c["own_methods"],imodule),
+                               "@tag":c["name"]+" Behavior"})
 
             bclasses[c["name"]] = cbehavior
             # superclass BarClass will be eventually in the variable 'classes'
@@ -652,11 +674,18 @@ class Interpreter():
         self.processes = {}
         self.procids = 0
 
-        self.volatile_breakpoints = []
-
         self.manager = multiprocessing.Manager()
 
         self.my_channel = self.manager.Queue()
+
+        atexit.register(self.cleanup)
+
+    def cleanup(self):
+        try:
+            for k,p in self.processes.iteritems(): # list of your processes
+                p.terminate() # supported from python 2.6
+        except:
+            pass
 
     def module_to_text(self, cmod):
         def if_ctor(lst, val):
@@ -733,14 +762,6 @@ class Interpreter():
             elif msg['name'] == 'debug':
                 getattr(self, 'cmdproc_' + msg['name'])(*msg['args'])
                 self.my_channel.put('done')
-            elif msg['name'] == 'step_into':
-                pass
-            elif msg['name'] == 'step_over':
-                pass
-            elif msg['name'] == 'step_out':
-                pass
-            elif msg['name'] == 'continue':
-                pass
 
     def cmdproc_exec_module(self, procid, mname, fname, args):
         proc = self.processes[procid]
@@ -770,10 +791,6 @@ class Interpreter():
     #     target_process.debugger_process.exec_module("idez.mm", 'debug', [mmprocess, exception])
     #     #target_process.debugger_process.join()
     #     #print "DONE debugger for process"
-
-    def break_at(self, cfun, line):
-        #print "Breaking at: " + str(line) + " --- " + P(cfun,1,True)
-        self.volatile_breakpoints.append({"cfun":cfun, "line":line})
 
     def compiled_module_by_filename(self, filename):
         module_name = filename[:-3]
@@ -911,7 +928,7 @@ class Interpreter():
         return self.alloc(dict(template.items() + data.items()))
 
     def alloc(self, obj):
-        self.memory.append(obj)
+        self.memory.append(ALLOC(obj))
         return obj
 
     def interned_symbol_for(self, s):
@@ -941,17 +958,7 @@ class Process(multiprocessing.Process):
         self.channels['target'] = target_channel
         self.channels['dbg'] = None
 
-        # # channel where I send commands to the interpreter
-        # self.int_channel = interpreter.my_channel
-
-        # # channel where I receive data
-        # self.my_channel = interpreter.manager.Queue()
-
-        # # channel to command the process I'm debugging
-        # self.target_channel = target_channel
-
-        # # channel to receive commands from my debugger process
-        # self.dbg_channel = interpreter.manager.Queue()
+        self.volatile_breakpoints = []
 
         self.entry = {} # data for executing the entry point
 
@@ -976,15 +983,24 @@ class Process(multiprocessing.Process):
         self.locals = {}
         self.stack = []
 
+
+    def break_at(self, cfun, line):
+        #print "Breaking at: " + str(line) + " --- " + P(cfun,1,True)
+        self.volatile_breakpoints.append({"cfun":cfun, "line":line})
+
     def call_target_process(self, block, procid, name, *args):
-        print 'this process: ' + str(self.procid)
-        print 'call_target_process: ' + str(procid)
-        self.channels['target'].put({"cmd":name})
+        print str(self.procid) + ": call_target_process"
+        print str(self.procid) + ': queue empty?' + str(self.channels['target'].empty())
+        print str(self.procid) + ': queue full?' + str(self.channels['target'].full())
+        print str(self.procid) + ': putting data on queue....'
+        self.channels['target'].put({"cmd":name, "args": args})
+        print str(self.procid) + ': data sent. Should we block?' + str(block)
         if block:
-            print 'call_target_process waiting for debugged process to answer'
+            print str(self.procid) + ': call_target_process waiting for debugged process to answer'
             data = self.channels['my'].get()
-            print 'debugger got data from target'
+            print str(self.procid) + ': debugger got data from target'
             return data
+        print str(self.procid) + "call_target_process() DONE"
 
     def call_interpreter(self, block, name, *args):
         print 'call_interpreter: ' + name
@@ -1037,15 +1053,18 @@ class Process(multiprocessing.Process):
             print "Exception raised during the boot: " + e.mmobj()['message']
             print e.mmobj()['py_trace']
 
-    def pause_execution(self):
-        print 'pause_execution'
-        pass
 
-    def resume(self, new_state = 'running'):
-        self.state = new_state
-        print 'RESUMING EXECUTION'
-        self.qev.exit(0)
-        print 'RESUMED'
+    # def patch_frame_cfun(self, other):
+    #     for frame in self.all_stack_frames():
+    #         if frame['r_cp']:
+    #             cfun = frame['r_cp']['compiled_function']
+    #             if cfun['name'] == other['name']:
+    #                 for key in other.keys():
+    #                     if key != '_vt' and key != '_delegate':
+    #                         cfun[key] = other[key]
+    #                 print 'patched!'
+    #                 return
+    #     self.throw_with_message("Bug on patch_frame_cfun: no match found")
 
     def _lookup(self, drecv, vt, selector):
         if vt == None:
@@ -1138,6 +1157,15 @@ class Process(multiprocessing.Process):
         else:
             return list(reversed(self.stack)).index(frame)
 
+    def all_stack_frames(self):
+        return self.stack + [self.top_frame()]
+
+    def frame_by_index(self, idx):
+        if len(self.stack) == idx:
+            return self.top_frame()
+        else:
+            return self.stack[idx]
+
     def top_frame(self):
         return {"r_cp": self.r_cp,
                 "r_rp": self.r_rp,
@@ -1195,7 +1223,6 @@ class Process(multiprocessing.Process):
         self.r_mp = method["module"]
         self.r_ep = None
         self.locals = {}
-        # binding up arguments to parameters
         if not equal(self.interpreter.get_vt(method), core.Context):
             self.r_rp  = recv
             self.r_rdp = drecv
@@ -1232,7 +1259,6 @@ class Process(multiprocessing.Process):
             # put args in the env
             for k,v in zip(method["compiled_function"]["params"],args):
                 self.env_set_value(k, v)
-
 
     def setup_and_run_unprotected(self, recv, drecv, name, method, args, should_allocate):
         self.exception_protection.append(False)
@@ -1498,88 +1524,126 @@ class Process(multiprocessing.Process):
 
     ## debugger
 
-    def dbg_cmd(self, cmd):
-        #print 'dbg_cmd received: ' + str(cmd)
-        if cmd[0] == 'step_into':
-            #print("process:: changed state to paused")
-            self.state = 'paused'
-        if cmd[0] == 'step_over':
-            #print("process:: changed state to next")
-            self.state = 'next'
-        if cmd[0] == 'continue':
-            #print("process:: changed state to continue")
-            self.state = 'running'
-        if cmd[0] == 'continue_throw':
-            #print("process:: we are asked to raise the exception ")
-            self.state = 'exception'
-        if cmd[0] == 'rewind':
-            self.interpreter.break_at(self.r_cp['compiled_function'], cmd[2])
-            self.state = 'running'
-            raise RewindException(self.frame_level(cmd[1])+2)
-        if cmd[0] == 'reload':
-            #print "process: reload to line " + str(cmd[1])
-            if cmd[1] == 0:
-                self.state = 'paused'
-            else:
-                self.interpreter.break_at(self.r_cp['compiled_function'], cmd[1])
-                self.state = 'running'
-            raise RewindException(1)
-        #print "process: " + str(id(self)) + " is " + self.state
+    # def dbg_cmd(self, cmd):
+    #     #print 'dbg_cmd received: ' + str(cmd)
+    #     if cmd[0] == 'step_into':
+    #         #print("process:: changed state to paused")
+    #         self.state = 'paused'
+    #     if cmd[0] == 'step_over':
+    #         #print("process:: changed state to next")
+    #         self.state = 'next'
+    #     if cmd[0] == 'continue':
+    #         #print("process:: changed state to continue")
+    #         self.state = 'running'
+    #     if cmd[0] == 'continue_throw':
+    #         #print("process:: we are asked to raise the exception ")
+    #         self.state = 'exception'
+    #     if cmd[0] == 'rewind':
+    #         self.interpreter.break_at(self.r_cp['compiled_function'], cmd[2])
+    #         self.state = 'running'
+    #         raise RewindException(self.frame_level(cmd[1])+2)
+    #     if cmd[0] == 'reload':
+    #         #print "process: reload to line " + str(cmd[1])
+    #         if cmd[1] == 0:
+    #             self.state = 'paused'
+    #         else:
+    #             self.interpreter.break_at(self.r_cp['compiled_function'], cmd[1])
+    #             self.state = 'running'
+    #         raise RewindException(1)
+    #     #print "process: " + str(id(self)) + " is " + self.state
 
         return self.state
 
     def dbg_control(self, name, force_debug = False):
 
-        if not self.channels['my'].empty():
-            msg = self.channels['my'].get()
+        def process_breakpoints():
+            for idx, bp in enumerate(self.volatile_breakpoints):
+                line = self.r_ip.start_line - self.r_cp['compiled_function']['line']+1
+                #print "Checking line: " + str(line) + " --- " + str(self.r_ip)
+                if line == bp['line'] and equal(self.r_cp['compiled_function'], bp['cfun']):
+                    #print "BP activated at line: " + str(line) + " --- " + str(self.r_ip)
+                    self.state = 'paused'
+                    del self.volatile_breakpoints[idx]
+                    return
+
+        def process_dbg_msg(msg):
+            print 'target: received from debugger: ' + P(msg,1,True)
             if msg['cmd'] == 'set_state':
                 self.state = msg['value']
+            if msg['cmd'] == 'get_frames':
+                print 'sending frames'
+                self.channels['dbg'].put(self.all_stack_frames())
+                print 'frames sent, we are done'
+            if msg['cmd'] == 'step_into':
+                self.state = 'paused'
+                self.channels['dbg'].put(self.all_stack_frames())
+                return True
+            if msg['cmd'] == 'step_over':
+                self.state = 'next'
+                self.channels['dbg'].put(self.all_stack_frames())
+                return True
+            if msg['cmd'] == 'continue':
+                print 'target: received continue'
+                self.state = 'running'
+                self.channels['dbg'].put('done')
+                return True
+            if msg['cmd'] == 'reload_frame':
+                print 'target: reload frame'
+                self.state = 'paused'
+                raise RewindException(1)
+            if msg['cmd'] == 'rewind_and_break':
+                print 'target: rewind_and_break'
+                self.state = 'running'
+
+                frames_count = msg['args'][0]
+                print 'rewinding  this much of frames: ' + str(frames_count)
+                print 'We are at: ' + self.r_cp['compiled_function']['name']
+
+                to_line = msg['args'][1]
+                print 'line: ' + str(to_line)
+
+                print 'we will break at: ' + self.r_cp['compiled_function']['name']
+                self.break_at(self.r_cp['compiled_function'], to_line)
+                raise RewindException(frames_count)
+            if msg['cmd'] == 'update_object':
+                import pickle
+                obj = pickle.loads(msg['args'][0])
+                print 'updating object:'
+                UPDATE_OBJECT(obj)
+            if msg['cmd'] == 'eval':
+                print 'evaluating text:'
+                frame = self.frame_by_index(msg['args'][1])
+                # var cmod = get_compiled_module(imod);
+                cmod = self.interpreter.get_vt(self.r_mp)['compiled_module']
+                # var cfn = CompiledFunction.newClosure(code, thisContext.compiledFunction(), false);
+                code = "fun () { " + msg['args'][0] + "}"
+                cfn = _create_closure(self, code, self.r_cp['compiled_function'], False)
+                # var fn = cfn.asContextWithFrame(imod, frame);
+                fn = _compiled_function_as_context_with_frame(cfn, self, self.r_mp, frame)
+                print 'setup_and_run_unprotected....'
+                old_state = self.state
+                self.state = 'running'
+                res = self.setup_and_run_unprotected(None, None, 'fn', fn, [], True)
+                print "eval result: " + P(res,1,True)
+                self.state = old_state
+                import pickle
+                obj = pickle.dumps(res)
+                self.channels['dbg'].put(obj)
+                print 'done eval'
+
+        process_breakpoints()
+
+        if self.state == 'running' and not self.channels['my'].empty():
+            msg = self.channels['my'].get()
+            process_dbg_msg(msg)
 
         if self.state in ['paused', 'next'] or force_debug:
-            print "dbg_control paused! state: " + self.state
+            print str(self.procid) + ": dbg_control paused! state: " + self.state
             while True:
+                print str(self.procid) + ':target: waiting for debugger command'
                 msg = self.channels['my'].get()
-                print 'received from debugger: ' + str(msg)
-                if msg['cmd'] == 'get_frames':
-                    print 'sending frames'
-                    self.channels['dbg'].put(self.stack + [self.top_frame()])
-                if msg['cmd'] == 'step_into':
-                    self.state = 'paused'
+                if process_dbg_msg(msg):
                     break
-                if msg['cmd'] == 'step_over':
-                    self.state = 'next'
-                    break
-                if msg['cmd'] == 'continue':
-                    self.state = 'running'
-                    break
-
-        #self.process_breakpoints()
-        # if self.state in ['paused', 'next'] or force_debug:
-        #     if not self.debugger_process:
-        #         print 'dbg_control: paused: initiating debugger...please wait'
-        #         if self.state == 'exception':
-        #             print "An exception ocurred: starting debugger..."
-        #             self.interpreter.debugger_for_process(self, self.last_exception)
-        #         else:
-        #             self.interpreter.debugger_for_process(self)
-        #     elif self.state == 'exception':
-        #         print "An exception ocurred: starting debugger..."
-        #         self.debugger_process.switch("exception",self.last_exception)
-        #     else:
-        #         #print 'dbg_control paused: asking debugger for cmd...'
-        #         self.debugger_process.switch()
-        #     ret = self.dbg_cmd(cmd)
-        #     return ret
-
-    def process_breakpoints(self):
-        for idx, bp in enumerate(self.interpreter.volatile_breakpoints):
-            line = self.r_ip.start_line - self.r_cp['compiled_function']['line']+1
-            #print "Checking line: " + str(line) + " --- " + str(self.r_ip)
-            if line == bp['line'] and equal(self.r_cp['compiled_function'], bp['cfun']):
-                #print "BP activated at line: " + str(line) + " --- " + str(self.r_ip)
-                self.state = 'paused'
-                del self.interpreter.volatile_breakpoints[idx]
-                return
 
     def is_exception_protected(self):
         #print "is_exception_protected?: " + str(self.exception_protection[-1])
@@ -1661,8 +1725,12 @@ class Process(multiprocessing.Process):
 ###################################################
 
 
+
+
+
+
 if __name__ == "__main__":
-    sys.setrecursionlimit(10000000) # yes, really
+    #sys.setrecursionlimit(10000000) # yes, really
 
     if len(sys.argv) == 1:
         print "i.py filename"

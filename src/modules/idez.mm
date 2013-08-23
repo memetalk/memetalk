@@ -113,7 +113,7 @@ init new: fun(process, ex, eventloop) {
   @exception = ex;
   @eventloop = eventloop;
 
-  @shouldUpdateVars = false;
+  @shouldUpdateVars = true;
 
   this.resize(700,800);
   this.setWindowTitle("Debugger");
@@ -131,18 +131,15 @@ init new: fun(process, ex, eventloop) {
   @stackCombo = StackCombo.new(centralWidget, @execFrames);
   mainLayout.addWidget(@stackCombo);
 
-  @editor = Editor.new(centralWidget,
-                       null,
-                       fun() { @execFrames.frame(@frame_index).modulePointer },
-                       fun() { @execFrames.frame(@frame_index) },
-                       null);
+  @editor = Editor.new(centralWidget, null, null, null);
 
-  mainLayout.addWidget(@editor);
+  @editor.setProcess(@process);
 
   @stackCombo.connect("currentIndexChanged",fun(i) {
     if (0 <= i) {
       @frame_index = i;
       @editor.setText(@execFrames.codeFor(i));
+      @editor.setFrameIndex(@frame_index);
       var locInfo = @execFrames.locationInfoFor(i);
       @editor.pausedAtLine(locInfo["start_line"]-1, locInfo["start_col"], locInfo["end_line"]-1, locInfo["end_col"]);
       if (@shouldUpdateVars) {
@@ -152,12 +149,16 @@ init new: fun(process, ex, eventloop) {
     }
   });
 
+  mainLayout.addWidget(@editor);
+
   var hbox = qt.QHBoxLayout.new(null);
-  @localVarList = VariableListWidget.new(centralWidget);
+  @localVarList = VariableListWidget.new(@process, centralWidget);
   hbox.addWidget(@localVarList);
 
-  @fieldVarList = VariableListWidget.new(centralWidget);
+
+  @fieldVarList = VariableListWidget.new(@process, centralWidget);
   hbox.addWidget(@fieldVarList);
+
 
   mainLayout.addLayout(hbox);
   this.setCentralWidget(centralWidget);
@@ -232,7 +233,7 @@ init new: fun(process, ex, eventloop) {
   action = qt.QAction.new("Inspect it", this);
   action.setShortcut("ctrl+i");
   action.connect("triggered", fun() {
-      @editor.inspectIt();
+      @editor.inspectIt()
   });
   execMenu.addAction(action);
 
@@ -267,20 +268,14 @@ instance_method toggleVarUpdate: fun() {
 
 instance_method acceptIt: fun() {
   var text = @editor.text();
-  @execFrames.frame(@frame_index).contextPointer.compiledFunction.setCode(text);
+  var cfun = @execFrames.frame(@frame_index).contextPointer.compiledFunction;
+  cfun.setCode(text);
   @editor.saved();
-}
-
-instance_method closeEvent: fun() {
-  io.print("CLOSE EVENT");
-  if (@exception) {
-    @eventloop.exit(1);
-  } else {
-    @eventloop.exit(0);
-  }
+  @process.updateObject(cfun);
 }
 
 instance_method continue: fun() {
+  @process.continue();
   this.close();
 }
 
@@ -306,10 +301,8 @@ instance_method rewindAndGo: fun() {
   @exception = null;
   @statusLabel.setText("Rewinding...");
   this.disableActions();
-  var fromFrame = @execFrames.frame(@frame_index);
-  var topFrame = @execFrames.topFrame();
-  var line = topFrame.instructionPointer["start_line"];
-  @process.rewindUntil(fromFrame, line);
+  var line = @execFrames.topFrame.instructionPointer["start_line"];
+  @process.rewindAndBreak(@stackCombo.count - @frame_index, line);
   @stackCombo.updateInfo();
   this.enableActions();
 }
@@ -365,8 +358,8 @@ instance_method stepOver: fun() {
 end //idez:DebuggerUI
 
 class Editor < QsciScintilla
-fields: getContext, getIModule, getFrame, afterEval;
-init new: fun(parent, getContext, getIModule, getFrame, afterEval) {
+fields: getContext, getIModule, afterEval, target_process, frame_index;
+init new: fun(parent, getContext, getIModule, afterEval) {
   super.new(parent);
   if (parent == null) {
     this.initExtraActions();
@@ -376,23 +369,27 @@ init new: fun(parent, getContext, getIModule, getFrame, afterEval) {
 
   @getContext = getContext;
   @getIModule = getIModule;
-  @getFrame = getFrame;
   @afterEval = afterEval;
+}
+instance_method setProcess: fun(proc) {
+  @target_process = proc;
+}
+instance_method setFrameIndex: fun(fidx) {
+  @frame_index = fidx;
 }
 
 instance_method debugIt: fun() {
   try {
-    var fn = null;
-    if (@getContext) {
-      fn = evalWithVarsFn(this.selectedText(), @getContext(), @getIModule());
+    if (@target_process) {
+      return @target_process.eval(this.selectedText(), @frame_index);
     } else {
-      fn = evalWithVarsFn(this.selectedText(), @getFrame(), @getIModule());
+      var fn = evalWithVarsFn(this.selectedText(), @getContext(), @getIModule());
+      VMProcess.debug(fn,[]);
+      if (@afterEval) {
+        @afterEval(fn.getEnv());
+      }
     }
-    VMProcess.debug(fn,[]);
-    if (@afterEval) {
-      @afterEval(fn.getEnv());
-    }
-  } catch(e) {
+  } catch (e) {
     this.insertSelectedText(e.message());
   }
 }
@@ -406,16 +403,16 @@ instance_method doIt: fun() {
 }
 
 instance_method evalSelection: fun() {
-  var r = null;
-  if (@getContext) {
-    r = evalWithVars(this.selectedText(), @getContext(), @getIModule());
+  if (@target_process) {
+    return @target_process.eval(this.selectedText(), @frame_index);
   } else {
-    r = evalWithFrame(this.selectedText(), @getFrame(), @getIModule());
+    var r = null;
+    r = evalWithVars(this.selectedText(), @getContext(), @getIModule());
+    if (@afterEval) {
+      @afterEval(r["env"]);
+    }
+    return r["result"];
   }
-  if (@afterEval) {
-    @afterEval(r["env"]);
-  }
-  return r["result"];
 }
 
 instance_method initEditActions: fun() {
@@ -501,7 +498,7 @@ instance_method insertSelectedText: fun(text) {
 instance_method inspectIt: fun() {
   try {
     var res = this.evalSelection();
-    Inspector.new(res).show();
+    return Inspector.inspect(res).setProcess(@target_process);
   } catch(e) {
     this.insertSelectedText(e.message());
   }
@@ -547,7 +544,7 @@ instance_method locationInfoFor: fun(i) {
 
 instance_method names: fun() {
   return @vmproc.stackFrames().map(fun(frame) {
-    frame.contextPointer().compiledFunction().fullName() + ":" + frame.instructionPointer()["start_line"].toString()
+    frame.contextPointer.compiledFunction.fullName + ":" + frame.instructionPointer["start_line"].toString
   });
 }
 
@@ -563,8 +560,8 @@ end //idez:ExecutionFrames
 
 class ExplorerEditor < Editor
 fields: cfun;
-init new: fun(cfun, parent, getContext, getIModule, getFrame, afterEval) {
-  super.new(parent, getContext, getIModule, getFrame, afterEval);
+init new: fun(cfun, parent, getContext, getIModule, afterEval) {
+  super.new(parent, getContext, getIModule, afterEval);
   @cfun = cfun;
 }
 
@@ -584,13 +581,15 @@ instance_method cfun: fun() {
 end //idez:ExplorerEditor
 
 class Inspector < QMainWindow
-fields: inspectee, variables, mirror, fieldList, textArea, lineEdit;
+fields: inspectee, variables, mirror, fieldList, textArea, lineEdit, target_process;
 init new: fun(inspectee) {
   super.new();
 
   @variables = {"this":@inspectee};
   @inspectee = inspectee;
   @mirror = Mirror.new(@inspectee);
+
+  @target_process = null;
 
   this.resize(300,250);
   this.setWindowTitle("Inspector");
@@ -605,7 +604,7 @@ init new: fun(inspectee) {
 
   @textArea = Editor.new(centralWidget,
                          fun() { {"this" : @inspectee} },
-                         fun() { thisModule }, null, null);
+                         fun() { thisModule }, null);
 
   hbox.addWidget(@textArea);
 
@@ -667,12 +666,18 @@ init new: fun(inspectee) {
 }
 //end idez:Inspector:new
 
+instance_method setProcess: fun(proc) {
+  @target_process = proc;
+}
 instance_method acceptIt: fun() {
   var fn = evalWithVarsFn(@textArea.text(), {"this":@inspectee}, thisModule);
   var new_value = fn.apply([]);
   var slot = @fieldList.currentItem().text();
   @mirror.setValueFor(slot, new_value);
   @textArea.saved();
+  if (@target_process) {
+    @target_process.updateObject(@inspectee);
+  }
 }
 
 instance_method debugIt: fun() {
@@ -920,14 +925,12 @@ init new: fun() {
       if (cfn) {
         e = ExplorerEditor.new(cfn, null, fun() { @variables },
                                fun() { this.currentIModule() },
-                               null,
                                fun(env) { @variables = env + @variables;});
       }
     } else {
       if (params.has("code")) {
         e = ExplorerEditor.new(null, null, fun() { @variables },
                                fun() { this.currentIModule() },
-                               null,
                                fun(env) { @variables = env + @variables;});
       }
     }
@@ -1765,8 +1768,8 @@ instance_method object: fun() {
 end //idez:VariableItem
 
 class VariableListWidget < QTableWidget
-fields: ;
-init new: fun(parent) {
+fields: target_process;
+init new: fun(process, parent) {
   super.new(parent);
   this.verticalHeader().hide();
   this.setSelectionMode(1);
@@ -1778,8 +1781,10 @@ init new: fun(parent) {
   this.clear();
   this.setHorizontalHeaderLabels(['Name', 'Value']);
 
+  @target_process = process;
+
   this.connect("itemDoubleClicked", fun(item) {
-    Inspector.inspect(item.object);
+    Inspector.inspect(item.object).setProcess(@target_process)
   });
 }
 
@@ -1862,7 +1867,7 @@ init new: fun() {
   this.setWindowTitle("Workspace");
 
   @editor = Editor.new(this, fun() { @variables },
-                       fun() { thisModule }, null,
+                       fun() { thisModule },
                        fun(env) { @variables = env + @variables; });
 
   this.setCentralWidget(@editor);

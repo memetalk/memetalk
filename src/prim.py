@@ -70,7 +70,9 @@ def prim_exception_type(proc):
 
 def prim_vmprocess_current(proc):
     VMProcess = proc.interpreter.get_core_class('VMProcess')
-    return proc.interpreter.alloc_object(VMProcess, {'self': proc, 'id':proc.procid})
+    VMStackFrameClass = proc.interpreter.get_core_class('VMStackFrame')
+    frames = [proc.interpreter.alloc_object(VMStackFrameClass,{'self':x}) for x in proc.all_stack_frames()]
+    return proc.interpreter.alloc_object(VMProcess, {'self': proc, 'id':proc.procid, 'frames': frames})
 
 def prim_vmprocess_spawn(proc):
     print 'prim_vmprocess_spawn'
@@ -88,31 +90,63 @@ def prim_vmprocess_exec_module(proc):
     return proc.r_rp
 
 def prim_vmprocess_debug(proc):
-    print "prim_vmprocess_debug"
+    print "prim_vmprocess_debug: firing up debugger"
     proc.call_interpreter(True, 'debug', proc.r_rdp['id'])
 
 def prim_vmprocess_step_into(proc):
-    proc.call_target_process(False, proc.r_rdp['id'], 'step_into')
+    raw_frames = proc.call_target_process(True, proc.r_rdp['id'], 'step_into')
+    VMStackFrameClass = proc.interpreter.get_core_class('VMStackFrame')
+    print 'got frames, assemblying...'
+    proc.r_rdp['frames'] = [proc.interpreter.alloc_object(VMStackFrameClass,{'self':x}) for x in raw_frames if x['r_cp']]
 
 def prim_vmprocess_step_over(proc):
-    proc.call_target_process(False, proc.r_rdp['id'], 'step_over')
+    raw_frames = proc.call_target_process(True, proc.r_rdp['id'], 'step_over')
+    VMStackFrameClass = proc.interpreter.get_core_class('VMStackFrame')
+    print 'got frames, assemblying...'
+    proc.r_rdp['frames'] = [proc.interpreter.alloc_object(VMStackFrameClass,{'self':x}) for x in raw_frames if x['r_cp']]
 
 def prim_vmprocess_continue(proc):
-    proc.call_target_process(False, proc.r_rdp['id'], 'continue')
+    print 'prim_vmprocess_continue'
+    proc.call_target_process(True, proc.r_rdp['id'], 'continue')
 
-# def prim_vmprocess_reload_frame(proc):
-#     _proc = _lookup_field(proc, proc.r_rp, 'self')
-#     _proc.switch("reload", proc.locals['line'])
+def prim_vmprocess_update_object(proc):
+    obj = proc.locals['obj']
+    print 'prim_vmprocess_update_object'
+    import pickle
+    raw_obj = pickle.dumps(obj)
+    proc.call_target_process(False, proc.r_rdp['id'], 'update_object', raw_obj)
 
-# def prim_vmprocess_rewind_until(proc):
-#     _proc = _lookup_field(proc, proc.r_rp, 'self')
-#     frame = _lookup_field(proc, proc.locals['fromFrame'], 'self')
-#     _proc.switch("rewind", frame, proc.locals['to_line'])
+def prim_vmprocess_reload_frame(proc):
+    print 'asking to reloading frame...'
+    proc.call_target_process(False, proc.r_rdp['id'], 'reload_frame')
+
+def prim_vmprocess_rewind_and_break(proc):
+    print 'asking to rewind...'
+    frames_count = proc.locals['frames_count']
+    to_line = proc.locals['to_line']
+    proc.call_target_process(False, proc.r_rdp['id'], 'rewind_and_break', frames_count, to_line)
 
 def prim_vmprocess_stack_frames(proc):
-    raw_frames = proc.call_target_process(True, proc.r_rdp['id'], 'get_frames')
-    VMStackFrameClass = proc.interpreter.get_core_class('VMStackFrame')
-    return [proc.interpreter.alloc_object(VMStackFrameClass,{'self':x}) for x in raw_frames if x['r_cp']]
+    print 'prim_vmprocess_stack_frames'
+    if proc.r_rdp['frames']:
+        print 'we have it cached, returning it'
+        return proc.r_rdp['frames']
+    else:
+        print 'asking stack frames...'
+        raw_frames = proc.call_target_process(True, proc.r_rdp['id'], 'get_frames')
+        VMStackFrameClass = proc.interpreter.get_core_class('VMStackFrame')
+        print 'got frames, assemblying...'
+        proc.r_rdp['frames'] = [proc.interpreter.alloc_object(VMStackFrameClass,{'self':x}) for x in raw_frames if x['r_cp']]
+        print 'returning frames'
+        return proc.r_rdp['frames']
+
+def prim_vmprocess_eval(proc):
+    print 'asking to eval...'
+    text = proc.locals['text']
+    frame_level = proc.locals['frame_level'] + 1
+    raw = proc.call_target_process(True, proc.r_rdp['id'], 'eval', text, frame_level)
+    import pickle
+    return pickle.loads(raw)
 
 def prim_vmstackframe_instruction_pointer(proc):
     frame = _lookup_field(proc, proc.r_rp, 'self')
@@ -143,7 +177,9 @@ def prim_vmstackframe_module_pointer(proc):
         return None
 
 def prim_vmstackframe_context_pointer(proc):
+    print 'prim_vmstackframe_context_pointer'
     frame = _lookup_field(proc, proc.r_rp, 'self')
+    print 'got frame: returning:' + P(frame,1,True)
     return frame['r_cp']
 
 def prim_vmstackframe_receiver_pointer(proc):
@@ -250,13 +286,17 @@ def prim_compiled_function_new_top_level(proc):
     cfun['is_top_level'] = True
     return cfun
 
-def prim_compiled_function_new_closure(proc):
-    text = proc.locals['text']
-    outer = proc.locals['cfun']
+def _create_closure(proc, text, outer, is_embedded):
     cfun = proc.interpreter.compile_closure(text,outer)
-    cfun['is_embedded'] = proc.locals['is_embedded'] #text is embeded in outter cfun?
+    cfun['is_embedded'] = is_embedded #text is embeded in outter cfun?
     cfun['is_top_level'] = False
     return cfun
+
+def prim_compiled_function_new_closure(proc):
+    text = proc.locals['text']
+    outer = proc.locals['outer_cfun']
+    is_embedded = proc.locals['is_embedded']
+    return _create_closure(proc, text, outer, is_embedded)
 
 def prim_compiled_function_set_code(proc):
     if proc.r_rdp['is_top_level']:
@@ -301,25 +341,29 @@ class ProxyEnv():
             ret[key] = self.frame['locals'][name]
         return ret.iteritems()
 
-def prim_compiled_function_as_context_with_frame(proc):
-    frame = proc.locals['frame']
+def _compiled_function_as_context_with_frame(cfun, proc, imod, frame):
     # If the frame passed has an r_ep, just use it as our env.
     # else, we need to construct a proxy env capable of changing
     # frame.locals. We also need to patch r_rp function's env_table
     # so that all frame.locals/this are mapped there (so env_lookup works).
-    if frame['self']['r_ep'] != None:
-        env = frame['self']['r_ep']
+    if frame['r_ep'] != None:
+        env = frame['r_ep']
         # Though this cfun was already constructed with an outer_cfun,
         # now we have a frame, so it's cp should be our outer_cfun! :(
-        proc.r_rp['outer_cfun'] = frame['self']['r_cp']['compiled_function']
+        cfun['outer_cfun'] = frame['r_cp']['compiled_function']
         # patching our env_table's indexes
-        begin = max(proc.r_rp['outer_cfun']['env_table'].keys()) + 1
-        proc.r_rp['env_table'] = dict([(x+begin,y) for x,y in proc.r_rp['env_table'].iteritems()])
+        begin = max(cfun['outer_cfun']['env_table'].keys()) + 1
+        cfun['env_table'] = dict([(x+begin,y) for x,y in cfun['env_table'].iteritems()])
     else:
-        env = ProxyEnv(frame['self'], proc.r_rp['env_table'])
-        proc.r_rp['env_table'] = env.table # patching the env_table
-    ret = proc.interpreter.compiled_function_to_context(proc.r_rp, env, proc.locals['imodule'])
+        env = ProxyEnv(frame, cfun['env_table'])
+        cfun['env_table'] = env.table # patching the env_table
+    ret = proc.interpreter.compiled_function_to_context(cfun, env, imod)
     return ret
+
+def prim_compiled_function_as_context_with_frame(proc):
+    frame = proc.locals['frame']
+    imod = proc.locals['imodule']
+    return _compiled_function_as_context_with_frame(proc.r_rp, proc, imod, frame['self'])
 
 def prim_compiled_function_as_context_with_vars(proc):
     var_dict = proc.locals['vars']
@@ -624,10 +668,10 @@ def prim_compiled_module_new_class(proc):
 
     for imod in proc.interpreter.imodules():
         if equal(imod['_vt']['compiled_module'], cmod):
-            cb = {"_vt": proc.interpreter.get_core_class("Behavior"),
-                  "parent": proc.interpreter.get_core_class("ObjectBehavior")['_vt'],
-                  "dict": {},
-                  "@tag": name + "Behavior"}
+            cb = proc.interpreter.alloc({"_vt": proc.interpreter.get_core_class("Behavior"),
+                                         "parent": proc.interpreter.get_core_class("ObjectBehavior")['_vt'],
+                                         "dict": {},
+                                         "@tag": name + "Behavior"})
             imod['_vt']['dict'][name] = proc.interpreter.create_accessor_method(imod, name)
             imod[name] = proc.interpreter.create_class({"_vt": cb,
                                                         "parent": proc.interpreter.get_core_class("Object"),
@@ -645,10 +689,10 @@ def prim_compiled_module_add_class(proc):
     cmod['compiled_classes'][name] = klass
     for imod in proc.interpreter.imodules():
         if equal(imod['_vt']['compiled_module'], cmod):
-            cb = {"_vt": proc.interpreter.get_core_class("Behavior"),
-                  "parent": proc.lookup_in_modules(klass["super_class_name"], imod)['_vt'],
-                  "dict": proc.interpreter.compiled_functions_to_functions(klass["own_methods"], imod),
-                  "@tag": name + "Behavior"}
+            cb = proc.interpreter.alloc({"_vt": proc.interpreter.get_core_class("Behavior"),
+                                         "parent": proc.lookup_in_modules(klass["super_class_name"], imod)['_vt'],
+                                         "dict": proc.interpreter.compiled_functions_to_functions(klass["own_methods"], imod),
+                                         "@tag": name + "Behavior"})
             imod['_vt']['dict'][name] = proc.interpreter.create_accessor_method(imod, name)
             imod[name] = proc.interpreter.create_class({"_vt": cb,
                                                         "parent": proc.interpreter.get_core_class("Object"),
@@ -1332,6 +1376,10 @@ def prim_qt_qcombobox_clear(proc):
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
     qtobj.clear()
     return proc.r_rp
+
+def prim_qt_qcombobox_count(proc):
+    qtobj = _lookup_field(proc, proc.r_rp, 'self')
+    return qtobj.count()
 
 ## QTableWidget
 

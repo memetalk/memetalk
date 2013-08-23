@@ -102,16 +102,17 @@ class CoreGenerator(ASTBuilder):
 
         append("from i import _create_compiled_function, _function_from_cfunction")
         append("from i import _create_compiled_module, _create_compiled_class")
+        append("from i import ALLOC")
         append("from astbuilder import *")
-        append("kernel_cmodule = {}")
-        append("kernel_imodule = {}")
+        append("kernel_cmodule = ALLOC({})")
+        append("kernel_imodule = ALLOC({})")
 
         for k,v in self.objects.iteritems():
-            append(k + " = {}")
+            append(k + " = ALLOC({})")
 
         for k,v in self.classes.iteritems():
-            append(k + " = {}")
-            append(k+"Behavior = {'_vt': Behavior,'parent':"+self.supers[k]+"Behavior, 'dict':{}, '@tag':'"+k+"Behavior'}")
+            append(k + " = ALLOC({})")
+            append(k+"Behavior = ALLOC({'_vt': Behavior,'parent':"+self.supers[k]+"Behavior, 'dict':{}, '@tag':'"+k+"Behavior'})")
 
         for name,obj in self.objects.iteritems():
             for key,v in obj.iteritems():
@@ -168,11 +169,11 @@ class CoreGenerator(ASTBuilder):
                "'@tag':'kernel compiled module'}))")
 
         append("""
-KernelModule = {"_vt": ModuleBehavior,
+KernelModule = ALLOC({"_vt": ModuleBehavior,
 "_delegate": None,
 "parent": Object,
 "dict": {},
-"@tag": "KernelModule"}""")
+"@tag": "KernelModule"})""")
         append("kernel_imodule['_vt'] = KernelModule")
         append("kernel_imodule['_delegate'] = None")
         append("kernel_imodule['@tag'] = 'Kernel module instance'")
