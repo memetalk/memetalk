@@ -34,6 +34,9 @@ from config import MODULES_PATH
 import traceback
 from mmpprint import P
 from dcmp import dcmp as equal
+import logging
+
+logger = logging.getLogger("i")
 
 _app = None
 _qt_imodule = None
@@ -75,14 +78,14 @@ def prim_vmprocess_current(proc):
     return proc.interpreter.alloc_object(VMProcess, {'self': proc, 'id':proc.procid, 'frames': frames})
 
 def prim_vmprocess_spawn(proc):
-    print 'prim_vmprocess_spawn'
+    logger.debug('prim_vmprocess_spawn')
     procid = proc.call_interpreter(True, 'spawn')
-    print 'prim_vmprocess_spawn got id:'
+    logger.debug('prim_vmprocess_spawn got id:')
     proc.r_rdp['id'] = procid
     return proc.r_rp
 
 def prim_vmprocess_exec_module(proc):
-    print 'prim_vmprocess_exec_module'
+    logger.debug('prim_vmprocess_exec_module')
     mname = proc.locals['mname']
     fname = proc.locals['fname']
     args  = proc.locals['args']
@@ -90,58 +93,58 @@ def prim_vmprocess_exec_module(proc):
     return proc.r_rp
 
 def prim_vmprocess_debug(proc):
-    print "prim_vmprocess_debug: firing up debugger"
+    logger.debug("prim_vmprocess_debug: firing up debugger")
     proc.call_interpreter(True, 'debug', proc.r_rdp['id'])
 
 def prim_vmprocess_step_into(proc):
     raw_frames = proc.call_target_process(True, proc.r_rdp['id'], 'step_into')
     VMStackFrameClass = proc.interpreter.get_core_class('VMStackFrame')
-    print 'got frames, assemblying...'
+    logger.debug('got frames, assemblying...')
     proc.r_rdp['frames'] = [proc.interpreter.alloc_object(VMStackFrameClass,{'self':x}) for x in raw_frames if x['r_cp']]
 
 def prim_vmprocess_step_over(proc):
     raw_frames = proc.call_target_process(True, proc.r_rdp['id'], 'step_over')
     VMStackFrameClass = proc.interpreter.get_core_class('VMStackFrame')
-    print 'got frames, assemblying...'
+    logger.debug('got frames, assemblying...')
     proc.r_rdp['frames'] = [proc.interpreter.alloc_object(VMStackFrameClass,{'self':x}) for x in raw_frames if x['r_cp']]
 
 def prim_vmprocess_continue(proc):
-    print 'prim_vmprocess_continue'
+    logger.debug('prim_vmprocess_continue')
     proc.call_target_process(True, proc.r_rdp['id'], 'continue')
 
 def prim_vmprocess_update_object(proc):
     obj = proc.locals['obj']
-    print 'prim_vmprocess_update_object'
+    logger.debug('prim_vmprocess_update_object')
     import pickle
     raw_obj = pickle.dumps(obj)
     proc.call_target_process(False, proc.r_rdp['id'], 'update_object', raw_obj)
 
 def prim_vmprocess_reload_frame(proc):
-    print 'asking to reloading frame...'
+    logger.debug('asking to reloading frame...')
     proc.call_target_process(False, proc.r_rdp['id'], 'reload_frame')
 
 def prim_vmprocess_rewind_and_break(proc):
-    print 'asking to rewind...'
+    logger.debug('asking to rewind...')
     frames_count = proc.locals['frames_count']
     to_line = proc.locals['to_line']
     proc.call_target_process(False, proc.r_rdp['id'], 'rewind_and_break', frames_count, to_line)
 
 def prim_vmprocess_stack_frames(proc):
-    print 'prim_vmprocess_stack_frames'
+    logger.debug('prim_vmprocess_stack_frames')
     if proc.r_rdp['frames']:
-        print 'we have it cached, returning it'
+        logger.debug('we have it cached, returning it')
         return proc.r_rdp['frames']
     else:
-        print 'asking stack frames...'
+        logger.debug('asking stack frames...')
         raw_frames = proc.call_target_process(True, proc.r_rdp['id'], 'get_frames')
         VMStackFrameClass = proc.interpreter.get_core_class('VMStackFrame')
-        print 'got frames, assemblying...'
+        logger.debug('got frames, assemblying...')
         proc.r_rdp['frames'] = [proc.interpreter.alloc_object(VMStackFrameClass,{'self':x}) for x in raw_frames if x['r_cp']]
-        print 'returning frames'
+        logger.debug('returning frames')
         return proc.r_rdp['frames']
 
 def prim_vmprocess_eval(proc):
-    print 'asking to eval...'
+    logger.debug('asking to eval...')
     text = proc.locals['text']
     frame_level = proc.locals['frame_level'] + 1
     raw = proc.call_target_process(True, proc.r_rdp['id'], 'eval', text, frame_level)
@@ -177,9 +180,9 @@ def prim_vmstackframe_module_pointer(proc):
         return None
 
 def prim_vmstackframe_context_pointer(proc):
-    print 'prim_vmstackframe_context_pointer'
+    logger.debug('prim_vmstackframe_context_pointer')
     frame = _lookup_field(proc, proc.r_rp, 'self')
-    print 'got frame: returning:' + P(frame,1,True)
+    logger.debug('got frame: returning:' + P(frame,1,True))
     return frame['r_cp']
 
 def prim_vmstackframe_receiver_pointer(proc):
@@ -598,7 +601,6 @@ def prim_list_get(proc):
     return proc.r_rdp[proc.locals['n']]
 
 def prim_list_size(proc):
-#    print("********** SIZE:"+str(len(proc.r_rdp)))
     return len(proc.r_rdp)
 
 def prim_list_map(proc):
@@ -782,13 +784,13 @@ def _meme_instance(proc, obj):
     #     return qstring_to_str(obj.toString()) # TODO: currently ignoring QUrl objects
     elif obj.__class__ in mapping: # NOTE: should be a qt instance
         if hasattr(obj, 'meme_instance'): # all qt objetcs should have this one day
-            #print "Returning meme_instance for " + str(obj)
+            logger.debug("Returning meme_instance for " + str(obj))
             return obj.meme_instance
         else:
             return {"_vt":mapping[obj.__class__], 'self':obj}
     else:
-        print "*** WARNING: object has no memetalk mapping specified:"
-        P(obj)
+        logger.warning("*** WARNING: object has no memetalk mapping specified:")
+        logger.warning(P(obj,1,True))
         return None
 
 def qstring_to_str(qstring):
@@ -921,11 +923,11 @@ def prim_qt_qwidget_connect(proc):
         try:
             proc.setup_and_run_fun(None, None, '<?>', slot, args, True)
         except proc.interpreter.py_memetalk_exception() as e:
-            print "prim_qt_qwidget_connect: Exception raised: " + e.mmobj()['message']
-            print "Python trace:"
-            print e.mmobj()['py_trace']
-            print "Memetalk trace:"
-            print e.mmobj()['mtrace']
+            logger.debug("prim_qt_qwidget_connect: Exception raised: " + e.mmobj()['message'])
+            logger.debug("Python trace:")
+            logger.debug(e.mmobj()['py_trace'])
+            logger.debug("Memetalk trace:")
+            logger.debug(e.mmobj()['mtrace'])
 
     getattr(qtobj,signal).connect(callback)
     return proc.r_rp
@@ -1075,11 +1077,11 @@ def prim_qt_qaction_connect(proc):
         try:
             proc.setup_and_run_fun(None, None, '<?>', slot, [], True)
         except proc.interpreter.py_memetalk_exception() as e:
-            print "Exception raised: " + e.mmobj()['message']
-            print "Python trace:"
-            print e.mmobj()['py_trace']
-            print "Memetalk trace:"
-            print e.mmobj()['mtrace']
+            logger.debug("Exception raised: " + e.mmobj()['message'])
+            logger.debug("Python trace:")
+            logger.debug(e.mmobj()['py_trace'])
+            logger.debug("Memetalk trace:")
+            logger.debug(e.mmobj()['mtrace'])
 
     getattr(qtobj,signal).connect(callback)
     return proc.r_rp
@@ -1125,20 +1127,8 @@ def prim_qt_qshortcut_new(proc):
     qtobj = _lookup_field(proc, proc.r_rp, 'self')
     def callback(*rest):
         proc.setup_and_run_fun(None, None, '<?>', slot, [], True)
-        #print 'callback slot: ' + str(slot['compiled_function']['body'])
-        #print 'callback: eventloop proc equal? ' + str(proc == eventloop_processes[-1]['proc'])
-        if not equal(proc, eventloop_processes[-1]['proc']):
-            entry = eventloop_processes[-1]
-            #entry['qtobj'].exit(0)
-            entry['proc'].switch('done', None) # this is were the exit point of the debugger arrives
-            #print 'debugger module ended'
-            proc.interpreter.debugger_process = None
-            proc.interpreter.processes.remove(entry['proc'])
-            proc.state = 'running'
-        if eventloop_processes[-1]['done']:
-            #print 'POPing eventloop'
-            eventloop_processes.pop()
-        #print "END of callback"
+        logger.debug('callback slot: ' + str(slot['compiled_function']['body']))
+        logger.debug('callback: eventloop proc equal? ' + str(proc == eventloop_processes[-1]['proc']))
 
     qtobj.activated.connect(callback)
     return proc.r_rp
@@ -1733,11 +1723,11 @@ def prim_qt_extra_qwebpage_enable_plugins(proc):
                     mobj = proc.setup_and_run_fun(None, None, '<?>', fn, [dict(zip(names,values))], True)
                     return _lookup_field(proc, mobj, 'self')
                 except proc.interpreter.py_memetalk_exception() as e:
-                    print "Exception raised: " + e.mmobj()['message']
-                    print "Python trace:"
-                    print e.mmobj()['py_trace']
-                    print "Memetalk trace:"
-                    print e.mmobj()['mtrace']
+                    logger.debug("Exception raised: " + e.mmobj()['message'])
+                    logger.debug("Python trace:")
+                    logger.debug(e.mmobj()['py_trace'])
+                    logger.debug("Memetalk trace:")
+                    logger.debug(e.mmobj()['mtrace'])
 
         def plugins(self):
             plugin = QWebPluginFactory.Plugin()

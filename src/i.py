@@ -41,14 +41,7 @@ import atexit
 import sys
 import time
 
-def _should_dump_mast():
-    return 'DEBUG' in os.environ and os.environ['DEBUG'] == 'full'
-
-def _should_dump_ast():
-    return 'DEBUG' in os.environ
-
-def _should_warn_of_exception():
-    return 'DEBUG' in os.environ
+logger = logging.getLogger("i")
 
 IDX = 0
 MEMORY = {}
@@ -318,10 +311,9 @@ class ModuleLoader(ASTBuilder):
             else:
                 i.current_process.throw_py_exception(err, traceback.format_exc())
 
-        if _should_dump_ast():
-            print "---- AST ----"
-            print ast
-            print "//---- AST ----"
+        logger.debug("---- AST ----")
+        logger.debug(ast)
+        logger.debug("//---- AST ----")
 
         self.env_id_table = []
         self.env_idx = 0
@@ -369,10 +361,9 @@ class ModuleLoader(ASTBuilder):
             else:
                 i.current_process.throw_py_exception(err, traceback.format_exc())
 
-        if _should_dump_ast():
-            print "---- AST ----"
-            print ast
-            print "//---- AST ----"
+        logger.debug("---- AST ----")
+        logger.debug(ast)
+        logger.debug("//---- AST ----")
 
         self.env_id_table = []
         self.env_idx = 0
@@ -406,10 +397,9 @@ class ModuleLoader(ASTBuilder):
             else:
                 i.current_process.throw_py_exception(err, traceback.format_exc())
 
-        if _should_dump_ast():
-            print "---- AST ----"
-            print ast
-            print "//---- AST ----"
+        logger.debug("---- AST ----")
+        logger.debug(ast)
+        logger.debug("//---- AST ----")
 
         self.env_id_table = []
         self.env_idx = 0
@@ -450,10 +440,9 @@ class ModuleLoader(ASTBuilder):
             else:
                 i.current_process.throw_py_exception(err, traceback.format_exc())
 
-        if _should_dump_ast():
-            print "---- AST ----"
-            print ast
-            print "//---- AST ----"
+        logger.debug("---- AST ----")
+        logger.debug(ast)
+        logger.debug("//---- AST ----")
 
         self.env_id_table = []
         self.env_idx = 0
@@ -493,10 +482,9 @@ class ModuleLoader(ASTBuilder):
             else:
                 i.current_process.throw_py_exception(err, traceback.format_exc())
 
-        if _should_dump_mast():
-            print "---- AST ----"
-            print ast
-            print "//---- AST ----"
+        logger.debug("---- AST ----")
+        logger.debug(ast)
+        logger.debug("//---- AST ----")
 
         self.current_module = _create_compiled_module({"name": name,
                                                        "ast": ast,
@@ -712,10 +700,10 @@ class Interpreter():
 
     def save_module(self, name):
         ## Empty fields are being dumped as "fields ;"!!
-        print "saving module: " + name
+        logger.info("saving module: " + name)
         cmod = self.compiled_module_by_filename(name + ".mm")
         source = self.module_to_text(cmod)
-        print "saving to: " + os.path.join(MODULES_PATH, name + ".mm")
+        logger.info("saving to: " + os.path.join(MODULES_PATH, name + ".mm"))
         open(os.path.join(MODULES_PATH, name + ".mm"), "w").write(source)
 
     def open_module_file(self, filename):
@@ -726,11 +714,11 @@ class Interpreter():
 
     def spawn(self, target_procid = None):
         if target_procid != None:
-            print 'spawn: creating debugger for: ' + str(target_procid)
-            print 'target process channel is: ' + str(self.processes[target_procid].channels['my'])
+            logger.debug('spawn: creating debugger for: ' + str(target_procid))
+            logger.debug('target process channel is: ' + str(self.processes[target_procid].channels['my']))
             process = Process(self, self.procids, self.processes[target_procid].channels['my'])
         else:
-            print 'spawn: creating regular proc'
+            logger.debug('spawn: creating regular proc')
             process = Process(self, self.procids)
         self.processes[self.procids] = process
         self.procids += 1
@@ -738,7 +726,7 @@ class Interpreter():
 
     def start(self, filename):
         proc = self.spawn()
-        print 'start:exec_module: ' + str(proc.procid)
+        logger.debug('start:exec_module: ' + str(proc.procid))
         proc.exec_module(filename, 'main', [])
         self.interpreter_loop()
 
@@ -748,9 +736,9 @@ class Interpreter():
         # the stack.
 
         while True:
-            print "interpreter_loop: waiting...."
+            logger.debug("interpreter_loop: waiting....")
             msg = self.my_channel.get()
-            print "interpreter_loop: got: " + msg['name']
+            logger.debug("interpreter_loop: got: " + msg['name'])
             if msg['name'] == 'spawn':
                 self.my_channel.put(self.spawn().procid)
             elif msg['name'] == 'exec_module':
@@ -767,17 +755,17 @@ class Interpreter():
         # 1) pause procid
         # 2) create debugger with procid as target
 
-        print 'cmdproc_debug: spawning debugger for target: ' + str(procid)
+        logger.debug('cmdproc_debug: spawning debugger for target: ' + str(procid))
         dbgproc = self.spawn(procid)
-        print 'cmdproc_debug: debugger procid: ' + str(dbgproc.procid)
+        logger.debug('cmdproc_debug: debugger procid: ' + str(dbgproc.procid))
 
-        print 'cmdproc_debug: changing state of target to paused...'
+        logger.debug('cmdproc_debug: changing state of target to paused...')
         proc = self.processes[procid]
         proc.channels['dbg'] = dbgproc.channels['my']
         proc.channels['my'].put({'cmd': 'set_state', "value": "paused"})
-        print 'cmdproc_debug: telling debugger to run idez::debug()'
+        logger.debug('cmdproc_debug: telling debugger to run idez::debug()')
         dbgproc.exec_module('idez.mm', 'debug', [procid, ""])
-        print 'cmdproc_debug: done'
+        logger.debug('cmdproc_debug: done')
 
     # def debugger_for_process(self, target_process, exception = None):
     #     target_process.debugger_process = Process(self)
@@ -981,30 +969,30 @@ class Process(multiprocessing.Process):
 
 
     def break_at(self, cfun, line):
-        #print "Breaking at: " + str(line) + " --- " + P(cfun,1,True)
+        logger.debug("Breaking at: " + str(line) + " --- " + P(cfun,1,True))
         self.volatile_breakpoints.append({"cfun":cfun, "line":line})
 
     def call_target_process(self, block, procid, name, *args):
-        print str(self.procid) + ": call_target_process"
-        print str(self.procid) + ': queue empty?' + str(self.channels['target'].empty())
-        print str(self.procid) + ': queue full?' + str(self.channels['target'].full())
-        print str(self.procid) + ': putting data on queue....'
+        logger.debug(str(self.procid) + ": call_target_process")
+        logger.debug(str(self.procid) + ': queue empty?' + str(self.channels['target'].empty()))
+        logger.debug(str(self.procid) + ': queue full?' + str(self.channels['target'].full()))
+        logger.debug(str(self.procid) + ': putting data on queue....')
         self.channels['target'].put({"cmd":name, "args": args})
-        print str(self.procid) + ': data sent. Should we block?' + str(block)
+        logger.debug(str(self.procid) + ': data sent. Should we block?' + str(block))
         if block:
-            print str(self.procid) + ': call_target_process waiting for debugged process to answer'
+            logger.debug(str(self.procid) + ': call_target_process waiting for debugged process to answer')
             data = self.channels['my'].get()
-            print str(self.procid) + ': debugger got data from target'
+            logger.debug(str(self.procid) + ': debugger got data from target')
             return data
-        print str(self.procid) + "call_target_process() DONE"
+        logger.debug(str(self.procid) + "call_target_process() DONE")
 
     def call_interpreter(self, block, name, *args):
-        print 'call_interpreter: ' + name
+        logger.debug('call_interpreter: ' + name)
         self.channels['interpreter'].put({"name":name, "args":args})
         if block:
-            print 'call_interpreter waiting for result'
+            logger.debug('call_interpreter waiting for result')
             res = self.channels['interpreter'].get()
-            print 'call_interpreter got result: ' + str(res)
+            logger.debug('call_interpreter got result: ' + str(res))
             return res
         else:
             return None
@@ -1019,9 +1007,9 @@ class Process(multiprocessing.Process):
         self.start() # start process
 
     def exec_module(self, filename, entry, args, state = 'running'):
-        print 'exec_module: ' + filename
+        logger.debug('exec_module: ' + filename)
         self.state = state
-        print 'exec_module: getting compiled module...'
+        logger.debug('exec_module: getting compiled module...')
         compiled_module = self.interpreter.compiled_module_by_filename(filename)
         imodule = self.interpreter.instantiate_module(compiled_module, {}, core.kernel_imodule)
         self.entry = {'drecv': imodule, 'recv': imodule,
@@ -1029,11 +1017,11 @@ class Process(multiprocessing.Process):
                       'fn': imodule[entry],
                       'args': args}
 
-        print 'exec_module:start..'
+        logger.debug('exec_module:start..')
         self.start() # start process
 
     def run(self):
-        print 'RUN!!!!'
+        logger.debug('RUN!!!!')
         try:
             self.init_data()
 
@@ -1046,8 +1034,8 @@ class Process(multiprocessing.Process):
 
             print "RETVAL: " + P(ret,1,True)
         except MemetalkException as e:
-            print "Exception raised during the boot: " + e.mmobj()['message']
-            print e.mmobj()['py_trace']
+            logger.debug("Exception raised during the boot: " + e.mmobj()['message'])
+            logger.debug(e.mmobj()['py_trace'])
 
 
     # def patch_frame_cfun(self, other):
@@ -1108,28 +1096,21 @@ class Process(multiprocessing.Process):
             self.evaluator = Eval([fun["compiled_function"]["body"]])
             self.evaluator.i = self
             try:
-                #print 'evaluate '+fun['compiled_function']['name']+': ' + str(fun['compiled_function']['body'])
                 ret,err = self.evaluator.apply("exec_fun")
-                #print 'DONE evaluate '+fun['compiled_function']['name']+': ' + str(fun['compiled_function']['body'])
             except ReturnException as e:
                 ret = e.val
             except RewindException as e:
-                #print("Caugh rewind: " + str(e.count))
                 if e.count > 1:
                     e.count = e.count - 1
-                    #print("rewind more than one; tearing up and raising again")
                     self.tear_fun()
                     raise e
-                # print "Rewind is resuming on..."
-                # P(fun['compiled_function'])
-                # print "++++++"
                 return self.run_fun(recv, drecv, fun, args, should_allocate)
             except MemetalkException:
                 self.tear_fun()
                 raise
             except Exception as e:
                 self.tear_fun()
-                print "WARNING: python exception ocurred: " + str(e.__class__) + ":" + str(e)
+                logger.debug("WARNING: python exception ocurred: " + str(e.__class__) + ":" + str(e))
                 self.throw_py_exception(e, traceback.format_exc())
                 raise
             self.tear_fun()
@@ -1137,9 +1118,6 @@ class Process(multiprocessing.Process):
                 self.state = 'paused'
             return ret
         ret = evaluate(self.state == 'next')
-        #print 'evaluate '+fun['compiled_function']['name']+' DONE'
-        # print "done fun:"
-        # P(fun["compiled_function"]["body"],5)
         return ret
 
     def frame_level(self, frame):
@@ -1201,8 +1179,7 @@ class Process(multiprocessing.Process):
 
     def setup_and_run_fun(self, recv, drecv, name, method, args, should_allocate):
         if isinstance(method, basestring):
-            print("*ERROR: function '" + name + "' lacks implementation. Receiver:");
-            #P(recv)
+            logger.debug("*ERROR: function '" + name + "' lacks implementation. Receiver:");
             sys.exit(1)
         if not self.ok_arity(method["compiled_function"]["params"], len(args)):
             #P(method,3)
@@ -1258,11 +1235,11 @@ class Process(multiprocessing.Process):
 
     def setup_and_run_unprotected(self, recv, drecv, name, method, args, should_allocate):
         self.exception_protection.append(False)
-        #print "saru: running fn with no protection -- " + str(self.exception_protection)
+        logger.debug("unprotected: running fn with no protection -- " + str(self.exception_protection))
         try:
             return self.setup_and_run_fun(recv, drecv, name, method, args, should_allocate)
         except:
-            #print "saru: fn raised: popping and reraise -- " + str(self.exception_protection)
+            logger.debug("unprotected: fn raised: popping and reraise -- " + str(self.exception_protection))
             self.exception_protection.pop()
             raise
 
@@ -1307,7 +1284,7 @@ class Process(multiprocessing.Process):
         try:
             return getattr(self, name)(*rest)
         except StandardError as e:
-            print "WARNING: python exception ocurred: " + str(e.__class__) + ":" + str(e)
+            logger.debug("WARNING: python exception ocurred: " + str(e.__class__) + ":" + str(e))
             if self.state == 'exception': # we know, let it propagate
                 raise
             else:
@@ -1503,13 +1480,11 @@ class Process(multiprocessing.Process):
     def eval_do_try(self, ast, tr, bind, ct):
         self.r_ip = ast
         try:
-            #print "try: protecting block..."
             self.exception_protection.append(True)
             ev = Eval([tr])
             ev.i = self
             return ev.apply("exprlist")[0]
         except MemetalkException as e:
-            #print "catch: removing protection..."
             self.exception_protection.pop()
             self.set_local_value(bind, e.mmobj())
             return self.evaluator.apply("exprlist", ct)[0]
@@ -1518,58 +1493,26 @@ class Process(multiprocessing.Process):
         self.r_ip = ast
         self.state = 'paused'
 
-    ## debugger
-
-    # def dbg_cmd(self, cmd):
-    #     #print 'dbg_cmd received: ' + str(cmd)
-    #     if cmd[0] == 'step_into':
-    #         #print("process:: changed state to paused")
-    #         self.state = 'paused'
-    #     if cmd[0] == 'step_over':
-    #         #print("process:: changed state to next")
-    #         self.state = 'next'
-    #     if cmd[0] == 'continue':
-    #         #print("process:: changed state to continue")
-    #         self.state = 'running'
-    #     if cmd[0] == 'continue_throw':
-    #         #print("process:: we are asked to raise the exception ")
-    #         self.state = 'exception'
-    #     if cmd[0] == 'rewind':
-    #         self.interpreter.break_at(self.r_cp['compiled_function'], cmd[2])
-    #         self.state = 'running'
-    #         raise RewindException(self.frame_level(cmd[1])+2)
-    #     if cmd[0] == 'reload':
-    #         #print "process: reload to line " + str(cmd[1])
-    #         if cmd[1] == 0:
-    #             self.state = 'paused'
-    #         else:
-    #             self.interpreter.break_at(self.r_cp['compiled_function'], cmd[1])
-    #             self.state = 'running'
-    #         raise RewindException(1)
-    #     #print "process: " + str(id(self)) + " is " + self.state
-
-        return self.state
-
     def dbg_control(self, name, force_debug = False):
 
         def process_breakpoints():
             for idx, bp in enumerate(self.volatile_breakpoints):
                 line = self.r_ip.start_line - self.r_cp['compiled_function']['line']+1
-                #print "Checking line: " + str(line) + " --- " + str(self.r_ip)
+                logger.debug("Checking line: " + str(line) + " --- " + str(self.r_ip))
                 if line == bp['line'] and equal(self.r_cp['compiled_function'], bp['cfun']):
-                    #print "BP activated at line: " + str(line) + " --- " + str(self.r_ip)
+                    logger.debug("BP activated at line: " + str(line) + " --- " + str(self.r_ip))
                     self.state = 'paused'
                     del self.volatile_breakpoints[idx]
                     return
 
         def process_dbg_msg(msg):
-            print 'target: received from debugger: ' + P(msg,1,True)
+            logger.debug('target: received from debugger: ' + P(msg,1,True))
             if msg['cmd'] == 'set_state':
                 self.state = msg['value']
             if msg['cmd'] == 'get_frames':
-                print 'sending frames'
+                logger.debug('sending frames')
                 self.channels['dbg'].put(self.all_stack_frames())
-                print 'frames sent, we are done'
+                logger.debug('frames sent, we are done')
             if msg['cmd'] == 'step_into':
                 self.state = 'paused'
                 self.channels['dbg'].put(self.all_stack_frames())
@@ -1579,35 +1522,35 @@ class Process(multiprocessing.Process):
                 self.channels['dbg'].put(self.all_stack_frames())
                 return True
             if msg['cmd'] == 'continue':
-                print 'target: received continue'
+                logger.debug('target: received continue')
                 self.state = 'running'
                 self.channels['dbg'].put('done')
                 return True
             if msg['cmd'] == 'reload_frame':
-                print 'target: reload frame'
+                logger.debug('target: reload frame')
                 self.state = 'paused'
                 raise RewindException(1)
             if msg['cmd'] == 'rewind_and_break':
-                print 'target: rewind_and_break'
+                logger.debug('target: rewind_and_break')
                 self.state = 'running'
 
                 frames_count = msg['args'][0]
-                print 'rewinding  this much of frames: ' + str(frames_count)
-                print 'We are at: ' + self.r_cp['compiled_function']['name']
+                logger.debug('rewinding  this much of frames: ' + str(frames_count))
+                logger.debug('We are at: ' + self.r_cp['compiled_function']['name'])
 
                 to_line = msg['args'][1]
-                print 'line: ' + str(to_line)
+                logger.debug('line: ' + str(to_line))
 
-                print 'we will break at: ' + self.r_cp['compiled_function']['name']
+                logger.debug('we will break at: ' + self.r_cp['compiled_function']['name'])
                 self.break_at(self.r_cp['compiled_function'], to_line)
                 raise RewindException(frames_count)
             if msg['cmd'] == 'update_object':
                 import pickle
                 obj = pickle.loads(msg['args'][0])
-                print 'updating object:'
+                logger.debug('updating object:')
                 UPDATE_OBJECT(obj)
             if msg['cmd'] == 'eval':
-                print 'evaluating text:'
+                logger.debug('evaluating text:')
                 frame = self.frame_by_index(msg['args'][1])
                 # var cmod = get_compiled_module(imod);
                 cmod = self.interpreter.get_vt(self.r_mp)['compiled_module']
@@ -1616,16 +1559,16 @@ class Process(multiprocessing.Process):
                 cfn = _create_closure(self, code, self.r_cp['compiled_function'], False)
                 # var fn = cfn.asContextWithFrame(imod, frame);
                 fn = _compiled_function_as_context_with_frame(cfn, self, self.r_mp, frame)
-                print 'setup_and_run_unprotected....'
+                logger.debug('setup_and_run_unprotected....')
                 old_state = self.state
                 self.state = 'running'
                 res = self.setup_and_run_unprotected(None, None, 'fn', fn, [], True)
-                print "eval result: " + P(res,1,True)
+                logger.debug("eval result: " + P(res,1,True))
                 self.state = old_state
                 import pickle
                 obj = pickle.dumps(res)
                 self.channels['dbg'].put(obj)
-                print 'done eval'
+                logger.debug('done eval')
 
         process_breakpoints()
 
@@ -1634,15 +1577,15 @@ class Process(multiprocessing.Process):
             process_dbg_msg(msg)
 
         if self.state in ['paused', 'next'] or force_debug:
-            print str(self.procid) + ": dbg_control paused! state: " + self.state
+            logger.debug(str(self.procid) + ": dbg_control paused! state: " + self.state)
             while True:
-                print str(self.procid) + ':target: waiting for debugger command'
+                logger.debug(str(self.procid) + ':target: waiting for debugger command')
                 msg = self.channels['my'].get()
                 if process_dbg_msg(msg):
                     break
 
     def is_exception_protected(self):
-        #print "is_exception_protected?: " + str(self.exception_protection[-1])
+        logger.debug("is_exception_protected?: " + str(self.exception_protection[-1]))
         return self.exception_protection[-1]
 
     def throw(self, mex):
@@ -1663,47 +1606,35 @@ class Process(multiprocessing.Process):
                 raise MemetalkException(mex, self.pp_stack_trace())
 
     def throw_py_exception(self, pyex, tb):
-        if _should_warn_of_exception():
-            print "Python exception with message: \n" + pyex.message
+        logger.debug("Python exception with message: \n" + pyex.message)
         ex = self.interpreter.create_instance(core.Exception)
 
         # ...and this me being stupid:
-        ex['message'] =  "Python exception: " + pyex.message
+        ex['message'] =  "Python exception: " + str(pyex.message)
 
-        #print "throw/w: " +  str(id(self.current_process)) +  " flagged? " + str(self.current_process.flag_stop_on_exception)
         if not self.is_exception_protected() and self.flag_stop_on_exception:
             self.state = 'exception'
             self.last_exception = ex
-            #print "def throw: passing control"
             r = self.dbg_control("throw", True);
-            #print "def throw is back. proc: " + str(id(self.current_process))
-            #print "def throw: state " + self.current_process.state
             if self.state == r:
-                #print "RAISE"
                 raise MemetalkException(ex, self.pp_stack_trace(), tb)
         else:
             # MemetalkException encapsulates the memetalk exception:
             raise MemetalkException(ex, self.pp_stack_trace(), tb)
 
     def throw_with_message(self, msg):
-        if _should_warn_of_exception():
-            #print "MemetalkException with message: \n" + msg
-            self.pp_stack_trace()
+        logger.debug("MemetalkException with message: \n" + msg)
+        logger.debug(self.pp_stack_trace())
         ex = self.interpreter.create_instance(core.Exception)
 
         # ...and this me being stupid:
         ex['message'] =  msg
 
-        #print "throw/w: " +  str(id(self.current_process)) +  " flagged? " + str(self.current_process.flag_stop_on_exception)
         if not self.is_exception_protected() and self.flag_stop_on_exception:
             self.state = 'exception'
             self.last_exception = ex
-            #print "def throw: passing control"
             r = self.dbg_control("throw", True);
-            #print "def throw is back. proc: " + str(id(self.current_process))
-            #print "def throw: state " + self.current_process.state
             if self.state == r:
-                #print "RAISE"
                 raise MemetalkException(ex, self.pp_stack_trace())
         else:
             # MemetalkException encapsulates the memetalk exception:
@@ -1731,5 +1662,9 @@ if __name__ == "__main__":
     if len(sys.argv) == 1:
         print "i.py filename"
         sys.exit(0)
+
+    if 'DEBUG' in os.environ:
+        logger.setLevel(logging.DEBUG)
+    logger.addHandler(logging.StreamHandler(sys.stdout))
 
     Interpreter().start(sys.argv[1])
