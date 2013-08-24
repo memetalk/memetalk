@@ -1758,7 +1758,7 @@ def prim_exception_unprotected(proc):
 
 def prim_test_import(proc):
     cmod = proc.interpreter.compiled_module_by_filepath(proc.locals()['filepath'])
-    return proc.interpreter.instantiate_module(cmod, [], proc.reg('r_cp')['module'])
+    return proc.interpreter.instantiate_module(proc, cmod, [], proc.reg('r_cp')['module'])
 
 
 def prim_http_get(proc):

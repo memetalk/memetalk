@@ -155,7 +155,7 @@ def _compiled_functions_to_functions(cfuns, imodule):
     return funs
 
 
-def _instantiate_module(i, compiled_module, _args, parent_module):
+def _instantiate_module(proc, compiled_module, _args, parent_module):
     logger.debug("Instantiating module: " + compiled_module['name'])
 
     def setup_module_arguments(_args, compiled_module):
@@ -164,13 +164,13 @@ def _instantiate_module(i, compiled_module, _args, parent_module):
         for name,dp in compiled_module['default_params'].iteritems():
             if name not in args.keys():
                 if dp['type'] == 'lib':
-                    args[name] = i.compile_module_lib(dp['value'])
+                    args[name] = proc.interpreter.compile_module_lib(proc, dp['value'])
                 elif dp['type'] == 'uri':
-                    args[name] = i.compile_module_uri(dp['value'])
+                    args[name] = proc.interpreter.compile_module_uri(proc, dp['value'])
                 else:
-                    i.current_process.throw_with_message('Unknown module spec')
+                    proc.throw_with_message('Unknown module spec')
         if args.keys().sort() != compiled_module['params'].sort():
-            i.current_process.throw_with_message('arity error on module parameters')
+            proc.throw_with_message('arity error on module parameters')
 
         # module's aliases. dirty: using arg to set it
         for alias in compiled_module['aliases']:
@@ -234,7 +234,7 @@ def _instantiate_module(i, compiled_module, _args, parent_module):
         elif super_name in compiled_module["compiled_classes"]:
             super_later[c["name"]] = super_name
         else:
-            i.current_process.throw_with_message("super class not found: " + super_name)
+            proc.throw_with_message("super class not found: " + super_name)
 
         # superclass BarClass found
         if super_class:
@@ -308,9 +308,9 @@ class ModuleLoader(ASTBuilder):
             ast,_ = self.parser.apply("single_top_level_fun", name)
         except Exception as err:
             if hasattr(err,'formatError'):
-                i.current_process.throw_with_message(err.formatError(''.join(self.parser.input.data)))
+                proc.throw_with_message(err.formatError(''.join(self.parser.input.data)))
             else:
-                i.current_process.throw_py_exception(err, traceback.format_exc())
+                proc.throw_py_exception(err, traceback.format_exc())
 
         logger.debug("---- AST ----")
         logger.debug(ast)
@@ -343,9 +343,9 @@ class ModuleLoader(ASTBuilder):
                 return cfun
         except Exception as err:
             if hasattr(err,'formatError'):
-                i.current_process.throw_with_message(err.formatError(''.join(self.parser.input.data)))
+                proc.throw_with_message(err.formatError(''.join(self.parser.input.data)))
             else:
-                i.current_process.throw_py_exception(err, traceback.format_exc())
+                proc.throw_py_exception(err, traceback.format_exc())
 
 
     def recompile_closure(self, i, cfun, src):
@@ -358,9 +358,9 @@ class ModuleLoader(ASTBuilder):
             ast,_ = self.parser.apply("funliteral")
         except Exception as err:
             if hasattr(err,'formatError'):
-                i.current_process.throw_with_message(err.formatError(''.join(self.parser.input.data)))
+                proc.throw_with_message(err.formatError(''.join(self.parser.input.data)))
             else:
-                i.current_process.throw_py_exception(err, traceback.format_exc())
+                proc.throw_py_exception(err, traceback.format_exc())
 
         logger.debug("---- AST ----")
         logger.debug(ast)
@@ -379,9 +379,9 @@ class ModuleLoader(ASTBuilder):
             loader.apply("load_fun_lit")
         except Exception as err:
             if hasattr(err,'formatError'):
-                i.current_process.throw_with_message(err.formatError(''.join(self.parser.input.data)))
+                proc.throw_with_message(err.formatError(''.join(self.parser.input.data)))
             else:
-                i.current_process.throw_py_exception(err, traceback.format_exc())
+                proc.throw_py_exception(err, traceback.format_exc())
         return cfun
 
     def compile_closure(self, i, src, outer):
@@ -394,9 +394,9 @@ class ModuleLoader(ASTBuilder):
             ast,_ = self.parser.apply("funliteral")
         except Exception as err:
             if hasattr(err,'formatError'):
-                i.current_process.throw_with_message(err.formatError(''.join(self.parser.input.data)))
+                proc.throw_with_message(err.formatError(''.join(self.parser.input.data)))
             else:
-                i.current_process.throw_py_exception(err, traceback.format_exc())
+                proc.throw_py_exception(err, traceback.format_exc())
 
         logger.debug("---- AST ----")
         logger.debug(ast)
@@ -415,9 +415,9 @@ class ModuleLoader(ASTBuilder):
             loader.apply("load_fun_lit")
         except Exception as err:
             if hasattr(err,'formatError'):
-                i.current_process.throw_with_message(err.formatError(''.join(self.parser.input.data)))
+                proc.throw_with_message(err.formatError(''.join(self.parser.input.data)))
             else:
-                i.current_process.throw_py_exception(err, traceback.format_exc())
+                proc.throw_py_exception(err, traceback.format_exc())
 
         return self.first_fnlit
 
@@ -437,9 +437,9 @@ class ModuleLoader(ASTBuilder):
             ast,_ = self.parser.apply("single_top_level_fun", name)
         except Exception as err:
             if hasattr(err,'formatError'):
-                i.current_process.throw_with_message(err.formatError(''.join(self.parser.input.data)))
+                proc.throw_with_message(err.formatError(''.join(self.parser.input.data)))
             else:
-                i.current_process.throw_py_exception(err, traceback.format_exc())
+                proc.throw_py_exception(err, traceback.format_exc())
 
         logger.debug("---- AST ----")
         logger.debug(ast)
@@ -457,9 +457,9 @@ class ModuleLoader(ASTBuilder):
             loader.apply("function_definition", flag['self'])
         except Exception as err:
             if hasattr(err,'formatError'):
-                i.current_process.throw_with_message(err.formatError(''.join(self.parser.input.data)))
+                proc.throw_with_message(err.formatError(''.join(self.parser.input.data)))
             else:
-                i.current_process.throw_py_exception(err, traceback.format_exc())
+                proc.throw_py_exception(err, traceback.format_exc())
 
         if flag['self'] == "class_method" or flag['self'] == "constructor":
             return self.current_class["own_methods"][name]
@@ -479,9 +479,9 @@ class ModuleLoader(ASTBuilder):
             ast,_ = self.parser.apply("start")
         except Exception as err:
             if hasattr(err,'formatError'):
-                i.current_process.throw_with_message(err.formatError(''.join(self.parser.input.data)))
+                proc.throw_with_message(err.formatError(''.join(self.parser.input.data)))
             else:
-                i.current_process.throw_py_exception(err, traceback.format_exc())
+                proc.throw_py_exception(err, traceback.format_exc())
 
         logger.debug("---- AST ----")
         logger.debug(ast)
@@ -503,9 +503,9 @@ class ModuleLoader(ASTBuilder):
             loader.apply("load_module")
         except Exception as err:
             if hasattr(err,'formatError'):
-                i.current_process.throw_with_message(err.formatError(''.join(self.parser.input.data)))
+                proc.throw_with_message(err.formatError(''.join(self.parser.input.data)))
             else:
-                i.current_process.throw_py_exception(err, traceback.format_exc())
+                proc.throw_py_exception(err, traceback.format_exc())
 
         logger.debug("module compiled: " + name)
 
@@ -801,20 +801,20 @@ class Interpreter():
             self.compiled_modules[module_name] =  ModuleLoader().compile_module(self,module_name,source)
         return self.compiled_modules[module_name]
 
-    def instantiate_module(self, compiled_module, args, imodule):
-        imodule = _instantiate_module(self, compiled_module, args, imodule)
+    def instantiate_module(self, proc, compiled_module, args, imodule):
+        imodule = _instantiate_module(proc, compiled_module, args, imodule)
         self.imods.append(imodule)
         return imodule
 
     def imodules(self):
         return self.imods
 
-    def compile_module_lib(self, name):
+    def compile_module_lib(self, proc, name):
         compiled_module = self.compiled_module_by_filename(name + '.mm')
-        return self.instantiate_module(compiled_module, {}, core.kernel_imodule)
+        return self.instantiate_module(proc, compiled_module, {}, core.kernel_imodule)
 
-    def compile_module_uri(self, uri):
-        self.current_process.throw_with_message('TODO: compile_module_uri')
+    def compile_module_uri(self, proc, uri):
+        proc.throw_with_message('TODO: compile_module_uri')
 
     def kernel_module_instance(self):
         return core.kernel_imodule
@@ -1020,9 +1020,8 @@ class Process(multiprocessing.Process):
             logger.debug('exec_module: ' + filename)
             self.state = state
             logger.debug('exec_module: getting compiled module...')
-            self.interpreter.current_process = self # TODO: remove me
             compiled_module = self.interpreter.compiled_module_by_filename(filename)
-            imodule = self.interpreter.instantiate_module(compiled_module, {}, core.kernel_imodule)
+            imodule = self.interpreter.instantiate_module(self, compiled_module, {}, core.kernel_imodule)
 
             ret = self.setup_and_run_fun(imodule,
                                          imodule,
