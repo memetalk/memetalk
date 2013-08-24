@@ -74,11 +74,11 @@ constructor = spaces
                   top_fun_body:body !(self.input.position):end
                 token("}")
              -> self.i.ast(begin,['ctor', name, ["params", p],
-                  ['body', body + [self.i.sint_ast(end,['return-this'])]]])
+                  ['body', self.i.ast(begin, body + [self.i.sint_ast(end,['return-this'])])]])
 
 top_level_fn = spaces alpha_name:name token(":") !(self.input.position):begin
                 expr:e token(";") -> self.i.ast(begin,['fun', name, ['params', []],
-                                                              ['body', [e]]])
+                                                              ['body', self.i.ast(begin, [e])]])
 
 top_level_fun = spaces alpha_name:name token(":")
                 spaces !(self.input.position):begin
@@ -86,7 +86,7 @@ top_level_fun = spaces alpha_name:name token(":")
                   top_fun_body:body !(self.input.position):end
                 token("}")
                   -> self.i.ast(begin,['fun', name, ["params", p],
-                                              ['body', body + [self.i.sint_ast(end,['return-this'])]]])
+                                              ['body', self.i.sint_ast(end, body + [self.i.sint_ast(end,['return-this'])])]])
 
 instance_method_decl = spaces token("instance_method") alpha_name:name token(":")
                        spaces !(self.input.position):begin
@@ -94,7 +94,7 @@ instance_method_decl = spaces token("instance_method") alpha_name:name token(":"
                            top_fun_body:body !(self.input.position):end
                          token("}")
                       -> self.i.ast(begin,['fun', name, ["params", p],
-                         ['body', body + [self.i.sint_ast(end,['return-this'])]]])
+                         ['body', self.i.sint_ast(end, body + [self.i.sint_ast(end,['return-this'])])]])
 
 class_method_decl = spaces token("class_method") alpha_name:name token(":")
                     spaces !(self.input.position):begin
@@ -102,7 +102,7 @@ class_method_decl = spaces token("class_method") alpha_name:name token(":")
                         top_fun_body:body !(self.input.position):end
                       token("}")
                     -> self.i.ast(begin,['fun', name, ["params", p],
-                       ['body', body + [self.i.sint_ast(end,['return-this'])]]])
+                       ['body', self.i.sint_ast(end, body + [self.i.sint_ast(end,['return-this'])])]])
 
 params = token("(") idlist:xs token(")") -> xs
 
@@ -120,18 +120,16 @@ top_fun_body = primitive
 
 primitive =  spaces !(self.input.position):begin token("<primitive") lit_string:s token(">") -> self.i.ast(begin, [self.i.ast(begin,["primitive", s])])
 
-stmts  = stmt*
+stmts  = !(self.input.position):begin stmt*:x -> self.i.ast(begin, x)
 
 stmt = control_expr
      | non_control_expr:e token(";") -> e
 
-non_control_expr = expr_debug
-                 | expr_ret
+non_control_expr = expr_ret
                  | expr_attr
                  | expr
                  | expr_decl
 
-expr_debug = spaces !(self.input.position):begin token("debug") -> self.i.ast(begin,['debug'])
 expr_ret =  spaces !(self.input.position):begin token("return") expr:e -> self.i.ast(begin,['return', e])
 
 expr_decl =  spaces !(self.input.position):begin token("var")
@@ -139,8 +137,8 @@ expr_decl =  spaces !(self.input.position):begin token("var")
 
 expr_attr =  spaces !(self.input.position):begin lhs:a token("=") expr:b -> self.i.ast(begin,["=", a, b])
 
-lhs = alpha_name:x -> ["id", x]
-    | field_name:x -> ["field", x]
+lhs = !(self.input.position):begin alpha_name:x -> self.i.ast(begin, ["id", x])
+    | !(self.input.position):begin field_name:x -> self.i.ast(begin, ["field", x])
 
 control_expr = expr_if
              | expr_while
@@ -225,24 +223,24 @@ prim_expr = token("(") expr:e token(")") -> e
 pair_list = pair:x (token(",") pair)*:xs -> [x]+xs
           | -> []
 
-pair = expr:key token(":") expr:val -> ['pair', key, val]
+pair = !(self.input.position):begin expr:key token(":") expr:val -> self.i.ast(begin, ['pair', key, val])
 
 args = token("(") expr_list:p  token(")") -> p
 
 expr_list = expr:x (token(",") expr)*:xs -> [x]+xs
-          | -> []
+          | -> self.i.ast(self.input.position, [])
 
 literal = lit_number
         | lit_string
         | lit_symbol
         | spaces !(self.input.position):begin token("[") expr_list:e token("]")    -> self.i.ast(begin, ['literal-array']+e)
         | spaces !(self.input.position):begin token("{") pair_list:e token("}")    -> self.i.ast(begin, ['literal-dict']+e)
-        | token("thisModule")-> ['literal', 'module']
-        | token("thisContext")-> ['literal', 'context']
-        | token("this")   -> ['literal', 'this']
-        | token("null")   -> ['literal', 'null']
-        | token("true")   -> ['literal', 'true']
-        | token("false")  -> ['literal', 'false']
+        | spaces !(self.input.position):begin token("thisModule")-> self.i.ast(begin, ['literal', 'module'])
+        | spaces !(self.input.position):begin token("thisContext")-> self.i.ast(begin,['literal', 'context'])
+        | spaces !(self.input.position):begin token("this")   -> self.i.ast(begin,['literal', 'this'])
+        | spaces !(self.input.position):begin token("null")   -> self.i.ast(begin, ['literal', 'null'])
+        | spaces !(self.input.position):begin token("true")   -> self.i.ast(begin,['literal', 'true'])
+        | spaces !(self.input.position):begin token("false")  -> self.i.ast(begin, ['literal', 'false'])
         | funliteral
 
 funliteral = spaces !(self.input.position):begin token("fun") params:p token("{")
@@ -250,20 +248,20 @@ funliteral = spaces !(self.input.position):begin token("fun") params:p token("{"
              token("}") -> self.i.ast(begin, ['fun-literal', ["params", p],
                             ['body', body]])
 
-funliteral_body = stmt:x stmts:xs -> [x]+xs
-                | expr_ret:e      -> [e]
-                | expr:e          -> [e]
-                |                 -> [['literal', 'null']]
+funliteral_body = !(self.input.position):begin stmt:x stmts:xs -> self.i.ast(begin, [x]+xs)
+                | !(self.input.position):begin expr_ret:e      -> self.i.ast(begin, [e])
+                | !(self.input.position):begin expr:e          -> self.i.ast(begin, [e])
+                |                 -> self.i.sint_ast(self.input.position, [self.i.sint_ast(self.input.position,[self.i.sint_ast(self.input.position,['return-this'])])])
 
-lit_symbol = token(":") alpha_name:xs
-           -> ["literal-symbol", xs]
+lit_symbol = spaces !(self.input.position):begin token(":") alpha_name:xs
+           -> self.i.ast(begin, ["literal-symbol", xs])
 
-lit_number = spaces digit+:ds -> ["literal-number", int(''.join(ds))]
+lit_number = spaces !(self.input.position):begin digit+:ds -> self.i.ast(begin, ["literal-number", int(''.join(ds))])
 
-lit_string  = spaces '"' ('\\' '"' | ~'"' :x)*:xs '"'
-               -> ["literal-string", unicode(''.join(xs).decode("string_escape"))]
-            | spaces '\'' (~'\'' :x)*:xs '\''
-               -> ["literal-string", unicode(''.join(xs).decode("string_escape"))]
+lit_string  = spaces !(self.input.position):begin '"' ('\\' '"' | ~'"' :x)*:xs '"'
+               -> self.i.ast(begin, ["literal-string", unicode(''.join(xs).decode("string_escape"))])
+            | spaces !(self.input.position):begin '\'' (~'\'' :x)*:xs '\''
+               -> self.i.ast(begin, ["literal-string", unicode(''.join(xs).decode("string_escape"))])
 
 field_name = spaces '@' letter_or_digit_string:x -> x
 
@@ -273,4 +271,4 @@ single_top_level_fun :name = spaces !(self.input.position):begin token("fun")
                          top_fun_body:body !(self.input.position):end
                        token("}")
                        -> self.i.ast(begin,['fun', name, ["params", p],
-                              ['body', body + [self.i.sint_ast(end,['return-this'])]]])
+                              ['body', self.i.sint_ast(end, body + [self.i.sint_ast(end,['return-this'])])]])
