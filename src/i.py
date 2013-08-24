@@ -631,11 +631,7 @@ class ModuleLoader(ASTBuilder):
 
         function['env_table'] = self.env_id_table.pop()
 
-        #hack to identify the literal function when executing it
-        #body[0]: the first instruction. The body changes id, unfortunately
-        #literal is in the parent fun, so it can be easily fetched during execution
-        self.functions[-1]["fun_literals"][id(body[0])] = function
-
+        self.functions[-1]["fun_literals"][body._id] = function
 
 #######################################################
 ## Executing
@@ -1344,7 +1340,7 @@ class Process(multiprocessing.Process):
     def eval_do_fun_lit(self, params, body, ast):
         self.r_ip = ast
         self.dbg_control('eval_do_fun_lit')
-        compiled_fun = self.r_cp["compiled_function"]["fun_literals"][id(body[0])]
+        compiled_fun = self.r_cp["compiled_function"]["fun_literals"][body._id]
         return _compiled_function_to_context(compiled_fun, self.r_ep, self.r_mp)
 
     def eval_access_field(self, field):

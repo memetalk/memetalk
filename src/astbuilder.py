@@ -47,6 +47,7 @@ class ASTBuilder:
 class ASTNode(list):
     def __init__(self, lst, text, start_line, start_col, end_line, end_col):
         list.__init__(self,lst)
+        self._id = id(lst)
         self.lst = lst
         self.text = text
         self.start_line = start_line
