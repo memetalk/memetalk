@@ -113,7 +113,7 @@ init new: fun(process, ex, eventloop) {
   @exception = ex;
   @eventloop = eventloop;
 
-  @shouldUpdateVars = true;
+  @shouldUpdateVars = false;
 
   this.resize(700,800);
   this.setWindowTitle("Debugger");
