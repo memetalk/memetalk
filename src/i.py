@@ -35,7 +35,7 @@ from astbuilder import *
 from jinja2 import Environment
 from mmpprint import P
 import multiprocessing
-from dcmp import dcmp as equal
+from dcmp import id_eq
 
 import atexit
 import sys
@@ -43,17 +43,16 @@ import time
 
 logger = logging.getLogger("i")
 
-IDX = 0
 MEMORY = {}
 def ALLOC(obj):
-    global IDX, MEMORY
-    obj['@id'] = IDX
-    MEMORY[IDX] = obj
-    IDX += 1
+    global MEMORY
+    obj_id = id(obj)
+    obj['@id'] = obj_id
+    MEMORY[obj_id] = obj
     return obj
 
 def UPDATE_OBJECT(remote_obj):
-    global IDX, MEMORY
+    global MEMORY
     local_obj = MEMORY[remote_obj['@id']]
 
     if sorted(local_obj.keys()) != sorted(remote_obj.keys()):
@@ -157,6 +156,8 @@ def _compiled_functions_to_functions(cfuns, imodule):
 
 
 def _instantiate_module(i, compiled_module, _args, parent_module):
+    logger.debug("Instantiating module: " + compiled_module['name'])
+
     def setup_module_arguments(_args, compiled_module):
         args = dict(_args)
         # module's default argument
@@ -326,7 +327,7 @@ class ModuleLoader(ASTBuilder):
 
         try:
             owner = cfun['owner']
-            if equal(owner['_vt'], core.CompiledClass):
+            if id_eq(owner['_vt'], core.CompiledClass):
                 self.current_class = owner
                 self.current_module = owner['module']
                 if cfun in owner['methods'].values():
@@ -424,7 +425,7 @@ class ModuleLoader(ASTBuilder):
         self.line_offset = 0
         self.pos_stack = []
 
-        if equal(owner['_vt'], core.CompiledClass):
+        if id_eq(owner['_vt'], core.CompiledClass):
             self.current_class = owner
             self.current_module = owner["module"]
         else:
@@ -505,6 +506,8 @@ class ModuleLoader(ASTBuilder):
                 i.current_process.throw_with_message(err.formatError(''.join(self.parser.input.data)))
             else:
                 i.current_process.throw_py_exception(err, traceback.format_exc())
+
+        logger.debug("module compiled: " + name)
 
         return self.current_module
 
@@ -619,7 +622,14 @@ class ModuleLoader(ASTBuilder):
 
         function['env_table'] = self.env_id_table.pop()
 
-        self.functions[-1]["fun_literals"][body._id] = function
+        body.cfun_literal = function
+        # self.functions[-1]["fun_literals"][body._id] = function
+
+        # print "REGISTERED CLOSURE:"
+        # print body._id
+        # P(body)
+        # print '---- ON ----'
+        # P(self.functions[-1],2)
 
 #######################################################
 ## Executing
@@ -727,7 +737,8 @@ class Interpreter():
     def start(self, filename):
         proc = self.spawn()
         logger.debug('start:exec_module: ' + str(proc.procid))
-        proc.exec_module(filename, 'main', [])
+        proc.setup('exec_module', filename, 'main', [])
+        proc.start()
         self.interpreter_loop()
 
     def interpreter_loop(self):
@@ -878,17 +889,17 @@ class Interpreter():
             return False
 
     def is_wrapper_class(self, klass):
-        return equal(klass, core.String) or\
-            equal(klass, core.Dictionary) or\
-            equal(klass, core.List) or\
-            equal(klass, core.Number)
+        return id_eq(klass, core.String) or\
+            id_eq(klass, core.Dictionary) or\
+            id_eq(klass, core.List) or\
+            id_eq(klass, core.Number)
 
     def new_wrapper_object_for(self, klass):
-        if equal(klass, core.String):
+        if id_eq(klass, core.String):
             return str()
-        if equal(klass, core.Dictionary):
+        if id_eq(klass, core.Dictionary):
             return dict()
-        if equal(klass, core.List):
+        if id_eq(klass, core.List):
             return list()
         if klass.Number:
             return 0
@@ -956,15 +967,14 @@ class Process(multiprocessing.Process):
         self.init_data()
 
     def init_data(self):
-        # registers
-        self.r_mp  = None  # module pointer
-        self.r_cp  = None  # context pointer
-        self.r_rp  = None  # receiver pointer
-        self.r_rdp = None  # receiver data pointer
-        self.r_ep  = None  # environment pointer
-        self.r_ip  = None  # instruction pointer / ast info
-
-        self.locals = {}
+        # top frame / registers
+        self.tframe = ALLOC({'r_mp':None,    # module pointer
+                             'r_cp':None,    # context pointer
+                             'r_rp': None,   # receiver pointer
+                             'r_rdp': None,  # receiver data pointer
+                             'r_ep': None,   # environment pointer
+                             'r_ip':None,   # instruction pointer / ast info
+                             'locals':{}})
         self.stack = []
 
 
@@ -997,45 +1007,33 @@ class Process(multiprocessing.Process):
         else:
             return None
 
-    def exec_fun(self, drecv, recv, name, fn, args, state = 'running'):
-        self.state = state
-        self.entry = {'drecv': drecv, 'recv': recv,
-                      'name': name,
-                      'fn': fn,
-                      'args': args}
-
-        self.start() # start process
-
-    def exec_module(self, filename, entry, args, state = 'running'):
-        logger.debug('exec_module: ' + filename)
-        self.state = state
-        logger.debug('exec_module: getting compiled module...')
-        compiled_module = self.interpreter.compiled_module_by_filename(filename)
-        imodule = self.interpreter.instantiate_module(compiled_module, {}, core.kernel_imodule)
-        self.entry = {'drecv': imodule, 'recv': imodule,
-                      'name': entry,
-                      'fn': imodule[entry],
-                      'args': args}
-
-        logger.debug('exec_module:start..')
-        self.start() # start process
+    def setup(self, name, *args):
+        self.entry = {'name': name, 'args': args}
 
     def run(self):
-        logger.debug('RUN!!!!')
-        try:
-            self.init_data()
+        logger.info("running process:" + str(self.procid))
+        self.init_data()
+        getattr(self, self.entry['name'])(*self.entry['args'])
 
-            ret = self.setup_and_run_fun(self.entry['drecv'],
-                                         self.entry['recv'],
-                                         self.entry['name'],
-                                         self.entry['fn'],
-                                         self.entry['args'],
-                                         True)
+    def exec_module(self, filename, entry, args, state = 'running'):
+        try:
+            logger.debug('exec_module: ' + filename)
+            self.state = state
+            logger.debug('exec_module: getting compiled module...')
+            self.interpreter.current_process = self # TODO: remove me
+            compiled_module = self.interpreter.compiled_module_by_filename(filename)
+            imodule = self.interpreter.instantiate_module(compiled_module, {}, core.kernel_imodule)
+
+            ret = self.setup_and_run_fun(imodule,
+                                         imodule,
+                                         entry,
+                                         imodule[entry],
+                                         args, True)
 
             print "RETVAL: " + P(ret,1,True)
         except MemetalkException as e:
-            logger.debug("Exception raised during the boot: " + e.mmobj()['message'])
-            logger.debug(e.mmobj()['py_trace'])
+            print ("Exception raised during exec_module : " + e.mmobj()['message'])
+            print (e.mmobj()['py_trace'])
 
 
     # def patch_frame_cfun(self, other):
@@ -1070,7 +1068,7 @@ class Process(multiprocessing.Process):
             raise Exception("No rdp for ctor. Probably a bug")
 
         klass = self.interpreter.get_vt(rp)['compiled_class']
-        if equal(klass, fun['compiled_function']['owner']):
+        if id_eq(klass, fun['compiled_function']['owner']):
             return rp
         else:
             return self.ctor_rdp_for(rp['_delegate'], fun)
@@ -1080,13 +1078,13 @@ class Process(multiprocessing.Process):
         self.setup_parameters_and_registers(recv, drecv, fun, args)
         if should_allocate and fun["compiled_function"]['is_ctor']:
             #allocate new instance and make it the receiver
-            self.r_rp = self.interpreter.create_instance(self.r_rp)
+            self.reg('r_rp', self.interpreter.create_instance(self.reg('r_rp')))
             # rdp will be the instance associated to the class of fun
-            self.r_rdp = self.ctor_rdp_for(self.r_rp, fun)
+            self.reg('r_rdp', self.ctor_rdp_for(self.reg('r_rp'), fun))
             #...updating env if exist
-            if self.r_ep != None:
-                self.r_ep["r_rp"] = self.r_rp
-                self.r_ep["r_rdp"] = self.r_rdp
+            if self.reg('r_ep') != None:
+                self.reg('r_ep')["r_rp"] = self.reg('r_rp')
+                self.reg('r_ep')["r_rdp"] = self.reg('r_rdp')
 
             #...fun will be executed with this new r_rp, below
 
@@ -1110,8 +1108,6 @@ class Process(multiprocessing.Process):
                 raise
             except Exception as e:
                 self.tear_fun()
-                logger.debug("WARNING: python exception ocurred: " + str(e.__class__) + ":" + str(e))
-                self.throw_py_exception(e, traceback.format_exc())
                 raise
             self.tear_fun()
             if skip:
@@ -1120,13 +1116,20 @@ class Process(multiprocessing.Process):
         ret = evaluate(self.state == 'next')
         return ret
 
+    def reg(self, name, *args):
+        if len(args) == 0:
+            return self.tframe[name]
+        else:
+            self.tframe[name] = args[0]
+
+    def locals(self, *args):
+        if len(args) == 0:
+            return self.tframe['locals']
+        else:
+            self.tframe['locals'] = args[0]
+
     def frame_level(self, frame):
-        if equal(frame['r_cp'], self.r_cp) and \
-                equal(frame['r_rp']. self.r_rp) and \
-                equal(['r_rdp'], self.r_rdp) and \
-                equal(frame['r_ep'], self.r_ep) and \
-                equal(frame['r_ip'], self.r_ip) and \
-                equal(frame['locals'], self.locals):
+        if id_eq(frame, self.tframe):
             return 0
         else:
             return list(reversed(self.stack)).index(frame)
@@ -1141,32 +1144,14 @@ class Process(multiprocessing.Process):
             return self.stack[idx]
 
     def top_frame(self):
-        return {"r_cp": self.r_cp,
-                "r_rp": self.r_rp,
-                "r_rdp": self.r_rdp,
-                "r_ep" : self.r_ep,
-                'r_ip' : self.r_ip,
-                'locals':self.locals}
+        return self.tframe
 
     def push_stack_frame(self):
-        self.stack.append({
-                "r_cp": self.r_cp,
-                "r_rp": self.r_rp,
-                "r_rdp": self.r_rdp,
-                "r_ep" : self.r_ep,
-                'r_ip' : self.r_ip,
-                'locals':self.locals})
-                # no need to backup mp, it can be infered from current fun
+        self.stack.append(self.tframe)
+        self.tframe = ALLOC({})
+
     def tear_fun(self):
-        frame = self.stack.pop()
-        self.r_cp = frame["r_cp"]
-        self.r_rp = frame["r_rp"]
-        self.r_rdp = frame["r_rdp"]
-        self.r_ep  = frame["r_ep"]
-        self.r_ip  = frame['r_ip']
-        self.locals = frame['locals']
-        if self.r_cp: #if we are exiting main, this will be null
-            self.r_mp = self.r_cp["module"]
+        self.tframe = self.stack.pop()
 
     def has_vararg(self, params):
         return len(params) > 0 and len(params[-1]) == 2 and params[-1][0] == 'var-arg'
@@ -1192,43 +1177,44 @@ class Process(multiprocessing.Process):
         return self.run_fun(recv, drecv, method, args, should_allocate)
 
     def setup_parameters_and_registers(self, recv, drecv, method, args):
-        self.r_cp  = method
-        self.r_mp = method["module"]
-        self.r_ep = None
-        self.locals = {}
-        if not equal(self.interpreter.get_vt(method), core.Context):
-            self.r_rp  = recv
-            self.r_rdp = drecv
+        self.reg('r_cp', method)
+        self.reg('r_mp', method["module"])
+        self.reg('r_ep', None)
+        self.locals({})
+        if not id_eq(self.interpreter.get_vt(method), core.Context):
+            self.reg('r_rp', recv)
+            self.reg('r_rdp', drecv)
+
             if not method["compiled_function"]["uses_env"] and \
-                    equal(self.interpreter.get_vt(method), core.Function):
+                    id_eq(self.interpreter.get_vt(method), core.Function):
                 # normal fun, put args in the stack
                 if self.has_vararg(method["compiled_function"]["params"]):
                     regular = method["compiled_function"]["params"][0:-1]
                     reg_len = len(regular)
                     for k,v in zip(regular,args):
-                        self.locals[k] = v
+                        self.locals()[k] = v
                     va_name = method["compiled_function"]["params"][-1][1]
-                    self.locals[va_name] = args[reg_len:]
+                    self.locals()[va_name] = args[reg_len:]
                 else:
                     for k,v in zip(method["compiled_function"]["params"],args):
-                        self.locals[k] = v
+                        self.locals()[k] = v
             # normal fun using env, initialize one
             elif method["compiled_function"]["uses_env"] and \
-                    equal(self.interpreter.get_vt(method), core.Function):
-                self.r_ep = dict(method["compiled_function"]['env_table_skel'])
-                self.r_ep["r_rp"] = self.r_rp
-                self.r_ep["r_rdp"] = self.r_rdp # usually receivers are on stack.
+                    id_eq(self.interpreter.get_vt(method), core.Function):
+                self.reg('r_ep', dict(method["compiled_function"]['env_table_skel']))
+                self.reg('r_ep')["r_rp"] = self.reg('r_rp')
+                self.reg('r_ep')["r_rdp"] = self.reg('r_rdp') # usually receivers are on stack.
                                                 # I need them here: when calling a
                                                 # closure that references a 'this'
                 # put args in the env
                 for k,v in zip(method["compiled_function"]["params"],args):
                     self.env_set_value(k,v) # cp should be set already
         else:
-            self.r_ep = method["env"]
-            if 'r_rp' in self.r_ep:
-                self.r_rp = self.r_ep['r_rp']
-            if 'r_rdp' in self.r_ep:
-                self.r_rdp = self.r_ep['r_rdp']
+            self.reg('r_ep', method["env"])
+            if 'r_rp' in self.reg('r_ep'):
+                self.reg('r_rp', self.reg('r_ep')['r_rp'])
+            if 'r_rdp' in self.reg('r_ep'):
+                self.reg('r_rdp', self.reg('r_ep')['r_rdp'])
             # put args in the env
             for k,v in zip(method["compiled_function"]["params"],args):
                 self.env_set_value(k, v)
@@ -1252,8 +1238,8 @@ class Process(multiprocessing.Process):
 
     ## env auxiliary
     def env_lookup(self, name):
-        #the idx of name in self.r_ep or None
-        if self.r_ep == None:
+        #the idx of name in self.reg('r_ep') or None
+        if self.reg('r_ep') == None:
             return None
         def lookup(cfun, name):
             if name in cfun["env_table"].values():
@@ -1262,21 +1248,20 @@ class Process(multiprocessing.Process):
                 return lookup(cfun["outer_cfun"], name)
             else:
                 return None
-        return lookup(self.r_cp["compiled_function"], name)
+        return lookup(self.reg('r_cp')["compiled_function"], name)
 
     def env_set_value(self, name, value):
         idx = self.env_lookup(name)
         if idx != None:
-            self.r_ep[idx] = value
+            self.reg('r_ep')[idx] = value
         else:
-            br()
             self.throw_with_message('Undeclared env variable: ' + name)
 
     def set_local_value(self, name, expr):
-        if self.r_ep != None:
+        if self.reg('r_ep') != None:
             self.env_set_value(name, expr)
         else:
-            self.locals[name] = expr
+            self.locals()[name] = expr
 
     ##### eval routines
 
@@ -1284,45 +1269,50 @@ class Process(multiprocessing.Process):
         try:
             return getattr(self, name)(*rest)
         except StandardError as e:
-            logger.debug("WARNING: python exception ocurred: " + str(e.__class__) + ":" + str(e))
+
+            print "WARNING: python exception ocurred: " + str(e.__class__) + ":" + str(e)
+            print ''.join(traceback.format_exc())
+
             if self.state == 'exception': # we know, let it propagate
                 raise
             else:
                 self.throw_py_exception(e, traceback.format_exc())
 
     def eval_prim(self, prim_name, ast):
-        self.r_ip = ast
+        self.reg('r_ip', ast)
         self.dbg_control('eval_prim')
         return globals()['prim_'+prim_name](self)
 
     def eval_do_field_assign(self, field, rhs, ast):
-        self.r_ip = ast
+        self.reg('r_ip', ast)
         self.dbg_control('eval_do_field_assign')
 
-        if not field in self.r_rdp:
+        if not field in self.reg('r_rdp'):
             self.throw_with_message("object has no field " + field)
         else:
-            self.r_rdp[field] = rhs
+            self.reg('r_rdp')[field] = rhs
 
     def eval_do_local_assign(self, name,expr, ast):
-        self.r_ip = ast
+        self.reg('r_ip', ast)
         self.dbg_control('eval_do_local_assign')
         self.set_local_value(name, expr)
 
     def eval_do_var_def(self, name, expr, ast):
-        self.r_ip = ast
+        self.reg('r_ip', ast)
         self.dbg_control('eval_var_def')
         self.set_local_value(name, expr)
 
     def eval_do_fun_lit(self, params, body, ast):
-        self.r_ip = ast
+        self.reg('r_ip', ast)
         self.dbg_control('eval_do_fun_lit')
-        compiled_fun = self.r_cp["compiled_function"]["fun_literals"][body._id]
-        return _compiled_function_to_context(compiled_fun, self.r_ep, self.r_mp)
+
+        compiled_fun = body.cfun_literal
+        ctx = _compiled_function_to_context(compiled_fun, self.reg('r_ep'), self.reg('r_mp'))
+        return ctx
 
     def eval_access_field(self, field):
-        if field in self.r_rdp:
-            return self.r_rdp[field]
+        if field in self.reg('r_rdp'):
+            return self.reg('r_rdp')[field]
         else:
             self.throw_with_message("object has no field " + field)
 
@@ -1330,31 +1320,31 @@ class Process(multiprocessing.Process):
         return left[idx]
 
     def eval_access_module(self):
-        return self.r_mp
+        return self.reg('r_mp')
 
     def eval_access_context(self):
-        return self.r_cp
+        return self.reg('r_cp')
 
     def eval_access_this(self):
-        return self.r_rp
+        return self.reg('r_rp')
 
     def eval_symbol(self, s):
         return self.interpreter.interned_symbol_for(s)
 
     def eval_access_var(self, name, ast):
-        self.r_ip = ast
+        self.reg('r_ip', ast)
         self.dbg_control('eval_access_var')
         #-local
-        if self.r_ep != None: # env
+        if self.reg('r_ep') != None: # env
             idx = self.env_lookup(name)
             if idx != None:
-                return self.r_ep[idx]
+                return self.reg('r_ep')[idx]
         else: # checking stack
-            if name in self.locals:
-                return self.locals[name]
+            if name in self.locals():
+                return self.locals()[name]
 
         #-module params + module entries
-        return self.lookup_in_modules(name, self.r_mp)
+        return self.lookup_in_modules(name, self.reg('r_mp'))
 
     def lookup_in_modules(self, name, mp):
         if name in mp:
@@ -1362,40 +1352,40 @@ class Process(multiprocessing.Process):
         elif mp['_delegate'] != None:
             return self.lookup_in_modules(name, mp['_delegate'])
         else:
-            self.throw_with_message("Undeclared: " + name + " : "+P(self.r_cp['compiled_function'],1,True))
+            self.throw_with_message("Undeclared: " + name + " : "+P(self.reg('r_cp')['compiled_function'],1,True))
 
     def eval_do_return(self, value, ast):
-        self.r_ip = ast
+        self.reg('r_ip', ast)
         self.dbg_control('eval_do_return')
         raise ReturnException(value)
 
     def eval_do_super_send(self, args, ast):
-        self.r_ip = ast
+        self.reg('r_ip', ast)
         self.dbg_control('eval_do_super_send')
 
-        instance = self.r_rdp
+        instance = self.reg('r_rdp')
         klass = self.interpreter.get_vt(instance)
         pklass = klass["parent"]
         receiver = instance["_delegate"]
 
-        selector = self.r_cp['compiled_function']['name']
+        selector = self.reg('r_cp')['compiled_function']['name']
         drecv, method = self._lookup(receiver, pklass, selector)
 
         if not method:
             self.throw_with_message("DoesNotUnderstand: " + selector + " -- " + P(instance,1,True))
         else:
-            return self.setup_and_run_fun(self.r_rp, drecv, selector, method, args, False)
+            return self.setup_and_run_fun(self.reg('r_rp'), drecv, selector, method, args, False)
 
     def eval_do_super_ctor_send(self, selector, args, ast):
-        self.r_ip = ast
+        self.reg('r_ip', ast)
         self.dbg_control('eval_do_super_ctor_send')
         # -super.foo() can only be used inside constructors.
         # -normal methods can invoke super() to get its superclass version.
         # -A method m() cannot invoke a super method of different name.
-        if not self.r_cp["compiled_function"]["is_ctor"]:
+        if not self.reg('r_cp')["compiled_function"]["is_ctor"]:
             self.throw_with_message("Cannot use super.m() outside ctor");
 
-        instance = self.r_rdp
+        instance = self.reg('r_rdp')
         klass = self.interpreter.get_vt(instance)
         pklass = klass["parent"]
         receiver = instance["_delegate"]
@@ -1407,10 +1397,10 @@ class Process(multiprocessing.Process):
         elif not method["compiled_function"]["is_ctor"]:
             self.hrow_with_message("Method is not constructor: " + selector)
         else:
-            return self.setup_and_run_fun(self.r_rp, drecv, selector, method, args, False)
+            return self.setup_and_run_fun(self.reg('r_rp'), drecv, selector, method, args, False)
 
     def eval_do_bin_send(self, selector, receiver, arg, ast):
-        self.r_ip = ast
+        self.reg('r_ip', ast)
         self.dbg_control('eval_do_bin_send')
         drecv, method = self._lookup(receiver, self.interpreter.get_vt(receiver), selector)
         if not method:
@@ -1419,7 +1409,7 @@ class Process(multiprocessing.Process):
             return self.setup_and_run_fun(receiver, drecv, selector, method, [arg], True)
 
     def eval_do_un_not(self, value, ast):
-        self.r_ip = ast
+        self.reg('r_ip', ast)
         self.dbg_control('eval_do_un_not')
         return not value
 
@@ -1427,38 +1417,38 @@ class Process(multiprocessing.Process):
         return l and r
 
     def eval_do_un_neg(self, value, ast):
-        self.r_ip = ast
+        self.reg('r_ip', ast)
         self.dbg_control('eval_do_un_neg')
         return - value
 
     def eval_do_send(self, receiver, selector, args, ast):
-        self.r_ip = ast
+        self.reg('r_ip', ast)
         self.dbg_control('eval_do_send')
         return self.do_send(receiver, selector, args)
 
     def eval_do_call(self, fun, args, ast):
-        self.r_ip = ast
+        self.reg('r_ip', ast)
         self.dbg_control('eval_do_call')
-        return self.setup_and_run_fun(self.r_rp, self.r_rdp, '<?>', fun, args, True)
+        return self.setup_and_run_fun(self.reg('r_rp'), self.reg('r_rdp'), '<?>', fun, args, True)
 
 
     def eval_do_send_or_call(self, name, args,ast):
-        self.r_ip = ast
+        self.reg('r_ip', ast)
         self.dbg_control('eval_do_send_or_call')
         fn = None
         # if name is local...
-        if self.r_ep:
+        if self.reg('r_ep'):
             idx = self.env_lookup(name) # in env?
             if idx != None:
-                fn = self.r_ep[idx]
-        elif name in self.locals:        # local in stack
-            fn = self.locals[name]
+                fn = self.reg('r_ep')[idx]
+        elif name in self.locals():        # local in stack
+            fn = self.locals()[name]
 
         if fn:
-            return self.setup_and_run_fun(self.r_rp, self.r_rdp, name, fn, args, True)
-        fn = self.lookup_in_modules(name, self.r_mp)
+            return self.setup_and_run_fun(self.reg('r_rp'), self.reg('r_rdp'), name, fn, args, True)
+        fn = self.lookup_in_modules(name, self.reg('r_mp'))
         if fn:
-            return self.setup_and_run_fun(self.r_mp, self.r_mp, name, fn, args, True)
+            return self.setup_and_run_fun(self.reg('r_mp'), self.reg('r_mp'), name, fn, args, True)
 
     def eval_do_if(self, cond, yes):
         if cond: #False/None vs. *
@@ -1478,7 +1468,7 @@ class Process(multiprocessing.Process):
             self.evaluator.apply("exprlist", yes_expr)
 
     def eval_do_try(self, ast, tr, bind, ct):
-        self.r_ip = ast
+        self.reg('r_ip', ast)
         try:
             self.exception_protection.append(True)
             ev = Eval([tr])
@@ -1490,17 +1480,17 @@ class Process(multiprocessing.Process):
             return self.evaluator.apply("exprlist", ct)[0]
 
     def eval_do_debug(self,ast):
-        self.r_ip = ast
+        self.reg('r_ip', ast)
         self.state = 'paused'
 
     def dbg_control(self, name, force_debug = False):
 
         def process_breakpoints():
             for idx, bp in enumerate(self.volatile_breakpoints):
-                line = self.r_ip.start_line - self.r_cp['compiled_function']['line']+1
-                logger.debug("Checking line: " + str(line) + " --- " + str(self.r_ip))
-                if line == bp['line'] and equal(self.r_cp['compiled_function'], bp['cfun']):
-                    logger.debug("BP activated at line: " + str(line) + " --- " + str(self.r_ip))
+                line = self.reg('r_ip').start_line - self.reg('r_cp')['compiled_function']['line']+1
+                logger.debug("Checking line: " + str(line) + " --- " + str(self.reg('r_ip')))
+                if line == bp['line'] and id_eq(self.reg('r_cp')['compiled_function'], bp['cfun']):
+                    logger.debug("BP activated at line: " + str(line) + " --- " + str(self.reg('r_ip')))
                     self.state = 'paused'
                     del self.volatile_breakpoints[idx]
                     return
@@ -1536,13 +1526,13 @@ class Process(multiprocessing.Process):
 
                 frames_count = msg['args'][0]
                 logger.debug('rewinding  this much of frames: ' + str(frames_count))
-                logger.debug('We are at: ' + self.r_cp['compiled_function']['name'])
+                logger.debug('We are at: ' + self.reg('r_cp')['compiled_function']['name'])
 
                 to_line = msg['args'][1]
                 logger.debug('line: ' + str(to_line))
 
-                logger.debug('we will break at: ' + self.r_cp['compiled_function']['name'])
-                self.break_at(self.r_cp['compiled_function'], to_line)
+                logger.debug('we will break at: ' + self.reg('r_cp')['compiled_function']['name'])
+                self.break_at(self.reg('r_cp')['compiled_function'], to_line)
                 raise RewindException(frames_count)
             if msg['cmd'] == 'update_object':
                 import pickle
@@ -1553,12 +1543,12 @@ class Process(multiprocessing.Process):
                 logger.debug('evaluating text:')
                 frame = self.frame_by_index(msg['args'][1])
                 # var cmod = get_compiled_module(imod);
-                cmod = self.interpreter.get_vt(self.r_mp)['compiled_module']
+                cmod = self.interpreter.get_vt(self.reg('r_mp'))['compiled_module']
                 # var cfn = CompiledFunction.newClosure(code, thisContext.compiledFunction(), false);
                 code = "fun () { " + msg['args'][0] + "}"
-                cfn = _create_closure(self, code, self.r_cp['compiled_function'], False)
+                cfn = _create_closure(self, code, self.reg('r_cp')['compiled_function'], False)
                 # var fn = cfn.asContextWithFrame(imod, frame);
-                fn = _compiled_function_as_context_with_frame(cfn, self, self.r_mp, frame)
+                fn = _compiled_function_as_context_with_frame(cfn, self, self.reg('r_mp'), frame)
                 logger.debug('setup_and_run_unprotected....')
                 old_state = self.state
                 self.state = 'running'
@@ -1606,7 +1596,7 @@ class Process(multiprocessing.Process):
                 raise MemetalkException(mex, self.pp_stack_trace())
 
     def throw_py_exception(self, pyex, tb):
-        logger.debug("Python exception with message: \n" + pyex.message)
+        logger.debug("Python exception with message: \n" + str(pyex.message))
         ex = self.interpreter.create_instance(core.Exception)
 
         # ...and this me being stupid:
@@ -1645,8 +1635,8 @@ class Process(multiprocessing.Process):
         for frame in self.stack:
             if frame['r_cp']:
                 st = st +  (frame['r_cp']['compiled_function']['name'] + " :::" + str(frame['r_cp']['compiled_function']['body']))[0:80] + "...\n"
-        if self.r_cp:
-            st = st + (self.r_cp['compiled_function']['name'] + " ::: " + str(self.r_cp['compiled_function']['body']))[0:80] + "...\n"
+        if self.reg('r_cp'):
+            st = st + (self.reg('r_cp')['compiled_function']['name'] + " ::: " + str(self.reg('r_cp')['compiled_function']['body']))[0:80] + "...\n"
         return st
 
 ###################################################

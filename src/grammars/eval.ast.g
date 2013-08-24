@@ -37,7 +37,7 @@ expr = ['super-ctor-send' :s args:a]:ast     -> self.i.do_eval('eval_do_super_ct
      | ['literal-dict'  pair*:r]             -> dict(r)
      | ['fun-literal'  ['params' :p]
           ['body' :b]]:ast                   -> self.i.do_eval('eval_do_fun_lit',p,b,ast)
-     | ['return-this']:ast                   -> self.i.do_eval('eval_do_return',self.i.r_rp,ast)
+     | ['return-this']:ast                   -> self.i.do_eval('eval_do_return',self.i.reg('r_rp'),ast)
      | ['return-null']:ast                   -> self.i.do_eval('eval_do_return',None,ast)
      | ['return-top']                        -> self.i.todo26()
      | assignment

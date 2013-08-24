@@ -251,7 +251,7 @@ funliteral = spaces !(self.input.position):begin token("fun") params:p token("{"
 funliteral_body = !(self.input.position):begin stmt:x stmts:xs -> self.i.ast(begin, [x]+xs)
                 | !(self.input.position):begin expr_ret:e      -> self.i.ast(begin, [e])
                 | !(self.input.position):begin expr:e          -> self.i.ast(begin, [e])
-                |                 -> self.i.sint_ast(self.input.position, [self.i.sint_ast(self.input.position,[self.i.sint_ast(self.input.position,['return-this'])])])
+                |  -> self.i.sint_ast(self.input.position, [self.i.sint_ast(self.input.position,[self.i.sint_ast(self.input.position,['literal','null'])])])
 
 lit_symbol = spaces !(self.input.position):begin token(":") alpha_name:xs
            -> self.i.ast(begin, ["literal-symbol", xs])
