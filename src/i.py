@@ -60,230 +60,8 @@ def UPDATE_OBJECT(remote_obj):
 
     local_obj.update(remote_obj)
 
-def _create_compiled_module(data):
-    template = {"_vt": core.CompiledModule,
-                "_delegate": None,
-                "name": "",
-                "license":"",
-                "params": [],
-                "default_params": {},
-                "aliases": [],
-                "compiled_functions": {},
-                "compiled_classes": {},
-                "@tag":" a CompiledModule"}
-
-    return ALLOC(dict(template.items() + data.items()))
-
-def _create_compiled_function(data):
-    template = {"_vt": core.CompiledFunction,
-                "_delegate": None,
-                "name": "",
-                "params": [],
-                "body": None,
-                "line":0,
-                "text": '/* native */',
-                "is_prim": False, # not currently in use
-                "prim_name": '',  # not currently in use
-                "uses_env": False,
-                "fun_literals":{},
-                "env_table":{},
-                "env_table_skel": {},
-                "outer_cfun":None,
-                "owner":None,
-                "is_ctor": False,
-                "is_top_level": True,
-                "is_embedded": True,
-                "@tag": "a CompiledFunction"}
-    return ALLOC(dict(template.items() + data.items()))
-
-def _create_compiled_class(data):
-    template = {"_vt": core.CompiledClass,
-                "_delegate": None,
-                "module": None, #compiled module
-                "name": "",
-                "super_class_name":"Object",
-                "fields": [],
-                "methods": {},
-                "own_methods":{},
-                "@tag":"a CompiledClass"}
-    return ALLOC(dict(template.items() + data.items()))
-
-def _create_module(data):
-    template = {"_vt": core.ModuleBehavior,
-                "_delegate": None,
-                "parent": core.Object,
-                "dict": {},
-                "compiled_module": None,
-                "@tag": "a Module"}
-    return ALLOC(dict(template.items() + data.items()))
-
-def _create_class(data):
-    template = {"_vt": None, #it should be given by data [FooClassBehavior]
-                "_delegate": None,
-                "parent": None,
-                "dict": {},
-                "compiled_class":None,
-                "@tag":"a class"}
-    return ALLOC(dict(template.items() + data.items()))
 
 
-def _create_accessor_method(imodule, name):
-    cf =  _create_compiled_function({
-            "name": name,
-            "body":  [ASTNode(['return', ['field', name]],'return @'+name+';',0,0,0,0)]})
-    return _function_from_cfunction(cf, imodule)
-
-def _function_from_cfunction(cfun, imodule):
-    return ALLOC({"_vt": core.Function,
-                  "_delegate": None,
-                  "compiled_function": cfun,
-                  "module": imodule,
-                  "@tag": "a Function"})
-
-def _compiled_function_to_context(cfun, env, imodule):
-    return ALLOC({"_vt": core.Context,
-                  "_delegate": None,
-                  "compiled_function": cfun,
-                  "env":env,
-                  "module": imodule,
-                  "@tag": "a Context"})
-
-def _compiled_functions_to_functions(cfuns, imodule):
-    funs = {}
-    for name, fun in cfuns.items():
-        funs[name] = _function_from_cfunction(fun, imodule)
-    return funs
-
-
-def _instantiate_module(proc, compiled_module, _args, parent_module):
-    logger.debug("Instantiating module: " + compiled_module['name'])
-
-    def setup_module_arguments(_args, compiled_module):
-        args = dict(_args)
-        # module's default argument
-        for name,dp in compiled_module['default_params'].iteritems():
-            if name not in args.keys():
-                if dp['type'] == 'lib':
-                    args[name] = proc.interpreter.compile_module_lib(proc, dp['value'])
-                elif dp['type'] == 'uri':
-                    args[name] = proc.interpreter.compile_module_uri(proc, dp['value'])
-                else:
-                    proc.throw_with_message('Unknown module spec')
-        if args.keys().sort() != compiled_module['params'].sort():
-            proc.throw_with_message('arity error on module parameters')
-
-        # module's aliases. dirty: using arg to set it
-        for alias in compiled_module['aliases']:
-            for name in alias[1]:
-                args[name] = args[alias[0]][name]
-        return args
-
-    args = setup_module_arguments(_args, compiled_module)
-
-    #creates the Module object and its instance
-    size = len(compiled_module["params"])+\
-        len(compiled_module["compiled_classes"])+\
-        len(compiled_module["compiled_functions"])
-
-    # puff
-    imod_dictionary = {"_compiledModule":_function_from_cfunction(
-            _create_compiled_function({
-                    'name':'_compiledModule',
-                    'params':[],
-                    'body': ['primitive', ['literal-string', 'module_instance_compiled_module']],
-                    '@tag': '<Module>._compiledModule compiled function'}),
-            core.kernel_imodule)}
-
-    # Module
-    module = _create_module({"_vt": core.ModuleBehavior,
-                             "dict": imod_dictionary,
-                             "compiled_module": compiled_module,
-                             "@tag":"Module " + compiled_module["name"]})
-
-    # module instance
-    imodule = ALLOC({"_vt": module,
-                     "_delegate": parent_module,
-                     "@tag":"Module instance: " + compiled_module["name"]})
-
-    # accessors
-    for cname, cclass in compiled_module["compiled_classes"].items():
-        imod_dictionary[cname] = _create_accessor_method(imodule, cname)
-
-    # functions as module methods
-    for cfname, cfun in compiled_module["compiled_functions"].items():
-        imod_dictionary[cfname] = _function_from_cfunction(cfun,imodule)
-
-    #instantiate classes
-
-    def lookup_super_class_on_parent_module(super_name, module):
-        if super_name in module:
-            return module[super_name] # TODO: should be actually a msg send
-        elif module["_delegate"]:
-            return lookup_super_class_on_parent_module(super_name, module['_delegate'])
-
-    classes = {}
-    bclasses = {}
-    super_later = {}
-    for _, c in compiled_module["compiled_classes"].items():
-        super_name = c["super_class_name"]
-        super_class = None
-        if super_name in args.keys():
-            super_class = args[super_name]
-        elif lookup_super_class_on_parent_module(super_name, parent_module):
-            super_class = lookup_super_class_on_parent_module(super_name, parent_module)
-        elif super_name in compiled_module["compiled_classes"]:
-            super_later[c["name"]] = super_name
-        else:
-            proc.throw_with_message("super class not found: " + super_name)
-
-        # superclass BarClass found
-        if super_class:
-            # FooClassBehavior
-            cbehavior = ALLOC({"_vt": core.Behavior,
-                               "parent": super_class["_vt"],
-                               "dict": _compiled_functions_to_functions(c["own_methods"], imodule),
-                               "@tag":c["name"]+" Behavior"})
-
-            classes[c["name"]] = _create_class({"_vt": cbehavior,
-                                                "parent": super_class,
-                                                "dict": _compiled_functions_to_functions(c["methods"],imodule),
-                                                "compiled_class":c,
-                                                "@tag":c["name"]+" Class"})
-            bclasses[c["name"]] = cbehavior
-        else:
-            # FooClassBehavior
-            cbehavior = ALLOC({"_vt": core.Behavior,
-                               "parent": "*replace-me*", #latter below
-                               "dict": _compiled_functions_to_functions(c["own_methods"],imodule),
-                               "@tag":c["name"]+" Behavior"})
-
-            bclasses[c["name"]] = cbehavior
-            # superclass BarClass will be eventually in the variable 'classes'
-            classes[c["name"]] = _create_class({"_vt": cbehavior,
-                                                "parent": "*replace-me*", #placeholder to substitute later below
-                                                "dict": _compiled_functions_to_functions(c["methods"],imodule),
-                                                "compiled_class":c,
-                                                "@tag":c["name"]+" Class"})
-
-    for name, super_name in super_later.items():
-        classes[name]["parent"] = classes[super_name]
-        classes[name]["_vt"]["parent"] = bclasses[super_name]
-
-    # #update parent classes
-    # for name, c in classes.items():
-    #     parent_name = classes[name]["parent"]
-
-    funs = _compiled_functions_to_functions(compiled_module["compiled_functions"], imodule)
-
-    for name, fun in funs.items():
-        imodule[name] = fun
-    for name, klass in classes.items():
-        imodule[name] = klass
-
-    for name, val in args.iteritems():
-        imodule[name] = val
-
-    return imodule
 
 #######################################################
 ## Loading
@@ -295,10 +73,12 @@ class ModuleLoader(ASTBuilder):
         self.first_fnlit = None
         self.recompiling_cfun = None
 
-    def recompile_top_level(self, i, cfun, src):
+    def recompile_top_level(self, proc, cfun, src):
         self.line_offset = 0
         self.pos_stack = []
         name = cfun['name']
+
+        self.interpreter = proc.interpreter
 
         self.recompiling_cfun = cfun
 
@@ -327,7 +107,7 @@ class ModuleLoader(ASTBuilder):
 
         try:
             owner = cfun['owner']
-            if id_eq(owner['_vt'], core.CompiledClass):
+            if id_eq(owner['_vt'], self.interpreter.core_imod['CompiledClass']):
                 self.current_class = owner
                 self.current_module = owner['module']
                 if cfun in owner['methods'].values():
@@ -348,9 +128,11 @@ class ModuleLoader(ASTBuilder):
                 proc.throw_py_exception(err, traceback.format_exc())
 
 
-    def recompile_closure(self, i, cfun, src):
+    def recompile_closure(self, proc, cfun, src):
         self.line_offset = 0
         self.pos_stack = []
+
+        self.interpreter = proc.interpreter
 
         self.parser = MemeParser(src)
         self.parser.i = self
@@ -384,9 +166,11 @@ class ModuleLoader(ASTBuilder):
                 proc.throw_py_exception(err, traceback.format_exc())
         return cfun
 
-    def compile_closure(self, i, src, outer):
+    def compile_closure(self, proc, src, outer):
         self.line_offset = 0
         self.pos_stack = []
+
+        self.interpreter = proc.interpreter
 
         self.parser = MemeParser(src)
         self.parser.i = self
@@ -421,11 +205,13 @@ class ModuleLoader(ASTBuilder):
 
         return self.first_fnlit
 
-    def compile_top_level(self, i, name, src, owner, flag):
+    def compile_top_level(self, proc, name, src, owner, flag):
         self.line_offset = 0
         self.pos_stack = []
 
-        if id_eq(owner['_vt'], core.CompiledClass):
+        self.interpreter = proc.interpreter
+
+        if id_eq(owner['_vt'], self.interpreter.core_imod['CompiledClass']):
             self.current_class = owner
             self.current_module = owner["module"]
         else:
@@ -468,10 +254,11 @@ class ModuleLoader(ASTBuilder):
         else:
             return self.current_module["compiled_functions"][name]
 
-    def compile_module(self, i, name, src):
+    def compile_module(self, proc, name, src):
         self.line_offset = 0
         self.pos_stack = []
-        #self.function_line_offset = 0
+
+        self.interpreter = proc.interpreter
 
         self.parser = MemeParser(src)
         self.parser.i = self
@@ -487,10 +274,10 @@ class ModuleLoader(ASTBuilder):
         logger.debug(ast)
         logger.debug("//---- AST ----")
 
-        self.current_module = _create_compiled_module({"name": name,
-                                                       "ast": ast,
-                                                       "parent_module":"memetalk/kernel",
-                                                       "@tag":"a compiled module"})
+        self.current_module = proc.interpreter.create_compiled_module({"name": name,
+                                                                       "ast": ast,
+                                                                       "parent_module":"memetalk/kernel",
+                                                                       "@tag":"a compiled module"})
 
         self.env_id_table = []
         self.env_idx = 0
@@ -527,10 +314,10 @@ class ModuleLoader(ASTBuilder):
         self.current_module['aliases'].append((libname, aliases))
 
     def l_begin_class(self, name, super_class, fields):
-        self.current_class = _create_compiled_class({"name":name,
-                                                     "super_class_name":super_class,
-                                                     "module": self.current_module,
-                                                     "fields":fields})
+        self.current_class = self.interpreter.create_compiled_class({"name":name,
+                                                                     "super_class_name":super_class,
+                                                                     "module": self.current_module,
+                                                                     "fields":fields})
 
     def l_end_class(self):
         cname = self.current_class["name"]
@@ -549,10 +336,10 @@ class ModuleLoader(ASTBuilder):
             self.recompiling_cfun['name'] = name
             self.recompiling_cfun['is_ctor'] = tp == "constructor"
         else:
-            self.functions.append(_create_compiled_function({"name":name,
-                                                             "is_ctor": tp == "constructor",
-                                                             'owner': owner,
-                                                             "@tag":"a compiled function"}))
+            self.functions.append(self.interpreter.create_compiled_function({"name":name,
+                                                                             "is_ctor": tp == "constructor",
+                                                                             'owner': owner,
+                                                                             "@tag":"a compiled function"}))
 
     def l_var_def(self, name):
         self.env_id_table[-1][self.env_idx] = name
@@ -587,21 +374,21 @@ class ModuleLoader(ASTBuilder):
     def l_enter_literal_fun(self):
         self.env_id_table.append({})
         self.functions[0]["uses_env"] = True # root Function using env
-        cfun = _create_compiled_function({"name":"<anonymous>",
-                                          "outer_cfun": self.functions[-1],
-                                          "owner": self.functions[-1]['owner'],
-                                          "is_top_level": False,
-                                          "@tag":"a compiled literal function"})
+        cfun = self.interpreter.create_compiled_function({"name":"<anonymous>",
+                                                          "outer_cfun": self.functions[-1],
+                                                          "owner": self.functions[-1]['owner'],
+                                                          "is_top_level": False,
+                                                          "@tag":"a compiled literal function"})
         self.functions.append(cfun)
 
     def l_enter_first_literal_fun(self):
         self.env_id_table.append({})
         if self.first_fnlit == None:
-            self.first_fnlit = _create_compiled_function({"name":"<anonymous>",
-                                                          "outer_cfun": self.functions[-1],
-                                                          "owner": self.functions[-1]['owner'],
-                                                          "is_top_level": False,
-                                                          "@tag":"a compiled literal function"})
+            self.first_fnlit = self.interpreter.create_compiled_function({"name":"<anonymous>",
+                                                                           "outer_cfun": self.functions[-1],
+                                                                           "owner": self.functions[-1]['owner'],
+                                                                           "is_top_level": False,
+                                                                           "@tag":"a compiled literal function"})
             self.functions.append(self.first_fnlit)
 
     def l_set_fun_literal_parameters(self, params):
@@ -647,10 +434,10 @@ class RewindException(VMException):
         self.count = count
 
 class MemetalkException(VMException):
-    def __init__(self, mmobj, mtrace, pytrace = None):
+    def __init__(self, mmobj, mtrace, pyex = None, pytrace = None):
         self._mmobj = mmobj
         self._mmobj['mtrace'] = mtrace
-        self._mmobj['py_exception'] = self
+        self._mmobj['py_exception'] = pyex
         if pytrace == None:
             self._mmobj['py_trace'] = "".join(traceback.format_stack()[:-1])
         else:
@@ -668,11 +455,244 @@ class Interpreter():
         self.processes = {}
         self.procids = 0
 
+        self.core_imod = {}
+        core.init(self, self.core_imod)
+
         self.manager = multiprocessing.Manager()
 
         self.my_channel = self.manager.Queue()
 
         atexit.register(self.cleanup)
+
+    ### Object creation ###
+    def new_object(self, data = {}):
+        return dict(data)
+
+    def create_compiled_function(self, data):
+        template = {"_vt": self.core_imod['CompiledFunction'],
+                    "_delegate": None,
+                    "name": "",
+                    "params": [],
+                    "body": None,
+                    "line":0,
+                    "text": '/* native */',
+                    "is_prim": False, # not currently in use
+                    "prim_name": '',  # not currently in use
+                    "uses_env": False,
+                    "fun_literals":{},
+                    "env_table":{},
+                    "env_table_skel": {},
+                    "outer_cfun":None,
+                    "owner":None,
+                    "is_ctor": False,
+                    "is_top_level": True,
+                    "is_embedded": True,
+                    "@tag": "a CompiledFunction"}
+        return self.new_object(dict(template.items() + data.items()))
+
+    def create_compiled_class(self, data):
+        template = {"_vt": self.core_imod['CompiledClass'],
+                    "_delegate": None,
+                    "module": None, # compiled module
+                    "name": "",
+                    "super_class_name":"Object",
+                    "fields": [],
+                    "methods": {},
+                    "own_methods":{},
+                    "@tag":"a CompiledClass"}
+        return self.new_object(dict(template.items() + data.items()))
+
+    def create_module(self, data):
+        template = {"_vt": self.core_imod['ModuleBehavior'],
+                    "_delegate": None,
+                    "parent": self.core_imod['Object'],
+                    "dict": {},
+                    "compiled_module": None,
+                    "@tag": "a Module"}
+        return self.new_object(dict(template.items() + data.items()))
+
+    def create_class(self, data):
+        template = {"_vt": None, # it should be given by data [FooClassBehavior]
+                    "_delegate": None,
+                    "parent": None,
+                    "dict": {},
+                    "compiled_class":None,
+                    "@tag":"a class"}
+        return self.new_object(dict(template.items() + data.items()))
+
+
+    def create_accessor_method(self, imodule, name):
+        cf =  self.create_compiled_function({
+                "name": name,
+                "body":  [ASTNode(['return', ['field', name]],'return @'+ name +';',0,0,0,0)]})
+        return self.function_from_cfunction(cf, imodule)
+
+    def function_from_cfunction(self, cfun, imodule):
+        return self.new_object({"_vt": self.core_imod['Function'],
+                                "_delegate": None,
+                                "compiled_function": cfun,
+                                "module": imodule,
+                                "@tag": "a Function"})
+
+    def compiled_function_to_context(self, cfun, env, imodule):
+        return self.new_object({"_vt": self.core_imod['Context'],
+                                "_delegate": None,
+                                "compiled_function": cfun,
+                                "env":env,
+                                "module": imodule,
+                                "@tag": "a Context"})
+
+    def compiled_functions_to_functions(self, cfuns, imodule):
+        funs = {}
+        for name, fun in cfuns.items():
+            funs[name] = self.function_from_cfunction(fun, imodule)
+        return funs
+
+    def create_compiled_module(self, data):
+        template = {"_vt": self.core_imod['CompiledModule'],
+                    "_delegate": None,
+                    "name": "",
+                    "license":"",
+                    "params": [],
+                    "default_params": {},
+                    "aliases": [],
+                    "compiled_functions": {},
+                    "compiled_classes": {},
+                    "@tag":" a CompiledModule"}
+
+        return self.new_object(dict(template.items() + data.items()))
+
+
+    def instantiate_module(self, proc, compiled_module, _args, parent_module):
+        logger.debug("Instantiating module: " + compiled_module['name'])
+        def setup_module_arguments(_args, compiled_module):
+            args = dict(_args)
+            # module's default argument
+            for name,dp in compiled_module['default_params'].iteritems():
+                if name not in args.keys():
+                    if dp['type'] == 'lib':
+                        args[name] = self.compile_module_lib(proc, dp['value'])
+                    elif dp['type'] == 'uri':
+                        args[name] = self.compile_module_uri(proc, dp['value'])
+                    else:
+                        proc.throw_with_message('Unknown module spec')
+            if sorted(args.keys()) != sorted(compiled_module['params']):
+                proc.throw_with_message('arity error on module parameters')
+
+            # module's aliases. dirty: using arg to set it
+            for alias in compiled_module['aliases']:
+                for name in alias[1]:
+                    args[name] = args[alias[0]][name]
+            return args
+
+        args = setup_module_arguments(_args, compiled_module)
+
+        #creates the Module object and its instance
+        size = len(compiled_module["params"])+\
+            len(compiled_module["compiled_classes"])+\
+            len(compiled_module["compiled_functions"])
+
+        # puff
+        imod_dictionary = {"_compiledModule":self.function_from_cfunction(
+                self.create_compiled_function({
+                        'name':'_compiledModule',
+                        'params':[],
+                        'body': ['primitive', ['literal-string', 'module_instance_compiled_module']],
+                        '@tag': '<Module>._compiledModule compiled function'}),
+                self.core_imod)}
+
+        # Module
+        module = self.create_module({"_vt": self.core_imod['ModuleBehavior'],
+                                     "dict": imod_dictionary,
+                                     "compiled_module": compiled_module,
+                                     "@tag":"Module " + compiled_module["name"]})
+
+        # module instance
+        imodule = self.new_object({"_vt": module,
+                                   "_delegate": parent_module,
+                                   "@tag":"Module instance: " + compiled_module["name"]})
+
+        # accessors
+        for cname, cclass in compiled_module["compiled_classes"].items():
+            imod_dictionary[cname] = self.create_accessor_method(imodule, cname)
+
+        # functions as module methods
+        for cfname, cfun in compiled_module["compiled_functions"].items():
+            imod_dictionary[cfname] = self.function_from_cfunction(cfun,imodule)
+        #instantiate classes
+
+        def lookup_super_class_on_parent_module(super_name, module):
+            if super_name in module:
+                return module[super_name] # TODO: should be actually a msg send
+            elif module["_delegate"]:
+                return lookup_super_class_on_parent_module(super_name, module['_delegate'])
+
+        classes = {}
+        bclasses = {}
+        super_later = {}
+        for _, c in compiled_module["compiled_classes"].items():
+            super_name = c["super_class_name"]
+            super_class = None
+            if super_name in args.keys():
+                super_class = args[super_name]
+            elif lookup_super_class_on_parent_module(super_name, parent_module):
+                super_class = lookup_super_class_on_parent_module(super_name, parent_module)
+            elif super_name in compiled_module["compiled_classes"]:
+                super_later[c["name"]] = super_name
+            else:
+                proc.throw_with_message("super class not found: " + super_name)
+
+            # superclass BarClass found
+            if super_class:
+                # FooClassBehavior
+                cbehavior = ALLOC({"_vt": self.core_imod['Behavior'],
+                                   "parent": super_class["_vt"],
+                                   "dict": self.compiled_functions_to_functions(c["own_methods"], imodule),
+                                   "@tag":c["name"]+" Behavior"})
+
+                classes[c["name"]] = self.create_class({"_vt": cbehavior,
+                                                        "parent": super_class,
+                                                        "dict": self.compiled_functions_to_functions(c["methods"],imodule),
+                                                        "compiled_class":c,
+                                                        "@tag":c["name"]+" Class"})
+                bclasses[c["name"]] = cbehavior
+            else:
+                # FooClassBehavior
+                cbehavior = ALLOC({"_vt": self.core_imod['Behavior'],
+                                   "parent": "*replace-me*", #latter below
+                                   "dict": self.compiled_functions_to_functions(c["own_methods"],imodule),
+                                   "@tag":c["name"]+" Behavior"})
+
+                bclasses[c["name"]] = cbehavior
+                # superclass BarClass will be eventually in the variable 'classes'
+                classes[c["name"]] = self.create_class({"_vt": cbehavior,
+                                                        "parent": "*replace-me*", #placeholder to substitute later below
+                                                        "dict": self.compiled_functions_to_functions(c["methods"],imodule),
+                                                        "compiled_class":c,
+                                                        "@tag":c["name"]+" Class"})
+
+        for name, super_name in super_later.items():
+            classes[name]["parent"] = classes[super_name]
+            classes[name]["_vt"]["parent"] = bclasses[super_name]
+
+        # #update parent classes
+        # for name, c in classes.items():
+        #     parent_name = classes[name]["parent"]
+
+        funs = self.compiled_functions_to_functions(compiled_module["compiled_functions"], imodule)
+
+        for name, fun in funs.items():
+            imodule[name] = fun
+        for name, klass in classes.items():
+            imodule[name] = klass
+
+        for name, val in args.iteritems():
+            imodule[name] = val
+
+        self.imods.append(imodule)
+        return imodule
+
+    #####################
 
     def cleanup(self):
         try:
@@ -711,7 +731,7 @@ class Interpreter():
     def save_module(self, name):
         ## Empty fields are being dumped as "fields ;"!!
         logger.info("saving module: " + name)
-        cmod = self.compiled_module_by_filename(name + ".mm")
+        cmod = self.compiled_module_by_filename(self, name + ".mm")
         source = self.module_to_text(cmod)
         logger.info("saving to: " + os.path.join(MODULES_PATH, name + ".mm"))
         open(os.path.join(MODULES_PATH, name + ".mm"), "w").write(source)
@@ -787,96 +807,71 @@ class Interpreter():
     #     #target_process.debugger_process.join()
     #     #print "DONE debugger for process"
 
-    def compiled_module_by_filename(self, filename):
+    def compiled_module_by_filename(self, proc, filename):
         module_name = filename[:-3]
         if module_name not in self.compiled_modules:
             source = self.open_module_file(filename).read()
-            self.compiled_modules[module_name] =  ModuleLoader().compile_module(self,module_name,source)
+            self.compiled_modules[module_name] =  ModuleLoader().compile_module(proc,module_name,source)
         return self.compiled_modules[module_name]
 
-    def compiled_module_by_filepath(self, filepath):
+    def compiled_module_by_filepath(self, proc, filepath):
         module_name = filepath
         if module_name not in self.compiled_modules:
             source = open(filepath).read()
-            self.compiled_modules[module_name] =  ModuleLoader().compile_module(self,module_name,source)
+            self.compiled_modules[module_name] =  ModuleLoader().compile_module(proc,module_name,source)
         return self.compiled_modules[module_name]
-
-    def instantiate_module(self, proc, compiled_module, args, imodule):
-        imodule = _instantiate_module(proc, compiled_module, args, imodule)
-        self.imods.append(imodule)
-        return imodule
 
     def imodules(self):
         return self.imods
 
     def compile_module_lib(self, proc, name):
-        compiled_module = self.compiled_module_by_filename(name + '.mm')
-        return self.instantiate_module(proc, compiled_module, {}, core.kernel_imodule)
+        compiled_module = self.compiled_module_by_filename(proc, name + '.mm')
+        imod = self.instantiate_module(proc, compiled_module, {}, self.core_imod)
+        return imod
 
     def compile_module_uri(self, proc, uri):
         proc.throw_with_message('TODO: compile_module_uri')
 
     def kernel_module_instance(self):
-        return core.kernel_imodule
+        return self.core_imod.kernel_imodule
 
     def get_core_class(self, name):
-        return getattr(core, name)
+        return self.core_imod[name]
 
     def get_core_module(self):
-        return core.kernel_imodule
+        return self.core_imod.kernel_imodule
 
     def py_memetalk_exception(self):
         return MemetalkException
 
-    def create_compiled_function(self, data):
-        return _create_compiled_function(data)
+    def compile_top_level(self, proc, name,text, owner, flags):
+        return ModuleLoader().compile_top_level(proc, name, text, owner, flags)
 
-    def compiled_functions_to_functions(self, cfuns, imod):
-        return _compiled_functions_to_functions(cfuns, imod)
+    def compile_closure(self, proc, text, cfun):
+        return ModuleLoader().compile_closure(proc, text, cfun)
 
-    def create_compiled_class(self, data):
-        return _create_compiled_class(data)
+    def recompile_top_level(self, proc, cfun, code):
+        return ModuleLoader().recompile_top_level(proc, cfun, code)
 
-    def create_class(self, data):
-        return _create_class(data)
-
-    def create_function_from_cfunction(self, cfun, imodule):
-        return _function_from_cfunction(cfun, imodule)
-
-    def create_accessor_method(self, imodule, name):
-        return _create_accessor_method(imodule, name)
-
-    def compiled_function_to_context(self, cfun, env, imodule):
-        return _compiled_function_to_context(cfun, env, imodule)
-
-    def compile_top_level(self, name,text, owner, flags):
-        return ModuleLoader().compile_top_level(self, name, text, owner, flags)
-
-    def compile_closure(self, text, cfun):
-        return ModuleLoader().compile_closure(self, text, cfun)
-
-    def recompile_top_level(self, cfun, code):
-        return ModuleLoader().recompile_top_level(self, cfun, code)
-
-    def recompile_closure(self, cfun, code):
-        return ModuleLoader().recompile_closure(self, cfun, code)
+    def recompile_closure(self, proc, cfun, code):
+        return ModuleLoader().recompile_closure(proc, cfun, code)
 
     # object routines
     # -dealing with nulls, booleans, integers, etc...
 
     def get_vt(self, obj):
         if obj == None:
-            return core.Object
+            return self.core_imod['Object']
         elif isinstance(obj, basestring):
-            return core.String
+            return self.core_imod['String']
         elif isinstance(obj, dict) and '_vt' not in obj:
-            return core.Dictionary
+            return self.core_imod['Dictionary']
         elif isinstance(obj, int) or isinstance(obj, long):
-            return core.Number
+            return self.core_imod['Number']
         elif isinstance(obj, list):
-            return core.List
+            return self.core_imod['List']
         elif isinstance(obj, Process):
-            return core.VMProcess
+            return self.core_imod['VMProcess']
         else:
             return obj["_vt"]
 
@@ -889,17 +884,17 @@ class Interpreter():
             return False
 
     def is_wrapper_class(self, klass):
-        return id_eq(klass, core.String) or\
-            id_eq(klass, core.Dictionary) or\
-            id_eq(klass, core.List) or\
-            id_eq(klass, core.Number)
+        return id_eq(klass, self.core_imod['String']) or\
+            id_eq(klass, self.core_imod['Dictionary']) or\
+            id_eq(klass, self.core_imod['List']) or\
+            id_eq(klass, self.core_imod['Number'])
 
     def new_wrapper_object_for(self, klass):
-        if id_eq(klass, core.String):
+        if id_eq(klass, self.core_imod['String']):
             return str()
-        if id_eq(klass, core.Dictionary):
+        if id_eq(klass, self.core_imod['Dictionary']):
             return dict()
-        if id_eq(klass, core.List):
+        if id_eq(klass, self.core_imod['List']):
             return list()
         if klass.Number:
             return 0
@@ -928,7 +923,7 @@ class Interpreter():
 
     def interned_symbol_for(self, s):
         if s not in self.interned_symbols:
-            self.interned_symbols[s] = self.alloc_object(core.Symbol, {'self':s})
+            self.interned_symbols[s] = self.alloc_object(self.core_imod['Symbol'], {'self':s})
         return self.interned_symbols[s]
 
     def shitty_get_module_from_cfunction(self, cfun):
@@ -1020,8 +1015,8 @@ class Process(multiprocessing.Process):
             logger.debug('exec_module: ' + filename)
             self.state = state
             logger.debug('exec_module: getting compiled module...')
-            compiled_module = self.interpreter.compiled_module_by_filename(filename)
-            imodule = self.interpreter.instantiate_module(self, compiled_module, {}, core.kernel_imodule)
+            compiled_module = self.interpreter.compiled_module_by_filename(self,filename)
+            imodule = self.interpreter.instantiate_module(self, compiled_module, {}, self.interpreter.core_imod)
 
             ret = self.setup_and_run_fun(imodule,
                                          imodule,
@@ -1180,12 +1175,12 @@ class Process(multiprocessing.Process):
         self.reg('r_mp', method["module"])
         self.reg('r_ep', None)
         self.locals({})
-        if not id_eq(self.interpreter.get_vt(method), core.Context):
+        if not id_eq(self.interpreter.get_vt(method), self.interpreter.core_imod['Context']):
             self.reg('r_rp', recv)
             self.reg('r_rdp', drecv)
 
             if not method["compiled_function"]["uses_env"] and \
-                    id_eq(self.interpreter.get_vt(method), core.Function):
+                    id_eq(self.interpreter.get_vt(method), self.interpreter.core_imod['Function']):
                 # normal fun, put args in the stack
                 if self.has_vararg(method["compiled_function"]["params"]):
                     regular = method["compiled_function"]["params"][0:-1]
@@ -1199,7 +1194,7 @@ class Process(multiprocessing.Process):
                         self.locals()[k] = v
             # normal fun using env, initialize one
             elif method["compiled_function"]["uses_env"] and \
-                    id_eq(self.interpreter.get_vt(method), core.Function):
+                    id_eq(self.interpreter.get_vt(method), self.interpreter.core_imod['Function']):
                 self.reg('r_ep', dict(method["compiled_function"]['env_table_skel']))
                 self.reg('r_ep')["r_rp"] = self.reg('r_rp')
                 self.reg('r_ep')["r_rdp"] = self.reg('r_rdp') # usually receivers are on stack.
@@ -1306,7 +1301,7 @@ class Process(multiprocessing.Process):
         self.dbg_control('eval_do_fun_lit')
 
         compiled_fun = body.cfun_literal
-        ctx = _compiled_function_to_context(compiled_fun, self.reg('r_ep'), self.reg('r_mp'))
+        ctx = self.interpreter.compiled_function_to_context(compiled_fun, self.reg('r_ep'), self.reg('r_mp'))
         return ctx
 
     def eval_access_field(self, field):
@@ -1596,7 +1591,8 @@ class Process(multiprocessing.Process):
 
     def throw_py_exception(self, pyex, tb):
         logger.debug("Python exception with message: \n" + str(pyex.message))
-        ex = self.interpreter.create_instance(core.Exception)
+        logger.debug(tb)
+        ex = self.interpreter.create_instance(self.interpreter.core_imod['Exception'])
 
         # ...and this me being stupid:
         ex['message'] =  "Python exception: " + str(pyex.message)
@@ -1606,15 +1602,15 @@ class Process(multiprocessing.Process):
             self.last_exception = ex
             r = self.dbg_control("throw", True);
             if self.state == r:
-                raise MemetalkException(ex, self.pp_stack_trace(), tb)
+                raise MemetalkException(ex, self.pp_stack_trace(), pyex, tb)
         else:
             # MemetalkException encapsulates the memetalk exception:
-            raise MemetalkException(ex, self.pp_stack_trace(), tb)
+            raise MemetalkException(ex, self.pp_stack_trace(), pyex, tb)
 
     def throw_with_message(self, msg):
         logger.debug("MemetalkException with message: \n" + msg)
         logger.debug(self.pp_stack_trace())
-        ex = self.interpreter.create_instance(core.Exception)
+        ex = self.interpreter.create_instance(self.interpreter.core_imod['Exception'])
 
         # ...and this me being stupid:
         ex['message'] =  msg

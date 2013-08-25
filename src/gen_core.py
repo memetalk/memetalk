@@ -97,22 +97,26 @@ class CoreGenerator(ASTBuilder):
     def dump(self):
         self.source = ''
 
-        def append(x):
-            self.source = self.source + x + "\n"
+        def append(x, indsize = 3):
+            indent = ' ' * indsize
+            self.source = self.source + indent + x + "\n"
 
-        append("from i import _create_compiled_function, _function_from_cfunction")
-        append("from i import _create_compiled_module, _create_compiled_class")
-        append("from i import ALLOC")
-        append("from astbuilder import *")
-        append("kernel_cmodule = ALLOC({})")
-        append("kernel_imodule = ALLOC({})")
+        append("from astbuilder import *",0)
+        append("def init(i, imod):",0)
+        append("kernel_cmodule = i.new_object()")
+        append("kernel_imodule = imod")
 
         for k,v in self.objects.iteritems():
-            append(k + " = ALLOC({})")
+            append(k + " = i.new_object()")
 
         for k,v in self.classes.iteritems():
-            append(k + " = ALLOC({})")
-            append(k+"Behavior = ALLOC({'_vt': Behavior,'parent':"+self.supers[k]+"Behavior, 'dict':{}, '@tag':'"+k+"Behavior'})")
+            append(k + " = i.new_object()")
+            append(k+"Behavior = i.new_object({'_vt': Behavior,'parent':"+self.supers[k]+"Behavior, 'dict':{}, '@tag':'"+k+"Behavior'})")
+
+        for name, val in self.classes.iteritems():
+            append("kernel_imodule["+to_source(name)+"] = " + name)
+        for name, val in self.objects.iteritems():
+            append("kernel_imodule["+to_source(name)+"] = " + name)
 
         for name,obj in self.objects.iteritems():
             for key,v in obj.iteritems():
@@ -120,7 +124,7 @@ class CoreGenerator(ASTBuilder):
             append(name+"['@tag'] = " + to_source(name))
 
         for name, dc in self.funs.iteritems():
-            if len(dc) > 0: append(name+"['dict'] = {}")
+            if len(dc) > 0: append(name+"['dict'] = i.new_object()")
             for mname,v in dc.iteritems():
                 append(name+"['dict']["+to_source(mname)+"] = " + v)
 
@@ -135,27 +139,27 @@ class CoreGenerator(ASTBuilder):
 
 
         for name,obj in self.classes.iteritems():
-            append(name + '["compiled_class"] = _create_compiled_class({"_vt": CompiledClass,'+\
-                                       '"_delegate": None,'+\
-                                       '"name": "'+name+'",'+\
-                                       '"super_class_name":"'+self.supers[name]+'",'+\
-                                       '"fields": '+to_source(self.fields[name])+','+\
-                                       '"module": kernel_cmodule,'+\
-                                       '"methods": {},'+\
-                                       '"own_methods":{}})')
+            append(name + '["compiled_class"] = i.create_compiled_class({"_vt": CompiledClass,'+\
+                       '"_delegate": None,'+\
+                       '"name": "'+name+'",'+\
+                       '"super_class_name":"'+self.supers[name]+'",'+\
+                       '"fields": '+to_source(self.fields[name])+','+\
+                       '"module": kernel_cmodule,'+\
+                       '"methods": {},'+\
+                       '"own_methods":{}})')
 
 
         for name, dc in self.methods.iteritems():
             if len(dc) > 0: append(name+"['dict'] = {}")
             for mname,v in dc.iteritems():
                 append(name+"['compiled_class']['methods']["+to_source(mname)+"] = " + v)
-                append(name+"['dict']["+to_source(mname)+"] = _function_from_cfunction(" + name+"['compiled_class']['methods']["+to_source(mname)+"], kernel_imodule)")
+                append(name+"['dict']["+to_source(mname)+"] = i.function_from_cfunction(" + name+"['compiled_class']['methods']["+to_source(mname)+"], kernel_imodule)")
 
 
         for name, dc in self.bv_methods.iteritems():
             for mname,v in dc.iteritems():
                 append(name+"['compiled_class']['own_methods']["+to_source(mname)+"] = " + v)
-                append(name+"Behavior['dict']["+to_source(mname)+"] = _function_from_cfunction(" + name+"['compiled_class']['own_methods']["+to_source(mname)+"], kernel_imodule)")
+                append(name+"Behavior['dict']["+to_source(mname)+"] = i.function_from_cfunction(" + name+"['compiled_class']['own_methods']["+to_source(mname)+"], kernel_imodule)")
 
         append("for name, m, in Object['dict'].iteritems():")
         append( "   Object_CompiledClass['methods'][name] = m['compiled_function']")
@@ -163,25 +167,20 @@ class CoreGenerator(ASTBuilder):
         append( "   Object_CompiledClass['own_methods'][name] = m['compiled_function']")
 
 
-        append("kernel_cmodule.update(_create_compiled_module({'name': 'core'," +\
-               "'ast': None," +\
-               "'parent_module':None," +\
-               "'@tag':'kernel compiled module'}))")
+        append("kernel_cmodule.update(i.create_compiled_module({'name': 'core'," +\
+                   "'ast': None," +\
+                   "'parent_module':None," +\
+                   "'@tag':'kernel compiled module'}))")
 
-        append("""
-KernelModule = ALLOC({"_vt": ModuleBehavior,
-"_delegate": None,
-"parent": Object,
-"dict": {},
-"@tag": "KernelModule"})""")
+        append('KernelModule = i.new_object({"_vt": ModuleBehavior,')
+        append('"_delegate": None,')
+        append('"parent": Object,')
+        append('"dict": {},')
+        append('"@tag": "KernelModule"})')
         append("kernel_imodule['_vt'] = KernelModule")
         append("kernel_imodule['_delegate'] = None")
         append("kernel_imodule['@tag'] = 'Kernel module instance'")
         append("KernelModule['compiled_module'] = kernel_cmodule")
-        for name, val in self.classes.iteritems():
-            append("kernel_imodule["+to_source(name)+"] = " + name)
-        for name, val in self.objects.iteritems():
-            append("kernel_imodule["+to_source(name)+"] = " + name)
 
         for k,v in self.module_funs.iteritems():
             append(k + " = " + v)
@@ -207,8 +206,8 @@ KernelModule = ALLOC({"_vt": ModuleBehavior,
             exit(1)
 
     def add_module_function(self, name, params, body):
-        self.module_funs[name] = "_function_from_cfunction("+\
-            "_create_compiled_function({"+\
+        self.module_funs[name] = "i.function_from_cfunction("+\
+            "i.create_compiled_function({"+\
                 "'name': "+to_source(name)+","+\
                 "'params': "+to_source(params)+","+\
                 "'body': "+to_source(body)+","+\
@@ -216,8 +215,8 @@ KernelModule = ALLOC({"_vt": ModuleBehavior,
                 "'@tag': '"+name+" compiled function'}),kernel_imodule)"
 
     def add_fun(self, name, params, body, is_ctor):
-        self.funs[self.current][name] = "_function_from_cfunction("+\
-            "_create_compiled_function({"+\
+        self.funs[self.current][name] = "i.function_from_cfunction("+\
+            "i.create_compiled_function({"+\
                 "'name': "+to_source(name)+","+\
                 "'params': "+to_source(params)+","+\
                 "'body': "+to_source(body)+","+\
@@ -228,7 +227,7 @@ KernelModule = ALLOC({"_vt": ModuleBehavior,
         self.objects[self.current][name] = str(value)
 
     def add_class_ctor(self, name, params, body):
-        self.bv_methods[self.current][name] = "_create_compiled_function({"+\
+        self.bv_methods[self.current][name] = "i.create_compiled_function({"+\
                 "'name': "+to_source(name)+","+\
                 "'params': "+to_source(params)+","+\
                 "'body': "+to_source(body)+","+\
@@ -237,7 +236,7 @@ KernelModule = ALLOC({"_vt": ModuleBehavior,
                 "'@tag': '<"+self.current+"Behavior>."+name+" compiled function'})"
 
     def add_class_method(self, name, params, body):
-        self.methods[self.current][name] = "_create_compiled_function({"+\
+        self.methods[self.current][name] = "i.create_compiled_function({"+\
                 "'name': "+to_source(name)+","+\
                 "'params': "+to_source(params)+","+\
                 "'body': "+to_source(body)+","+\
@@ -246,7 +245,7 @@ KernelModule = ALLOC({"_vt": ModuleBehavior,
                 "'@tag': '<"+self.current+">."+name+" compiled function'})"
 
     def add_class_self_method(self, name, params,body):
-        self.bv_methods[self.current][name] = "_create_compiled_function({"+\
+        self.bv_methods[self.current][name] = "i.create_compiled_function({"+\
                 "'name': "+to_source(name)+","+\
                 "'params': "+to_source(params)+","+\
                 "'body': "+to_source(body)+","+\

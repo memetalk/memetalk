@@ -285,12 +285,12 @@ def prim_compiled_function_new_top_level(proc):
     text = proc.locals()['text']
     owner = proc.locals()['owner']
     flag = proc.locals()['flag']
-    cfun = proc.interpreter.compile_top_level(name,text,owner, flag)
+    cfun = proc.interpreter.compile_top_level(proc, name,text,owner, flag)
     cfun['is_top_level'] = True
     return cfun
 
 def _create_closure(proc, text, outer, is_embedded):
-    cfun = proc.interpreter.compile_closure(text,outer)
+    cfun = proc.interpreter.compile_closure(proc, text,outer)
     cfun['is_embedded'] = is_embedded #text is embeded in outter cfun?
     cfun['is_top_level'] = False
     return cfun
@@ -303,11 +303,11 @@ def prim_compiled_function_new_closure(proc):
 
 def prim_compiled_function_set_code(proc):
     if proc.reg('r_rdp')['is_top_level']:
-        return proc.interpreter.recompile_top_level(proc.reg('r_rdp'), proc.locals()['code'])
+        return proc.interpreter.recompile_top_level(proc, proc.reg('r_rdp'), proc.locals()['code'])
     else:
         # NOTE: if a Function of this cfun already exists, its env should
         # be updated, otherwise calling it will screw up var access.
-        return proc.interpreter.recompile_closure(proc.reg('r_rdp'), proc.locals()['code'])
+        return proc.interpreter.recompile_closure(proc, proc.reg('r_rdp'), proc.locals()['code'])
 
 
 
@@ -384,7 +384,7 @@ def prim_compiled_function_as_context_with_vars(proc):
     return ret
 
 def prim_compiled_function_instantiate(proc):
-    return proc.interpreter.create_function_from_cfunction(proc.reg('r_rp'), proc.locals()['imodule'])
+    return proc.interpreter.function_from_cfunction(proc.reg('r_rp'), proc.locals()['imodule'])
 
 def prim_context_apply(proc):
     # fn.apply([...args...])
@@ -519,7 +519,7 @@ def prim_compiled_class_add_method(proc):
     # add the function to the instantiated classes:
     for imod in proc.interpreter.imodules():
         if id_eq(imod['_vt']['compiled_module'], proc.reg('r_rdp')['module']):
-            fun = proc.interpreter.create_function_from_cfunction(cfun, imod)
+            fun = proc.interpreter.function_from_cfunction(cfun, imod)
             if flag['self'] == 'instance_method':
                 imod[proc.reg('r_rdp')['name']]['dict'][cfun['name']] = fun
             else:
@@ -652,7 +652,7 @@ def prim_compiled_module_add_function(proc):
     # add the function to the module instances:
     for imod in proc.interpreter.imodules():
         if id_eq(imod['_vt']['compiled_module'], cmod):
-            fun = proc.interpreter.create_function_from_cfunction(cfun, imod)
+            fun = proc.interpreter.function_from_cfunction(cfun, imod)
             # add the getter
             imod['_vt']['dict'][cfun['name']] = fun
             # add the function to the dict:
@@ -1757,7 +1757,7 @@ def prim_exception_unprotected(proc):
     return proc.setup_and_run_unprotected(None, None, 'fn', proc.locals()['fn'], [], True)
 
 def prim_test_import(proc):
-    cmod = proc.interpreter.compiled_module_by_filepath(proc.locals()['filepath'])
+    cmod = proc.interpreter.compiled_module_by_filepath(proc, proc.locals()['filepath'])
     return proc.interpreter.instantiate_module(proc, cmod, [], proc.reg('r_cp')['module'])
 
 
