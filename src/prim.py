@@ -33,7 +33,7 @@ import scintilla_editor
 from config import MODULES_PATH
 import traceback
 from mmpprint import P
-from dcmp import obj_eq, id_eq
+from mobject import obj_eq, id_eq
 import logging
 
 logger = logging.getLogger("i")
@@ -494,7 +494,7 @@ def prim_compiled_class_set_fields(proc):
     rm =  diff(klass['fields'], fields)
     add = diff(fields, klass['fields'])
 
-    for obj in proc.interpreter.memory:
+    for obj in proc.interpreter.instances[klass['@id']].values():
         if 'compiled_class' in obj['_vt'] and id_eq(obj['_vt']['compiled_class'], klass):
             for f in rm: del obj[f]
             for f in add: obj[f] = None
@@ -670,10 +670,10 @@ def prim_compiled_module_new_class(proc):
 
     for imod in proc.interpreter.imodules():
         if id_eq(imod['_vt']['compiled_module'], cmod):
-            cb = proc.interpreter.alloc({"_vt": proc.interpreter.get_core_class("Behavior"),
-                                         "parent": proc.interpreter.get_core_class("ObjectBehavior")['_vt'],
-                                         "dict": {},
-                                         "@tag": name + "Behavior"})
+            cb = proc.interpreter.new_object({"_vt": proc.interpreter.get_core_class("Behavior"),
+                                              "parent": proc.interpreter.get_core_class("ObjectBehavior")['_vt'],
+                                              "dict": {},
+                                              "@tag": name + "Behavior"})
             imod['_vt']['dict'][name] = proc.interpreter.create_accessor_method(imod, name)
             imod[name] = proc.interpreter.create_class({"_vt": cb,
                                                         "parent": proc.interpreter.get_core_class("Object"),
@@ -691,10 +691,10 @@ def prim_compiled_module_add_class(proc):
     cmod['compiled_classes'][name] = klass
     for imod in proc.interpreter.imodules():
         if id_eq(imod['_vt']['compiled_module'], cmod):
-            cb = proc.interpreter.alloc({"_vt": proc.interpreter.get_core_class("Behavior"),
-                                         "parent": proc.lookup_in_modules(klass["super_class_name"], imod)['_vt'],
-                                         "dict": proc.interpreter.compiled_functions_to_functions(klass["own_methods"], imod),
-                                         "@tag": name + "Behavior"})
+            cb = proc.interpreter.new_object({"_vt": proc.interpreter.get_core_class("Behavior"),
+                                              "parent": proc.lookup_in_modules(klass["super_class_name"], imod)['_vt'],
+                                              "dict": proc.interpreter.compiled_functions_to_functions(klass["own_methods"], imod),
+                                              "@tag": name + "Behavior"})
             imod['_vt']['dict'][name] = proc.interpreter.create_accessor_method(imod, name)
             imod[name] = proc.interpreter.create_class({"_vt": cb,
                                                         "parent": proc.interpreter.get_core_class("Object"),

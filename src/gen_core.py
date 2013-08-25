@@ -124,7 +124,7 @@ class CoreGenerator(ASTBuilder):
             append(name+"['@tag'] = " + to_source(name))
 
         for name, dc in self.funs.iteritems():
-            if len(dc) > 0: append(name+"['dict'] = i.new_object()")
+            if len(dc) > 0: append(name+"['dict'] = {}")
             for mname,v in dc.iteritems():
                 append(name+"['dict']["+to_source(mname)+"] = " + v)
 

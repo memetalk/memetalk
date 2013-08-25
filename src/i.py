@@ -35,33 +35,13 @@ from astbuilder import *
 from jinja2 import Environment
 from mmpprint import P
 import multiprocessing
-from dcmp import id_eq
-
+from mobject import Dict, id_eq
+import weakref
 import atexit
 import sys
 import time
 
 logger = logging.getLogger("i")
-
-MEMORY = {}
-def ALLOC(obj):
-    global MEMORY
-    obj_id = id(obj)
-    obj['@id'] = obj_id
-    MEMORY[obj_id] = obj
-    return obj
-
-def UPDATE_OBJECT(remote_obj):
-    global MEMORY
-    local_obj = MEMORY[remote_obj['@id']]
-
-    if sorted(local_obj.keys()) != sorted(remote_obj.keys()):
-        for k,v in local_obj.iteritems(): del local_obj[k]
-
-    local_obj.update(remote_obj)
-
-
-
 
 #######################################################
 ## Loading
@@ -450,8 +430,7 @@ class Interpreter():
         self.compiled_modules = {}
         self.imods = []
         self.interned_symbols = {}
-        self.memory = []
-
+        self.instances = {} #TODO: make weakref work on this
         self.processes = {}
         self.procids = 0
 
@@ -465,8 +444,6 @@ class Interpreter():
         atexit.register(self.cleanup)
 
     ### Object creation ###
-    def new_object(self, data = {}):
-        return dict(data)
 
     def create_compiled_function(self, data):
         template = {"_vt": self.core_imod['CompiledFunction'],
@@ -645,10 +622,10 @@ class Interpreter():
             # superclass BarClass found
             if super_class:
                 # FooClassBehavior
-                cbehavior = ALLOC({"_vt": self.core_imod['Behavior'],
-                                   "parent": super_class["_vt"],
-                                   "dict": self.compiled_functions_to_functions(c["own_methods"], imodule),
-                                   "@tag":c["name"]+" Behavior"})
+                cbehavior = proc.interpreter.new_object({"_vt": self.core_imod['Behavior'],
+                                                    "parent": super_class["_vt"],
+                                                    "dict": self.compiled_functions_to_functions(c["own_methods"], imodule),
+                                                    "@tag":c["name"]+" Behavior"})
 
                 classes[c["name"]] = self.create_class({"_vt": cbehavior,
                                                         "parent": super_class,
@@ -658,10 +635,10 @@ class Interpreter():
                 bclasses[c["name"]] = cbehavior
             else:
                 # FooClassBehavior
-                cbehavior = ALLOC({"_vt": self.core_imod['Behavior'],
-                                   "parent": "*replace-me*", #latter below
-                                   "dict": self.compiled_functions_to_functions(c["own_methods"],imodule),
-                                   "@tag":c["name"]+" Behavior"})
+                cbehavior = proc.interpreter.new_object({"_vt": self.core_imod['Behavior'],
+                                                         "parent": "*replace-me*", #latter below
+                                                         "dict": self.compiled_functions_to_functions(c["own_methods"],imodule),
+                                                         "@tag":c["name"]+" Behavior"})
 
                 bclasses[c["name"]] = cbehavior
                 # superclass BarClass will be eventually in the variable 'classes'
@@ -909,17 +886,33 @@ class Interpreter():
 
         fields = klass["compiled_class"]["fields"]
         name = klass["compiled_class"]["name"]
-        res = dict([(x,None) for x in fields] + {"_vt": klass, "_delegate":p, "@tag": name + " instance"}.items() )
-        return self.alloc(res)
+        res = dict([(x,None) for x in fields] + {"_vt": klass, "_delegate":p, "@tag": name + " instance"}.items())
+        return self.new_object(res)
+
+    def new_object(self, data = {}):
+        if type(data) == dict:
+            obj = Dict(data) #weak referenceable
+        else:
+            obj = data
+        if '@id' in obj:
+            raise Exception("BUG: @id already set")
+
+        obj['@id'] = id(obj)
+
+        # tracking instances associated to compiled classes
+        # so we can patch them when meta modifications are made
+        # to the class
+        if '_vt' in obj and 'compiled_class' in obj['_vt']:
+            key = obj['_vt']['compiled_class']['@id']
+            if key not in self.instances:
+                self.instances[key] = weakref.WeakValueDictionary()
+            self.instances[key][obj['@id']] = obj
+        return obj
 
     def alloc_object(self, klass, data):
         template = {"_vt": klass,
                 "_delegate": None}
-        return self.alloc(dict(template.items() + data.items()))
-
-    def alloc(self, obj):
-        self.memory.append(ALLOC(obj))
-        return obj
+        return self.new_object(dict(template.items() + data.items()))
 
     def interned_symbol_for(self, s):
         if s not in self.interned_symbols:
@@ -963,13 +956,13 @@ class Process(multiprocessing.Process):
 
     def init_data(self):
         # top frame / registers
-        self.tframe = ALLOC({'r_mp':None,    # module pointer
-                             'r_cp':None,    # context pointer
-                             'r_rp': None,   # receiver pointer
-                             'r_rdp': None,  # receiver data pointer
-                             'r_ep': None,   # environment pointer
-                             'r_ip':None,   # instruction pointer / ast info
-                             'locals':{}})
+        self.tframe = self.interpreter.new_object({'r_mp':None,    # module pointer
+                                                   'r_cp':None,    # context pointer
+                                                   'r_rp': None,   # receiver pointer
+                                                   'r_rdp': None,  # receiver data pointer
+                                                   'r_ep': None,   # environment pointer
+                                                   'r_ip':None,   # instruction pointer / ast info
+                                                   'locals':{}})
         self.stack = []
 
 
@@ -1142,7 +1135,7 @@ class Process(multiprocessing.Process):
 
     def push_stack_frame(self):
         self.stack.append(self.tframe)
-        self.tframe = ALLOC({})
+        self.tframe = self.interpreter.new_object()
 
     def tear_fun(self):
         self.tframe = self.stack.pop()
