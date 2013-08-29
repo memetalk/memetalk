@@ -816,7 +816,7 @@ class Interpreter():
         return self.core_imod[name]
 
     def get_core_module(self):
-        return self.core_imod.kernel_imodule
+        return self.core_imod
 
     def py_memetalk_exception(self):
         return MemetalkException

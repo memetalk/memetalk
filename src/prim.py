@@ -48,7 +48,7 @@ def prim_available_modules(proc):
     return [f[:-3] for f in listdir(MODULES_PATH) if isfile(join(MODULES_PATH,f)) and f != "core.md"]
 
 def prim_get_module(proc):
-    return proc.interpreter.compiled_module_by_filename(proc.locals()['name'] + ".mm")
+    return proc.interpreter.compiled_module_by_filename(proc, proc.locals()['name'] + ".mm")
 
 def prim_save_module(proc):
     return proc.interpreter.save_module(proc.locals()['name'])
@@ -731,7 +731,7 @@ def prim_compiled_module_set_default_parameter(proc):
 
 def prim_compiled_module_instantiate(proc):
     core = proc.interpreter.get_core_module()
-    return proc.interpreter.instantiate_module(proc.reg('r_rdp'), proc.locals()['args'], core)
+    return proc.interpreter.instantiate_module(proc, proc.reg('r_rdp'), proc.locals()['args'], core)
 
 # lookup the inner handle of the actual binding object
 # which is set -- this is because a hierarchy of delegates
