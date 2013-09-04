@@ -316,8 +316,20 @@ instance_method redo: fun() {
     <primitive "qt_scintilla_redo">
 }
 
+instance_method undo: fun() {
+    <primitive "qt_scintilla_undo">
+}
+
 instance_method saved: fun() {
     <primitive "qt_scintilla_saved">
+}
+
+instance_method append: fun(text) {
+    <primitive "qt_scintilla_append">
+}
+
+instance_method lines: fun() {
+    <primitive "qt_scintilla_lines">
 }
 
 instance_method selectedText: fun() {

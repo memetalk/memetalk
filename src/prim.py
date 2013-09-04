@@ -595,7 +595,12 @@ def prim_list_reversed(proc):
     return list(reversed(proc.reg('r_rdp')))
 
 def prim_list_prepend(proc):
-    return proc.locals()['arg'] + proc.reg('r_rdp')
+    proc.reg('r_rdp').insert(0, proc.locals()['arg'])
+    return proc.reg('r_rdp')
+
+def prim_list_append(proc):
+    proc.reg('r_rdp').append(proc.locals()['arg'])
+    return proc.reg('r_rdp')
 
 def prim_list_get(proc):
     return proc.reg('r_rdp')[proc.locals()['n']]
@@ -1657,6 +1662,10 @@ def prim_qt_scintilla_redo(proc):
     qtobj.redo()
     return proc.reg('r_rp')
 
+def prim_qt_scintilla_undo(proc):
+    qtobj = _lookup_field(proc, proc.reg('r_rp'), 'self')
+    qtobj.undo()
+    return proc.reg('r_rp')
 
 
 def prim_qt_scintilla_set_text(proc):
@@ -1693,6 +1702,14 @@ def prim_qt_scintilla_insert_at(proc):
     qtobj.insertAt(proc.locals()['text'], proc.locals()['line'], proc.locals()['index'])
     return proc.reg('r_rp')
 
+def prim_qt_scintilla_append(proc):
+    qtobj = _lookup_field(proc, proc.reg('r_rp'), 'self')
+    qtobj.append(proc.locals()['text'])
+    return proc.reg('r_rp')
+
+def prim_qt_scintilla_lines(proc):
+    qtobj = _lookup_field(proc, proc.reg('r_rp'), 'self')
+    return qtobj.lines()
 
 def prim_qt_scintilla_get_selection(proc):
     qtobj = _lookup_field(proc, proc.reg('r_rp'), 'self')

@@ -165,3 +165,8 @@ class MemeQsciScintilla(QsciScintilla):
 
     def saved(self):
         self.setMarginsBackgroundColor(self.bg_margin_saved)
+
+    def copy(self):
+        # emacs like behavior: clear the selection
+        super(MemeQsciScintilla, self).copy()
+        self.setCursorPosition(*self.getCursorPosition())

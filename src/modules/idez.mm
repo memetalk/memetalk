@@ -47,28 +47,25 @@ evalWithFrame: fun(text, frame, imod) {
   return {"result": res, "env": fn.getEnv()};
 }
 
-evalWithVars: fun(text, vars, imod) {
-  var fn = evalWithVarsFn(text, vars, imod);
-  var res = exception_unprotected(fn);
-  return {"result": res, "env": fn.getEnv()};
-}
+// evalWithVars: fun(text, vars, imod) {
+//   var fn = evalWithVarsFn(text, vars, imod);
+//   var res = exception_unprotected(fn);
+//   return {"result": res, "env": fn.getEnv()};
+// }
 
-evalWithVarsFn: fun(text, vars, imod) {
-  var cmod = get_compiled_module(imod);
-  var code = "fun() {" + text + "}";
-  var cfn = CompiledFunction.newClosure(code, thisContext.compiledFunction(), false);
-  return cfn.asContextWithVars(imod, vars);
-}
+// ** became Context.withVars()
+// evalWithVarsFn: fun(text, vars, imod) {
+//   var cmod = get_compiled_module(imod);
+//   var code = "fun() {" + text + "}";
+//   var cfn = CompiledFunction.newClosure(code, thisContext.compiledFunction(), false);
+//   return cfn.asContextWithVars(imod, vars);
+// }
 
 main: fun() {
   VMProcess.stopOnException();
-  io.print("new qapp");
   var app = qt.QApplication.new();
-  //var me = ModuleExplorer.new();
-  //me.show();
-  io.print("Workspace.new");
-  var w = Workspace.new();
-  w.show();
+  var me = ModuleExplorer.new();
+  me.show();
   return app.exec();
 }
 
@@ -358,64 +355,25 @@ instance_method stepOver: fun() {
 end //idez:DebuggerUI
 
 class Editor < QsciScintilla
-fields: getContext, getIModule, afterEval, target_process, frame_index;
-init new: fun(parent, getContext, getIModule, afterEval) {
+fields: editing_actions, exploring_actions;
+init new: fun(parent) {
   super.new(parent);
-  if (parent == null) {
-    this.initExtraActions();
-  }
-
-  this.initEditActions();
-
-  @getContext = getContext;
-  @getIModule = getIModule;
-  @afterEval = afterEval;
-}
-instance_method setProcess: fun(proc) {
-  @target_process = proc;
-}
-instance_method setFrameIndex: fun(fidx) {
-  @frame_index = fidx;
+  this.initActions();
 }
 
-instance_method debugIt: fun() {
-  try {
-    if (@target_process) {
-      return @target_process.eval(this.selectedText(), @frame_index);
-    } else {
-      var fn = evalWithVarsFn(this.selectedText(), @getContext(), @getIModule());
-      VMProcess.debug(fn,[]);
-      if (@afterEval) {
-        @afterEval(fn.getEnv());
-      }
-    }
-  } catch (e) {
-    this.insertSelectedText(e.message());
-  }
+instance_method editingActions: fun() {
+  return @editing_actions;
+}
+instance_method exploringActions: fun() {
+  return @exploring_actions;
 }
 
-instance_method doIt: fun() {
-  try {
-    this.evalSelection();
-  } catch(e) {
-    this.insertSelectedText(e.message());
-  }
-}
+instance_method initActions: fun() {
 
-instance_method evalSelection: fun() {
-  if (@target_process) {
-    return @target_process.eval(this.selectedText(), @frame_index);
-  } else {
-    var r = null;
-    r = evalWithVars(this.selectedText(), @getContext(), @getIModule());
-    if (@afterEval) {
-      @afterEval(r["env"]);
-    }
-    return r["result"];
-  }
-}
+  @editing_actions = [];
+  @exploring_actions = [];
 
-instance_method initEditActions: fun() {
+  // editing actions
   var action = qt.QAction.new("Cut", this);
   action.setShortcut("ctrl+w");
   action.connect("triggered", fun() {
@@ -423,6 +381,7 @@ instance_method initEditActions: fun() {
   });
   action.setShortcutContext(0); //widget context
   this.addAction(action);
+  @editing_actions.append(action);
 
   action = qt.QAction.new("Copy", this);
   action.setShortcut("alt+w");
@@ -431,6 +390,7 @@ instance_method initEditActions: fun() {
   });
   action.setShortcutContext(0); //widget context
   this.addAction(action);
+  @editing_actions.append(action);
 
   action = qt.QAction.new("Paste", this);
   action.setShortcut("ctrl+y");
@@ -439,17 +399,28 @@ instance_method initEditActions: fun() {
   });
   action.setShortcutContext(0); //widget context
   this.addAction(action);
+  @editing_actions.append(action);
+
+  action = qt.QAction.new("Undo", this);
+  action.setShortcut("ctrl+;");
+  action.connect("triggered", fun() {
+      this.undo();
+  });
+  action.setShortcutContext(0); //widget context
+  this.addAction(action);
+  @editing_actions.append(action);
 
   action = qt.QAction.new("Redo", this);
-  action.setShortcut("ctrl+shift+z");
+  action.setShortcut("ctrl+shift+;");
   action.connect("triggered", fun() {
       this.redo();
   });
   action.setShortcutContext(0); //widget context
   this.addAction(action);
-}
+  @editing_actions.append(action);
 
-instance_method initExtraActions: fun() {
+  // exploring actions
+
   var action = qt.QAction.new("Do it", this);
   action.setShortcut("ctrl+d");
   action.connect("triggered", fun() {
@@ -457,6 +428,16 @@ instance_method initExtraActions: fun() {
   });
   action.setShortcutContext(0); //widget context
   this.addAction(action);
+  @exploring_actions.append(action);
+
+  var action = qt.QAction.new("*Do it", this);
+  action.setShortcut("ctrl+shift+d");
+  action.connect("triggered", fun() {
+      this.spawnAndDoIt();
+  });
+  action.setShortcutContext(0); //widget context
+  this.addAction(action);
+  @exploring_actions.append(action);
 
   action = qt.QAction.new("Print it", this);
   action.setShortcut("ctrl+p");
@@ -465,6 +446,7 @@ instance_method initExtraActions: fun() {
   });
   action.setShortcutContext(0); //widget context
   this.addAction(action);
+  @exploring_actions.append(action);
 
   action = qt.QAction.new("Inspect it", this);
   action.setShortcut("ctrl+i");
@@ -473,6 +455,7 @@ instance_method initExtraActions: fun() {
   });
   action.setShortcutContext(0); //widget context
   this.addAction(action);
+  @exploring_actions.append(action);
 
   action = qt.QAction.new("Debug it", this);
   action.setShortcut("ctrl+b");
@@ -481,6 +464,7 @@ instance_method initExtraActions: fun() {
   });
   action.setShortcutContext(0); //widget context
   this.addAction(action);
+  @exploring_actions.append(action);
 }
 
 instance_method insertSelectedText: fun(text) {
@@ -495,25 +479,117 @@ instance_method insertSelectedText: fun(text) {
   }
 }
 
-instance_method inspectIt: fun() {
+instance_method appendSelectedText: fun(text) {
+  this.append("\n" + text);
+  var nl = text.count("\n") + 1;
+  this.setSelection(this.lines - nl, 0, this.lines, 0);
+}
+end //idez:Editor
+
+class DebuggerEditor < Editor
+fields: ;
+init new: fun(parent) {
+  super.new(parent);
+}
+end
+
+class MemeEditor < Editor
+fields: with_variables, with_imod, on_finish;
+init new: fun(parent) {
+  super.new(parent);
+
+  @with_variables = fun () { {} };
+  @with_imod = fun() { thisModule };
+  @on_finish = fun(x) { };
+}
+instance_method withVariables: fun(fn) {
+  @with_variables = fn;
+}
+instance_method withIModule: fun(fn) {
+  @with_imod = fn;
+}
+instance_method onFinish: fun(fn) {
+  @on_finish = fn;
+}
+
+instance_method doIt: fun() {
   try {
-    var res = this.evalSelection();
-    return Inspector.inspect(res).setProcess(@target_process);
-  } catch(e) {
-    this.insertSelectedText(e.message());
+    var ctx = Context.withVars(this.selectedText(), @with_variables(), @with_imod());
+    ctx();
+    @on_finish(ctx.getEnv());
+  } catch(ex) {
+    this.insertSelectedText(ex.message());
   }
 }
 
+instance_method spawnAndDoIt: fun() {
+  try {
+    var ctx = Context.withVars(this.selectedText(), @with_variables(), @with_imod());
+    var proc = VMProcess.spawnWithFun(ctx);
+    proc.start();
+    // set green light led
+    while (proc.isRunning()) {
+      qt.QApplication.instance.processEvent();
+    }
+    //turn off greenlight led
+    @on_finish(ctx.getEnv());
+  } catch(ex) {
+    this.insertSelectedText(ex.message());
+  }
+}
 instance_method printIt: fun() {
   try {
-    var res = this.evalSelection();
+    var ctx = Context.withVars(this.selectedText(), @with_variables(), @with_imod());
+    var res = ctx();
+    @on_finish(ctx.getEnv());
     this.insertSelectedText(res.toString());
-  } catch(e) {
-    this.insertSelectedText(e.message());
+  } catch(ex) {
+    this.insertSelectedText(ex.message());
+  }
+}
+instance_method inspectIt: fun() {
+  try {
+    var ctx = Context.withVars(this.selectedText(), @with_variables(), @with_imod());
+    var res = ctx();
+    @on_finish(ctx.getEnv());
+    Inspector.inspect(res);
+  } catch(ex) {
+    this.insertSelectedText(ex.message());
   }
 }
 
-end //idez:Editor
+instance_method debugIt: fun() {
+  try {
+    var ctx = Context.withVars(this.selectedText(), @with_variables(), @with_imod());
+    VMProcess.current.debug(ctx);
+    @on_finish(ctx.getEnv());
+  } catch(ex) {
+    this.insertSelectedText(ex.message());
+  }
+}
+
+end
+
+class ExplorerEditor < MemeEditor
+fields: cfun;
+init new: fun(parent, cfun) {
+  super.new(parent);
+  this.setStyleSheet("border-style: outset;");
+  @cfun = cfun;
+  if (cfun != null) {
+    this.setText(cfun.text);
+  }
+}
+instance_method accept: fun() {
+  if (@cfun != null) {
+    try {
+      @cfun.setCode(this.text());
+    } catch(ex) {
+      this.appendSelectedText(ex.message());
+    }
+  }
+}
+end
 
 class ExecutionFrames
 fields: vmproc;
@@ -558,38 +634,14 @@ instance_method topFrame: fun() {
 
 end //idez:ExecutionFrames
 
-class ExplorerEditor < Editor
-fields: cfun;
-init new: fun(cfun, parent, getContext, getIModule, afterEval) {
-  super.new(parent, getContext, getIModule, afterEval);
-  @cfun = cfun;
-}
-
-instance_method accept: fun() {
-    try {
-      @cfun.setCode(this.text());
-      this.saved();
-    } catch(ex) {
-      this.insertSelectedText(ex.message());
-    }
-}
-
-instance_method cfun: fun() {
-  return @cfun;
-}
-
-end //idez:ExplorerEditor
-
 class Inspector < QMainWindow
-fields: inspectee, variables, mirror, fieldList, textArea, lineEdit, target_process;
+fields: inspectee, variables, mirror, fieldList, textArea, lineEdit;
 init new: fun(inspectee) {
   super.new();
 
   @variables = {"this":@inspectee};
   @inspectee = inspectee;
   @mirror = Mirror.new(@inspectee);
-
-  @target_process = null;
 
   this.resize(300,250);
   this.setWindowTitle("Inspector");
@@ -602,15 +654,13 @@ init new: fun(inspectee) {
   @fieldList.setMaximumWidth(200);
   hbox.addWidget(@fieldList);
 
-  @textArea = Editor.new(centralWidget,
-                         fun() { {"this" : @inspectee} },
-                         fun() { thisModule }, null);
-
+  @textArea = MemeEditor.new(centralWidget);
+  @textArea.withVariables(fun() { {"this" : @inspectee} });
   hbox.addWidget(@textArea);
 
   mainLayout.addLayout(hbox);
 
-  @lineEdit = LineEditor.new(centralWidget, @inspectee);
+  @lineEdit = LineEditor.new(centralWidget, @inspectee, true);
   mainLayout.addWidget(@lineEdit);
 
   @lineEdit.connect("returnPressed", fun() {
@@ -635,6 +685,7 @@ init new: fun(inspectee) {
       this.doIt();
   });
   execMenu.addAction(action);
+  action.setShortcutContext(0); //widget context
 
   action = qt.QAction.new("Print it", this);
   action.setShortcut("ctrl+p");
@@ -642,6 +693,7 @@ init new: fun(inspectee) {
       this.printIt();
   });
   execMenu.addAction(action);
+  action.setShortcutContext(0); //widget context
 
   action = qt.QAction.new("Inspect it", this);
   action.setShortcut("ctrl+i");
@@ -649,6 +701,7 @@ init new: fun(inspectee) {
       this.inspectIt();
   });
   execMenu.addAction(action);
+  action.setShortcutContext(0); //widget context
 
   action = qt.QAction.new("Debug it", this);
   action.setShortcut("ctrl+b");
@@ -656,6 +709,7 @@ init new: fun(inspectee) {
       this.debugIt();
   });
   execMenu.addAction(action);
+  action.setShortcutContext(0); //widget context
 
   action = qt.QAction.new("Accept it", execMenu);
   action.setShortcut("ctrl+x,s");
@@ -666,18 +720,23 @@ init new: fun(inspectee) {
 }
 //end idez:Inspector:new
 
-instance_method setProcess: fun(proc) {
-  @target_process = proc;
-}
 instance_method acceptIt: fun() {
-  var fn = evalWithVarsFn(@textArea.text(), {"this":@inspectee}, thisModule);
-  var new_value = fn.apply([]);
-  var slot = @fieldList.currentItem().text();
-  @mirror.setValueFor(slot, new_value);
-  @textArea.saved();
-  if (@target_process) {
-    @target_process.updateObject(@inspectee);
+  try {
+    //thisModule here: not appropriate.
+    //it should be the module where inspectee was defined
+    // -- perhaps, inspectee's vt if it is a class.
+    // [if it isn't, fuck, use kernel imodule.]
+    var ctx = Context.withVars(@textArea.text(), {"this":@inspectee}, thisModule);
+    var new_value = ctx();
+    var slot = @fieldList.currentItem().text();
+    @mirror.setValueFor(slot, new_value);
+    @textArea.saved();
+  } catch(ex) {
+    @textArea.appendSelectedText(ex.message());
   }
+  // if (@target_process) {
+  //   @target_process.updateObject(@inspectee);
+  // }
 }
 
 instance_method debugIt: fun() {
@@ -743,38 +802,23 @@ end //idez:Inspector
 
 class LineEditor < QLineEdit
 fields: receiver;
-init new: fun(parent, receiver) {
+init new: fun(parent, receiver, returnDoesIt) {
   super.new(parent);
-  if (parent == null) {
-    this.initActions(true);
-  }
+  this.initActions(returnDoesIt);
   @receiver = receiver;
-}
-
-instance_method debugIt: fun() {
-  try {
-    var fn = evalWithVarsFn(this.selectedText(), {"this" : @receiver}, thisModule);
-    VMProcess.debug(fn,[]);
-  } catch(e) {
-    this.insertSelectedText(e.message());
-  }
 }
 
 instance_method doIt: fun() {
   try {
-    this.evalSelection();
-  } catch(e) {
-    this.insertSelectedText(e.message());
+    var ctx = Context.withVars(this.selectedText(), {"this":@receiver}, thisModule);
+    ctx();
+  } catch(ex) {
+    this.insertSelectedText(ex.message());
   }
 }
 
-instance_method evalSelection: fun() {
-  var r = evalWithVars(this.selectedText(), {"this" : @receiver}, thisModule);
-  return r["result"];
-}
-
-instance_method initActions: fun(initReturnPressed) {
-  if (initReturnPressed) {
+instance_method initActions: fun(bindReturn) {
+  if (bindReturn) {
     this.connect("returnPressed", fun() {
       this.selectAllAndDoit(null);
     });
@@ -821,25 +865,27 @@ instance_method insertSelectedText: fun(text) {
 
 instance_method inspectIt: fun() {
   try {
-    var res = this.evalSelection();
-    Inspector.new(res).show();
-  } catch(e) {
-    this.insertSelectedText(e.message());
+    var ctx = Context.withVars(this.selectedText(), {"this":@receiver}, thisModule);
+    var res = ctx();
+    Inspector.inspect(res);
+  } catch(ex) {
+    this.insertSelectedText(ex.message());
   }
 }
 
 instance_method printIt: fun() {
   try {
-    var res = this.evalSelection();
+    var ctx = Context.withVars(this.selectedText(), {"this":@receiver}, thisModule);
+    var res = ctx();
     this.insertSelectedText(res.toString());
-  } catch(e) {
-    this.insertSelectedText(e.message());
+  } catch(ex) {
+    this.insertSelectedText(ex.message());
   }
 }
 
 instance_method selectAllAndDoit: fun(receiver) {
-    this.selectAll();
-    this.doIt();
+  this.selectAll();
+  this.doIt();
 }
 
 end //idez:LineEditor
@@ -852,8 +898,7 @@ init new: fun(parent) {
   this.hide();
   this.setMaximumHeight(30);
   @callback = null;
-  @lineEdit = LineEditor.new(this, thisModule);
-  @lineEdit.initActions(false);
+  @lineEdit = LineEditor.new(this, thisModule, false);
   @lineEdit.setMinimumSize(200,30);
   @label = qt.QLabel.new(this);
   var l = qt.QHBoxLayout.new(this);
@@ -923,20 +968,19 @@ init new: fun() {
         cfn = get_module(params["module_name"]).compiled_classes()[params["class_name"]].instanceMethods()[params["function_name"]];
       }
       if (cfn) {
-        e = ExplorerEditor.new(cfn, null, fun() { @variables },
-                               fun() { this.currentIModule() },
-                               fun(env) { @variables = env + @variables;});
+        e =ExplorerEditor.new(null, cfn);
+        e.withVariables(fun() { @variables });
+        e.withIModule(fun() { this.currentIModule() });
+        e.onFinish(fun(env) { @variables = env + @variables;});
       }
     } else {
       if (params.has("code")) {
-        e = ExplorerEditor.new(null, null, fun() { @variables },
-                               fun() { this.currentIModule() },
-                               fun(env) { @variables = env + @variables;});
+        e = ExplorerEditor.new(null, null);
+        e.withVariables(fun() { @variables });
+        e.withIModule(fun() { this.currentIModule() });
+        e.onFinish(fun(env) { @variables = env + @variables;});
+        e.setText(params["code"]);
       }
-    }
-    if (e) {
-      e.setText(params["code"]);
-      e.setStyleSheet("border-style: outset;");
     }
     return e;
   });
@@ -1866,41 +1910,20 @@ init new: fun() {
 
   this.setWindowTitle("Workspace");
 
-  @editor = Editor.new(this, fun() { @variables },
-                       fun() { thisModule },
-                       fun(env) { @variables = env + @variables; });
+  @editor = MemeEditor.new(this);
+  @editor.withVariables(fun() { @variables });
+  @editor.onFinish(fun(env) { @variables = env + @variables; });
 
   this.setCentralWidget(@editor);
 
-
+  var execMenu = this.menuBar().addMenu("Edit");
+  @editor.editingActions.each(fun(ac) {
+    execMenu.addAction(ac);
+  });
   var execMenu = this.menuBar().addMenu("Exploring");
-  var action = qt.QAction.new("Do it", this);
-  action.setShortcut("ctrl+d");
-  action.connect("triggered", fun() {
-    @editor.doIt();
+  @editor.exploringActions.each(fun(ac) {
+    execMenu.addAction(ac);
   });
-  execMenu.addAction(action);
-
-  action = qt.QAction.new("Print it", this);
-  action.setShortcut("ctrl+p");
-  action.connect("triggered", fun() {
-      @editor.printIt();
-  });
-  execMenu.addAction(action);
-
-  action = qt.QAction.new("Inspect it", this);
-  action.setShortcut("ctrl+i");
-  action.connect("triggered", fun() {
-      @editor.inspectIt();
-  });
-  execMenu.addAction(action);
-
-  action = qt.QAction.new("Debug it", this);
-  action.setShortcut("ctrl+b");
-  action.connect("triggered", fun() {
-      @editor.debugIt();
-  });
-  execMenu.addAction(action);
 }
 
 end //idez:Workspace

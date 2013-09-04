@@ -235,6 +235,12 @@ module core() {
     instance_method compiledFunction: fun() {
       return @compiled_function;
     }
+    class_method withVars: fun(text, vars, imod) {
+      var cmod = get_compiled_module(imod);
+      var code = "fun() {" + text + "}";
+      var cfn = CompiledFunction.newClosure(code, thisContext.compiledFunction(), false);
+      return cfn.asContextWithVars(imod, vars);
+    }
   }
 
   class CompiledModule {
@@ -382,6 +388,9 @@ module core() {
     }
     instance_method prepend: fun(arg) {
       <primitive "list_prepend">
+    }
+    instance_method append: fun(arg) {
+      <primitive "list_append">
     }
     instance_method has: fun(value) {
       <primitive "list_has">
