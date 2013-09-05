@@ -47,20 +47,6 @@ evalWithFrame: fun(text, frame, imod) {
   return {"result": res, "env": fn.getEnv()};
 }
 
-// evalWithVars: fun(text, vars, imod) {
-//   var fn = evalWithVarsFn(text, vars, imod);
-//   var res = exception_unprotected(fn);
-//   return {"result": res, "env": fn.getEnv()};
-// }
-
-// ** became Context.withVars()
-// evalWithVarsFn: fun(text, vars, imod) {
-//   var cmod = get_compiled_module(imod);
-//   var code = "fun() {" + text + "}";
-//   var cfn = CompiledFunction.newClosure(code, thisContext.compiledFunction(), false);
-//   return cfn.asContextWithVars(imod, vars);
-// }
-
 main: fun() {
   VMProcess.stopOnException();
   var app = qt.QApplication.new();
@@ -100,6 +86,14 @@ instance_method undo: fun() {
 }
 
 end //idez:CommandHistory
+
+class DebuggerEditor < Editor
+fields: ;
+init new: fun(parent) {
+  super.new(parent);
+}
+
+end //idez:DebuggerEditor
 
 class DebuggerUI < QMainWindow
 fields: frame_index, process, exception, execFrames, stackCombo, editor, localVarList, fieldVarList, statusLabel, execMenu, shouldUpdateVars, eventloop;
@@ -259,10 +253,6 @@ init new: fun(process, ex, eventloop) {
 }
 //end idez:DebuggerUI:new
 
-instance_method toggleVarUpdate: fun() {
-  @shouldUpdateVars = !@shouldUpdateVars;
-}
-
 instance_method acceptIt: fun() {
   var text = @editor.text();
   var cfun = @execFrames.frame(@frame_index).contextPointer.compiledFunction;
@@ -352,6 +342,10 @@ instance_method stepOver: fun() {
   }
 }
 
+instance_method toggleVarUpdate: fun() {
+  @shouldUpdateVars = !@shouldUpdateVars;
+}
+
 end //idez:DebuggerUI
 
 class Editor < QsciScintilla
@@ -361,9 +355,16 @@ init new: fun(parent) {
   this.initActions();
 }
 
+instance_method appendSelectedText: fun(text) {
+  this.append("\n" + text);
+  var nl = text.count("\n") + 1;
+  this.setSelection(this.lines - nl, 0, this.lines, 0);
+}
+
 instance_method editingActions: fun() {
   return @editing_actions;
 }
+
 instance_method exploringActions: fun() {
   return @exploring_actions;
 }
@@ -466,6 +467,7 @@ instance_method initActions: fun() {
   this.addAction(action);
   @exploring_actions.append(action);
 }
+//end idez:Editor:initActions
 
 instance_method insertSelectedText: fun(text) {
   var pos = this.getSelection();
@@ -479,117 +481,7 @@ instance_method insertSelectedText: fun(text) {
   }
 }
 
-instance_method appendSelectedText: fun(text) {
-  this.append("\n" + text);
-  var nl = text.count("\n") + 1;
-  this.setSelection(this.lines - nl, 0, this.lines, 0);
-}
 end //idez:Editor
-
-class DebuggerEditor < Editor
-fields: ;
-init new: fun(parent) {
-  super.new(parent);
-}
-end
-
-class MemeEditor < Editor
-fields: with_variables, with_imod, on_finish;
-init new: fun(parent) {
-  super.new(parent);
-
-  @with_variables = fun () { {} };
-  @with_imod = fun() { thisModule };
-  @on_finish = fun(x) { };
-}
-instance_method withVariables: fun(fn) {
-  @with_variables = fn;
-}
-instance_method withIModule: fun(fn) {
-  @with_imod = fn;
-}
-instance_method onFinish: fun(fn) {
-  @on_finish = fn;
-}
-
-instance_method doIt: fun() {
-  try {
-    var ctx = Context.withVars(this.selectedText(), @with_variables(), @with_imod());
-    ctx();
-    @on_finish(ctx.getEnv());
-  } catch(ex) {
-    this.insertSelectedText(ex.message());
-  }
-}
-
-instance_method spawnAndDoIt: fun() {
-  try {
-    var ctx = Context.withVars(this.selectedText(), @with_variables(), @with_imod());
-    var proc = VMProcess.spawnWithFun(ctx);
-    proc.start();
-    // set green light led
-    while (proc.isRunning()) {
-      qt.QApplication.instance.processEvent();
-    }
-    //turn off greenlight led
-    @on_finish(ctx.getEnv());
-  } catch(ex) {
-    this.insertSelectedText(ex.message());
-  }
-}
-instance_method printIt: fun() {
-  try {
-    var ctx = Context.withVars(this.selectedText(), @with_variables(), @with_imod());
-    var res = ctx();
-    @on_finish(ctx.getEnv());
-    this.insertSelectedText(res.toString());
-  } catch(ex) {
-    this.insertSelectedText(ex.message());
-  }
-}
-instance_method inspectIt: fun() {
-  try {
-    var ctx = Context.withVars(this.selectedText(), @with_variables(), @with_imod());
-    var res = ctx();
-    @on_finish(ctx.getEnv());
-    Inspector.inspect(res);
-  } catch(ex) {
-    this.insertSelectedText(ex.message());
-  }
-}
-
-instance_method debugIt: fun() {
-  try {
-    var ctx = Context.withVars(this.selectedText(), @with_variables(), @with_imod());
-    VMProcess.current.debug(ctx);
-    @on_finish(ctx.getEnv());
-  } catch(ex) {
-    this.insertSelectedText(ex.message());
-  }
-}
-
-end
-
-class ExplorerEditor < MemeEditor
-fields: cfun;
-init new: fun(parent, cfun) {
-  super.new(parent);
-  this.setStyleSheet("border-style: outset;");
-  @cfun = cfun;
-  if (cfun != null) {
-    this.setText(cfun.text);
-  }
-}
-instance_method accept: fun() {
-  if (@cfun != null) {
-    try {
-      @cfun.setCode(this.text());
-    } catch(ex) {
-      this.appendSelectedText(ex.message());
-    }
-  }
-}
-end
 
 class ExecutionFrames
 fields: vmproc;
@@ -633,6 +525,29 @@ instance_method topFrame: fun() {
 }
 
 end //idez:ExecutionFrames
+
+class ExplorerEditor < MemeEditor
+fields: cfun;
+init new: fun(parent, cfun) {
+  super.new(parent);
+  this.setStyleSheet("border-style: outset;");
+  @cfun = cfun;
+  if (cfun != null) {
+    this.setText(cfun.text);
+  }
+}
+
+instance_method accept: fun() {
+  if (@cfun != null) {
+    try {
+      @cfun.setCode(this.text());
+    } catch(ex) {
+      this.appendSelectedText(ex.message());
+    }
+  }
+}
+
+end //idez:ExplorerEditor
 
 class Inspector < QMainWindow
 fields: inspectee, variables, mirror, fieldList, textArea, lineEdit;
@@ -889,6 +804,88 @@ instance_method selectAllAndDoit: fun(receiver) {
 }
 
 end //idez:LineEditor
+
+class MemeEditor < Editor
+fields: with_variables, with_imod, on_finish;
+init new: fun(parent) {
+  super.new(parent);
+
+  @with_variables = fun () { {} };
+  @with_imod = fun() { thisModule };
+  @on_finish = fun(x) { };
+}
+
+instance_method debugIt: fun() {
+  try {
+    var ctx = Context.withVars(this.selectedText(), @with_variables(), @with_imod());
+    VMProcess.current.debug(ctx);
+    @on_finish(ctx.getEnv());
+  } catch(ex) {
+    this.insertSelectedText(ex.message());
+  }
+}
+
+instance_method doIt: fun() {
+  try {
+    var ctx = Context.withVars(this.selectedText(), @with_variables(), @with_imod());
+    ctx();
+    @on_finish(ctx.getEnv());
+  } catch(ex) {
+    this.insertSelectedText(ex.message());
+  }
+}
+
+instance_method inspectIt: fun() {
+  try {
+    var ctx = Context.withVars(this.selectedText(), @with_variables(), @with_imod());
+    var res = ctx();
+    @on_finish(ctx.getEnv());
+    Inspector.inspect(res);
+  } catch(ex) {
+    this.insertSelectedText(ex.message());
+  }
+}
+
+instance_method onFinish: fun(fn) {
+  @on_finish = fn;
+}
+
+instance_method printIt: fun() {
+  try {
+    var ctx = Context.withVars(this.selectedText(), @with_variables(), @with_imod());
+    var res = ctx();
+    @on_finish(ctx.getEnv());
+    this.insertSelectedText(res.toString());
+  } catch(ex) {
+    this.insertSelectedText(ex.message());
+  }
+}
+
+instance_method spawnAndDoIt: fun() {
+  try {
+    var ctx = Context.withVars(this.selectedText(), @with_variables(), @with_imod());
+    var proc = VMProcess.spawnWithFun(ctx);
+    proc.start();
+    // set green light led
+    while (proc.isRunning()) {
+      qt.QApplication.instance.processEvent();
+    }
+    //turn off greenlight led
+    @on_finish(ctx.getEnv());
+  } catch(ex) {
+    this.insertSelectedText(ex.message());
+  }
+}
+
+instance_method withIModule: fun(fn) {
+  @with_imod = fn;
+}
+
+instance_method withVariables: fun(fn) {
+  @with_variables = fn;
+}
+
+end //idez:MemeEditor
 
 class MiniBuffer < QWidget
 fields: label, lineEdit, callback;

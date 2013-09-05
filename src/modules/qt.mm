@@ -62,12 +62,15 @@ fields: self;
 init new: fun() {
   <primitive "qt_qapplication_new">
 }
-instance_method exit: fun(code) {
-  <primitive "qt_qapplication_exit">
-}
+
 instance_method exec: fun() {
   <primitive "qt_qapplication_exec">
 }
+
+instance_method exit: fun(code) {
+  <primitive "qt_qapplication_exit">
+}
+
 class_method focusWidget: fun() {
   <primitive "qt_qapplication_focus_widget">
 }
@@ -88,12 +91,12 @@ instance_method clear: fun() {
   <primitive "qt_qcombobox_clear">
 }
 
-instance_method setCurrentIndex: fun(i) {
-  <primitive "qt_qcombobox_set_current_index">
-}
-
 instance_method count: fun() {
   <primitive "qt_qcombobox_count">
+}
+
+instance_method setCurrentIndex: fun(i) {
+  <primitive "qt_qcombobox_set_current_index">
 }
 
 end //qt:QComboBox
@@ -284,6 +287,10 @@ init new: fun(parent) {
     <primitive "qt_scintilla_editor_new">
 }
 
+instance_method append: fun(text) {
+    <primitive "qt_scintilla_append">
+}
+
 instance_method copy: fun() {
     <primitive "qt_scintilla_copy">
 }
@@ -304,6 +311,10 @@ instance_method insertAt: fun(text, line, index) {
     <primitive "qt_scintilla_insert_at">
 }
 
+instance_method lines: fun() {
+    <primitive "qt_scintilla_lines">
+}
+
 instance_method paste: fun() {
     <primitive "qt_scintilla_paste">
 }
@@ -316,20 +327,8 @@ instance_method redo: fun() {
     <primitive "qt_scintilla_redo">
 }
 
-instance_method undo: fun() {
-    <primitive "qt_scintilla_undo">
-}
-
 instance_method saved: fun() {
     <primitive "qt_scintilla_saved">
-}
-
-instance_method append: fun(text) {
-    <primitive "qt_scintilla_append">
-}
-
-instance_method lines: fun() {
-    <primitive "qt_scintilla_lines">
 }
 
 instance_method selectedText: fun() {
@@ -346,6 +345,10 @@ instance_method setText: fun(text) {
 
 instance_method text: fun() {
     <primitive "qt_scintilla_text">
+}
+
+instance_method undo: fun() {
+    <primitive "qt_scintilla_undo">
 }
 
 end //qt:QsciScintilla
