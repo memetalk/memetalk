@@ -705,10 +705,10 @@ class Interpreter():
                 "module": cmod}
         return template.render(args)
 
-    def save_module(self, name):
+    def save_module(self, proc, name):
         ## Empty fields are being dumped as "fields ;"!!
         logger.info("saving module: " + name)
-        cmod = self.compiled_module_by_filename(self, name + ".mm")
+        cmod = self.compiled_module_by_filename(proc, name + ".mm")
         source = self.module_to_text(cmod)
         logger.info("saving to: " + os.path.join(MODULES_PATH, name + ".mm"))
         open(os.path.join(MODULES_PATH, name + ".mm"), "w").write(source)

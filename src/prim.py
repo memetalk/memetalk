@@ -51,7 +51,7 @@ def prim_get_module(proc):
     return proc.interpreter.compiled_module_by_filename(proc, proc.locals()['name'] + ".mm")
 
 def prim_save_module(proc):
-    return proc.interpreter.save_module(proc.locals()['name'])
+    return proc.interpreter.save_module(proc,proc.locals()['name'])
 
 def prim_break_at(proc):
     cfun = proc.locals()['cfun']
