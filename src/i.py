@@ -754,6 +754,8 @@ class Interpreter():
             elif msg['name'] == 'debug':
                 getattr(self, 'cmdproc_' + msg['name'])(*msg['args'])
                 self.my_channel.put('done')
+            else:
+                logger.error("Interpreter: unknown command")
 
     def cmdproc_exec_module(self, procid, mname, fname, args):
         proc = self.processes[procid]
