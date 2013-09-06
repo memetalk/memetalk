@@ -71,18 +71,23 @@ def prim_exception_throw(proc):
 def prim_exception_type(proc):
     return proc.reg('r_rp')['_vt']
 
-def prim_vmprocess_current(proc):
-    VMProcess = proc.interpreter.get_core_class('VMProcess')
-    VMStackFrameClass = proc.interpreter.get_core_class('VMStackFrame')
-    frames = [proc.interpreter.alloc_object(VMStackFrameClass,{'self':x}) for x in proc.all_stack_frames()]
-    return proc.interpreter.alloc_object(VMProcess, {'self': proc, 'id':proc.procid, 'frames': frames})
-
 def prim_vmprocess_spawn(proc):
     logger.debug('prim_vmprocess_spawn')
     procid = proc.call_interpreter(True, 'spawn')
     logger.debug('prim_vmprocess_spawn got id:')
     proc.reg('r_rdp')['id'] = procid
     return proc.reg('r_rp')
+
+def prim_vmprocess_is_running(proc):
+    return proc.is_alive()
+
+def prim_vmprocess_current(proc):
+    return proc.mm_self()
+
+def prim_vmprocess_spawn_with_fun(proc):
+    _proc = proc.interpreter.spawn()
+    _proc.setup('exec_fn_unprotected', proc.locals['fn'])
+    return _proc
 
 def prim_vmprocess_exec_module(proc):
     logger.debug('prim_vmprocess_exec_module')
@@ -93,11 +98,26 @@ def prim_vmprocess_exec_module(proc):
     return proc.reg('r_rp')
 
 def prim_vmprocess_debug(proc):
-    logger.debug("prim_vmprocess_debug: firing up debugger")
-    proc.call_interpreter(True, 'debug', proc.reg('r_rdp')['id'])
+    logger.debug("prim_vmprocess_debug")
+    if proc.channels['dbg'] == None:
+        proc.call_interpreter(True, 'debug', proc.reg('r_rdp')['id'])
+    else:
+        logger.debug("prim_vmprocess_debug: we have a dbg; pausing...")
+        proc.state = 'paused'
+
+# def prim_vmprocess_debug(proc):
+#     logger.debug("prim_vmprocess_debug_fn")
+#     # execute fn with state = paused
+#     proc.state = 'paused'
+#     #proc.setup_and_run_fun(proc.locals['fn'])
+#     #proc.call_interpreter(True, 'debug', proc.locals['fn'])
 
 def prim_vmprocess_step_into(proc):
     raw_frames = proc.call_target_process(True, proc.reg('r_rdp')['id'], 'step_into')
+    VMStackFrameClass = proc.interpreter.get_core_class('VMStackFrame')
+    logger.debug('got frames, assemblying and caching...')
+    proc.reg('r_rdp')['frames'] = [proc.interpreter.alloc_object(VMStackFrameClass,{'self':x}) for x in raw_frames if x['r_cp']]
+
     VMStackFrameClass = proc.interpreter.get_core_class('VMStackFrame')
     logger.debug('got frames, assemblying...')
     proc.reg('r_rdp')['frames'] = [proc.interpreter.alloc_object(VMStackFrameClass,{'self':x}) for x in raw_frames if x['r_cp']]
@@ -110,7 +130,10 @@ def prim_vmprocess_step_over(proc):
 
 def prim_vmprocess_continue(proc):
     logger.debug('prim_vmprocess_continue')
-    proc.call_target_process(True, proc.reg('r_rdp')['id'], 'continue')
+    raw_frames = proc.call_target_process(True, proc.reg('r_rdp')['id'], 'continue')
+    VMStackFrameClass = proc.interpreter.get_core_class('VMStackFrame')
+    logger.debug('got frames, assemblying...')
+    proc.reg('r_rdp')['frames'] = [proc.interpreter.alloc_object(VMStackFrameClass,{'self':x}) for x in raw_frames if x['r_cp']]
 
 def prim_vmprocess_update_object(proc):
     obj = proc.locals()['obj']
@@ -128,6 +151,13 @@ def prim_vmprocess_rewind_and_break(proc):
     frames_count = proc.locals()['frames_count']
     to_line = proc.locals()['to_line']
     proc.call_target_process(False, proc.reg('r_rdp')['id'], 'rewind_and_break', frames_count, to_line)
+
+def prim_vmprocess_init_com_with_target(proc):
+    logger.debug('prim_vmprocess_init_com_with_target')
+    raw_frames = proc.init_debugging_session()
+    VMStackFrameClass = proc.interpreter.get_core_class('VMStackFrame')
+    logger.debug('got frames, assemblying and caching...')
+    proc.reg('r_rdp')['frames'] = [proc.interpreter.alloc_object(VMStackFrameClass,{'self':x}) for x in raw_frames if x['r_cp']]
 
 def prim_vmprocess_stack_frames(proc):
     logger.debug('prim_vmprocess_stack_frames')

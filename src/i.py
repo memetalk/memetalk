@@ -771,20 +771,14 @@ class Interpreter():
 
         logger.debug('cmdproc_debug: changing state of target to paused...')
         proc = self.processes[procid]
-        proc.channels['dbg'] = dbgproc.channels['my']
+        proc.channels['dbg'] = dbgproc.channels['target_incoming']
         proc.channels['my'].put({'cmd': 'set_state', "value": "paused"})
-        logger.debug('cmdproc_debug: telling debugger to run idez::debug()')
-        dbgproc.exec_module('idez.mm', 'debug', [procid, ""])
+
+        logger.debug('cmdproc_debug: telling debugger to start() running idez::debug()')
+
+        dbgproc.setup('exec_module', 'idez.mm', 'debug', [procid, ""])
+        dbgproc.start()
         logger.debug('cmdproc_debug: done')
-
-    # def debugger_for_process(self, target_process, exception = None):
-    #     target_process.debugger_process = Process(self)
-    #     self.processes.append(target_process.debugger_process)
-
-    #     mmprocess = self.alloc_object(core.VMProcess, {'self':target_process})
-    #     target_process.debugger_process.exec_module("idez.mm", 'debug', [mmprocess, exception])
-    #     #target_process.debugger_process.join()
-    #     #print "DONE debugger for process"
 
     def compiled_module_by_filename(self, proc, filename):
         module_name = filename[:-3]
@@ -937,11 +931,24 @@ class Process(multiprocessing.Process):
 
         self.interpreter = interpreter
 
+        self.mm_self_obj = None
+
         self.channels = multiprocessing.Manager().dict()
+
+        # channel where I talk to my interpreter
         self.channels['interpreter'] = interpreter.my_channel
+
+        # channel where I receive commands from outside (ie. a debugger)
         self.channels['my'] = interpreter.manager.Queue()
+
+        # channel where I command a target process (ie. I'm a debugger)
         self.channels['target'] = target_channel
+
+        # channel where I send info to my debugger  (ie. I'm a target process)
         self.channels['dbg'] = None
+
+        # channel where I receive info from my target (ie. I'm a debugger)
+        self.channels['target_incoming'] = interpreter.manager.Queue()
 
         self.volatile_breakpoints = []
 
@@ -968,12 +975,32 @@ class Process(multiprocessing.Process):
         self.stack = []
 
 
+    def mm_self(self):
+        if not self.mm_self_obj:
+            VMProcess = self.interpreter.get_core_class('VMProcess')
+            VMStackFrameClass = self.interpreter.get_core_class('VMStackFrame')
+            frames = [self.interpreter.alloc_object(VMStackFrameClass,{'self':x}) for x in self.all_stack_frames()]
+            self.mm_self_obj = self.interpreter.alloc_object(VMProcess, {'self': self, 'id':self.procid, 'frames': frames})
+        return self.mm_self_obj
+
     def break_at(self, cfun, line):
         logger.debug("Breaking at: " + str(line) + " --- " + P(cfun,1,True))
         self.volatile_breakpoints.append({"cfun":cfun, "line":line})
 
+    def init_debugging_session(self):
+        logger.debug(str(self.procid) + ': init_debugging_session()')
+        data = self.channels['target_incoming'].get()
+        logger.debug(str(self.procid) + ': should receive "done set_state":' + P(data,1,True))
+        return self.receive_frames()
+
+    def receive_frames(self):
+        logger.debug(str(self.procid) + ': receive_frames()')
+        data = self.channels['target_incoming'].get()
+        logger.debug(str(self.procid) + ': received frames:' + P(data,1,True))
+        return data
+
     def call_target_process(self, block, procid, name, *args):
-        logger.debug(str(self.procid) + ": call_target_process")
+        logger.debug(str(self.procid) + ": Process::call_target_process()")
         logger.debug(str(self.procid) + ': queue empty?' + str(self.channels['target'].empty()))
         logger.debug(str(self.procid) + ': queue full?' + str(self.channels['target'].full()))
         logger.debug(str(self.procid) + ': putting data on queue....')
@@ -981,7 +1008,7 @@ class Process(multiprocessing.Process):
         logger.debug(str(self.procid) + ': data sent. Should we block?' + str(block))
         if block:
             logger.debug(str(self.procid) + ': call_target_process waiting for debugged process to answer')
-            data = self.channels['my'].get()
+            data = self.channels['target_incoming'].get()#self.channels['my'].get()
             logger.debug(str(self.procid) + ': debugger got data from target')
             return data
         logger.debug(str(self.procid) + "call_target_process() DONE")
@@ -1485,25 +1512,25 @@ class Process(multiprocessing.Process):
                     return
 
         def process_dbg_msg(msg):
-            logger.debug('target: received from debugger: ' + P(msg,1,True))
+            logger.debug(str(self.procid) + ': received from debugger: ' + P(msg,1,True))
             if msg['cmd'] == 'set_state':
                 self.state = msg['value']
+                self.channels['dbg'].put('done set_state')
+                return False
             if msg['cmd'] == 'get_frames':
                 logger.debug('sending frames')
                 self.channels['dbg'].put(self.all_stack_frames())
                 logger.debug('frames sent, we are done')
+                return False
             if msg['cmd'] == 'step_into':
                 self.state = 'paused'
-                self.channels['dbg'].put(self.all_stack_frames())
                 return True
             if msg['cmd'] == 'step_over':
                 self.state = 'next'
-                self.channels['dbg'].put(self.all_stack_frames())
                 return True
             if msg['cmd'] == 'continue':
                 logger.debug('target: received continue')
                 self.state = 'running'
-                self.channels['dbg'].put('done')
                 return True
             if msg['cmd'] == 'reload_frame':
                 logger.debug('target: reload frame')
@@ -1528,6 +1555,7 @@ class Process(multiprocessing.Process):
                 obj = pickle.loads(msg['args'][0])
                 logger.debug('updating object:')
                 UPDATE_OBJECT(obj)
+                return False
             if msg['cmd'] == 'eval':
                 logger.debug('evaluating text:')
                 frame = self.frame_by_index(msg['args'][1])
@@ -1548,19 +1576,26 @@ class Process(multiprocessing.Process):
                 obj = pickle.dumps(res)
                 self.channels['dbg'].put(obj)
                 logger.debug('done eval')
+                return False
 
         process_breakpoints()
 
+        # intercepting while we are running:
         if self.state == 'running' and not self.channels['my'].empty():
+            logger.debug(str(self.procid) + ": dbg_control intercepted. receiving msg..")
             msg = self.channels['my'].get()
             process_dbg_msg(msg)
 
         if self.state in ['paused', 'next'] or force_debug:
             logger.debug(str(self.procid) + ": dbg_control paused! state: " + self.state)
+            logger.debug(str(self.procid) + ": dbg_control sending frames to debugger")
+            self.channels['dbg'].put(self.all_stack_frames())
+            logger.debug(str(self.procid) + ": dbg_control entering cmd loop")
             while True:
-                logger.debug(str(self.procid) + ':target: waiting for debugger command')
+                logger.debug(str(self.procid) + ': waiting for debugger command')
                 msg = self.channels['my'].get()
                 if process_dbg_msg(msg):
+                    logger.debug(str(self.procid) + ": dbg_control resuming execution")
                     break
 
     def is_exception_protected(self):

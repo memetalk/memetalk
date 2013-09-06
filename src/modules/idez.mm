@@ -31,7 +31,7 @@ SOFTWARE.
 // -- module functions --
 
 debug: fun(procid, exception) {
-  io.print("idez:debug()");
+  io.print("::in idez:debug()");
   var app = qt.QApplication.new;
   var dbg = DebuggerUI.new(VMProcess.new(procid), exception, app);
   dbg.show();
@@ -88,11 +88,14 @@ instance_method undo: fun() {
 end //idez:CommandHistory
 
 class DebuggerEditor < Editor
-fields: ;
-init new: fun(parent) {
+fields: process, frame_index;
+init new: fun(parent, process) {
   super.new(parent);
+  @process = process;
 }
-
+instance_method setFrameIndex: fun(idx) {
+  @frame_index = idx;
+}
 end //idez:DebuggerEditor
 
 class DebuggerUI < QMainWindow
@@ -105,6 +108,8 @@ init new: fun(process, ex, eventloop) {
   @eventloop = eventloop;
 
   @shouldUpdateVars = false;
+
+  @process.initComWithTarget();
 
   this.resize(700,800);
   this.setWindowTitle("Debugger");
@@ -122,9 +127,7 @@ init new: fun(process, ex, eventloop) {
   @stackCombo = StackCombo.new(centralWidget, @execFrames);
   mainLayout.addWidget(@stackCombo);
 
-  @editor = Editor.new(centralWidget, null, null, null);
-
-  @editor.setProcess(@process);
+  @editor = DebuggerEditor.new(centralWidget, @process);
 
   @stackCombo.connect("currentIndexChanged",fun(i) {
     if (0 <= i) {
@@ -155,6 +158,7 @@ init new: fun(process, ex, eventloop) {
   this.setCentralWidget(centralWidget);
 
   var execMenu = this.menuBar().addMenu("Debugging");
+  @execMenu = execMenu;
   var action = qt.QAction.new("Step Into", execMenu);
   action.setShortcut("F6");
   action.connect("triggered", fun() {
@@ -196,7 +200,6 @@ init new: fun(process, ex, eventloop) {
     this.runToLine();
   });
   execMenu.addAction(action);
-  @execMenu = execMenu;
 
   action = qt.QAction.new("Toggle Var Update", execMenu);
   action.setShortcut("ctrl+u");
@@ -204,7 +207,6 @@ init new: fun(process, ex, eventloop) {
     this.toggleVarUpdate();
   });
   execMenu.addAction(action);
-  @execMenu = execMenu;
 
   execMenu = this.menuBar().addMenu("Exploring");
   action = qt.QAction.new("Do it", this);
@@ -262,8 +264,10 @@ instance_method acceptIt: fun() {
 }
 
 instance_method continue: fun() {
-  @process.continue();
   this.close();
+  @process.continue();
+  @stackCombo.updateInfo();
+  this.show();
 }
 
 instance_method disableActions: fun() {
@@ -309,37 +313,15 @@ instance_method save: fun() {
 }
 
 instance_method stepInto: fun() {
-  @exception = null;
   @statusLabel.setText("Stepping into...");
-  this.disableActions();
-  var r = @process.stepInto();
-  if(r == false) {
-    this.continue();
-  }
+  @process.stepInto();
   @stackCombo.updateInfo();
-  this.enableActions();
-  if (Mirror.vtFor(r) == Exception) {
-    @statusLabel.setText("An exception ocurred: " + r.value);
-  } else {
-    @statusLabel.setText("done");
-  }
 }
 
 instance_method stepOver: fun() {
-  @exception = null;
   @statusLabel.setText("Stepping over...");
-  this.disableActions();
-  var r = @process.stepOver();
-  if(r == false) {
-    this.continue();
-  }
+  @process.stepOver();
   @stackCombo.updateInfo();
-  this.enableActions();
-  if (Mirror.vtFor(r) == Exception) {
-    @statusLabel.setText("An exception ocurred: " + r.value);
-  } else {
-    @statusLabel.setText("done");
-  }
 }
 
 instance_method toggleVarUpdate: fun() {

@@ -482,12 +482,18 @@ module core() {
     init spawn: fun() {
       <primitive "vmprocess_spawn">
     }
-    instance_method exec_module: fun(mname, fname, args) {
-      <primitive "vmprocess_exec_module">
+    init isRunning: fun() {
+      <primitive "vmprocess_is_running">
     }
     instance_method debug: fun() {
       <primitive "vmprocess_debug">
     }
+    instance_method initComWithTarget: fun() {
+      <primitive "vmprocess_init_com_with_target">
+    }
+    // instance_method debugFun: fun(fn) {
+    //   <primitive "vmprocess_debug_fun">
+    // }
     instance_method stackFrames: fun() {
       <primitive "vmprocess_stack_frames">
     }
@@ -497,35 +503,41 @@ module core() {
     instance_method stepOver: fun() {
       <primitive "vmprocess_step_over">
     }
-    instance_method stepOut: fun() {
-      <primitive "vmprocess_step_out">
-    }
     instance_method continue: fun() {
       <primitive "vmprocess_continue">
     }
-    instance_method updateObject: fun(obj) {
-      <primitive "vmprocess_update_object">
-    }
-    instance_method reloadFrame: fun(line) {
-      <primitive "vmprocess_reload_frame">
-    }
-    instance_method rewindAndBreak: fun(frames_count, to_line) {
-      <primitive "vmprocess_rewind_and_break">
-    }
-    instance_method eval: fun(text, frame_level) {
-      <primitive "vmprocess_eval">
-    }
-    //
-    instance_method setDebuggerProcess: fun(arg) {
-      <primitive "vmprocess_set_debugger_process">
-    }
-    //
     class_method current: fun() {
       <primitive "vmprocess_current">
     }
-    // class_method stopOnException: fun() {
-    //   <primitive "vmprocess_stop_on_exception">
+    // class_method spawnWithFun: fun(fn) {
+    //   <primitive "vmprocess_spawn_with_fun">
     // }
+    class_method stopOnException: fun() {
+      <primitive "vmprocess_stop_on_exception">
+    }
+    // instance_method stepOut: fun() {
+    //   <primitive "vmprocess_step_out">
+    // }
+    // instance_method exec_module: fun(mname, fname, args) {
+    //   <primitive "vmprocess_exec_module">
+    // }
+    // instance_method updateObject: fun(obj) {
+    //   <primitive "vmprocess_update_object">
+    // }
+    // instance_method reloadFrame: fun(line) {
+    //   <primitive "vmprocess_reload_frame">
+    // }
+    // instance_method rewindAndBreak: fun(frames_count, to_line) {
+    //   <primitive "vmprocess_rewind_and_break">
+    // }
+    // instance_method eval: fun(text, frame_level) {
+    //   <primitive "vmprocess_eval">
+    // }
+    //
+    // instance_method setDebuggerProcess: fun(arg) {
+    //   <primitive "vmprocess_set_debugger_process">
+    // }
+    //
   }
 
   class VMStackFrame {
