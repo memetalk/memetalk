@@ -602,7 +602,7 @@ def prim_compiled_class_remove_method(proc):
 
     # removing function from instances:
     for imod in proc.interpreter.imodules():
-        if id_eq(imod['_vt']['compiled_module'], proc.reg('r_rdp')['module']):
+        if imod['_vt']['compiled_module']['name'] == proc.reg('r_rdp')['module']['name']:
             if flag['self'] == 'instance_method':
                 del imod[proc.reg('r_rdp')['name']]['dict'][name]
             else:
