@@ -146,17 +146,8 @@ init new: fun(process, ex, eventloop) {
   @editor = DebuggerEditor.new(centralWidget, @process);
 
   @stackCombo.connect("currentIndexChanged",fun(i) {
-    if (0 <= i) {
-      @frame_index = i;
-      @editor.setText(@execFrames.codeFor(i));
-      @editor.setFrameIndex(@frame_index);
-      var locInfo = @execFrames.locationInfoFor(i);
-      @editor.pausedAtLine(locInfo["start_line"], locInfo["start_col"], locInfo["end_line"], locInfo["end_col"]);
-      if (@shouldUpdateVars) {
-        @localVarList.loadFrame(@execFrames.frame(i));
-        @fieldVarList.loadReceiver(@execFrames.frame(i));
-      }
-    }
+    @frame_index = i;
+    this.updateInfo();
   });
 
   mainLayout.addWidget(@editor);
@@ -307,8 +298,23 @@ instance_method stepOver: fun() {
 
 instance_method toggleVarUpdate: fun() {
   @shouldUpdateVars = !@shouldUpdateVars;
+  this.updateInfo();
 }
 
+instance_method updateInfo: fun() {
+  if (0 <= @frame_index) {
+    @editor.setText(@execFrames.codeFor(@frame_index));
+    @editor.setFrameIndex(@frame_index);
+    var locInfo = @execFrames.locationInfoFor(@frame_index);
+    @editor.pausedAtLine(locInfo["start_line"], locInfo["start_col"], locInfo["end_line"], locInfo["end_col"]);
+    @localVarList.clear();
+    @fieldVarList.clear();
+    if (@shouldUpdateVars) {
+      @localVarList.loadFrame(@execFrames.frame(@frame_index));
+      @fieldVarList.loadReceiver(@execFrames.frame(@frame_index));
+    }
+  }
+}
 instance_method closeEvent: fun() {
   this.continue();
 }
