@@ -343,6 +343,9 @@ instance_method toggleVarUpdate: fun() {
   @shouldUpdateVars = !@shouldUpdateVars;
 }
 
+instance_method closeEvent: fun() {
+  this.continue();
+}
 end //idez:DebuggerUI
 
 class Editor < QsciScintilla
