@@ -25,7 +25,7 @@ class ASTBuilder:
         end = self.parser.input.position
         full = ''.join(self.parser.input.data)
         text = full[begin:end]
-        start_line = full[:begin].count("\n") + self.line_offset+1
+        start_line = full[:begin].count("\n") + self.line_offset
         start_col = begin - full.rfind("\n", 0, begin)-1
         end_line = start_line + text.count("\n")
         inside_nl = text.rfind("\n", 0)

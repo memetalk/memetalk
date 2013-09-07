@@ -33,7 +33,7 @@ SOFTWARE.
 debug: fun(procid, exception) {
   io.print("::in idez:debug()");
   var app = qt.QApplication.new;
-  var dbg = DebuggerUI.new(VMProcess.new(procid), exception, app);
+  var dbg = DebuggerUI.new(VMRemoteProcess.new(procid), exception, app);
   dbg.show();
   return app.exec();
 }
@@ -127,7 +127,7 @@ init new: fun(process, ex, eventloop) {
       @editor.setText(@execFrames.codeFor(i));
       @editor.setFrameIndex(@frame_index);
       var locInfo = @execFrames.locationInfoFor(i);
-      @editor.pausedAtLine(locInfo["start_line"]-1, locInfo["start_col"], locInfo["end_line"]-1, locInfo["end_col"]);
+      @editor.pausedAtLine(locInfo["start_line"], locInfo["start_col"], locInfo["end_line"], locInfo["end_col"]);
       if (@shouldUpdateVars) {
         @localVarList.loadFrame(@execFrames.frame(i));
         @fieldVarList.loadReceiver(@execFrames.frame(i));
@@ -736,14 +736,6 @@ instance_method initActions: fun(bindReturn) {
   });
   action.setShortcutContext(0); //widget context
   this.addAction(action);
-
-  action = qt.QAction.new("Debug it", this);
-  action.setShortcut("ctrl+b");
-  action.connect("triggered", fun() {
-      this.debugIt();
-  });
-  action.setShortcutContext(0); //widget context
-  this.addAction(action);
 }
 
 instance_method insertSelectedText: fun(text) {
@@ -880,7 +872,7 @@ init new: fun(parent) {
   @lineEdit.connect("returnPressed", fun() {
     if (@callback) {
       var close = @callback(@lineEdit.text());
-      if (close) { this.hide(); }
+      if (close != false) { this.hide(); }
     }
   });
 }
@@ -1125,8 +1117,9 @@ instance_method action_debug: fun() {
       } else {
         imod = thisModule;
       }
-      var fn = evalWithVarsFn(expr, {}, imod);
-      VMProcess.debug(fn,[]);
+
+      var ctx = Context.withVars(expr, {}, imod);
+      VMProcess.current.debugFn(ctx);
     } catch(e) {
       @statusLabel.setText(e.message);
     }
@@ -1285,8 +1278,9 @@ instance_method action_eval: fun() {
       } else {
         imod = thisModule;
       }
-      var r = evalWithVars(expr, {}, imod);
-      @statusLabel.setText(r["result"].toString());
+      var ctx = Context.withVars(expr, {}, imod);
+      var r = ctx();
+      @statusLabel.setText(r.toString());
     } catch(e) {
       @statusLabel.setText(e.message);
     }

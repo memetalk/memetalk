@@ -71,110 +71,134 @@ def prim_exception_throw(proc):
 def prim_exception_type(proc):
     return proc.reg('r_rp')['_vt']
 
-def prim_vmprocess_spawn(proc):
-    logger.debug('prim_vmprocess_spawn')
-    procid = proc.call_interpreter(True, 'spawn')
-    logger.debug('prim_vmprocess_spawn got id:')
-    proc.reg('r_rdp')['id'] = procid
-    return proc.reg('r_rp')
 
-def prim_vmprocess_is_running(proc):
-    return proc.is_alive()
+#### VMRemoteProcess
 
-def prim_vmprocess_current(proc):
-    return proc.mm_self()
-
-def prim_vmprocess_spawn_with_fun(proc):
-    _proc = proc.interpreter.spawn()
-    _proc.setup('exec_fn_unprotected', proc.locals['fn'])
-    return _proc
-
-def prim_vmprocess_exec_module(proc):
-    logger.debug('prim_vmprocess_exec_module')
-    mname = proc.locals()['mname']
-    fname = proc.locals()['fname']
-    args  = proc.locals()['args']
-    procid = proc.call_interpreter(False, 'exec_module', proc.reg('r_rdp')['id'], mname, fname, args,)
-    return proc.reg('r_rp')
-
-def prim_vmprocess_debug(proc):
-    logger.debug("prim_vmprocess_debug")
-    proc.debug_me()
-
-def prim_vmprocess_debug_fn(proc):
-    logger.debug("prim_vmprocess_debug_fn")
-    proc.debug_me()
-    logger.debug("prim_vmprocess_debug_fn: calling fn...")
-    return proc.run_fun(None, None, proc.locals()['fn'], [], True)
-
-def prim_vmprocess_step_into(proc):
-    raw_frames = proc.call_target_process(True, proc.reg('r_rdp')['id'], 'step_into')
-    VMStackFrameClass = proc.interpreter.get_core_class('VMStackFrame')
-    logger.debug('got frames, assemblying and caching...')
-    proc.reg('r_rdp')['frames'] = [proc.interpreter.alloc_object(VMStackFrameClass,{'self':x}) for x in raw_frames if x['r_cp']]
-
-    VMStackFrameClass = proc.interpreter.get_core_class('VMStackFrame')
-    logger.debug('got frames, assemblying...')
-    proc.reg('r_rdp')['frames'] = [proc.interpreter.alloc_object(VMStackFrameClass,{'self':x}) for x in raw_frames if x['r_cp']]
-
-def prim_vmprocess_step_over(proc):
-    raw_frames = proc.call_target_process(True, proc.reg('r_rdp')['id'], 'step_over')
-    VMStackFrameClass = proc.interpreter.get_core_class('VMStackFrame')
-    logger.debug('got frames, assemblying...')
-    proc.reg('r_rdp')['frames'] = [proc.interpreter.alloc_object(VMStackFrameClass,{'self':x}) for x in raw_frames if x['r_cp']]
-
-def prim_vmprocess_continue(proc):
-    logger.debug('prim_vmprocess_continue')
-    raw_frames = proc.call_target_process(True, proc.reg('r_rdp')['id'], 'continue')
-    VMStackFrameClass = proc.interpreter.get_core_class('VMStackFrame')
-    logger.debug('got frames, assemblying...')
-    proc.reg('r_rdp')['frames'] = [proc.interpreter.alloc_object(VMStackFrameClass,{'self':x}) for x in raw_frames if x['r_cp']]
-
-def prim_vmprocess_update_object(proc):
-    obj = proc.locals()['obj']
-    logger.debug('prim_vmprocess_update_object')
-    import pickle
-    raw_obj = pickle.dumps(obj)
-    proc.call_target_process(False, proc.reg('r_rdp')['id'], 'update_object', raw_obj)
-
-def prim_vmprocess_reload_frame(proc):
-    logger.debug('asking to reloading frame...')
-    proc.call_target_process(False, proc.reg('r_rdp')['id'], 'reload_frame')
-
-def prim_vmprocess_rewind_and_break(proc):
-    logger.debug('asking to rewind...')
-    frames_count = proc.locals()['frames_count']
-    to_line = proc.locals()['to_line']
-    proc.call_target_process(False, proc.reg('r_rdp')['id'], 'rewind_and_break', frames_count, to_line)
-
-def prim_vmprocess_init_com_with_target(proc):
+def prim_vmremoteprocess_init_com_with_target(proc):
     logger.debug('prim_vmprocess_init_com_with_target')
     raw_frames = proc.init_debugging_session()
     VMStackFrameClass = proc.interpreter.get_core_class('VMStackFrame')
     logger.debug('got frames, assemblying and caching...')
     proc.reg('r_rdp')['frames'] = [proc.interpreter.alloc_object(VMStackFrameClass,{'self':x}) for x in raw_frames if x['r_cp']]
 
-def prim_vmprocess_stack_frames(proc):
-    logger.debug('prim_vmprocess_stack_frames')
+def prim_vmremoteprocess_step_into(proc):
+    raw_frames = proc.call_target_process(True, proc.reg('r_rdp')['procid'], 'step_into')
+    VMStackFrameClass = proc.interpreter.get_core_class('VMStackFrame')
+    logger.debug('got frames, assemblying and caching...')
+    proc.reg('r_rdp')['frames'] = [proc.interpreter.alloc_object(VMStackFrameClass,{'self':x}) for x in raw_frames if x['r_cp']]
+
+    VMStackFrameClass = proc.interpreter.get_core_class('VMStackFrame')
+    logger.debug('got frames, assemblying...')
+    proc.reg('r_rdp')['frames'] = [proc.interpreter.alloc_object(VMStackFrameClass,{'self':x}) for x in raw_frames if x['r_cp']]
+
+def prim_vmremoteprocess_step_over(proc):
+    raw_frames = proc.call_target_process(True, proc.reg('r_rdp')['procid'], 'step_over')
+    VMStackFrameClass = proc.interpreter.get_core_class('VMStackFrame')
+    logger.debug('got frames, assemblying...')
+    proc.reg('r_rdp')['frames'] = [proc.interpreter.alloc_object(VMStackFrameClass,{'self':x}) for x in raw_frames if x['r_cp']]
+
+def prim_vmremoteprocess_continue(proc):
+    logger.debug('prim_vmprocess_continue')
+    raw_frames = proc.call_target_process(True, proc.reg('r_rdp')['procid'], 'continue')
+    VMStackFrameClass = proc.interpreter.get_core_class('VMStackFrame')
+    logger.debug('got frames, assemblying...')
+    proc.reg('r_rdp')['frames'] = [proc.interpreter.alloc_object(VMStackFrameClass,{'self':x}) for x in raw_frames if x['r_cp']]
+
+def prim_vmremoteprocess_stack_frames(proc):
     if proc.reg('r_rdp')['frames']:
         logger.debug('we have it cached, returning it')
         return proc.reg('r_rdp')['frames']
     else:
         logger.debug('asking stack frames...')
-        raw_frames = proc.call_target_process(True, proc.reg('r_rdp')['id'], 'get_frames')
+        raw_frames = proc.call_target_process(True, proc.reg('r_rdp')['procid'], 'get_frames')
         VMStackFrameClass = proc.interpreter.get_core_class('VMStackFrame')
         logger.debug('got frames, assemblying...')
         proc.reg('r_rdp')['frames'] = [proc.interpreter.alloc_object(VMStackFrameClass,{'self':x}) for x in raw_frames if x['r_cp']]
         logger.debug('returning frames')
         return proc.reg('r_rdp')['frames']
 
-def prim_vmprocess_eval(proc):
-    logger.debug('asking to eval...')
-    text = proc.locals()['text']
-    frame_level = proc.locals()['frame_level'] + 1
-    raw = proc.call_target_process(True, proc.reg('r_rdp')['id'], 'eval', text, frame_level)
-    import pickle
-    return pickle.loads(raw)
+
+#### VMProcess
+
+# def prim_vmprocess_spawn(proc):
+#     logger.debug('prim_vmprocess_spawn')
+#     procid = proc.call_interpreter(True, 'spawn')
+#     logger.debug('prim_vmprocess_spawn got id:')
+#     proc.reg('r_rdp')['id'] = procid
+#     return proc.reg('r_rp')
+
+# def prim_vmprocess_is_running(proc):
+#     return proc.is_alive()
+
+# def prim_vmprocess_spawn_with_fun(proc):
+#     _proc = proc.interpreter.spawn()
+#     _proc.setup('exec_fn_unprotected', proc.locals['fn'])
+#     return _proc
+
+# def prim_vmprocess_exec_module(proc):
+#     logger.debug('prim_vmprocess_exec_module')
+#     mname = proc.locals()['mname']
+#     fname = proc.locals()['fname']
+#     args  = proc.locals()['args']
+#     procid = proc.call_interpreter(False, 'exec_module', proc.reg('r_rdp')['id'], mname, fname, args,)
+#     return proc.reg('r_rp')
+
+# def prim_vmprocess_update_object(proc):
+#     obj = proc.locals()['obj']
+#     logger.debug('prim_vmprocess_update_object')
+#     import pickle
+#     raw_obj = pickle.dumps(obj)
+#     proc.call_target_process(False, proc.reg('r_rdp')['id'], 'update_object', raw_obj)
+
+# def prim_vmprocess_reload_frame(proc):
+#     logger.debug('asking to reloading frame...')
+#     proc.call_target_process(False, proc.reg('r_rdp')['id'], 'reload_frame')
+
+# def prim_vmprocess_rewind_and_break(proc):
+#     logger.debug('asking to rewind...')
+#     frames_count = proc.locals()['frames_count']
+#     to_line = proc.locals()['to_line']
+#     proc.call_target_process(False, proc.reg('r_rdp')['id'], 'rewind_and_break', frames_count, to_line)
+
+def prim_vmprocess_current(proc):
+    return proc.mm_self()
+
+def prim_vmprocess_debug(proc):
+    logger.debug("prim_vmprocess_debug")
+    assert(proc.reg('r_rdp')['procid'] == proc.procid)
+    proc.debug_me()
+
+def prim_vmprocess_debug_fn(proc):
+    logger.debug("prim_vmprocess_debug_fn")
+    assert(proc.reg('r_rdp')['procid'] == proc.procid)
+    proc.debug_me()
+    logger.debug("prim_vmprocess_debug_fn: calling fn...")
+    fn = proc.locals()['fn']
+    return proc.setup_and_run_fun(None, None, fn['compiled_function']['name'], fn, [], True)
+
+
+def prim_vmprocess_stack_frames(proc):
+    logger.debug('prim_vmprocess_stack_frames')
+    assert(proc.reg('r_rdp')['procid'] == proc.procid)
+    VMStackFrameClass = proc.interpreter.get_core_class('VMStackFrame')
+    return [proc.interpreter.alloc_object(VMStackFrameClass,{'self':x}) for x in proc.all_stack_frames()]
+
+def prim_vmprocess_debug_on_exception(proc):
+    assert(proc.reg('r_rdp')['procid'] == proc.procid)
+    proc.flag_debug_on_exception = True
+
+# def prim_vmprocess_eval(proc):
+#     logger.debug('asking to eval...')
+#     text = proc.locals()['text']
+#     frame_level = proc.locals()['frame_level'] + 1
+#     raw = proc.call_target_process(True, proc.reg('r_rdp')['id'], 'eval', text, frame_level)
+#     import pickle
+#     return pickle.loads(raw)
+
+
+
+#### VMStackFrame
+
 
 def prim_vmstackframe_instruction_pointer(proc):
     frame = _lookup_field(proc, proc.reg('r_rp'), 'self')
@@ -186,16 +210,14 @@ def prim_vmstackframe_instruction_pointer(proc):
     # we need to make it relative to the toplevel function
 
     outer_cfun = proc.interpreter.shitty_get_module_from_cfunction(frame['r_cp']['compiled_function'])
-    start_line = ast.start_line - outer_cfun['line']+1
+    start_line = ast.start_line - outer_cfun['line']
     start_col = ast.start_col
-    end_line = ast.end_line - outer_cfun['line']+1
+    end_line = ast.end_line - outer_cfun['line']
     end_col = ast.end_col
     res = {"start_line":start_line, "start_col": start_col, "end_line": end_line, "end_col":end_col}
     return res
 
 
-def prim_vmprocess_debug_on_exception(proc):
-    proc.flag_debug_on_exception = True
 
 def prim_vmstackframe_module_pointer(proc):
     frame = _lookup_field(proc, proc.reg('r_rp'), 'self')
@@ -207,7 +229,7 @@ def prim_vmstackframe_module_pointer(proc):
 def prim_vmstackframe_context_pointer(proc):
     logger.debug('prim_vmstackframe_context_pointer')
     frame = _lookup_field(proc, proc.reg('r_rp'), 'self')
-    logger.debug('got frame: returning:' + P(frame,1,True))
+    #logger.debug('got frame: returning:' + P(frame,1,True))
     return frame['r_cp']
 
 def prim_vmstackframe_receiver_pointer(proc):
@@ -835,6 +857,37 @@ def prim_exit(proc):
 
 
 # QApplication
+
+def qt_identity(x):
+    return str(x) + "::" + str(id(x))
+
+QApplication.__reduce__ = lambda self: (qt_identity, (str(self),))
+QWidget.__reduce__ = lambda self: (qt_identity, (str(self),))
+#_QMainWindow
+QMainWindow.__reduce__ = lambda self: (qt_identity, (str(self),))
+QPlainTextEdit.__reduce__ = lambda self: (qt_identity, (str(self),))
+QMenu.__reduce__ = lambda self: (qt_identity, (str(self),))
+QMenuBar.__reduce__ = lambda self: (qt_identity, (str(self),))
+QAction.__reduce__ = lambda self: (qt_identity, (str(self),))
+QShortcut.__reduce__ = lambda self: (qt_identity, (str(self),))
+QTextCursor.__reduce__ = lambda self: (qt_identity, (str(self),))
+QLayout.__reduce__ = lambda self: (qt_identity, (str(self),))
+QVBoxLayout.__reduce__ = lambda self: (qt_identity, (str(self),))
+QHBoxLayout.__reduce__ = lambda self: (qt_identity, (str(self),))
+QListWidget.__reduce__ = lambda self: (qt_identity, (str(self),))
+QListWidgetItem.__reduce__ = lambda self: (qt_identity, (str(self),))
+QLineEdit.__reduce__ = lambda self: (qt_identity, (str(self),))
+QLabel.__reduce__ = lambda self: (qt_identity, (str(self),))
+QHeaderView.__reduce__ = lambda self: (qt_identity, (str(self),))
+QComboBox.__reduce__ = lambda self: (qt_identity, (str(self),))
+QTableWidget.__reduce__ = lambda self: (qt_identity, (str(self),))
+QTableWidgetItem.__reduce__ = lambda self: (qt_identity, (str(self),))
+QWebView.__reduce__ = lambda self: (qt_identity, (str(self),))
+QWebPage.__reduce__ = lambda self: (qt_identity, (str(self),))
+QWebFrame.__reduce__ = lambda self: (qt_identity, (str(self),))
+QWebElement.__reduce__ = lambda self: (qt_identity, (str(self),))
+QUrl.__reduce__ = lambda self: (qt_identity, (str(self),))
+scintilla_editor.MemeQsciScintilla.__reduce__ = lambda self: (qt_identity, (str(self),))
 
 def prim_qt_qapplication_new(proc):
     global _qt_imodule

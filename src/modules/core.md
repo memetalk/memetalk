@@ -474,37 +474,37 @@ module core() {
     }
   }
 
+  class VMRemoteProcess {
+   fields: self, procid, frames;
+    init new: fun(procid) {
+      @procid = procid;
+    }
+    instance_method initComWithTarget: fun() {
+      <primitive "vmremoteprocess_init_com_with_target">
+    }
+    instance_method stepInto: fun() {
+      <primitive "vmremoteprocess_step_into">
+    }
+    instance_method stepOver: fun() {
+      <primitive "vmremoteprocess_step_over">
+    }
+    instance_method continue: fun() {
+      <primitive "vmremoteprocess_continue">
+    }
+    instance_method stackFrames: fun() {
+      <primitive "vmremoteprocess_stack_frames">
+    }
+  }
   class VMProcess {
-    fields: self, id, frames;
-    init new: fun(id) {
-      @id = id;
-    }
-    init spawn: fun() {
-      <primitive "vmprocess_spawn">
-    }
-    init isRunning: fun() {
-      <primitive "vmprocess_is_running">
-    }
+    fields: procid;
     instance_method debug: fun() {
       <primitive "vmprocess_debug">
     }
     instance_method debugFn: fun(fn) {
       <primitive "vmprocess_debug_fn">
     }
-    instance_method initComWithTarget: fun() {
-      <primitive "vmprocess_init_com_with_target">
-    }
     instance_method stackFrames: fun() {
       <primitive "vmprocess_stack_frames">
-    }
-    instance_method stepInto: fun() {
-      <primitive "vmprocess_step_into">
-    }
-    instance_method stepOver: fun() {
-      <primitive "vmprocess_step_over">
-    }
-    instance_method continue: fun() {
-      <primitive "vmprocess_continue">
     }
     instance_method debugOnException: fun() {
       <primitive "vmprocess_debug_on_exception">
@@ -512,6 +512,12 @@ module core() {
     class_method current: fun() {
       <primitive "vmprocess_current">
     }
+    // init spawn: fun() {
+    //   <primitive "vmprocess_spawn">
+    // }
+    // instance_method isRunning: fun() {
+    //   <primitive "vmprocess_is_running">
+    // }
     // class_method spawnWithFun: fun(fn) {
     //   <primitive "vmprocess_spawn_with_fun">
     // }
