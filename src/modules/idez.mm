@@ -38,17 +38,9 @@ debug: fun(procid, exception) {
   return app.exec();
 }
 
-evalWithFrame: fun(text, frame, imod) {
-  var cmod = get_compiled_module(imod);
-  var code = "fun() {" + text + "}";
-  var cfn = CompiledFunction.newClosure(code, thisContext.compiledFunction(), false);
-  var fn = cfn.asContextWithFrame(imod, frame);
-  var res = exception_unprotected(fn);
-  return {"result": res, "env": fn.getEnv()};
-}
 
 main: fun() {
-  VMProcess.stopOnException();
+  VMProcess.current.debugOnException();
   var app = qt.QApplication.new();
   var me = ModuleExplorer.new();
   me.show();
@@ -800,7 +792,7 @@ init new: fun(parent) {
 instance_method debugIt: fun() {
   try {
     var ctx = Context.withVars(this.selectedText(), @with_variables(), @with_imod());
-    VMProcess.current.debug(ctx);
+    VMProcess.current.debugFn(ctx);
     @on_finish(ctx.getEnv());
   } catch(ex) {
     this.insertSelectedText(ex.message());

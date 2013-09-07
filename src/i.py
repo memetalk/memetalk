@@ -240,6 +240,7 @@ class ModuleLoader(ASTBuilder):
 
         self.interpreter = proc.interpreter
 
+        logger.debug("Compiling module: " + name + ". this may take a while...")
         self.parser = MemeParser(src)
         self.parser.i = self
         try:
@@ -747,21 +748,19 @@ class Interpreter():
             logger.debug("interpreter_loop: waiting....")
             msg = self.my_channel.get()
             logger.debug("interpreter_loop: got: " + msg['name'])
-            if msg['name'] == 'spawn':
-                self.my_channel.put(self.spawn().procid)
-            elif msg['name'] == 'exec_module':
-                getattr(self, 'cmdproc_' + msg['name'])(*msg['args'])
-            elif msg['name'] == 'debug':
-                getattr(self, 'cmdproc_' + msg['name'])(*msg['args'])
-                self.my_channel.put('done')
-            else:
-                logger.error("Interpreter: unknown command")
+            getattr(self, 'cmdproc_' + msg['name'])(*msg['args'])
+
+    def cmdproc_spawn(self):
+        self.my_channel.put(self.spawn().procid)
+
+    def cmdproc_kill_process(self, procid):
+        self.processes[procid].terminate()
 
     def cmdproc_exec_module(self, procid, mname, fname, args):
         proc = self.processes[procid]
         proc.exec_module(mname + ".mm", fname, args)
 
-    def cmdproc_debug(self, procid):
+    def cmdproc_debug(self, procid, new_state, last_exception):
         # 1) pause procid
         # 2) create debugger with procid as target
 
@@ -769,16 +768,18 @@ class Interpreter():
         dbgproc = self.spawn(procid)
         logger.debug('cmdproc_debug: debugger procid: ' + str(dbgproc.procid))
 
-        logger.debug('cmdproc_debug: changing state of target to paused...')
+        logger.debug('cmdproc_debug: changing state of target to:' + new_state)
         proc = self.processes[procid]
         proc.channels['dbg'] = dbgproc.channels['target_incoming']
-        proc.channels['my'].put({'cmd': 'set_state', "value": "paused"})
+        proc.shared['mydbg.pid'] = dbgproc.procid
+        proc.channels['my'].put({'cmd': 'set_state', "value": new_state})
 
         logger.debug('cmdproc_debug: telling debugger to start() running idez::debug()')
 
-        dbgproc.setup('exec_module', 'idez.mm', 'debug', [procid, ""])
+        dbgproc.setup('exec_module', 'idez.mm', 'debug', [procid, last_exception])
         dbgproc.start()
         logger.debug('cmdproc_debug: done')
+        self.my_channel.put('done')
 
     def compiled_module_by_filename(self, proc, filename):
         module_name = filename[:-3]
@@ -930,8 +931,11 @@ class Process(multiprocessing.Process):
         self.procid = procid
 
         self.interpreter = interpreter
+        self.mydbg = None
 
         self.mm_self_obj = None
+
+        self.shared = multiprocessing.Manager().dict()
 
         self.channels = multiprocessing.Manager().dict()
 
@@ -957,7 +961,7 @@ class Process(multiprocessing.Process):
         self.stack = []
         self.state = None
 
-        self.flag_stop_on_exception = False
+        self.flag_debug_on_exception = False
         self.exception_protection = [False]
         self.last_exception = None
 
@@ -1024,6 +1028,13 @@ class Process(multiprocessing.Process):
         else:
             return None
 
+    def debug_me(self, new_state = 'paused'):
+        if self.channels['dbg'] == None:
+            self.call_interpreter(True, 'debug', self.procid, new_state, self.last_exception)
+        else:
+            logger.debug(str(self.procid) + ": debug_me(): we have a dbg; pausing...")
+            self.state = new_state
+
     def setup(self, name, *args):
         self.entry = {'name': name, 'args': args}
 
@@ -1051,18 +1062,8 @@ class Process(multiprocessing.Process):
             print ("Exception raised during exec_module : " + e.mmobj()['message'])
             print (e.mmobj()['py_trace'])
 
-
-    # def patch_frame_cfun(self, other):
-    #     for frame in self.all_stack_frames():
-    #         if frame['r_cp']:
-    #             cfun = frame['r_cp']['compiled_function']
-    #             if cfun['name'] == other['name']:
-    #                 for key in other.keys():
-    #                     if key != '_vt' and key != '_delegate':
-    #                         cfun[key] = other[key]
-    #                 print 'patched!'
-    #                 return
-    #     self.throw_with_message("Bug on patch_frame_cfun: no match found")
+        if self.channels['dbg'] != None: # we have a debugger, kill it
+            self.call_interpreter(False, 'kill_process', self.shared['mydbg.pid'])
 
     def _lookup(self, drecv, vt, selector):
         if vt == None:
@@ -1499,7 +1500,7 @@ class Process(multiprocessing.Process):
         self.reg('r_ip', ast)
         self.state = 'paused'
 
-    def dbg_control(self, name, force_debug = False):
+    def dbg_control(self, name):
 
         def process_breakpoints():
             for idx, bp in enumerate(self.volatile_breakpoints):
@@ -1535,10 +1536,13 @@ class Process(multiprocessing.Process):
             if msg['cmd'] == 'reload_frame':
                 logger.debug('target: reload frame')
                 self.state = 'paused'
+                self.self.last_exception = None
                 raise RewindException(1)
             if msg['cmd'] == 'rewind_and_break':
                 logger.debug('target: rewind_and_break')
+
                 self.state = 'running'
+                self.self.last_exception = None
 
                 frames_count = msg['args'][0]
                 logger.debug('rewinding  this much of frames: ' + str(frames_count))
@@ -1586,7 +1590,8 @@ class Process(multiprocessing.Process):
             msg = self.channels['my'].get()
             process_dbg_msg(msg)
 
-        if self.state in ['paused', 'next'] or force_debug:
+
+        if self.state in ['paused', 'next', 'exception']:
             logger.debug(str(self.procid) + ": dbg_control paused! state: " + self.state)
             logger.debug(str(self.procid) + ": dbg_control sending frames to debugger")
             self.channels['dbg'].put(self.all_stack_frames())
@@ -1598,17 +1603,27 @@ class Process(multiprocessing.Process):
                     logger.debug(str(self.procid) + ": dbg_control resuming execution")
                     break
 
+        return self.last_exception != None
+
+
     def is_exception_protected(self):
         logger.debug("is_exception_protected?: " + str(self.exception_protection[-1]))
         return self.exception_protection[-1]
 
+#         if self.state == 'exception':
+#             logger.debug(str(self.procid) + ": dbg_control in exception state")
+#             self.debug_me()
+#             logger.debug(str(self.procid) + ": dbg_control done")
+# #            logger.debug(str(self.procid) + ": dbg_control: debug_me() done")
+# #            process_dbg_msg({"cmd":"set_state","value":"paused"}) #so it sends done set_state to dbg
+
     def throw(self, mex):
         # MemetalkException encapsulates the memetalk exception:
-        if not self.is_exception_protected() and self.flag_stop_on_exception:
-            self.state = 'exception'
+        if not self.is_exception_protected() and self.flag_debug_on_exception:
+            logger.debug(str(self.procid) + ": throw: in exception state")
             self.last_exception = mex
-            r = self.dbg_control("throw", True);
-            if r == 'exception':
+            self.debug_me('exception')
+            if self.dbg_control("throw"):
                 if 'py_exception' in mex and mex['py_exception'] != None:
                     raise mex['py_exception']
                 else:
@@ -1627,11 +1642,11 @@ class Process(multiprocessing.Process):
         # ...and this me being stupid:
         ex['message'] =  "Python exception: " + str(pyex.message)
 
-        if not self.is_exception_protected() and self.flag_stop_on_exception:
-            self.state = 'exception'
+        if not self.is_exception_protected() and self.flag_debug_on_exception:
+            logger.debug(str(self.procid) + ": throw_py: in exception state")
             self.last_exception = ex
-            r = self.dbg_control("throw", True);
-            if self.state == r:
+            self.debug_me('exception')
+            if self.dbg_control("throw"):
                 raise MemetalkException(ex, self.pp_stack_trace(), pyex, tb)
         else:
             # MemetalkException encapsulates the memetalk exception:
@@ -1645,11 +1660,11 @@ class Process(multiprocessing.Process):
         # ...and this me being stupid:
         ex['message'] =  msg
 
-        if not self.is_exception_protected() and self.flag_stop_on_exception:
-            self.state = 'exception'
+        if not self.is_exception_protected() and self.flag_debug_on_exception:
+            logger.debug(str(self.procid) + ": throw_py: in exception state")
             self.last_exception = ex
-            r = self.dbg_control("throw", True);
-            if self.state == r:
+            self.debug_me('exception')
+            if self.dbg_control("throw"):
                 raise MemetalkException(ex, self.pp_stack_trace())
         else:
             # MemetalkException encapsulates the memetalk exception:

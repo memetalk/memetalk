@@ -99,18 +99,13 @@ def prim_vmprocess_exec_module(proc):
 
 def prim_vmprocess_debug(proc):
     logger.debug("prim_vmprocess_debug")
-    if proc.channels['dbg'] == None:
-        proc.call_interpreter(True, 'debug', proc.reg('r_rdp')['id'])
-    else:
-        logger.debug("prim_vmprocess_debug: we have a dbg; pausing...")
-        proc.state = 'paused'
+    proc.debug_me()
 
-# def prim_vmprocess_debug(proc):
-#     logger.debug("prim_vmprocess_debug_fn")
-#     # execute fn with state = paused
-#     proc.state = 'paused'
-#     #proc.setup_and_run_fun(proc.locals['fn'])
-#     #proc.call_interpreter(True, 'debug', proc.locals['fn'])
+def prim_vmprocess_debug_fn(proc):
+    logger.debug("prim_vmprocess_debug_fn")
+    proc.debug_me()
+    logger.debug("prim_vmprocess_debug_fn: calling fn...")
+    return proc.run_fun(None, None, proc.locals()['fn'], [], True)
 
 def prim_vmprocess_step_into(proc):
     raw_frames = proc.call_target_process(True, proc.reg('r_rdp')['id'], 'step_into')
@@ -199,8 +194,8 @@ def prim_vmstackframe_instruction_pointer(proc):
     return res
 
 
-def prim_vmprocess_stop_on_exception(proc):
-    proc.flag_stop_on_exception = True
+def prim_vmprocess_debug_on_exception(proc):
+    proc.flag_debug_on_exception = True
 
 def prim_vmstackframe_module_pointer(proc):
     frame = _lookup_field(proc, proc.reg('r_rp'), 'self')

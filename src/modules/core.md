@@ -488,12 +488,12 @@ module core() {
     instance_method debug: fun() {
       <primitive "vmprocess_debug">
     }
+    instance_method debugFn: fun(fn) {
+      <primitive "vmprocess_debug_fn">
+    }
     instance_method initComWithTarget: fun() {
       <primitive "vmprocess_init_com_with_target">
     }
-    // instance_method debugFun: fun(fn) {
-    //   <primitive "vmprocess_debug_fun">
-    // }
     instance_method stackFrames: fun() {
       <primitive "vmprocess_stack_frames">
     }
@@ -506,15 +506,15 @@ module core() {
     instance_method continue: fun() {
       <primitive "vmprocess_continue">
     }
+    instance_method debugOnException: fun() {
+      <primitive "vmprocess_debug_on_exception">
+    }
     class_method current: fun() {
       <primitive "vmprocess_current">
     }
     // class_method spawnWithFun: fun(fn) {
     //   <primitive "vmprocess_spawn_with_fun">
     // }
-    class_method stopOnException: fun() {
-      <primitive "vmprocess_stop_on_exception">
-    }
     // instance_method stepOut: fun() {
     //   <primitive "vmprocess_step_out">
     // }
