@@ -103,6 +103,15 @@ instance_method printIt: fun() {
     this.insertSelectedText(ex.message());
   }
 }
+
+instance_method inspectIt: fun() {
+  try {
+    var res = @process.evalInFrame(this.selectedText(), @frame_index);
+    Inspector.inspect(res); //TODO: use a RemoteInspector able to wire changes
+  } catch(ex) {
+    this.insertSelectedText(ex.message());
+  }
+}
 end //idez:DebuggerEditor
 
 class DebuggerUI < QMainWindow
@@ -1776,7 +1785,7 @@ init new: fun(process, parent) {
   @target_process = process;
 
   this.connect("itemDoubleClicked", fun(item) {
-    Inspector.inspect(item.object).setProcess(@target_process)
+    Inspector.inspect(item.object)
   });
 }
 
