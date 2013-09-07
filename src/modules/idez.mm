@@ -91,9 +91,6 @@ instance_method setFrameIndex: fun(idx) {
 instance_method doIt: fun() {
   try {
     @process.evalInFrame(this.selectedText(), @frame_index);
-    // var frame = @process.stackFrames().get(@frame_index);
-    // var ctx = Context.withFrame(this.selectedText(), frame);
-    // ctx();
   } catch(ex) {
     this.insertSelectedText(ex.message());
   }
@@ -226,46 +223,6 @@ init new: fun(process, ex, eventloop) {
   @editor.exploringActions.each(fun(ac) {
     execMenu.addAction(ac);
   });
-
-  // action = qt.QAction.new("Do it", this);
-  // action.setShortcut("ctrl+d");
-  // action.connect("triggered", fun() {
-  //   @editor.doIt();
-  // });
-  // action.setShortcutContext(0); //widget context
-  // execMenu.addAction(action);
-
-  // action = qt.QAction.new("Print it", this);
-  // action.setShortcut("ctrl+p");
-  // action.connect("triggered", fun() {
-  //     @editor.printIt();
-  // });
-  // action.setShortcutContext(0); //widget context
-  // execMenu.addAction(action);
-
-  // action = qt.QAction.new("Inspect it", this);
-  // action.setShortcut("ctrl+i");
-  // action.connect("triggered", fun() {
-  //     @editor.inspectIt()
-  // });
-  // action.setShortcutContext(0); //widget context
-  // execMenu.addAction(action);
-
-  // action = qt.QAction.new("Accept it", execMenu);
-  // action.setShortcut("ctrl+x,a");
-  // action.connect("triggered", fun() {
-  //     this.acceptIt();
-  // });
-  // action.setShortcutContext(0); //widget context
-  // execMenu.addAction(action);
-
-  // action = qt.QAction.new("Save", execMenu);
-  // action.setShortcut("ctrl+x,s");
-  // action.connect("triggered", fun() {
-  //     this.save();
-  // });
-  // execMenu.addAction(action);
-
   @stackCombo.updateInfo();
 }
 //end idez:DebuggerUI:new

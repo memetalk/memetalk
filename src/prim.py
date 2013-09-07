@@ -87,10 +87,6 @@ def prim_vmremoteprocess_step_into(proc):
     logger.debug('got frames, assemblying and caching...')
     proc.reg('r_rdp')['frames'] = [proc.interpreter.alloc_object(VMStackFrameClass,{'self':x}) for x in raw_frames]
 
-    VMStackFrameClass = proc.interpreter.get_core_class('VMStackFrame')
-    logger.debug('got frames, assemblying...')
-    proc.reg('r_rdp')['frames'] = [proc.interpreter.alloc_object(VMStackFrameClass,{'self':x}) for x in raw_frames]
-
 def prim_vmremoteprocess_step_over(proc):
     raw_frames = proc.call_target_process(True, proc.reg('r_rdp')['procid'], 'step_over')
     VMStackFrameClass = proc.interpreter.get_core_class('VMStackFrame')
