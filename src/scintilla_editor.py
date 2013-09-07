@@ -31,7 +31,7 @@ class QsciLexerMemeScript(QsciLexerJavaScript):
 
     def keywords(self, s):
         if s != 1: return ""
-        return "fun var null this debug throw return if else while try catch or and super new true false thisModule thisContext"
+        return "fun var null this throw return if else while try catch or and super new true false thisModule thisContext"
 
     def defaultFont(self, s):
         font = QFont("Monospace",10)
