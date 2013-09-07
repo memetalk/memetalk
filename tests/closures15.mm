@@ -13,7 +13,7 @@ main: fun() {
   var cfn = CompiledFunction.newClosure(
     "fun(a) { x = 20; a + y; }", thisContext.compiledFunction(), false);
   var fn = cfn.asContextWithFrame(
-    thisModule, VMProcess.current.stackFrames()[-2]);
+    VMProcess.current.stackFrames()[-2]);
   assert(fn(1) + x == 31, "Creating closure with frame");
 }
 
