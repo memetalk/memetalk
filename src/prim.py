@@ -75,34 +75,34 @@ def prim_exception_type(proc):
 #### VMRemoteProcess
 
 def prim_vmremoteprocess_init_com_with_target(proc):
-    logger.debug('prim_vmprocess_init_com_with_target')
+    logger.debug('prim_vmremoteprocess_init_com_with_target')
     raw_frames = proc.init_debugging_session()
     VMStackFrameClass = proc.interpreter.get_core_class('VMStackFrame')
     logger.debug('got frames, assemblying and caching...')
-    proc.reg('r_rdp')['frames'] = [proc.interpreter.alloc_object(VMStackFrameClass,{'self':x}) for x in raw_frames if x['r_cp']]
+    proc.reg('r_rdp')['frames'] = [proc.interpreter.alloc_object(VMStackFrameClass,{'self':x}) for x in raw_frames]
 
 def prim_vmremoteprocess_step_into(proc):
     raw_frames = proc.call_target_process(True, proc.reg('r_rdp')['procid'], 'step_into')
     VMStackFrameClass = proc.interpreter.get_core_class('VMStackFrame')
     logger.debug('got frames, assemblying and caching...')
-    proc.reg('r_rdp')['frames'] = [proc.interpreter.alloc_object(VMStackFrameClass,{'self':x}) for x in raw_frames if x['r_cp']]
+    proc.reg('r_rdp')['frames'] = [proc.interpreter.alloc_object(VMStackFrameClass,{'self':x}) for x in raw_frames]
 
     VMStackFrameClass = proc.interpreter.get_core_class('VMStackFrame')
     logger.debug('got frames, assemblying...')
-    proc.reg('r_rdp')['frames'] = [proc.interpreter.alloc_object(VMStackFrameClass,{'self':x}) for x in raw_frames if x['r_cp']]
+    proc.reg('r_rdp')['frames'] = [proc.interpreter.alloc_object(VMStackFrameClass,{'self':x}) for x in raw_frames]
 
 def prim_vmremoteprocess_step_over(proc):
     raw_frames = proc.call_target_process(True, proc.reg('r_rdp')['procid'], 'step_over')
     VMStackFrameClass = proc.interpreter.get_core_class('VMStackFrame')
     logger.debug('got frames, assemblying...')
-    proc.reg('r_rdp')['frames'] = [proc.interpreter.alloc_object(VMStackFrameClass,{'self':x}) for x in raw_frames if x['r_cp']]
+    proc.reg('r_rdp')['frames'] = [proc.interpreter.alloc_object(VMStackFrameClass,{'self':x}) for x in raw_frames]
 
 def prim_vmremoteprocess_continue(proc):
-    logger.debug('prim_vmprocess_continue')
+    logger.debug('prim_vmremoteprocess_continue')
     raw_frames = proc.call_target_process(True, proc.reg('r_rdp')['procid'], 'continue')
     VMStackFrameClass = proc.interpreter.get_core_class('VMStackFrame')
     logger.debug('got frames, assemblying...')
-    proc.reg('r_rdp')['frames'] = [proc.interpreter.alloc_object(VMStackFrameClass,{'self':x}) for x in raw_frames if x['r_cp']]
+    proc.reg('r_rdp')['frames'] = [proc.interpreter.alloc_object(VMStackFrameClass,{'self':x}) for x in raw_frames]
 
 def prim_vmremoteprocess_stack_frames(proc):
     if proc.reg('r_rdp')['frames']:
@@ -113,10 +113,18 @@ def prim_vmremoteprocess_stack_frames(proc):
         raw_frames = proc.call_target_process(True, proc.reg('r_rdp')['procid'], 'get_frames')
         VMStackFrameClass = proc.interpreter.get_core_class('VMStackFrame')
         logger.debug('got frames, assemblying...')
-        proc.reg('r_rdp')['frames'] = [proc.interpreter.alloc_object(VMStackFrameClass,{'self':x}) for x in raw_frames if x['r_cp']]
+        proc.reg('r_rdp')['frames'] = [proc.interpreter.alloc_object(VMStackFrameClass,{'self':x}) for x in raw_frames]
         logger.debug('returning frames')
         return proc.reg('r_rdp')['frames']
 
+def prim_vmremoteprocess_eval_in_frame(proc):
+    logger.debug('prim_vmremoteprocess_eval_in_frame')
+    text = proc.locals()['text']
+    frame_idx = proc.locals()['frame_index']
+    (ex, res) = proc.call_target_process(True, proc.reg('r_rdp')['procid'], 'eval_in_frame', text, frame_idx)
+    if ex:
+        proc.throw(ex)
+    return res
 
 #### VMProcess
 
@@ -337,7 +345,7 @@ def prim_compiled_function_new_top_level(proc):
     return cfun
 
 def _create_closure(proc, text, outer, is_embedded):
-    cfun = proc.interpreter.compile_closure(proc, text,outer)
+    cfun = proc.interpreter.compile_closure(proc, text, outer)
     cfun['is_embedded'] = is_embedded #text is embeded in outter cfun?
     cfun['is_top_level'] = False
     return cfun
@@ -411,9 +419,9 @@ def _compiled_function_as_context_with_frame(cfun, proc, imod, frame):
     return ret
 
 def prim_compiled_function_as_context_with_frame(proc):
-    frame = proc.locals()['frame']
-    imod = proc.locals()['imodule']
-    return _compiled_function_as_context_with_frame(proc.reg('r_rp'), proc, imod, frame['self'])
+    frame = proc.locals()['frame']['self']
+    imod = frame['r_cp']['module']
+    return _compiled_function_as_context_with_frame(proc.reg('r_rp'), proc, imod, frame)
 
 def prim_compiled_function_as_context_with_vars(proc):
     var_dict = proc.locals()['vars']
@@ -450,6 +458,18 @@ def prim_context_get_env(proc):
         if k in env:
             ret[v] = env[k]
     return ret
+
+def _context_with_frame(proc, text, frame):
+    code = code = "fun() {" + text + "}"
+    imod = frame['r_cp']['module']
+    outer = proc.reg('r_cp')['compiled_function']
+    cfn = _create_closure(proc, code, outer, False)
+    return _compiled_function_as_context_with_frame(cfn, proc, imod, frame)
+
+def prim_context_with_frame(proc):
+    text = proc.locals()['text']
+    frame = proc.locals()['frame']
+    return _context_with_frame(proc, text, frame)
 
 def prim_function_apply(proc):
     # fn.apply([...args...])

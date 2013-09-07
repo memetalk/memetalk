@@ -26,7 +26,7 @@ from parser import MemeParser
 from loader import Loader
 from evaluator import Eval
 from prim import *
-from prim import _create_closure, _compiled_function_as_context_with_frame
+from prim import _create_closure, _compiled_function_as_context_with_frame, _context_with_frame
 import core_module as core
 from pdb import set_trace as br
 import traceback
@@ -972,7 +972,6 @@ class Process(multiprocessing.Process):
 
         self.entry = {} # data for executing the entry point
 
-        self.stack = []
         self.state = None
 
         self.flag_debug_on_exception = False
@@ -1165,16 +1164,16 @@ class Process(multiprocessing.Process):
         if id_eq(frame, self.tframe):
             return 0
         else:
-            return list(reversed(self.stack)).index(frame)
+            return list(reversed(self.all_stack_frames())).index(frame)
 
     def all_stack_frames(self):
-        return self.stack + [self.top_frame()]
+        return self.stack[1:] + [self.top_frame()]
 
     def frame_by_index(self, idx):
-        if len(self.stack) == idx:
+        if len(self.all_stack_frames()) == idx:
             return self.top_frame()
         else:
-            return self.stack[idx]
+            return self.all_stack_frames()[idx]
 
     def top_frame(self):
         return self.tframe
@@ -1256,11 +1255,23 @@ class Process(multiprocessing.Process):
         self.exception_protection.append(False)
         logger.debug("unprotected: running fn with no protection -- " + str(self.exception_protection))
         try:
-            return self.setup_and_run_fun(recv, drecv, name, method, args, should_allocate)
+            res = self.setup_and_run_fun(recv, drecv, name, method, args, should_allocate)
+            self.exception_protection.pop()
+            return res
         except:
             logger.debug("unprotected: fn raised: popping and reraise -- " + str(self.exception_protection))
             self.exception_protection.pop()
             raise
+
+    # def setup_and_run_protected(self, recv, drecv, name, method, args, should_allocate):
+    #     self.exception_protection.append(True)
+    #     logger.debug("protected: running fn with protection -- " + str(self.exception_protection))
+    #     try:
+    #         return (None, self.setup_and_run_fun(recv, drecv, name, method, args, should_allocate))
+    #     except MemetalkException as e:
+    #         logger.debug("protected: fn raised: popping and returning ex message -- " + str(self.exception_protection))
+    #         self.exception_protection.pop()
+    #         return (e.mmobj(), None)
 
     def do_send(self, receiver, selector, args):
         drecv, method = self._lookup(receiver, self.interpreter.get_vt(receiver), selector)
@@ -1549,6 +1560,23 @@ class Process(multiprocessing.Process):
                 logger.debug('target: received continue')
                 self.state = 'running'
                 return True
+            if msg['cmd'] == 'eval_in_frame':
+                text = msg['args'][0]
+                frame_index = msg['args'][1]
+
+                old_state = self.state
+                self.state = 'running'
+                try:
+                    self.exception_protection.append(True) #run in protected mode
+                    fn = _context_with_frame(self, text, self.all_stack_frames()[frame_index])
+                    val = self.setup_and_run_fun(None, None, fn['compiled_function']['name'], fn, [], True)
+                    res = (None, val)
+                except MemetalkException as e:
+                    res = (e.mmobj(), None)
+                self.exception_protection.pop()
+                ipc.put(self.channels['dbg'],  res)
+                self.state = old_state
+                return False
             if msg['cmd'] == 'reload_frame':
                 logger.debug('target: reload frame')
                 self.state = 'paused'
@@ -1576,28 +1604,6 @@ class Process(multiprocessing.Process):
                 logger.debug('updating object:')
                 UPDATE_OBJECT(obj)
                 return False
-            if msg['cmd'] == 'eval':
-                logger.debug('evaluating text:')
-                frame = self.frame_by_index(msg['args'][1])
-                # var cmod = get_compiled_module(imod);
-                cmod = self.interpreter.get_vt(self.reg('r_mp'))['compiled_module']
-                # var cfn = CompiledFunction.newClosure(code, thisContext.compiledFunction(), false);
-                code = "fun () { " + msg['args'][0] + "}"
-                cfn = _create_closure(self, code, self.reg('r_cp')['compiled_function'], False)
-                # var fn = cfn.asContextWithFrame(imod, frame);
-                fn = _compiled_function_as_context_with_frame(cfn, self, self.reg('r_mp'), frame)
-                logger.debug('setup_and_run_unprotected....')
-                old_state = self.state
-                self.state = 'running'
-                res = self.setup_and_run_unprotected(None, None, 'fn', fn, [], True)
-                logger.debug("eval result: " + P(res,1,True))
-                self.state = old_state
-                import pickle
-                obj = pickle.dumps(res)
-                ipc.put(self.channels['dbg'], obj)
-                logger.debug('done eval')
-                return False
-
         process_breakpoints()
 
         # intercepting while we are running:
@@ -1688,7 +1694,7 @@ class Process(multiprocessing.Process):
 
     def pp_stack_trace(self):
         st =  "\n**** Memetalk stack trace *** :\n"
-        for frame in self.stack:
+        for frame in self.all_stack_frames():
             if frame['r_cp']:
                 st = st +  (frame['r_cp']['compiled_function']['name'] + " :::" + str(frame['r_cp']['compiled_function']['body']))[0:80] + "...\n"
         if self.reg('r_cp'):

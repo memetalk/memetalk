@@ -88,6 +88,24 @@ init new: fun(parent, process) {
 instance_method setFrameIndex: fun(idx) {
   @frame_index = idx;
 }
+instance_method doIt: fun() {
+  try {
+    @process.evalInFrame(this.selectedText(), @frame_index);
+    // var frame = @process.stackFrames().get(@frame_index);
+    // var ctx = Context.withFrame(this.selectedText(), frame);
+    // ctx();
+  } catch(ex) {
+    this.insertSelectedText(ex.message());
+  }
+}
+instance_method printIt: fun() {
+  try {
+    var res = @process.evalInFrame(this.selectedText(), @frame_index);
+    this.insertSelectedText(res.toString());
+  } catch(ex) {
+    this.insertSelectedText(ex.message());
+  }
+}
 end //idez:DebuggerEditor
 
 class DebuggerUI < QMainWindow
@@ -149,7 +167,7 @@ init new: fun(process, ex, eventloop) {
   mainLayout.addLayout(hbox);
   this.setCentralWidget(centralWidget);
 
-  var execMenu = this.menuBar().addMenu("Debugging");
+  var execMenu = this.menuBar().addMenu("Debug");
   @execMenu = execMenu;
   var action = qt.QAction.new("Step Into", execMenu);
   action.setShortcut("F6");
@@ -200,48 +218,53 @@ init new: fun(process, ex, eventloop) {
   });
   execMenu.addAction(action);
 
-  execMenu = this.menuBar().addMenu("Exploring");
-  action = qt.QAction.new("Do it", this);
-  action.setShortcut("ctrl+d");
-  action.connect("triggered", fun() {
-    @editor.doIt();
+  execMenu = this.menuBar().addMenu("Edit");
+  @editor.editingActions.each(fun(ac) {
+    execMenu.addAction(ac);
   });
-  execMenu.addAction(action);
+  execMenu = this.menuBar().addMenu("Explore");
+  @editor.exploringActions.each(fun(ac) {
+    execMenu.addAction(ac);
+  });
 
-  action = qt.QAction.new("Print it", this);
-  action.setShortcut("ctrl+p");
-  action.connect("triggered", fun() {
-      @editor.printIt();
-  });
-  execMenu.addAction(action);
+  // action = qt.QAction.new("Do it", this);
+  // action.setShortcut("ctrl+d");
+  // action.connect("triggered", fun() {
+  //   @editor.doIt();
+  // });
+  // action.setShortcutContext(0); //widget context
+  // execMenu.addAction(action);
 
-  action = qt.QAction.new("Inspect it", this);
-  action.setShortcut("ctrl+i");
-  action.connect("triggered", fun() {
-      @editor.inspectIt()
-  });
-  execMenu.addAction(action);
+  // action = qt.QAction.new("Print it", this);
+  // action.setShortcut("ctrl+p");
+  // action.connect("triggered", fun() {
+  //     @editor.printIt();
+  // });
+  // action.setShortcutContext(0); //widget context
+  // execMenu.addAction(action);
 
-  action = qt.QAction.new("Debug it", this);
-  action.setShortcut("ctrl+b");
-  action.connect("triggered", fun() {
-      @editor.debugIt();
-  });
-  execMenu.addAction(action);
+  // action = qt.QAction.new("Inspect it", this);
+  // action.setShortcut("ctrl+i");
+  // action.connect("triggered", fun() {
+  //     @editor.inspectIt()
+  // });
+  // action.setShortcutContext(0); //widget context
+  // execMenu.addAction(action);
 
-  action = qt.QAction.new("Accept it", execMenu);
-  action.setShortcut("ctrl+x,a");
-  action.connect("triggered", fun() {
-      this.acceptIt();
-  });
-  execMenu.addAction(action);
+  // action = qt.QAction.new("Accept it", execMenu);
+  // action.setShortcut("ctrl+x,a");
+  // action.connect("triggered", fun() {
+  //     this.acceptIt();
+  // });
+  // action.setShortcutContext(0); //widget context
+  // execMenu.addAction(action);
 
-  action = qt.QAction.new("Save", execMenu);
-  action.setShortcut("ctrl+x,s");
-  action.connect("triggered", fun() {
-      this.save();
-  });
-  execMenu.addAction(action);
+  // action = qt.QAction.new("Save", execMenu);
+  // action.setShortcut("ctrl+x,s");
+  // action.connect("triggered", fun() {
+  //     this.save();
+  // });
+  // execMenu.addAction(action);
 
   @stackCombo.updateInfo();
 }
@@ -566,7 +589,7 @@ init new: fun(inspectee) {
       this.itemActivated(item);
   });
 
-  var execMenu = this.menuBar().addMenu("&Exploring");
+  var execMenu = this.menuBar().addMenu("Explore");
 
   var action = qt.QAction.new("Do it", this);
   action.setShortcut("ctrl+d");
@@ -1885,7 +1908,7 @@ init new: fun() {
   @editor.editingActions.each(fun(ac) {
     execMenu.addAction(ac);
   });
-  var execMenu = this.menuBar().addMenu("Exploring");
+  var execMenu = this.menuBar().addMenu("Explore");
   @editor.exploringActions.each(fun(ac) {
     execMenu.addAction(ac);
   });

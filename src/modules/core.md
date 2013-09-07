@@ -148,7 +148,7 @@ module core() {
     init newClosure: fun(text, outer_cfun, is_embedded) {
       <primitive "compiled_function_new_closure">
     }
-    instance_method asContextWithFrame: fun(imodule, frame) {
+    instance_method asContextWithFrame: fun(frame) {
       <primitive "compiled_function_as_context_with_frame">
     }
     instance_method asContextWithVars: fun(imodule, vars) {
@@ -240,6 +240,10 @@ module core() {
       var code = "fun() {" + text + "}";
       var cfn = CompiledFunction.newClosure(code, thisContext.compiledFunction(), false);
       return cfn.asContextWithVars(imod, vars);
+    }
+
+    class_method withFrame: fun(text, frame) {
+      <primitive "context_with_frame">
     }
   }
 
@@ -493,6 +497,9 @@ module core() {
     }
     instance_method stackFrames: fun() {
       <primitive "vmremoteprocess_stack_frames">
+    }
+    instance_method evalInFrame: fun(text, frame_index) {
+      <primitive "vmremoteprocess_eval_in_frame">
     }
   }
   class VMProcess {
