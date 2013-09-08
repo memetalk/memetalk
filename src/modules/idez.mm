@@ -20,8 +20,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 .endlicense
 
-.preamble(qt, foo, io)
-  foo : memetalk/foo/1.0();
+.preamble(qt, io)
   qt : memetalk/qt/1.0();
   io : memetalk/io/1.0();
   [QWidget, QMainWindow, QsciScintilla, QLineEdit, QComboBox, QTableWidget, QTableWidgetItem] <= qt;
