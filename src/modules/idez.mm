@@ -32,7 +32,7 @@ SOFTWARE.
 debug: fun(procid, exception) {
   io.print("::in idez:debug()");
   var app = qt.QApplication.new;
-  var dbg = DebuggerUI.new(VMRemoteProcess.new(procid), exception, app);
+  var dbg = DebuggerUI.new(VMRemoteProcess.new(procid), exception);
   dbg.show();
   return app.exec();
 }
@@ -114,13 +114,14 @@ instance_method inspectIt: fun() {
 end //idez:DebuggerEditor
 
 class DebuggerUI < QMainWindow
-fields: frame_index, process, exception, execFrames, stackCombo, editor, localVarList, fieldVarList, statusLabel, execMenu, shouldUpdateVars, eventloop;
-init new: fun(process, ex, eventloop) {
+fields: frame_index, process, exception, execFrames, stackCombo, editor, localVarList, fieldVarList, statusLabel, execMenu, shouldUpdateVars, continued;
+init new: fun(process, ex) {
   super.new();
   @process = process;
   @frame_index = 0;
   @exception = ex;
-  @eventloop = eventloop;
+
+  @continued = false;
 
   @shouldUpdateVars = false;
 
@@ -247,8 +248,10 @@ instance_method acceptIt: fun() {
 }
 
 instance_method continue: fun() {
+  @continued = true;
   this.close();
   @process.continue();
+  // if @process.continue return, means were are active  again
   @stackCombo.updateInfo();
   this.show();
 }
@@ -312,7 +315,9 @@ instance_method updateInfo: fun() {
   }
 }
 instance_method closeEvent: fun() {
-  this.continue();
+  if (!@continued) {
+    this.continue();
+  }
 }
 end //idez:DebuggerUI
 

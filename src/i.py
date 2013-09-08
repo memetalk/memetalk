@@ -814,16 +814,33 @@ class Interpreter():
         ipc.put(self.my_channel, 'dbg_done')
 
     def cmdproc_update_object(self, procid_origin, obj):
+        updated = False
         for _, proc in self.processes.iteritems():
             if proc.procid != procid_origin:
+                updated = True
                 logger.debug("SEND to proc " + str(proc.procid) + ": update object " + str(obj["@id"]))
                 ipc.put(proc.channels['my'], {'cmd': 'update_object', "value": obj})
+        if not updated:
+            logger.debug("Interpreter::cmd_update_object: no need to update " + str(obj["@id"]))
+
+    def cmdproc_update_cmodule(self, procid_origin, cmodule):
+        logger.debug("Interpreter: updating our cmodule...")
+        self.compiled_modules[cmodule['name']] = cmodule
+        updated = False
+        for _, proc in self.processes.iteritems():
+            if proc.procid != procid_origin:
+                updated = True
+                logger.debug("SEND to proc " + str(proc.procid) + ": update cmodule " + str(cmodule["@id"]))
+                ipc.put(proc.channels['my'], {'cmd': 'update_cmodule', "value": cmodule})
+        if not updated:
+            logger.debug("Interpreter::cmd_update_cmodule: no need to update " + str(cmodule["@id"]))
 
     def compiled_module_by_filename(self, proc, filename):
         module_name = filename[:-3]
         if module_name not in self.compiled_modules:
             source = self.open_module_file(filename).read()
             self.compiled_modules[module_name] =  ModuleLoader().compile_module(proc,module_name,source)
+            proc.call_interpreter(False, 'update_cmodule', proc.procid, self.compiled_modules[module_name])
         return self.compiled_modules[module_name]
 
     def compiled_module_by_filepath(self, proc, filepath):
@@ -831,6 +848,7 @@ class Interpreter():
         if module_name not in self.compiled_modules:
             source = open(filepath).read()
             self.compiled_modules[module_name] =  ModuleLoader().compile_module(proc,module_name,source)
+            proc.call_interpreter(False, 'update_cmodule', proc.procid, self.compiled_modules[module_name])
         return self.compiled_modules[module_name]
 
     def imodules(self):
@@ -1675,6 +1693,10 @@ class Process(multiprocessing.Process):
             if msg['cmd'] == 'update_object':
                 logger.debug(str(self.procid) + ": updating our version of object " + str(msg["value"]["@id"]))
                 self.interpreter.object_become(msg['value'])
+            if msg['cmd'] == 'update_cmodule':
+                cmod = msg['value']
+                logger.debug(str(self.procid) + ": updating our version of cmodule " + str(cmod["@id"]))
+                self.interpreter.compiled_modules[cmod['name']] = cmod
         process_breakpoints()
 
         # intercepting while we are running:
