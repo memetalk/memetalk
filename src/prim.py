@@ -136,20 +136,6 @@ def prim_vmremoteprocess_reload_frame(proc):
 
 #### VMProcess
 
-# def prim_vmprocess_spawn(proc):
-#     logger.debug('prim_vmprocess_spawn')
-#     procid = proc.call_interpreter(True, 'spawn')
-#     logger.debug('prim_vmprocess_spawn got id:')
-#     proc.reg('r_rdp')['id'] = procid
-#     return proc.reg('r_rp')
-
-# def prim_vmprocess_is_running(proc):
-#     return proc.is_alive()
-
-# def prim_vmprocess_spawn_with_fun(proc):
-#     _proc = proc.interpreter.spawn()
-#     _proc.setup('exec_fn_unprotected', proc.locals['fn'])
-#     return _proc
 
 # def prim_vmprocess_exec_module(proc):
 #     logger.debug('prim_vmprocess_exec_module')
@@ -169,12 +155,31 @@ def prim_vmremoteprocess_reload_frame(proc):
 def prim_vmprocess_current(proc):
     return proc.mm_self()
 
-def prim_vmprocess_debug(proc):
-    logger.debug("prim_vmprocess_debug")
+# def prim_vmprocess_spawn_and_run(proc):
+#     proc.call_interpreter(False, 'spawn_and_exec_fun', proc.locals()['fn'], [])
+
+def prim_vmprocess_spawn(proc):
+    logger.debug('prim_vmprocess_spawn')
+    procid = proc.call_interpreter(True, 'spawn')
+    logger.debug('prim_vmprocess_spawn got id:' + str(procid))
+    proc.reg('r_rdp')['procid'] = procid
+    return proc.reg('r_rp')
+
+def prim_vmprocess_run(proc):
+    proc.call_interpreter(True, 'proc_exec_fun', proc.reg('r_rdp')['procid'], proc.locals()['fn'], [])
+
+def prim_vmprocess_run_and_halt(proc):
+    proc.call_interpreter(True, 'proc_exec_fun', proc.reg('r_rdp')['procid'], proc.locals()['fn'], [], 'paused')
+
+def prim_vmprocess_is_running(proc):
+    return proc.is_alive()
+
+def prim_vmprocess_halt(proc):
+    logger.debug("prim_vmprocess_halt")
     assert(proc.reg('r_rdp')['procid'] == proc.procid)
     proc.debug_me()
 
-def prim_vmprocess_debug_fn(proc):
+def prim_vmprocess_halt_fn(proc):
     logger.debug("prim_vmprocess_debug_fn")
     assert(proc.reg('r_rdp')['procid'] == proc.procid)
     proc.debug_me()

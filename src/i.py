@@ -770,8 +770,14 @@ class Interpreter():
             getattr(self, 'cmdproc_' + msg['name'])(*msg['args'])
 
     def cmdproc_spawn(self):
-        logger.debug("interpreter_loop: SEND spawn")
+        logger.debug("interpreter_loop: SEND created procid")
         ipc.put(self.my_channel, self.spawn().procid)
+
+    def cmdproc_proc_exec_fun(self, procid, fn, args, state = 'running'):
+        self.processes[procid].setup('exec_fun', fn, args, state)
+        self.processes[procid].start()
+        logger.debug("interpreter_loop: SEND done exec_fun")
+        ipc.put(self.my_channel, 'done')
 
     def cmdproc_kill_process(self, procid):
         self.processes[procid].terminate()
@@ -782,9 +788,9 @@ class Interpreter():
         del self.processes[procid]
         self.maybe_exit()
 
-    def cmdproc_exec_module(self, procid, mname, fname, args):
-        proc = self.processes[procid]
-        proc.exec_module(mname + ".mm", fname, args)
+    # def cmdproc_exec_module(self, procid, mname, fname, args):
+    #     proc = self.processes[procid]
+    #     proc.exec_module(mname + ".mm", fname, args)
 
     def cmdproc_debug(self, procid, new_state, last_exception):
         # 1) pause procid
@@ -1091,11 +1097,36 @@ class Process(multiprocessing.Process):
         self.init_data()
         getattr(self, self.entry['name'])(*self.entry['args'])
 
+    def exec_fun(self, fn, args, state = 'running'):
+        try:
+            logger.debug(str(self.procid) + ': START exec_fun, state: ' + state)
+
+            self.state = 'running'
+
+            if state == 'paused':
+                self.debug_me()
+
+            ret = self.setup_and_run_fun(None,
+                                         None,
+                                         fn['compiled_function']['name'],
+                                         fn,
+                                         args, True)
+
+            print str(self.procid) + ": RETVAL: " + P(ret,1,True)
+        except MemetalkException as e:
+            print (str(self.procid) + ": Exception raised during exec_module : " + e.mmobj()['message'])
+            print (e.mmobj()['py_trace'])
+
+        if self.channels['dbg'] != None: # we have a debugger, kill it
+            self.call_interpreter(False, 'kill_process', self.shared['mydbg.pid'])
+
+        self.call_interpreter(False, 'process_terminated', self.procid)
+
     def exec_module(self, filename, entry, args, state = 'running'):
         try:
-            logger.debug('exec_module: ' + filename)
+            logger.debug(str(self.procid) + ': START exec_module: ' + filename)
             self.state = state
-            logger.debug('exec_module: getting compiled module...')
+            logger.debug(str(self.procid) + ': exec_module: getting compiled module...')
             compiled_module = self.interpreter.compiled_module_by_filename(self,filename)
             imodule = self.interpreter.instantiate_module(self, compiled_module, {}, self.interpreter.core_imod)
 
@@ -1105,9 +1136,9 @@ class Process(multiprocessing.Process):
                                          imodule[entry],
                                          args, True)
 
-            print "RETVAL: " + P(ret,1,True)
+            print str(self.procid) + ": RETVAL: " + P(ret,1,True)
         except MemetalkException as e:
-            print ("Exception raised during exec_module : " + e.mmobj()['message'])
+            print (str(self.procid) + ": Exception raised during exec_module : " + e.mmobj()['message'])
             print (e.mmobj()['py_trace'])
 
         if self.channels['dbg'] != None: # we have a debugger, kill it

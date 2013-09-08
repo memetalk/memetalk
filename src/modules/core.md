@@ -510,11 +510,14 @@ module core() {
   }
   class VMProcess {
     fields: procid;
-    instance_method debug: fun() {
-      <primitive "vmprocess_debug">
+    init spawn: fun() {
+      <primitive "vmprocess_spawn">
     }
-    instance_method debugFn: fun(fn) {
-      <primitive "vmprocess_debug_fn">
+    instance_method halt: fun() {
+      <primitive "vmprocess_halt">
+    }
+    instance_method haltFn: fun(fn) {
+      <primitive "vmprocess_halt_fn">
     }
     instance_method stackFrames: fun() {
       <primitive "vmprocess_stack_frames">
@@ -522,17 +525,20 @@ module core() {
     instance_method debugOnException: fun() {
       <primitive "vmprocess_debug_on_exception">
     }
+    instance_method run: fun(fn, args) {
+      <primitive "vmprocess_run">
+    }
+    instance_method runAndHalt: fun(fn, args) {
+      <primitive "vmprocess_run_and_halt">
+    }
+    instance_method isRunning: fun() {
+      <primitive "vmprocess_is_running">
+    }
     class_method current: fun() {
       <primitive "vmprocess_current">
     }
-    // init spawn: fun() {
-    //   <primitive "vmprocess_spawn">
-    // }
-    // instance_method isRunning: fun() {
-    //   <primitive "vmprocess_is_running">
-    // }
-    // class_method spawnWithFun: fun(fn) {
-    //   <primitive "vmprocess_spawn_with_fun">
+    // class_method spawnAndRun: fun(fn) {
+    //   <primitive "vmprocess_spawn_and_run">
     // }
     // instance_method stepOut: fun() {
     //   <primitive "vmprocess_step_out">

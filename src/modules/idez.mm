@@ -399,7 +399,7 @@ instance_method initActions: fun() {
   this.addAction(action);
   @exploring_actions.append(action);
 
-  var action = qt.QAction.new("*Do it", this);
+  var action = qt.QAction.new("Spawn and Do it", this);
   action.setShortcut("ctrl+shift+d");
   action.connect("triggered", fun() {
       this.spawnAndDoIt();
@@ -430,6 +430,16 @@ instance_method initActions: fun() {
   action.setShortcut("ctrl+b");
   action.connect("triggered", fun() {
       this.debugIt();
+  });
+  action.setShortcutContext(0); //widget context
+  this.addAction(action);
+  @exploring_actions.append(action);
+
+
+  var action = qt.QAction.new("Spawn and Debug it", this);
+  action.setShortcut("ctrl+shift+b");
+  action.connect("triggered", fun() {
+      this.spawnAndDebugIt();
   });
   action.setShortcutContext(0); //widget context
   this.addAction(action);
@@ -778,7 +788,7 @@ init new: fun(parent) {
 instance_method debugIt: fun() {
   try {
     var ctx = Context.withVars(this.selectedText(), @with_variables(), @with_imod());
-    VMProcess.current.debugFn(ctx);
+    VMProcess.current.haltFn(ctx);
     @on_finish(ctx.getEnv());
   } catch(ex) {
     this.insertSelectedText(ex.message());
@@ -824,14 +834,18 @@ instance_method printIt: fun() {
 instance_method spawnAndDoIt: fun() {
   try {
     var ctx = Context.withVars(this.selectedText(), @with_variables(), @with_imod());
-    var proc = VMProcess.spawnWithFun(ctx);
-    proc.start();
-    // set green light led
-    while (proc.isRunning()) {
-      qt.QApplication.instance.processEvent();
-    }
-    //turn off greenlight led
-    @on_finish(ctx.getEnv());
+    var proc = VMProcess.spawn();
+    proc.run(ctx, []);
+  } catch(ex) {
+    this.insertSelectedText(ex.message());
+  }
+}
+
+instance_method spawnAndDebugIt: fun() {
+  try {
+    var ctx = Context.withVars(this.selectedText(), @with_variables(), @with_imod());
+    var proc = VMProcess.spawn();
+    proc.runAndHalt(ctx, []);
   } catch(ex) {
     this.insertSelectedText(ex.message());
   }
@@ -1113,7 +1127,7 @@ instance_method action_debug: fun() {
       }
 
       var ctx = Context.withVars(expr, {}, imod);
-      VMProcess.current.debugFn(ctx);
+      VMProcess.current.haltFn(ctx);
     } catch(e) {
       @statusLabel.setText(e.message);
     }
@@ -1264,7 +1278,7 @@ instance_method action_editModuleParameters: fun() {
 }
 
 instance_method action_eval: fun() {
-  @miniBuffer.prompt("eval: ", "", fun(expr) {
+  @miniBuffer.prompt("Eval: ", "", fun(expr) {
     try {
       var imod = null;
       if (@imodule) {
@@ -1281,6 +1295,26 @@ instance_method action_eval: fun() {
   });
 }
 
+instance_method action_spawnAndEval: fun() {
+  @miniBuffer.prompt("Eval [spawn]: ", "", fun(expr) {
+    try {
+      var imod = null;
+      if (@imodule) {
+        imod = @imodule;
+      } else {
+        imod = thisModule;
+      }
+      var ctx = Context.withVars(expr, {}, imod);
+      @statusLabel.setText("Running spawn process...");
+      var proc = VMProcess.spawn();
+      proc.run(ctx, []);
+      @statusLabel.setText("");
+    } catch(e) {
+      @statusLabel.setText(e.message);
+    }
+  });
+}
+
 instance_method action_evalUntil: fun() {
   if (@current_cmodule == null) {
     @statusLabel.setText("No current module");
@@ -1291,7 +1325,7 @@ instance_method action_evalUntil: fun() {
     @statusLabel.setText("No function selected");
     return null;
   }
-  @miniBuffer.prompt("Eval*: ", "", fun(expr) {
+  @miniBuffer.prompt("Eval [until]: ", "", fun(expr) {
     try {
       var imod = null;
       if (@imodule) {
@@ -1437,6 +1471,14 @@ instance_method initActions: fun() {
   action.setShortcut("ctrl+x,e");
   action.connect("triggered", fun() {
     this.action_evalUntil();
+  });
+  action.setShortcutContext(1);
+  execMenu.addAction(action);
+
+  action = qt.QAction.new("Spawn and Eval", execMenu);
+  action.setShortcut("ctrl+c,e");
+  action.connect("triggered", fun() {
+    this.action_spawnAndEval();
   });
   action.setShortcutContext(1);
   execMenu.addAction(action);
