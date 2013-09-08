@@ -223,16 +223,28 @@ init new: fun(process, ex, eventloop) {
   @editor.exploringActions.each(fun(ac) {
     execMenu.addAction(ac);
   });
+
+  action = qt.QAction.new("Accept It", execMenu);
+  action.setShortcut("ctrl+x,a");
+  action.connect("triggered", fun() {
+    this.acceptIt();
+  });
+  execMenu.addAction(action);
+
   @stackCombo.updateInfo();
 }
 //end idez:DebuggerUI:new
 
 instance_method acceptIt: fun() {
   var text = @editor.text();
-  var cfun = @execFrames.frame(@frame_index).contextPointer.compiledFunction;
-  cfun.setCode(text);
-  @editor.saved();
-  @process.updateObject(cfun);
+  try {
+    var cfun = @execFrames.frame(@frame_index).contextPointer.compiledFunction;
+    cfun.setCode(text);
+    @editor.saved();
+    @process.updateObject(cfun);
+  } catch(ex) {
+    @editor.insertSelectedText(ex.message());
+  }
 }
 
 instance_method continue: fun() {
@@ -242,20 +254,7 @@ instance_method continue: fun() {
   this.show();
 }
 
-instance_method disableActions: fun() {
-  @execMenu.actions.each(fun(ac) {
-    ac.setEnabled(false);
-  });
-}
-
-instance_method enableActions: fun() {
-  @execMenu.actions.each(fun(ac) {
-    ac.setEnabled(true);
-  });
-}
-
 instance_method reloadFrame: fun() {
-  @exception = null;
   @process.reloadFrame(0);
   @stackCombo.updateInfo();
 }
@@ -285,13 +284,11 @@ instance_method save: fun() {
 }
 
 instance_method stepInto: fun() {
-  @statusLabel.setText("Stepping into...");
   @process.stepInto();
   @stackCombo.updateInfo();
 }
 
 instance_method stepOver: fun() {
-  @statusLabel.setText("Stepping over...");
   @process.stepOver();
   @stackCombo.updateInfo();
 }
@@ -598,8 +595,8 @@ init new: fun(inspectee) {
   execMenu.addAction(action);
   action.setShortcutContext(0); //widget context
 
-  action = qt.QAction.new("Accept it", execMenu);
-  action.setShortcut("ctrl+x,s");
+  action = qt.QAction.new("Accept It", execMenu);
+  action.setShortcut("ctrl+x,a");
   action.connect("triggered", fun() {
       this.acceptIt();
   });

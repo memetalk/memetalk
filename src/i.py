@@ -37,7 +37,6 @@ from mmpprint import P
 import multiprocessing
 from mobject import Dict, id_eq
 import ipc
-import weakref
 import atexit
 import sys
 import time
@@ -431,11 +430,23 @@ class Interpreter():
     def __init__(self):
         self.manager = multiprocessing.Manager()
 
-        self.compiled_modules = self.manager.dict()
+        self.shared = self.manager.Namespace()
+        self.shared.instance_ids = 0
 
+        # DON'T use manager.dict and stuff here!!
+        # each *access* to an entry of manager shit
+        # creates a different copy of the object.
+        #   ie. c = self.compiled_modules[module_name]
+        #       creates another copy of the cmodule into c!
+        # which means we end up with two versions of mm objects
+        # which means we can't track them to patch them
+
+        self.compiled_modules = {}
         self.imods = []
         self.interned_symbols = {}
-        self.instances = {} #TODO: make weakref work on this
+        self.instances_by_class = {} #[klass_id] = [i1, i2, ..., in]
+        self.objects = {}
+
         self.processes = {}
         self.procids = 0
 
@@ -753,12 +764,13 @@ class Interpreter():
         # the stack.
 
         while True:
-            logger.debug("interpreter_loop: waiting....")
+            logger.debug("interpreter_loop: WAIT....")
             msg = ipc.get(self.my_channel)
-            logger.debug("interpreter_loop: got: " + msg['name'])
+            logger.debug("interpreter_loop: RECV: " + msg['name'])
             getattr(self, 'cmdproc_' + msg['name'])(*msg['args'])
 
     def cmdproc_spawn(self):
+        logger.debug("interpreter_loop: SEND spawn")
         ipc.put(self.my_channel, self.spawn().procid)
 
     def cmdproc_kill_process(self, procid):
@@ -782,18 +794,24 @@ class Interpreter():
         dbgproc = self.spawn(procid)
         logger.debug('cmdproc_debug: debugger procid: ' + str(dbgproc.procid))
 
-        logger.debug('cmdproc_debug: changing state of target to:' + new_state)
         proc = self.processes[procid]
         proc.channels['dbg'] = dbgproc.channels['target_incoming']
         proc.shared['mydbg.pid'] = dbgproc.procid
-        ipc.put(proc.channels['my'], {'cmd': 'set_state', "value": new_state})
+        logger.debug('cmdproc_debug: SEND new state for target:' + new_state)
+        ipc.put(proc.channels['my'], {'cmd': 'dbg_break', 'value': new_state})
 
         logger.debug('cmdproc_debug: telling debugger to start() running idez::debug()')
 
         dbgproc.setup('exec_module', 'idez.mm', 'debug', [procid, last_exception])
         dbgproc.start()
-        logger.debug('cmdproc_debug: done')
-        ipc.put(self.my_channel, 'done')
+        logger.debug('interpreter: cmdproc_debug SEND dbg_done to who called us')
+        ipc.put(self.my_channel, 'dbg_done')
+
+    def cmdproc_update_object(self, procid_origin, obj):
+        for _, proc in self.processes.iteritems():
+            if proc.procid != procid_origin:
+                logger.debug("SEND to proc " + str(proc.procid) + ": update object " + str(obj["@id"]))
+                ipc.put(proc.channels['my'], {'cmd': 'update_object', "value": obj})
 
     def compiled_module_by_filename(self, proc, filename):
         module_name = filename[:-3]
@@ -898,26 +916,33 @@ class Interpreter():
         fields = klass["compiled_class"]["fields"]
         name = klass["compiled_class"]["name"]
         res = dict([(x,None) for x in fields] + {"_vt": klass, "_delegate":p, "@tag": name + " instance"}.items())
-        return self.new_object(res)
+
+        obj = self.new_object(res)
+        return obj
+
 
     def new_object(self, data = {}):
-        if type(data) == dict:
-            obj = Dict(data) #weak referenceable
-        else:
-            obj = data
+        assert(type(data) == dict)
+
+        obj = Dict(data)
+
         if '@id' in obj:
             raise Exception("BUG: @id already set")
 
-        obj['@id'] = id(obj)
+        obj['@id'] = self.shared.instance_ids
+        self.shared.instance_ids += 1
+
+        self.objects[obj['@id']] = obj
 
         # tracking instances associated to compiled classes
         # so we can patch them when meta modifications are made
         # to the class
         if '_vt' in obj and 'compiled_class' in obj['_vt']:
             key = obj['_vt']['compiled_class']['@id']
-            if key not in self.instances:
-                self.instances[key] = weakref.WeakValueDictionary()
-            self.instances[key][obj['@id']] = obj
+            if key not in self.instances_by_class:
+                self.instances_by_class[key] = {}
+            self.instances_by_class[key][obj['@id']] = obj
+
         return obj
 
     def alloc_object(self, klass, data):
@@ -937,6 +962,17 @@ class Interpreter():
             outer_cfun = outer_cfun['outer_cfun']
         return outer_cfun
 
+    def object_become(self, obj):
+        oid = obj['@id']
+        logger.debug("Become'ing an object: " + str(oid) + " :: " + str(id(obj)))
+        if oid in self.objects:
+            logger.debug("Become: object " + str(oid) + " found")
+            local = self.objects[oid]
+            local.clear()
+            local.update(obj)
+        else:
+            logger.debug("Become: obj not found, adding " + str(obj["@id"]))
+            self.objects[obj['@id']] = obj
 
 class Process(multiprocessing.Process):
     def __init__(self, interpreter, procid, target_channel = None):
@@ -1005,38 +1041,37 @@ class Process(multiprocessing.Process):
         self.volatile_breakpoints.append({"cfun":cfun, "line":line})
 
     def init_debugging_session(self):
-        logger.debug(str(self.procid) + ': init_debugging_session()')
+        logger.debug(str(self.procid) + ': init_debugging_session(). WAIT...')
         data = ipc.get(self.channels['target_incoming'])
-        logger.debug(str(self.procid) + ': should receive "done set_state":' + P(data,1,True))
+        logger.debug(str(self.procid) + ': RECV: should receive "done dbg_break":' + P(data,1,True))
         return self.receive_frames()
 
     def receive_frames(self):
-        logger.debug(str(self.procid) + ': receive_frames()')
+        logger.debug(str(self.procid) + ': receive_frames(). WAIT...')
         data = ipc.get(self.channels['target_incoming'])
-        logger.debug(str(self.procid) + ': received frames:' + P(data,1,True))
+        logger.debug(str(self.procid) + ': RECV: received frames:' + P(data,1,True))
         return data
 
     def call_target_process(self, block, procid, name, *args):
         logger.debug(str(self.procid) + ": Process::call_target_process()")
         logger.debug(str(self.procid) + ': queue empty?' + str(self.channels['target'].empty()))
-        logger.debug(str(self.procid) + ': queue full?' + str(self.channels['target'].full()))
-        logger.debug(str(self.procid) + ': putting data on queue....')
+        logger.debug(str(self.procid) + ': SEND putting data on queue....')
         ipc.put(self.channels['target'], {"cmd":name, "args": args})
         logger.debug(str(self.procid) + ': data sent. Should we block?' + str(block))
         if block:
-            logger.debug(str(self.procid) + ': call_target_process waiting for debugged process to answer')
+            logger.debug(str(self.procid) + ': call_target_process WAIT for debugged process to answer')
             data = ipc.get(self.channels['target_incoming'])#self.channels['my'].get()
-            logger.debug(str(self.procid) + ': debugger got data from target')
+            logger.debug(str(self.procid) + ': RECV debugger got data from target. returning it')
             return data
         logger.debug(str(self.procid) + "call_target_process() DONE")
 
     def call_interpreter(self, block, name, *args):
-        logger.debug('call_interpreter: ' + name)
+        logger.debug('call_interpreter SEND: ' + name)
         ipc.put(self.channels['interpreter'], {"name":name, "args":args})
         if block:
-            logger.debug('call_interpreter waiting for result')
+            logger.debug('call_interpreter WAITing for result')
             res = ipc.get(self.channels['interpreter'])
-            logger.debug('call_interpreter got result: ' + str(res))
+            logger.debug('call_interpreter RECV result: ' + str(res))
             return res
         else:
             return None
@@ -1540,13 +1575,20 @@ class Process(multiprocessing.Process):
                     return
 
         def process_dbg_msg(msg):
-            logger.debug(str(self.procid) + ': received from debugger: ' + P(msg,1,True))
+            logger.debug(str(self.procid) + ': received cmd: ' + P(msg,1,True))
+            if msg['cmd'] == 'dbg_break':
+                self.state = msg['value']
+                logger.debug(str(self.procid) + " dbg_control::dbg_break set state to paused")
+                logger.debug(str(self.procid) + " dbg_control::dbg_break SEND 'done dbg_break'")
+                ipc.put(self.channels['dbg'], 'done dbg_break')
+                return False
             if msg['cmd'] == 'set_state':
                 self.state = msg['value']
-                ipc.put(self.channels['dbg'], 'done set_state')
+                if self.state == 'running':
+                    return True
                 return False
             if msg['cmd'] == 'get_frames':
-                logger.debug('sending frames')
+                logger.debug(str(self.procid) + ' dbg_control::get_frames: SENDing frames')
                 ipc.put(self.channels['dbg'], self.all_stack_frames())
                 logger.debug('frames sent, we are done')
                 return False
@@ -1574,19 +1616,20 @@ class Process(multiprocessing.Process):
                 except MemetalkException as e:
                     res = (e.mmobj(), None)
                 self.exception_protection.pop()
+                logger.debug(str(self.procid) + ' dbg_control::eval_in_frame: SENDing result')
                 ipc.put(self.channels['dbg'],  res)
                 self.state = old_state
                 return False
             if msg['cmd'] == 'reload_frame':
-                logger.debug('target: reload frame')
+                logger.debug(str(self.procid) + ': reloading frame')
                 self.state = 'paused'
-                self.self.last_exception = None
+                self.last_exception = None
                 raise RewindException(1)
             if msg['cmd'] == 'rewind_and_break':
                 logger.debug('target: rewind_and_break')
 
                 self.state = 'running'
-                self.self.last_exception = None
+                self.last_exception = None
 
                 frames_count = msg['args'][0]
                 logger.debug('rewinding  this much of frames: ' + str(frames_count))
@@ -1599,28 +1642,27 @@ class Process(multiprocessing.Process):
                 self.break_at(self.reg('r_cp')['compiled_function'], to_line)
                 raise RewindException(frames_count)
             if msg['cmd'] == 'update_object':
-                import pickle
-                obj = pickle.loads(msg['args'][0])
-                logger.debug('updating object:')
-                UPDATE_OBJECT(obj)
-                return False
+                logger.debug(str(self.procid) + ": updating our version of object " + str(msg["value"]["@id"]))
+                self.interpreter.object_become(msg['value'])
         process_breakpoints()
 
         # intercepting while we are running:
         if self.state == 'running' and not self.channels['my'].empty():
-            logger.debug(str(self.procid) + ": dbg_control intercepted. receiving msg..")
+            logger.debug(str(self.procid) + ": cmd intercepted. WAIT..")
             msg = ipc.get(self.channels['my'])
+            logger.debug(str(self.procid) + ": cmd intercepted. RECV..")
             process_dbg_msg(msg)
 
 
         if self.state in ['paused', 'next', 'exception']:
             logger.debug(str(self.procid) + ": dbg_control paused! state: " + self.state)
-            logger.debug(str(self.procid) + ": dbg_control sending frames to debugger")
+            logger.debug(str(self.procid) + ": SEND frames to debugger")
             ipc.put(self.channels['dbg'], self.all_stack_frames())
             logger.debug(str(self.procid) + ": dbg_control entering cmd loop")
             while True:
-                logger.debug(str(self.procid) + ': waiting for debugger command')
+                logger.debug(str(self.procid) + ': WAIT for debugger command')
                 msg = ipc.get(self.channels['my'])
+                logger.debug(str(self.procid) + ': RECV command')
                 if process_dbg_msg(msg):
                     logger.debug(str(self.procid) + ": dbg_control resuming execution")
                     break

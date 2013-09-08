@@ -501,6 +501,12 @@ module core() {
     instance_method evalInFrame: fun(text, frame_index) {
       <primitive "vmremoteprocess_eval_in_frame">
     }
+    instance_method updateObject: fun(obj) {
+      <primitive "vmremoteprocess_update_object">
+    }
+    instance_method reloadFrame: fun(line) {
+      <primitive "vmremoteprocess_reload_frame">
+    }
   }
   class VMProcess {
     fields: procid;
@@ -533,12 +539,6 @@ module core() {
     // }
     // instance_method exec_module: fun(mname, fname, args) {
     //   <primitive "vmprocess_exec_module">
-    // }
-    // instance_method updateObject: fun(obj) {
-    //   <primitive "vmprocess_update_object">
-    // }
-    // instance_method reloadFrame: fun(line) {
-    //   <primitive "vmprocess_reload_frame">
     // }
     // instance_method rewindAndBreak: fun(frames_count, to_line) {
     //   <primitive "vmprocess_rewind_and_break">
