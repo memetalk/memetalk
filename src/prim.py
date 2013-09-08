@@ -185,7 +185,7 @@ def prim_vmprocess_halt_fn(proc):
     proc.debug_me()
     logger.debug("prim_vmprocess_debug_fn: calling fn...")
     fn = proc.locals()['fn']
-    return proc.setup_and_run_fun(None, None, fn['compiled_function']['name'], fn, [], True)
+    return proc.setup_and_run_unprotected(None, None, fn['compiled_function']['name'], fn, [], True)
 
 
 def prim_vmprocess_stack_frames(proc):
