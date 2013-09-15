@@ -955,6 +955,8 @@ class Process(multiprocessing.Process):
 
         self.mm_self_obj = None
 
+        self.shared = dshared.dict()
+
         self.channels = multiprocessing.Manager().dict()
 
         # channel where I talk to my interpreter

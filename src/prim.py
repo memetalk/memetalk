@@ -1104,6 +1104,10 @@ class _QMainWindow(QtGui.QMainWindow):
             fn = self.meme_obj['_vt']['dict']['closeEvent']
             self.get_proc().setup_and_run_fun(self.meme_obj, self.meme_obj, 'closeEvent', fn, [], True)
 
+    # dshared requires this hack
+    def __getattr__(self, name):
+        return self.__dict__[name]
+
 
 def prim_qt_qmainwindow_new(proc):
     #dshared is unable to store Process object. Indirection to the rescue
