@@ -40,6 +40,7 @@ import ipc
 import atexit
 import sys
 import time
+import dshared
 
 logger = logging.getLogger("i")
 
@@ -323,12 +324,12 @@ class ModuleLoader(ASTBuilder):
                                                                              "@tag":"a compiled function"}))
 
     def l_var_def(self, name):
-        self.env_id_table[-1][self.env_idx] = name
+        self.env_id_table[-1][str(self.env_idx)] = name
         self.env_idx = self.env_idx + 1
 
     def l_set_function_parameters(self, params):
         self.env_idx = 0
-        self.env_id_table[-1] = dict(zip(range(self.env_idx,self.env_idx+len(params)),params))
+        self.env_id_table[-1] = dict(zip(map(str,range(self.env_idx,self.env_idx+len(params))),params))
         self.env_idx = len(params)
         self.functions[-1]["params"] = params
 
@@ -341,7 +342,7 @@ class ModuleLoader(ASTBuilder):
         env_table = self.env_id_table.pop()
         if function["uses_env"]:
             function['env_table'] = env_table
-            function['env_table_skel'] =  dict(zip(range(0,self.env_idx),[None]*self.env_idx))
+            function['env_table_skel'] =  dict(zip(map(str,range(0,self.env_idx)),[None]*self.env_idx))
 
         fname = function["name"]
         if tp == "class_method" or tp == "constructor":
@@ -373,7 +374,8 @@ class ModuleLoader(ASTBuilder):
             self.functions.append(self.first_fnlit)
 
     def l_set_fun_literal_parameters(self, params):
-        self.env_id_table[-1] = dict(zip(range(self.env_idx,self.env_idx+len(params)),params))
+        self.env_id_table[-1] = dict(zip(map(str,range(self.env_idx,self.env_idx+len(params))),params))
+        #self.env_id_table[-1] = dict(zip(range(self.env_idx,self.env_idx+len(params)),params))
         self.env_idx = self.env_idx + len(params)
 
         self.functions[-1]["params"] = params
@@ -430,29 +432,19 @@ class Interpreter():
     def __init__(self):
         self.manager = multiprocessing.Manager()
 
-        self.shared = self.manager.Namespace()
-        self.shared.instance_ids = 0
-
-        # DON'T use manager.dict and stuff here!!
-        # each *access* to an entry of manager shit
-        # creates a different copy of the object.
-        #   ie. c = self.compiled_modules[module_name]
-        #       creates another copy of the cmodule into c!
-        # which means we end up with two versions of mm objects
-        # which means we can't track them to patch them
-
-        self.compiled_modules = {}
-        self.imods = []
-        self.interned_symbols = {}
-        self.instances_by_class = {} #[klass_id] = [i1, i2, ..., in]
-        self.objects = {}
+        self.shared = dshared.dict()
+        self.shared['instance_ids'] = 0
+        self.shared['compiled_modules'] = {}
+        self.shared['imods'] = []
+        self.shared['interned_symbols'] = {}
+        self.shared['instances_by_class'] = {} #[klass_id] = [i1, i2, ..., in]
 
         self.processes = {}
         self.procids = 0
 
-        self.core_imod = {}
+        self.core_imod = dshared.dict()
         core.init(self, self.core_imod)
-
+        self.shared['imods'].append(self.core_imod)
 
         self.my_channel = self.manager.Queue()
 
@@ -558,7 +550,7 @@ class Interpreter():
     def instantiate_module(self, proc, compiled_module, _args, parent_module):
         logger.debug("Instantiating module: " + compiled_module['name'])
         def setup_module_arguments(_args, compiled_module):
-            args = dict(_args)
+            args = dict(_args.items())
             # module's default argument
             for name,dp in compiled_module['default_params'].iteritems():
                 if name not in args.keys():
@@ -584,20 +576,12 @@ class Interpreter():
             len(compiled_module["compiled_classes"])+\
             len(compiled_module["compiled_functions"])
 
-        # puff
-        imod_dictionary = {"_compiledModule":self.function_from_cfunction(
-                self.create_compiled_function({
-                        'name':'_compiledModule',
-                        'params':[],
-                        'body': ['primitive', ['literal-string', 'module_instance_compiled_module']],
-                        '@tag': '<Module>._compiledModule compiled function'}),
-                self.core_imod)}
-
         # Module
         module = self.create_module({"_vt": self.core_imod['ModuleBehavior'],
-                                     "dict": imod_dictionary,
+                                     "dict": {},
                                      "compiled_module": compiled_module,
                                      "@tag":"Module " + compiled_module["name"]})
+        imod_dictionary = module['dict']
 
         # module instance
         imodule = self.new_object({"_vt": module,
@@ -681,7 +665,7 @@ class Interpreter():
         for name, val in args.iteritems():
             imodule[name] = val
 
-        self.imods.append(imodule)
+        self.shared['imods'].append(imodule)
         return imodule
 
     #####################
@@ -813,46 +797,22 @@ class Interpreter():
         logger.debug('interpreter: cmdproc_debug SEND dbg_done to who called us')
         ipc.put(self.my_channel, 'dbg_done')
 
-    def cmdproc_update_object(self, procid_origin, obj):
-        updated = False
-        for _, proc in self.processes.iteritems():
-            if proc.procid != procid_origin:
-                updated = True
-                logger.debug("SEND to proc " + str(proc.procid) + ": update object " + str(obj["@id"]))
-                ipc.put(proc.channels['my'], {'cmd': 'update_object', "value": obj})
-        if not updated:
-            logger.debug("Interpreter::cmd_update_object: no need to update " + str(obj["@id"]))
-
-    def cmdproc_update_cmodule(self, procid_origin, cmodule):
-        logger.debug("Interpreter: updating our cmodule...")
-        self.compiled_modules[cmodule['name']] = cmodule
-        updated = False
-        for _, proc in self.processes.iteritems():
-            if proc.procid != procid_origin:
-                updated = True
-                logger.debug("SEND to proc " + str(proc.procid) + ": update cmodule " + str(cmodule["@id"]))
-                ipc.put(proc.channels['my'], {'cmd': 'update_cmodule', "value": cmodule})
-        if not updated:
-            logger.debug("Interpreter::cmd_update_cmodule: no need to update " + str(cmodule["@id"]))
-
     def compiled_module_by_filename(self, proc, filename):
         module_name = filename[:-3]
-        if module_name not in self.compiled_modules:
+        if module_name not in self.shared['compiled_modules']:
             source = self.open_module_file(filename).read()
-            self.compiled_modules[module_name] =  ModuleLoader().compile_module(proc,module_name,source)
-            proc.call_interpreter(False, 'update_cmodule', proc.procid, self.compiled_modules[module_name])
-        return self.compiled_modules[module_name]
+            self.shared['compiled_modules'][module_name] =  ModuleLoader().compile_module(proc,module_name,source)
+        return self.shared['compiled_modules'][module_name]
 
     def compiled_module_by_filepath(self, proc, filepath):
         module_name = filepath
-        if module_name not in self.compiled_modules:
+        if module_name not in self.shared['compiled_modules']:
             source = open(filepath).read()
-            self.compiled_modules[module_name] =  ModuleLoader().compile_module(proc,module_name,source)
-            proc.call_interpreter(False, 'update_cmodule', proc.procid, self.compiled_modules[module_name])
-        return self.compiled_modules[module_name]
+            self.shared['compiled_modules'][module_name] =  ModuleLoader().compile_module(proc,module_name,source)
+        return self.shared['compiled_modules'][module_name]
 
     def imodules(self):
-        return self.imods
+        return self.shared['imods']
 
     def compile_module_lib(self, proc, name):
         compiled_module = self.compiled_module_by_filename(proc, name + '.mm')
@@ -894,11 +854,11 @@ class Interpreter():
             return self.core_imod['Object']
         elif isinstance(obj, basestring):
             return self.core_imod['String']
-        elif isinstance(obj, dict) and '_vt' not in obj:
+        elif isinstance(obj, (dict, dshared.dict)) and '_vt' not in obj:
             return self.core_imod['Dictionary']
         elif isinstance(obj, int) or isinstance(obj, long):
             return self.core_imod['Number']
-        elif isinstance(obj, list):
+        elif isinstance(obj, (list, dshared.list)):
             return self.core_imod['List']
         elif isinstance(obj, Process):
             return self.core_imod['VMProcess']
@@ -948,24 +908,22 @@ class Interpreter():
     def new_object(self, data = {}):
         assert(type(data) == dict)
 
-        obj = Dict(data)
+        obj = dshared.dict(data)
 
         if '@id' in obj:
             raise Exception("BUG: @id already set")
 
-        obj['@id'] = self.shared.instance_ids
-        self.shared.instance_ids += 1
-
-        self.objects[obj['@id']] = obj
+        obj['@id'] = str(self.shared['instance_ids'])
+        self.shared['instance_ids'] += 1
 
         # tracking instances associated to compiled classes
         # so we can patch them when meta modifications are made
         # to the class
         if '_vt' in obj and 'compiled_class' in obj['_vt']:
             key = obj['_vt']['compiled_class']['@id']
-            if key not in self.instances_by_class:
-                self.instances_by_class[key] = {}
-            self.instances_by_class[key][obj['@id']] = obj
+            if key not in self.shared['instances_by_class']:
+                self.shared['instances_by_class'][key] = {}
+            self.shared['instances_by_class'][key][obj['@id']] = obj
 
         return obj
 
@@ -975,9 +933,9 @@ class Interpreter():
         return self.new_object(dict(template.items() + data.items()))
 
     def interned_symbol_for(self, s):
-        if s not in self.interned_symbols:
-            self.interned_symbols[s] = self.alloc_object(self.core_imod['Symbol'], {'self':s})
-        return self.interned_symbols[s]
+        if s not in self.shared['interned_symbols']:
+            self.shared['interned_symbols'][s] = self.alloc_object(self.core_imod['Symbol'], {'self':s})
+        return self.shared['interned_symbols'][s]
 
     def shitty_get_module_from_cfunction(self, cfun):
         # I'm crying now...
@@ -985,18 +943,6 @@ class Interpreter():
         while outer_cfun['outer_cfun']:
             outer_cfun = outer_cfun['outer_cfun']
         return outer_cfun
-
-    def object_become(self, obj):
-        oid = obj['@id']
-        logger.debug("Become'ing an object: " + str(oid) + " :: " + str(id(obj)))
-        if oid in self.objects:
-            logger.debug("Become: object " + str(oid) + " found")
-            local = self.objects[oid]
-            local.clear()
-            local.update(obj)
-        else:
-            logger.debug("Become: obj not found, adding " + str(obj["@id"]))
-            self.objects[obj['@id']] = obj
 
 class Process(multiprocessing.Process):
     def __init__(self, interpreter, procid, target_channel = None):
@@ -1008,8 +954,6 @@ class Process(multiprocessing.Process):
         self.mydbg = None
 
         self.mm_self_obj = None
-
-        self.shared = multiprocessing.Manager().dict()
 
         self.channels = multiprocessing.Manager().dict()
 
@@ -1068,13 +1012,6 @@ class Process(multiprocessing.Process):
         logger.debug(str(self.procid) + ': init_debugging_session(). WAIT...')
         data = ipc.get(self.channels['target_incoming'])
         logger.debug(str(self.procid) + ': RECV: should receive "done dbg_break":' + P(data,1,True))
-        return self.receive_frames()
-
-    def receive_frames(self):
-        logger.debug(str(self.procid) + ': receive_frames(). WAIT...')
-        data = ipc.get(self.channels['target_incoming'])
-        logger.debug(str(self.procid) + ': RECV: received frames:' + P(data,1,True))
-        return data
 
     def call_target_process(self, block, procid, name, *args):
         logger.debug(str(self.procid) + ": Process::call_target_process()")
@@ -1317,7 +1254,7 @@ class Process(multiprocessing.Process):
             # normal fun using env, initialize one
             elif method["compiled_function"]["uses_env"] and \
                     id_eq(self.interpreter.get_vt(method), self.interpreter.core_imod['Function']):
-                self.reg('r_ep', dict(method["compiled_function"]['env_table_skel']))
+                self.reg('r_ep', dict(method["compiled_function"]['env_table_skel'].items()))
                 self.reg('r_ep')["r_rp"] = self.reg('r_rp')
                 self.reg('r_ep')["r_rdp"] = self.reg('r_rdp') # usually receivers are on stack.
                                                 # I need them here: when calling a
@@ -1636,11 +1573,6 @@ class Process(multiprocessing.Process):
                 if self.state == 'running':
                     return True
                 return False
-            if msg['cmd'] == 'get_frames':
-                logger.debug(str(self.procid) + ' dbg_control::get_frames: SENDing frames')
-                ipc.put(self.channels['dbg'], self.all_stack_frames())
-                logger.debug('frames sent, we are done')
-                return False
             if msg['cmd'] == 'step_into':
                 self.state = 'paused'
                 return True
@@ -1690,13 +1622,6 @@ class Process(multiprocessing.Process):
                 logger.debug('we will break at: ' + self.reg('r_cp')['compiled_function']['name'])
                 self.break_at(self.reg('r_cp')['compiled_function'], to_line)
                 raise RewindException(frames_count)
-            if msg['cmd'] == 'update_object':
-                logger.debug(str(self.procid) + ": updating our version of object " + str(msg["value"]["@id"]))
-                self.interpreter.object_become(msg['value'])
-            if msg['cmd'] == 'update_cmodule':
-                cmod = msg['value']
-                logger.debug(str(self.procid) + ": updating our version of cmodule " + str(cmod["@id"]))
-                self.interpreter.compiled_modules[cmod['name']] = cmod
         process_breakpoints()
 
         # intercepting while we are running:
@@ -1709,8 +1634,6 @@ class Process(multiprocessing.Process):
 
         if self.state in ['paused', 'next', 'exception']:
             logger.debug(str(self.procid) + ": dbg_control paused! state: " + self.state)
-            logger.debug(str(self.procid) + ": SEND frames to debugger")
-            ipc.put(self.channels['dbg'], self.all_stack_frames())
             logger.debug(str(self.procid) + ": dbg_control entering cmd loop")
             while True:
                 logger.debug(str(self.procid) + ': WAIT for debugger command')
@@ -1813,5 +1736,7 @@ if __name__ == "__main__":
     if 'DEBUG' in os.environ:
         logger.setLevel(logging.DEBUG)
     logger.addHandler(logging.StreamHandler(sys.stdout))
+
+    dshared.init("memetalk_shared",2 ** 25)
 
     Interpreter().start(sys.argv[1])

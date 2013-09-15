@@ -44,9 +44,8 @@ class ASTBuilder:
         node = ASTNode(ast, text, line, 0, line, 0)
         return node
 
-class ASTNode(list):
+class ASTNode():
     def __init__(self, lst, text, start_line, start_col, end_line, end_col):
-        list.__init__(self,lst)
         self.lst = lst
         self.text = text
         self.start_line = start_line
@@ -54,7 +53,50 @@ class ASTNode(list):
         self.end_line = end_line
         self.end_col = end_col
 
+    def __len__(self):
+        return len(self.lst)
+
+    def __getitem__(self, key):
+        return self.lst[key]
+
+    def __setitem__(self, key, val):
+        self.lst[key] = val
+
+    def __delitem__(self, key):
+        del self.lst[key]
+
+    def __iter__(self):
+        return self.lst.__iter__()
+
+    def __reversed__(self):
+        return self.lst.__reversed__()
+
+    def __contains__(self, item):
+        return item in self.lst
+
+    def __coerce__(self, other):
+        if hasattr(other, '__iter__'):
+            return (self, other)
+        return None
+
+    def __add__(self, other):
+        return self.lst + other
+
+    def __radd__(self, other):
+        return other + self.lst
+
+    def __str__(self):
+        return self.lst.__str__()
+
+    def __iter__(self):
+        return self.lst.__iter__()
+
     def __repr__(self):
         # this should be easy on the eyes
         # it should be used for stack traces and AST debugging
-        return P(self.lst,1, True)
+        return self.lst.__repr__()
+
+
+    # dshared requires this hack
+    def __getattr__(self, name):
+        return self.__dict__[name]

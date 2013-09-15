@@ -61,7 +61,7 @@ def prim_break_at(proc):
 
 def prim_import(proc):
     compiled_module = proc.interpreter.compiled_module_by_filename(proc.locals()["mname"])
-    args = dict(zip(compiled_module["params"],proc.locals()["margs"]))
+    args = dict(zip(compiled_module["params"],proc.locals()["margs"]).items())
     imodule = proc.interpreter.instantiate_module(compiled_module, args, proc.interpreter.kernel_module_instance())
     return imodule
 
@@ -121,11 +121,6 @@ def prim_vmremoteprocess_eval_in_frame(proc):
     if ex:
         proc.throw(ex)
     return res
-
-def prim_vmremoteprocess_update_object(proc):
-    obj = proc.locals()['obj']
-    logger.debug('prim_vmremoteprocess_update_object')
-    proc.call_interpreter(False, 'update_object', proc.procid, obj)
 
 def prim_vmremoteprocess_reload_frame(proc):
     logger.debug('prim_vmremoteprocess_reload_frame')
@@ -371,30 +366,40 @@ def prim_compiled_function_set_code(proc):
 
 # hackutility for as_context..
 class ProxyEnv():
+    # dshared requires this hack
+    def __getattr__(self, name):
+        return self.__dict__[name]
+
+    def __eq__(self, other):
+        return id(other) == id(self)
+
+    def __ne__(self, other):
+        return id(other) != id(self)
+
     def __init__(self, frame, cp_env_table):
         self.frame = frame
-        self.table = dict(cp_env_table)
+        self.table = dict(cp_env_table.items())
 
         self.i = len(self.table)
         for name in frame['locals'].keys():
-            self.table[self.i] = name
+            self.table[str(self.i)] = name
             self.i = self.i + 1
 
     def __getitem__(self, key):
-        if isinstance(key, (int, long)):
-            return self.frame['locals'][self.table[key]]
+        if isinstance(key, (int, long)) or (isinstance(key,str) and key.isdigit()):
+            return self.frame['locals'][self.table[str(key)]]
         else:
             #r_rdp,r_rp
             return self.frame[key]
 
     def __setitem__(self, key, val):
-        if isinstance(key, (int, long)):
-            self.frame['locals'][self.table[key]] = val
+        if isinstance(key, (int, long)) or (isinstance(key,str) and key.isdigit()):
+            self.frame['locals'][self.table[str(key)]] = val
         else:
             #r_rdp,r_rp
             self.frame[key] = val
     def __contains__(self, item):
-        return item in ['r_rdp', 'r_rp'] + range(0,self.i)
+        return item in ['r_rdp', 'r_rp'] + map(str,range(0,self.i))
 
     def __iter__(self):
         ret = {}
@@ -413,8 +418,8 @@ def _compiled_function_as_context_with_frame(cfun, proc, imod, frame):
         # now we have a frame, so it's cp should be our outer_cfun! :(
         cfun['outer_cfun'] = frame['r_cp']['compiled_function']
         # patching our env_table's indexes
-        begin = max(cfun['outer_cfun']['env_table'].keys()) + 1
-        cfun['env_table'] = dict([(x+begin,y) for x,y in cfun['env_table'].iteritems()])
+        begin = max(map(int,cfun['outer_cfun']['env_table'].keys())) + 1
+        cfun['env_table'] = dict([(str(int(x)+begin),y) for x,y in cfun['env_table'].iteritems()])
     else:
         env = ProxyEnv(frame, cfun['env_table'])
         cfun['env_table'] = env.table # patching the env_table
@@ -428,14 +433,14 @@ def prim_compiled_function_as_context_with_frame(proc):
 
 def prim_compiled_function_as_context_with_vars(proc):
     var_dict = proc.locals()['vars']
-    env = dict(var_dict) # we do 'del' below, lets no fuck with the parameter
+    env = dict(var_dict.items()) # we do 'del' below, lets no fuck with the parameter
     if 'this' in env: #another hack for binding this
         this = env['this']
         del env['this']
     else:
         this = None
     begin = len(proc.reg('r_rp')['env_table'])
-    proc.reg('r_rp')['env_table'].update(dict(zip(range(begin,begin+len(env.keys())), env.keys())))
+    proc.reg('r_rp')['env_table'].update(dict(zip(map(str,range(begin,begin+len(env.keys()))), env.keys())))
     env = dict([(key,env[name]) for key,name in proc.reg('r_rp')['env_table'].iteritems() if name in env])
     env['r_rdp'] = env['r_rp'] = this
     ret = proc.interpreter.compiled_function_to_context(proc.reg('r_rp'), env, proc.locals()['imodule'])
@@ -454,8 +459,8 @@ def prim_context_get_env(proc):
     #warning 2: only the outer env is returned (closures declaring variables
     #                                            are not contemplated. its
     #                                            a TODO).
-    env = dict(proc.reg('r_rdp')['env'])
-    env_table = dict(proc.reg('r_rdp')['compiled_function']['env_table'])
+    env = dict(proc.reg('r_rdp')['env'].items())
+    env_table = dict(proc.reg('r_rdp')['compiled_function']['env_table'].items())
     ret = {}
     for k,v in env_table.items():
         if k in env:
@@ -541,22 +546,18 @@ def prim_compiled_class_rename(proc):
     cmod = klass['module']
 
     klass['name'] = new_name
-    proc.call_interpreter(False, 'update_object', proc.procid, klass)
 
     del cmod['compiled_classes'][old_name]
     cmod['compiled_classes'][new_name] = klass
-    proc.call_interpreter(False, 'update_object', proc.procid, cmod)
 
     for imod in proc.interpreter.imodules():
         if id_eq(imod['_vt']['compiled_module'], cmod):
             iklass = imod[old_name]
             del imod[old_name]
             imod[new_name] = iklass
-            proc.call_interpreter(False, 'update_object', proc.procid, imod)
 
             del imod['_vt']['dict'][old_name] # del accessor
             imod['_vt']['dict'][new_name] = proc.interpreter.create_accessor_method(imod, new_name)
-            proc.call_interpreter(False, 'update_object', proc.procid, imod['_vt'])
 
     return proc.reg('r_rp')
 
@@ -571,13 +572,11 @@ def prim_compiled_class_set_fields(proc):
     rm =  diff(klass['fields'], fields)
     add = diff(fields, klass['fields'])
 
-    for _, obj in proc.interpreter.instances_by_class[klass['@id']].iteritems():
+    for _, obj in proc.interpreter.shared['instances_by_class'][klass['@id']].iteritems():
         for f in rm: del obj[f]
         for f in add: obj[f] = None
-        proc.call_interpreter(False, 'update_object', proc.procid, obj)
 
     klass['fields'] = fields
-    proc.call_interpreter(False, 'update_object', proc.procid, klass)
 
 def prim_compiled_class_class_methods(proc):
     return dict([(name, cfun) for name,cfun in proc.reg('r_rdp')['own_methods'].iteritems() if not cfun['is_ctor']])
@@ -585,8 +584,6 @@ def prim_compiled_class_class_methods(proc):
 def prim_compiled_class_add_method(proc):
     cfun = proc.locals()['cfun']
     flag = proc.locals()['flag']
-
-    proc.call_interpreter(False, 'update_object', proc.procid, cfun)
 
     # add the function to the compiled class
     if flag['self'] == 'instance_method':
@@ -596,20 +593,18 @@ def prim_compiled_class_add_method(proc):
     else:
         proc.throw_with_message("Unknown flag: " + P(flag,1,True))
 
-    proc.call_interpreter(False, 'update_object', proc.procid, proc.reg('r_rdp'))
 
     # add the function to the instantiated classes:
     for imod in proc.interpreter.imodules():
-        if id_eq(imod['_vt']['compiled_module'], proc.reg('r_rdp')['module']):
+        a = imod['_vt']['compiled_module']
+        b = proc.reg('r_rdp')['module']
+        if id_eq(a, b):
             fun = proc.interpreter.function_from_cfunction(cfun, imod)
-            proc.call_interpreter(False, 'update_object', proc.procid, fun)
 
             if flag['self'] == 'instance_method':
                 imod[proc.reg('r_rdp')['name']]['dict'][cfun['name']] = fun
-                proc.call_interpreter(False, 'update_object', proc.procid, imod[proc.reg('r_rdp')['name']])
             else:
                 imod[proc.reg('r_rdp')['name']]['_vt']['dict'][cfun['name']] = fun
-                proc.call_interpreter(False, 'update_object', proc.procid, imod[proc.reg('r_rdp')['name']]['_vt'])
 
     return proc.reg('r_rp')
 
@@ -624,17 +619,13 @@ def prim_compiled_class_remove_method(proc):
     else:
         del proc.reg('r_rdp')['own_methods'][name]
 
-    proc.call_interpreter(False, 'update_object', proc.procid, proc.reg('r_rdp'))
-
     # removing function from instances:
     for imod in proc.interpreter.imodules():
         if id_eq(imod['_vt']['compiled_module'], proc.reg('r_rdp')['module']):
             if flag['self'] == 'instance_method':
                 del imod[proc.reg('r_rdp')['name']]['dict'][name]
-                proc.call_interpreter(False, "update_object", proc.procid, imod[proc.reg('r_rdp')['name']])
             else:
                 del imod[proc.reg('r_rdp')['name']]['_vt']['dict'][name]
-                proc.call_interpreter(False, "update_object", proc.procid, imod[proc.reg('r_rdp')['name']]['_vt'])
 
 def prim_compiled_class_method_flag(proc):
     if proc.locals()['cfun'] in proc.reg('r_rdp')['methods'].values():
@@ -669,7 +660,8 @@ def prim_mirror_vt(proc):
     return proc.interpreter.get_vt(proc.locals()['obj'])
 
 def prim_list_ctor(proc):
-    proc.reg('r_rdp').extend(proc.locals()['lst'])
+    for x in proc.locals()['lst']:
+         proc.reg('r_rdp').append(x)
     return proc.reg('r_rp')
 
 def prim_list_each(proc):
@@ -729,41 +721,32 @@ def prim_compiled_module_remove_function(proc):
 
     # removing function from compiled module
     del cmod['compiled_functions'][name]
-    proc.call_interpreter(False, 'update_object', proc.procid, cmod)
 
     # removing function from instances:
     for imod in proc.interpreter.imodules():
         if id_eq(imod['_vt']['compiled_module'], cmod):
             # remove the getter...
             del imod['_vt']['dict'][name]
-            proc.call_interpreter(False, 'update_object', proc.procid, imod['_vt'])
             # ...and the python dict field
             del imod[name]
-            proc.call_interpreter(False, 'update_object', proc.procid, imod)
 
 def prim_compiled_module_add_function(proc):
     cfun = proc.locals()['cfun']
     cmod = proc.reg('r_rdp')
 
-    proc.call_interpreter(False, 'update_object', proc.procid, cfun)
-
     # add the function to the compiled module
     cmod['compiled_functions'][cfun['name']] = cfun
-    proc.call_interpreter(False, 'update_object', proc.procid, cmod)
 
     # add the function to the module instances:
     for imod in proc.interpreter.imodules():
         if id_eq(imod['_vt']['compiled_module'], cmod):
             fun = proc.interpreter.function_from_cfunction(cfun, imod)
-            proc.call_interpreter(False, 'update_object', proc.procid, fun)
 
             # add the getter
             imod['_vt']['dict'][cfun['name']] = fun
-            proc.call_interpreter(False, 'update_object', proc.procid, imod['_vt'])
 
             # add the function to the dict:
             imod[cfun['name']] = fun
-            proc.call_interpreter(False, 'update_object', proc.procid, imod)
 
 def prim_compiled_module_new_class(proc):
     name = proc.locals()['name']
@@ -773,11 +756,7 @@ def prim_compiled_module_new_class(proc):
                                                     "super_class_name":super_name,
                                                     "module": cmod})
 
-    proc.call_interpreter(False, 'update_object', proc.procid, klass)
-
     cmod['compiled_classes'][name] = klass
-    proc.call_interpreter(False, 'update_object', proc.procid, cmod)
-
     for imod in proc.interpreter.imodules():
         if id_eq(imod['_vt']['compiled_module'], cmod):
             cb = proc.interpreter.new_object({"_vt": proc.interpreter.get_core_class("Behavior"),
@@ -785,18 +764,12 @@ def prim_compiled_module_new_class(proc):
                                               "dict": {},
                                               "@tag": name + "Behavior"})
 
-            proc.call_interpreter(False, 'update_object', proc.procid, cb)
-
             imod['_vt']['dict'][name] = proc.interpreter.create_accessor_method(imod, name)
-            proc.call_interpreter(False, 'update_object', proc.procid, imod['_vt'])
-
             imod[name] = proc.interpreter.create_class({"_vt": cb,
                                                         "parent": proc.interpreter.get_core_class("Object"),
                                                         "dict": {},
                                                         "compiled_class": klass,
                                                         "@tag": name + " Class"})
-            proc.call_interpreter(False, 'update_object', proc.procid, imod[name])
-            proc.call_interpreter(False, 'update_object', proc.procid, imod)
 
     return klass
 
@@ -806,10 +779,7 @@ def prim_compiled_module_add_class(proc):
     cmod = proc.reg('r_rdp')
     klass['module'] = cmod
 
-    proc.call_interpreter(False, 'update_object', proc.procid, klass)
-
     cmod['compiled_classes'][name] = klass
-    proc.call_interpreter(False, 'update_object', proc.procid, cmod)
 
     for imod in proc.interpreter.imodules():
         if id_eq(imod['_vt']['compiled_module'], cmod):
@@ -818,18 +788,13 @@ def prim_compiled_module_add_class(proc):
                                               "dict": proc.interpreter.compiled_functions_to_functions(klass["own_methods"], imod),
                                               "@tag": name + "Behavior"})
 
-            proc.call_interpreter(False, 'update_object', proc.procid, cb)
 
             imod['_vt']['dict'][name] = proc.interpreter.create_accessor_method(imod, name)
-            proc.call_interpreter(False, 'update_object', proc.procid, imod['_vt'])
-
             imod[name] = proc.interpreter.create_class({"_vt": cb,
                                                         "parent": proc.interpreter.get_core_class("Object"),
                                                         "dict": {},
                                                         "compiled_class": klass,
                                                         "@tag": name + " Class"})
-            proc.call_interpreter(False, 'update_object', proc.procid, imod[name])
-            proc.call_interpreter(False, 'update_object', proc.procid, imod)
 
     return klass
 
@@ -839,15 +804,12 @@ def prim_compiled_module_remove_class(proc):
     cmod = proc.reg('r_rdp')
 
     del cmod['compiled_classes'][name]
-    proc.call_interpreter(False, 'update_object', proc.procid, cmod)
 
     # removing function from instances:
     for imod in proc.interpreter.imodules():
         if id_eq(imod['_vt']['compiled_module'], cmod):
             del imod[name]
             del imod['_vt']['dict'][name]
-            proc.call_interpreter(False, 'update_object', proc.procid, imod['_vt'])
-            proc.call_interpreter(False, 'update_object', proc.procid, imod)
 
     return proc.reg('r_rp')
 
@@ -862,8 +824,6 @@ def prim_compiled_module_set_default_parameter(proc):
     # really simplorious, for the moment
     proc.reg('r_rdp')['default_params'][proc.locals()['name']] = \
         {'name': proc.locals()['name'], 'type':'lib','value':proc.locals()['m']}
-
-    proc.call_interpreter(False, 'update_object', proc.procid, proc.reg('r_rdp'))
 
     return proc.reg('r_rp')
 
@@ -1939,7 +1899,7 @@ def prim_exception_unprotected(proc):
 
 def prim_test_import(proc):
     cmod = proc.interpreter.compiled_module_by_filepath(proc, proc.locals()['filepath'])
-    return proc.interpreter.instantiate_module(proc, cmod, [], proc.reg('r_cp')['module'])
+    return proc.interpreter.instantiate_module(proc, cmod, {}, proc.reg('r_cp')['module'])
 
 
 def prim_http_get(proc):
