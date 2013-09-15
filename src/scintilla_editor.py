@@ -63,7 +63,7 @@ class MemeQsciScintilla(QsciScintilla):
         self.bg_margin_saved =  QColor("#C5CBE3")
 
         self.CURRENT_LINE_MARKER = 8
-        self.CURRENT_RANGE_IND = self.indicatorDefine(self.INDIC_DOTBOX)
+        self.CURRENT_RANGE_IND = str(self.indicatorDefine(self.INDIC_DOTBOX))
 
         self.indicators = {self.CURRENT_RANGE_IND: None}
 
@@ -106,8 +106,8 @@ class MemeQsciScintilla(QsciScintilla):
         self.setMarginLineNumbers(0, True)
         self.setMarginsBackgroundColor(self.bg_margin_saved)
 
-        self.markerDefine(QsciScintilla.RightArrow,self.CURRENT_LINE_MARKER)
-        self.setMarkerBackgroundColor(QColor("blue"),self.CURRENT_LINE_MARKER)
+        self.markerDefine(QsciScintilla.RightArrow,int(self.CURRENT_LINE_MARKER))
+        self.setMarkerBackgroundColor(QColor("blue"),int(self.CURRENT_LINE_MARKER))
 
         # Brace matching: enable for a brace immediately before or after
         # the current position
@@ -137,8 +137,8 @@ class MemeQsciScintilla(QsciScintilla):
 
     def paused_at_line(self, start_line, start_col, end_line, end_col):
         # margin arrow
-        self.markerDeleteAll(self.CURRENT_LINE_MARKER)
-        self.markerAdd(start_line, self.CURRENT_LINE_MARKER)
+        self.markerDeleteAll(int(self.CURRENT_LINE_MARKER))
+        self.markerAdd(start_line, int(self.CURRENT_LINE_MARKER))
         # highlight expression
         if self.indicators[self.CURRENT_RANGE_IND]:
             ind = self.indicators[self.CURRENT_RANGE_IND]

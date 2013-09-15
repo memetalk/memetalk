@@ -907,35 +907,40 @@ def prim_exit(proc):
 def qt_identity(x):
     return str(x) + "::" + str(id(x))
 
-QApplication.__reduce__ = lambda self: (qt_identity, (str(self),))
-QWidget.__reduce__ = lambda self: (qt_identity, (str(self),))
+# dshared requires this hack
+def qt__getattr__(self, name):
+    return self.__dict__[name]
+
+QApplication.__getattr__ = qt__getattr__
+QWidget.__getattr__ = qt__getattr__
 #_QMainWindow
-QMainWindow.__reduce__ = lambda self: (qt_identity, (str(self),))
-QPlainTextEdit.__reduce__ = lambda self: (qt_identity, (str(self),))
-QMenu.__reduce__ = lambda self: (qt_identity, (str(self),))
-QMenuBar.__reduce__ = lambda self: (qt_identity, (str(self),))
-QAction.__reduce__ = lambda self: (qt_identity, (str(self),))
-QShortcut.__reduce__ = lambda self: (qt_identity, (str(self),))
-QTextCursor.__reduce__ = lambda self: (qt_identity, (str(self),))
-QLayout.__reduce__ = lambda self: (qt_identity, (str(self),))
-QVBoxLayout.__reduce__ = lambda self: (qt_identity, (str(self),))
-QHBoxLayout.__reduce__ = lambda self: (qt_identity, (str(self),))
-QListWidget.__reduce__ = lambda self: (qt_identity, (str(self),))
-QListWidgetItem.__reduce__ = lambda self: (qt_identity, (str(self),))
-QLineEdit.__reduce__ = lambda self: (qt_identity, (str(self),))
-QLabel.__reduce__ = lambda self: (qt_identity, (str(self),))
-QHeaderView.__reduce__ = lambda self: (qt_identity, (str(self),))
-QComboBox.__reduce__ = lambda self: (qt_identity, (str(self),))
-QTableWidget.__reduce__ = lambda self: (qt_identity, (str(self),))
-QTableWidgetItem.__reduce__ = lambda self: (qt_identity, (str(self),))
-QWebView.__reduce__ = lambda self: (qt_identity, (str(self),))
-QWebPage.__reduce__ = lambda self: (qt_identity, (str(self),))
-QWebFrame.__reduce__ = lambda self: (qt_identity, (str(self),))
-QWebElement.__reduce__ = lambda self: (qt_identity, (str(self),))
-QUrl.__reduce__ = lambda self: (qt_identity, (str(self),))
-scintilla_editor.MemeQsciScintilla.__reduce__ = lambda self: (qt_identity, (str(self),))
+QMainWindow.__getattr__ = qt__getattr__
+QPlainTextEdit.__getattr__ = qt__getattr__
+QMenu.__getattr__ = qt__getattr__
+QMenuBar.__getattr__ = qt__getattr__
+QAction.__getattr__ = qt__getattr__
+QShortcut.__getattr__ = qt__getattr__
+QTextCursor.__getattr__ = qt__getattr__
+QLayout.__getattr__ = qt__getattr__
+QVBoxLayout.__getattr__ = qt__getattr__
+QHBoxLayout.__getattr__ = qt__getattr__
+QListWidget.__getattr__ = qt__getattr__
+QListWidgetItem.__getattr__ = qt__getattr__
+QLineEdit.__getattr__ = qt__getattr__
+QLabel.__getattr__ = qt__getattr__
+QHeaderView.__getattr__ = qt__getattr__
+QComboBox.__getattr__ = qt__getattr__
+QTableWidget.__getattr__ = qt__getattr__
+QTableWidgetItem.__getattr__ = qt__getattr__
+QWebView.__getattr__ = qt__getattr__
+QWebPage.__getattr__ = qt__getattr__
+QWebFrame.__getattr__ = qt__getattr__
+QWebElement.__getattr__ = qt__getattr__
+QUrl.__getattr__ = qt__getattr__
+scintilla_editor.__getattr__ = qt__getattr__
 
 def prim_qt_qapplication_new(proc):
+
     global _qt_imodule
     _qt_imodule = proc.reg('r_mp')
     proc.reg('r_rdp')['self'] = QApplication(sys.argv)
@@ -1089,19 +1094,22 @@ def prim_qt_qwidget_has_focus(proc):
 # QMainWindow
 
 class _QMainWindow(QtGui.QMainWindow):
-    def __init__(self, proc, meme_obj, parent=None):
+    def __init__(self, get_proc, meme_obj, parent=None):
         super(QMainWindow, self).__init__(parent)
         self.meme_obj = meme_obj
-        self.proc = proc
+        self.get_proc = get_proc
 
     def closeEvent(self, ev):
         if 'closeEvent' in self.meme_obj['_vt']['dict']:
             fn = self.meme_obj['_vt']['dict']['closeEvent']
-            self.proc.setup_and_run_fun(self.meme_obj, self.meme_obj, 'closeEvent', fn, [], True)
+            self.get_proc().setup_and_run_fun(self.meme_obj, self.meme_obj, 'closeEvent', fn, [], True)
 
 
 def prim_qt_qmainwindow_new(proc):
-    proc.reg('r_rdp')['self'] = _QMainWindow(proc, proc.reg('r_rp'))
+    #dshared is unable to store Process object. Indirection to the rescue
+    def get_proc():
+        return proc
+    proc.reg('r_rdp')['self'] = _QMainWindow(get_proc, proc.reg('r_rp'))
     return proc.reg('r_rp')
 
 

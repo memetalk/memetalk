@@ -293,7 +293,7 @@ class ModuleLoader(ASTBuilder):
         self.current_module['default_params'][name] = {'name': name, 'type':'uri','value':spec[1]}
 
     def l_module_alias(self, libname, aliases):
-        self.current_module['aliases'].append((libname, aliases))
+        self.current_module['aliases'].append([libname, aliases])
 
     def l_begin_class(self, name, super_class, fields):
         self.current_class = self.interpreter.create_compiled_class({"name":name,
@@ -1737,6 +1737,6 @@ if __name__ == "__main__":
         logger.setLevel(logging.DEBUG)
     logger.addHandler(logging.StreamHandler(sys.stdout))
 
-    dshared.init("memetalk_shared",2 ** 25)
+    dshared.init("memetalk_shared",2 ** 28)
 
     Interpreter().start(sys.argv[1])
