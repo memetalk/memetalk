@@ -7,29 +7,32 @@ A rationale for this project may be found at the [wiki][1]
 [1]: https://github.com/thiago-silva/memetalk/wiki
 
 ## List of dependencies
-memetalk is currently developed in python, so it's recommended for you to create a
-[virtualenv](http://docs.python-guide.org/en/latest/dev/virtualenvs.html#virtualenvwrapper)
-to maintain your python dependencies.
+
+Memetalk is currently developed in python, so it's recommended for you to
+create a [virtualenv][2] to maintain your python dependencies.
 
  * Python (I'm using 2.7.5)
- * Python Greenlets
- * Python jinja2
- * QT (with python bindings)
+ * jinja2
+ * Qt (with python bindings)
  * QScintila2 (with python bindings)
+ * dshared library (and its dependencies)
+
+[2]: http://docs.python-guide.org/en/latest/dev/virtualenvs.html#virtualenvwrapper
 
 ### Debian-like systems
-The line below will install all the dependencies recursively
+The line below will install apt-available dependencies recursively:
 
-* `# aptitude install python-qscintilla2 python-greenlet python-jinja2`
+* `# aptitude install python-qscintilla2 python-jinja2 libboost-all-dev python-dev`
 
 ### Mac OS X
 * `$ brew install python pyqt qscintilla2`
-* `pip install greenlet`
-* `pip install jinja2`
+* `$ pip install jinja2`
 
 ### All systems
  * Clone `pymeta` from https://github.com/thiago-silva/pymeta.git
- * Run `python setup.py install` in the `pymeta` dir after cloning
+ * `# python setup.py install` in the `pymeta` dir after cloning
+ * Clone `dshared` from https://github.com/thiago-silva/dshared.git
+ * `# python setup.py install` in the `dshared` dir after cloning
 
 ## Installing & Building
 Inside of the `memetal/src` directory, run the following scripts:
@@ -39,7 +42,8 @@ Inside of the `memetal/src` directory, run the following scripts:
 3. Success!
 
 ## Running
-For now, the entry-point for memetalk's interpreter is `i.py`. From the `memetalk` dir, run `python src/i.py {{source.mm}}`. For example:
+For now, the entry-point for memetalk's interpreter is `i.py`. From the
+`memetalk` dir, run `python src/i.py {{source.mm}}`. For example:
 
 ```
 $ python src/i.py src/modules/memetest.mm
