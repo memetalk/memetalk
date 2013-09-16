@@ -508,6 +508,9 @@ module core() {
       <primitive "vmprocess_is_running">
     }
 
+    instance_method handShakeTarget: fun() {
+      <primitive "vmprocess_handshake_target">
+    }
     instance_method stepInto: fun() {
       <primitive "vmprocess_step_into">
     }

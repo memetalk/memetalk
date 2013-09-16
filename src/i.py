@@ -990,6 +990,9 @@ class Process():
 
         self.mm_self_obj = None
 
+        # self.shared['mydbg.pid']: the pid of the debugger of this process
+        # self.shared['eval.result']: the result of eval_in_frame
+        # self.shared['eval.exception']: the exception raised by eval_in_frame
         self.shared = dshared.dict()
 
         self.volatile_breakpoints = []
@@ -1002,7 +1005,7 @@ class Process():
         self.exception_protection = [False]
         self.last_exception = None
 
-        self.init_data()
+        self.init_stack()
 
     def new_frame(self):
         return self.interpreter.new_object({'r_mp':None,    # module pointer
@@ -1013,7 +1016,7 @@ class Process():
                                             'r_ip':None,   # instruction pointer / ast info
                                             'locals':{}})
 
-    def init_data(self):
+    def init_stack(self):
         self.interpreter.procstacks[str(self.procid)] = [self.new_frame()]
 
     def mm_self(self):
@@ -1037,7 +1040,7 @@ class Process():
         if block:
             logger.debug(str(self.procid) + ': call_target_process WAIT for debugged process to answer')
             data = ipc.proc_channel(self.procid, 'target_incoming').get()
-            logger.debug(str(self.procid) + ': RECV debugger got data from target. returning it')
+            logger.debug(str(self.procid) + ': RECV debugger got data from target. returning it: ' + P(data, 1, True))
             return data
         logger.debug(str(self.procid) + "call_target_process() DONE")
 
@@ -1058,6 +1061,11 @@ class Process():
         else:
             logger.debug(str(self.procid) + ": debug_me(): we have a dbg; pausing...")
             self.state = new_state
+
+    def init_debugging_session(self):
+        logger.debug(str(self.procid) + ': init_debugging_session(). WAIT...')
+        data = ipc.proc_channel(self.procid, 'target_incoming').get()
+        logger.debug(str(self.procid) + ': RECV: should receive "paused":' + P(data,1,True))
 
     def setup(self, name, *args):
         self.entry = {'name': name, 'args': args}
@@ -1080,7 +1088,7 @@ class Process():
 
     def run(self):
         logger.info("running process:" + str(self.procid))
-        self.init_data()
+        self.init_stack()
         getattr(self, self.entry['name'])(*self.entry['args'])
 
     def exec_fun(self, fn, args, state = 'running'):
@@ -1615,6 +1623,7 @@ class Process():
                 self.state = 'running'
                 return True
             if msg['cmd'] == 'eval_in_frame':
+                logger.debug('target: eval_in_frame')
                 text = msg['args'][0]
                 frame_index = msg['args'][1]
 
@@ -1624,12 +1633,14 @@ class Process():
                     self.exception_protection.append(True) #run in protected mode
                     fn = _context_with_frame(self, text, self.all_stack_frames()[frame_index])
                     val = self.setup_and_run_fun(None, None, fn['compiled_function']['name'], fn, [], True)
-                    res = (None, val)
+                    self.shared['eval.result'] = val
+                    self.shared['eval.exception'] = None
                 except MemetalkException as e:
-                    res = (e.mmobj(), None)
+                    self.shared['eval.result'] = None
+                    self.shared['eval.exception'] = e.mmobj()
                 self.exception_protection.pop()
-                logger.debug(str(self.procid) + ': dbg_control::eval_in_frame: SENDing result')
-                ipc.proc_channel(self.procid, 'dbg').put(res)
+                logger.debug(str(self.procid) + ': dbg_control::eval_in_frame: SENDing done')
+                ipc.proc_channel(self.procid, 'dbg').put('done')
                 self.state = old_state
                 return False
             if msg['cmd'] == 'reload_frame':

@@ -86,6 +86,11 @@ def prim_vmprocess_from_procid(proc):
     logger.debug('prim_vmprocess_from_procid')
     proc.reg('r_drp')['self'] = proc.interpreter.process_for(proc.locals['procid'])
 
+
+def prim_vmprocess_handshake_target(proc):
+    logger.debug('prim_vmprocess_handshake_target')
+    proc.init_debugging_session()
+
 def prim_vmprocess_step_into(proc):
     logger.debug('prim_vmprocess_step_into')
     proc.call_target_process(True, proc.reg('r_rdp')['self'].procid, 'step_into')
@@ -96,7 +101,8 @@ def prim_vmprocess_step_over(proc):
 
 def prim_vmprocess_continue(proc):
     logger.debug('prim_vmprocess_continue')
-    proc.call_target_process(True, proc.reg('r_rdp')['procid'], 'continue')
+    _proc = proc.reg('r_rdp')['self']
+    proc.call_target_process(True, _proc.procid, 'continue')
 
 def prim_vmprocess_stack_frames(proc):
     logger.debug('prim_vmprocess_stack_frames')
@@ -120,11 +126,15 @@ def prim_vmprocess_stack_frames(proc):
     #     return proc.reg('r_rdp')['frames']
 
 def prim_vmprocess_eval_in_frame(proc):
-    raise Exception("TODO")
     logger.debug('prim_vmprocess_eval_in_frame')
     text = proc.locals()['text']
     frame_idx = proc.locals()['frame_index']
-    (ex, res) = proc.call_target_process(True, proc.reg('r_rdp')['procid'], 'eval_in_frame', text, frame_idx)
+    _proc = proc.reg('r_rdp')['self']
+    logger.debug('sending text to be evaluated at procid: ' + str(_proc.procid))
+    proc.call_target_process(True, _proc.procid, 'eval_in_frame', text, frame_idx)
+    ex = _proc.shared['eval.exception']
+    res = _proc.shared['eval.result']
+    logger.debug('prim_vmprocess_eval_in_frame result: ' + P((ex,res),1,True))
     if ex:
         proc.throw(ex)
     return res

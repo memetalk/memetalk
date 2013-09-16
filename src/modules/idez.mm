@@ -31,6 +31,7 @@ SOFTWARE.
 
 debug: fun(process, exception) {
   io.print("::in idez:debug()");
+  process.handShakeTarget();
   var app = qt.QApplication.new;
   var dbg = DebuggerUI.new(process, exception);
   dbg.show();
