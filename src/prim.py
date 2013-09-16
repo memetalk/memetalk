@@ -189,9 +189,14 @@ def prim_vmprocess_halt_fn(proc):
     fn = proc.locals()['fn']
     return proc.setup_and_run_unprotected(None, None, fn['compiled_function']['name'], fn, [], True)
 
-def prim_vmprocess_debug_on_exception(proc):
+def prim_vmprocess_last_exception(proc):
     _proc = proc.reg('r_rdp')['self']
-    _proc.flag_debug_on_exception = True
+    return _proc.shared['last_exception']
+
+def prim_vmprocess_debug_on_exception(proc):
+    logger.debug("prim_vmprocess_debug_on_exception")
+    _proc = proc.reg('r_rdp')['self']
+    _proc.shared['flag_debug_on_exception'] = True
 
 #### VMStackFrame
 

@@ -508,6 +508,9 @@ module core() {
       <primitive "vmprocess_is_running">
     }
 
+    instance_method lastException: fun() {
+      <primitive "vmprocess_last_exception">
+    }
     instance_method breakAt: fun(cfun, line) {
       <primitive "vmprocess_break_at">
     }

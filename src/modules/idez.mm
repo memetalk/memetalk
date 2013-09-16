@@ -29,11 +29,11 @@ SOFTWARE.
 
 // -- module functions --
 
-debug: fun(process, exception) {
+debug: fun(process) {
   io.print("::in idez:debug()");
   process.handShakeTarget();
   var app = qt.QApplication.new;
-  var dbg = DebuggerUI.new(process, exception);
+  var dbg = DebuggerUI.new(process);
   dbg.show();
   return app.exec();
 }
@@ -116,11 +116,10 @@ end //idez:DebuggerEditor
 
 class DebuggerUI < QMainWindow
 fields: frame_index, process, exception, execFrames, stackCombo, editor, localVarList, fieldVarList, statusLabel, execMenu, shouldUpdateVars, continued;
-init new: fun(process, ex) {
+init new: fun(process) {
   super.new();
   @process = process;
   @frame_index = 0;
-  @exception = ex;
 
   @continued = false;
 
@@ -134,8 +133,8 @@ init new: fun(process, ex) {
   @statusLabel = qt.QLabel.new(this.statusBar());
   @statusLabel.setMinimumWidth(600);
 
-  if (@exception) {
-    @statusLabel.setText(@exception.message);
+  if (@process.lastException) {
+    @statusLabel.setText(@process.lastException.message);
   }
   @execFrames = ExecutionFrames.new(process);
 
@@ -267,7 +266,6 @@ instance_method rewindAndGo: fun() {
 }
 
 instance_method runToLine: fun() {
-  @exception = null;
   @statusLabel.setText("Run to line...");
   this.disableActions();
   var pos = @editor.getCursorPosition();
@@ -840,6 +838,7 @@ instance_method spawnAndDoIt: fun() {
   try {
     var ctx = Context.withVars(this.selectedText(), @with_variables(), @with_imod());
     var proc = VMProcess.spawn();
+    proc.debugOnException();
     proc.run(ctx, []);
   } catch(ex) {
     this.insertSelectedText(ex.message());
@@ -1312,6 +1311,7 @@ instance_method action_spawnAndEval: fun() {
       var ctx = Context.withVars(expr, {}, imod);
       @statusLabel.setText("Running spawn process...");
       var proc = VMProcess.spawn();
+      proc.debugOnException();
       proc.run(ctx, []);
       @statusLabel.setText("");
     } catch(e) {

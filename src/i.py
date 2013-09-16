@@ -785,7 +785,7 @@ class Interpreter():
     #     proc = self.processes[procid]
     #     proc.exec_module(mname + ".mm", fname, args)
 
-    def cmdproc_debug(self, procid, new_state, last_exception):
+    def cmdproc_debug(self, procid, new_state):
         # 1) pause procid
         # 2) create debugger with procid as target
 
@@ -806,7 +806,7 @@ class Interpreter():
 
         VMProcess = self.get_core_class('VMProcess')
         mmproc = self.alloc_object(VMProcess,{'self':self.processes[str(procid)]})
-        dbgproc.setup('exec_module', 'idez.mm', 'debug', [mmproc, last_exception])
+        dbgproc.setup('exec_module', 'idez.mm', 'debug', [mmproc])
 
         dbgproc.start()
         logger.debug('interpreter: cmdproc_debug SEND dbg_done to who called us')
@@ -985,7 +985,11 @@ class Process():
         # self.shared['mydbg.pid']: the pid of the debugger of this process
         # self.shared['eval.result']: the result of eval_in_frame
         # self.shared['eval.exception']: the exception raised by eval_in_frame
+        # self.shared['flag_debug_on_exception']: ditto
+        # self.shared['last_exception']: ditto
         self.shared = dshared.dict()
+        self.shared['flag_debug_on_exception'] = False
+        self.shared['last_exception'] = None
 
         self.volatile_breakpoints = []
 
@@ -993,9 +997,7 @@ class Process():
 
         self.state = None
 
-        self.flag_debug_on_exception = False
         self.exception_protection = [False]
-        self.last_exception = None
 
         self.init_stack()
 
@@ -1049,7 +1051,7 @@ class Process():
 
     def debug_me(self, new_state = 'paused'):
         if ipc.proc_channel(self.procid, 'dbg') == None:
-            self.call_interpreter(True, 'debug', self.procid, new_state, self.last_exception)
+            self.call_interpreter(True, 'debug', self.procid, new_state)
         else:
             logger.debug(str(self.procid) + ": debug_me(): we have a dbg; pausing...")
             self.state = new_state
@@ -1644,13 +1646,13 @@ class Process():
             if msg['cmd'] == 'reload_frame':
                 logger.debug(str(self.procid) + ': reloading frame')
                 self.state = 'paused'
-                self.last_exception = None
+                self.shared['last_exception'] = None
                 raise RewindException(1)
             if msg['cmd'] == 'rewind_and_break':
                 logger.debug('target: rewind_and_break')
 
                 self.state = 'running'
-                self.last_exception = None
+                self.shared['last_exception'] = None
 
                 frames_count = msg['args'][0]
                 logger.debug(str(self.procid) + ': rewinding  this much of frames: ' + str(frames_count))
@@ -1684,25 +1686,22 @@ class Process():
                     logger.debug(str(self.procid) + ": dbg_control resuming execution")
                     break
 
-        return self.last_exception != None
+        return self.shared['last_exception'] != None
 
 
     def is_exception_protected(self):
         logger.debug("is_exception_protected?: " + str(self.exception_protection[-1]))
         return self.exception_protection[-1]
 
-#         if self.state == 'exception':
-#             logger.debug(str(self.procid) + ": dbg_control in exception state")
-#             self.debug_me()
-#             logger.debug(str(self.procid) + ": dbg_control done")
-# #            logger.debug(str(self.procid) + ": dbg_control: debug_me() done")
-# #            process_dbg_msg({"cmd":"set_state","value":"paused"}) #so it sends done set_state to dbg
-
     def throw(self, mex):
         # MemetalkException encapsulates the memetalk exception:
-        if not self.is_exception_protected() and self.flag_debug_on_exception:
+        logger.debug(str(self.procid) + ": interpreter::throw")
+        logger.debug(str(self.procid) + ": protected? " + str(self.is_exception_protected()))
+        logger.debug(str(self.procid) + ": exception flag? " + str(self.shared['flag_debug_on_exception']))
+
+        if not self.is_exception_protected() and self.shared['flag_debug_on_exception']:
             logger.debug(str(self.procid) + ": throw: in exception state")
-            self.last_exception = mex
+            self.shared['last_exception'] = mex
             self.debug_me('exception')
             if self.dbg_control("throw"):
                 if 'py_exception' in mex and mex['py_exception'] != None:
@@ -1716,6 +1715,10 @@ class Process():
                 raise MemetalkException(mex, self.pp_stack_trace())
 
     def throw_py_exception(self, pyex, tb):
+        logger.debug(str(self.procid) + ": interpreter::throw_py_exception")
+        logger.debug(str(self.procid) + ": protected? " + str(self.is_exception_protected()))
+        logger.debug(str(self.procid) + ": exception flag? " + str(self.shared['flag_debug_on_exception']))
+
         logger.debug("Python exception with message: \n" + str(pyex.message))
         logger.debug(tb)
         ex = self.interpreter.create_instance(self.interpreter.core_imod['Exception'])
@@ -1723,9 +1726,9 @@ class Process():
         # ...and this me being stupid:
         ex['message'] =  "Python exception: " + str(pyex.message)
 
-        if not self.is_exception_protected() and self.flag_debug_on_exception:
+        if not self.is_exception_protected() and self.shared['flag_debug_on_exception']:
             logger.debug(str(self.procid) + ": throw_py: in exception state")
-            self.last_exception = ex
+            self.shared['last_exception'] = ex
             self.debug_me('exception')
             if self.dbg_control("throw"):
                 raise MemetalkException(ex, self.pp_stack_trace(), pyex, tb)
@@ -1734,6 +1737,9 @@ class Process():
             raise MemetalkException(ex, self.pp_stack_trace(), pyex, tb)
 
     def throw_with_message(self, msg):
+        logger.debug(str(self.procid) + ": interpreter::throw_with_message")
+        logger.debug(str(self.procid) + ": protected? " + str(self.is_exception_protected()))
+        logger.debug(str(self.procid) + ": exception flag? " + str(self.shared['flag_debug_on_exception']))
         logger.debug("MemetalkException with message: \n" + msg)
         logger.debug(self.pp_stack_trace())
         ex = self.interpreter.create_instance(self.interpreter.core_imod['Exception'])
@@ -1741,9 +1747,9 @@ class Process():
         # ...and this me being stupid:
         ex['message'] =  msg
 
-        if not self.is_exception_protected() and self.flag_debug_on_exception:
+        if not self.is_exception_protected() and self.shared['flag_debug_on_exception']:
             logger.debug(str(self.procid) + ": throw_py: in exception state")
-            self.last_exception = ex
+            self.shared['last_exception'] = ex
             self.debug_me('exception')
             if self.dbg_control("throw"):
                 raise MemetalkException(ex, self.pp_stack_trace())
