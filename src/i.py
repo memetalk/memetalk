@@ -388,21 +388,11 @@ class ModuleLoader(ASTBuilder):
     def l_done_literal_function(self, ast):
         function = self.functions.pop()
 
-        body = function["body"]
+        function["body"].cfun_literal = function
         function['text'] = ast.text
         function['line'] = ast.start_line
 
         function['env_table'] = self.env_id_table.pop()
-
-        body.cfun_literal = function
-        # self.functions[-1]["fun_literals"][body._id] = function
-
-        # print "REGISTERED CLOSURE:"
-        # print body._id
-        # P(body)
-        # print '---- ON ----'
-        # P(self.functions[-1],2)
-
 
 
 
@@ -974,6 +964,8 @@ class Process():
     # dshared requires these hacks
     def __getattr__(self, name):
         return self.__dict__[name]
+    def __repr__(self):
+        return '<Process ' + str(self.procid) + '>'
     def __ne__(self, other):
         return id(other) != id(self)
 
@@ -1622,6 +1614,11 @@ class Process():
                 logger.debug('target: received continue')
                 self.state = 'running'
                 return True
+            if msg['cmd'] == 'detach':
+                logger.debug('target: received detach')
+                ipc.set_proc_channel(self.procid, 'dbg', None)
+                self.state = 'running'
+                return True
             if msg['cmd'] == 'eval_in_frame':
                 logger.debug('target: eval_in_frame')
                 text = msg['args'][0]
@@ -1655,13 +1652,13 @@ class Process():
                 self.last_exception = None
 
                 frames_count = msg['args'][0]
-                logger.debug('rewinding  this much of frames: ' + str(frames_count))
-                logger.debug('We are at: ' + self.reg('r_cp')['compiled_function']['name'])
+                logger.debug(str(self.procid) + ': rewinding  this much of frames: ' + str(frames_count))
+                logger.debug(str(self.procid) + ': we are at: ' + self.reg('r_cp')['compiled_function']['name'])
 
                 to_line = msg['args'][1]
                 logger.debug('line: ' + str(to_line))
 
-                logger.debug('we will break at: ' + self.reg('r_cp')['compiled_function']['name'])
+                logger.debug(str(self.procid) + ': we will break at: ' + self.reg('r_cp')['compiled_function']['name'])
                 self.break_at(self.reg('r_cp')['compiled_function'], to_line)
                 raise RewindException(frames_count)
         process_breakpoints()

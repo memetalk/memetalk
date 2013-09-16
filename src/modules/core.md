@@ -532,7 +532,12 @@ module core() {
     instance_method reloadFrame: fun(line) {
       <primitive "vmprocess_reload_frame">
     }
-
+    instance_method rewindAndBreak: fun(frames_count, to_line) {
+      <primitive "vmprocess_rewind_and_break">
+    }
+    instance_method detach: fun() {
+      <primitive "vmprocess_detach">
+    }
 
     class_method current: fun() {
       <primitive "vmprocess_current">
@@ -545,9 +550,6 @@ module core() {
     // }
     // instance_method exec_module: fun(mname, fname, args) {
     //   <primitive "vmprocess_exec_module">
-    // }
-    // instance_method rewindAndBreak: fun(frames_count, to_line) {
-    //   <primitive "vmprocess_rewind_and_break">
     // }
     // instance_method eval: fun(text, frame_level) {
     //   <primitive "vmprocess_eval">

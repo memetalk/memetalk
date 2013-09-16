@@ -102,3 +102,7 @@ class ASTNode():
     # dshared requires this hack
     def __getattr__(self, name):
         return self.__dict__[name]
+
+    # ...and this hack...
+    def __setattr__(self, name, val):
+        self.__dict__[name] = val

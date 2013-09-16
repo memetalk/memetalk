@@ -240,7 +240,6 @@ instance_method acceptIt: fun() {
     var cfun = @execFrames.frame(@frame_index).contextPointer.compiledFunction;
     cfun.setCode(text);
     @editor.saved();
-    @process.updateObject(cfun);
   } catch(ex) {
     @editor.insertSelectedText(ex.message());
   }
@@ -248,9 +247,10 @@ instance_method acceptIt: fun() {
 
 instance_method continue: fun() {
   @continued = true;
-  this.close();
+  this.hide();
   @process.continue();
   // if @process.continue return, means were are active  again
+  @continued = false;
   @stackCombo.updateInfo();
   this.show();
 }
@@ -261,13 +261,9 @@ instance_method reloadFrame: fun() {
 }
 
 instance_method rewindAndGo: fun() {
-  @exception = null;
-  @statusLabel.setText("Rewinding...");
-  this.disableActions();
   var line = @execFrames.topFrame.instructionPointer["start_line"];
   @process.rewindAndBreak(@stackCombo.count - @frame_index, line);
   @stackCombo.updateInfo();
-  this.enableActions();
 }
 
 instance_method runToLine: fun() {
@@ -315,7 +311,7 @@ instance_method updateInfo: fun() {
 }
 instance_method closeEvent: fun() {
   if (!@continued) {
-    this.continue();
+    @process.detach();
   }
 }
 end //idez:DebuggerUI

@@ -140,13 +140,25 @@ def prim_vmprocess_eval_in_frame(proc):
     return res
 
 def prim_vmprocess_reload_frame(proc):
-    raise Exception("TODO")
     logger.debug('prim_vmprocess_reload_frame')
-    frames = proc.call_target_process(True, proc.reg('r_rdp')['procid'], 'reload_frame')
-    proc.reg('r_rdp')['frames'] = frames
+    _proc = proc.reg('r_rdp')['self']
+    proc.call_target_process(True, _proc.procid, 'reload_frame')
+
+def prim_vmprocess_rewind_and_break(proc):
+    logger.debug('prim_vmprocess_rewind_and_break')
+    frames_count = proc.locals()['frames_count']
+    to_line = proc.locals()['to_line']
+    _proc = proc.reg('r_rdp')['self']
+    proc.call_target_process(True, _proc.procid, 'rewind_and_break', frames_count, to_line)
 
 def prim_vmprocess_current(proc):
     return proc.mm_self()
+
+def prim_vmprocess_detach(proc):
+    logger.debug('prim_vmprocess_detach')
+    _proc = proc.reg('r_rdp')['self']
+    proc.call_target_process(False, _proc.procid, 'detach')
+
 
 def prim_vmprocess_run(proc):
     raise Exception("TODO")
@@ -209,7 +221,7 @@ def prim_vmstackframe_module_pointer(proc):
 def prim_vmstackframe_context_pointer(proc):
     logger.debug('prim_vmstackframe_context_pointer')
     frame = proc.reg('r_rdp')['self']
-    logger.debug('got frame: returning:' + P(frame,1,True))
+    #logger.debug('got frame: returning:' + P(frame,1,True))
     return frame['r_cp']
 
 def prim_vmstackframe_receiver_pointer(proc):
