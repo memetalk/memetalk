@@ -489,7 +489,7 @@ module core() {
     instance_method halt: fun() {
       <primitive "vmprocess_halt">
     }
-    instance_method haltFn: fun(fn) {
+    instance_method haltFn: fun(fn, args) {
       <primitive "vmprocess_halt_fn">
     }
     instance_method stackFrames: fun() {

@@ -791,7 +791,7 @@ init new: fun(parent) {
 instance_method debugIt: fun() {
   try {
     var ctx = Context.withVars(this.selectedText(), @with_variables(), @with_imod());
-    VMProcess.current.haltFn(ctx);
+    VMProcess.current.haltFn(ctx, []);
     @on_finish(ctx.getEnv());
   } catch(ex) {
     this.insertSelectedText(ex.message());
@@ -1121,7 +1121,7 @@ instance_method action_addMethod: fun() {
 //end idez:ModuleExplorer:action_addMethod
 
 instance_method action_debug: fun() {
-  @miniBuffer.prompt("debug: ", "", fun(expr) {
+  @miniBuffer.prompt("Debug: ", "", fun(expr) {
     try {
       var imod = null;
       if (@imodule) {
@@ -1131,7 +1131,7 @@ instance_method action_debug: fun() {
       }
 
       var ctx = Context.withVars(expr, {}, imod);
-      VMProcess.current.haltFn(ctx);
+      VMProcess.current.haltFn(ctx, []);
     } catch(e) {
       @statusLabel.setText(e.message);
     }
@@ -1309,13 +1309,60 @@ instance_method action_spawnAndEval: fun() {
         imod = thisModule;
       }
       var ctx = Context.withVars(expr, {}, imod);
-      @statusLabel.setText("Running spawn process...");
       var proc = VMProcess.spawn();
       proc.debugOnException();
       proc.run(ctx, []);
-      @statusLabel.setText("");
     } catch(e) {
       @statusLabel.setText(e.message);
+    }
+  });
+}
+
+instance_method action_spawnAndDebug: fun() {
+  @miniBuffer.prompt("Debug [spawn]: ", "", fun(expr) {
+    try {
+      var imod = null;
+      if (@imodule) {
+        imod = @imodule;
+      } else {
+        imod = thisModule;
+      }
+      var ctx = Context.withVars(expr, {}, imod);
+      var proc = VMProcess.spawn();
+      proc.debugOnException();
+      proc.runAndHalt(ctx, []);
+    } catch(e) {
+      @statusLabel.setText(e.message);
+    }
+  });
+}
+
+instance_method action_spawnAndEvalUntil: fun() {
+  if (@current_cmodule == null) {
+    @statusLabel.setText("No current module");
+    return null;
+  }
+  var e = qt.QApplication.focusWidget();
+  if (Mirror.vtFor(e) != ExplorerEditor) {
+    @statusLabel.setText("No function selected");
+    return null;
+  }
+  @miniBuffer.prompt("Spawn/Eval [until]: ", "", fun(expr) {
+    try {
+      var imod = null;
+      if (@imodule) {
+        imod = @imodule;
+      } else {
+        imod = thisModule;
+      }
+
+      var ctx = Context.withVars(expr, {}, imod);
+      var proc = VMProcess.spawn();
+      proc.debugOnException();
+      proc.breakAt(e.cfun, e.getCursorPosition["line"] + 1);
+      proc.run(ctx, []);
+    } catch(ex) {
+      @statusLabel.setText(ex.message);
     }
   });
 }
@@ -1474,9 +1521,17 @@ instance_method initActions: fun() {
   execMenu.addAction(action);
 
   action = qt.QAction.new("Eval Until", execMenu);
-  action.setShortcut("ctrl+x,e");
+  action.setShortcut("ctrl+x,l");
   action.connect("triggered", fun() {
     this.action_evalUntil();
+  });
+  action.setShortcutContext(1);
+  execMenu.addAction(action);
+
+  action = qt.QAction.new("Spawn and Eval Until", execMenu);
+  action.setShortcut("ctrl+x,b");
+  action.connect("triggered", fun() {
+    this.action_spawnAndEvalUntil();
   });
   action.setShortcutContext(1);
   execMenu.addAction(action);
@@ -1485,6 +1540,14 @@ instance_method initActions: fun() {
   action.setShortcut("ctrl+c,e");
   action.connect("triggered", fun() {
     this.action_spawnAndEval();
+  });
+  action.setShortcutContext(1);
+  execMenu.addAction(action);
+
+  action = qt.QAction.new("Spawn and Debug", execMenu);
+  action.setShortcut("ctrl+c,b");
+  action.connect("triggered", fun() {
+    this.action_spawnAndDebug();
   });
   action.setShortcutContext(1);
   execMenu.addAction(action);

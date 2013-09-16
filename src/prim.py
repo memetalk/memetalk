@@ -165,14 +165,20 @@ def prim_vmprocess_detach(proc):
 def prim_vmprocess_run(proc):
     logger.debug("prim_vmprocess_run");
     fn = proc.locals()['fn']
+    args = proc.locals()['args']
     _proc = proc.reg('r_rdp')['self']
-    _proc.setup('exec_fun', fn, [])
+    _proc.setup('exec_fun', fn, args)
     logger.debug("prim_vmprocess_run sending proc_start");
-    print proc.call_interpreter(True, 'proc_start', _proc.procid)
+    proc.call_interpreter(True, 'proc_start', _proc.procid)
 
 def prim_vmprocess_run_and_halt(proc):
-    raise Exception("TODO")
-    proc.call_interpreter(True, 'proc_exec_fun', proc.reg('r_rdp')['procid'], proc.locals()['fn'], [], 'paused')
+    logger.debug("prim_vmprocess_run_and_halt");
+    fn = proc.locals()['fn']
+    args = proc.locals()['args']
+    _proc = proc.reg('r_rdp')['self']
+    _proc.setup('exec_fun', fn, args, 'paused')
+    logger.debug("prim_vmprocess_run_and_halt sending proc_start");
+    proc.call_interpreter(True, 'proc_start', _proc.procid)
 
 def prim_vmprocess_is_running(proc):
     raise Exception("TODO")
@@ -187,7 +193,8 @@ def prim_vmprocess_halt_fn(proc):
     proc.debug_me()
     logger.debug("prim_vmprocess_halt_fn: calling fn...")
     fn = proc.locals()['fn']
-    return proc.setup_and_run_unprotected(None, None, fn['compiled_function']['name'], fn, [], True)
+    args = proc.locals()['args']
+    return proc.setup_and_run_unprotected(None, None, fn['compiled_function']['name'], fn, args, True)
 
 def prim_vmprocess_last_exception(proc):
     _proc = proc.reg('r_rdp')['self']
