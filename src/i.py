@@ -1034,7 +1034,7 @@ class Process():
             data = ipc.proc_channel(self.procid, 'target_incoming').get()
             logger.debug(str(self.procid) + ': RECV debugger got data from target. returning it: ' + P(data, 1, True))
             return data
-        logger.debug(str(self.procid) + "call_target_process() DONE")
+        logger.debug(str(self.procid) + ": call_target_process() DONE")
 
     def call_interpreter(self, block, name, *args):
         logger.debug('call_interpreter SEND: ' + name)
