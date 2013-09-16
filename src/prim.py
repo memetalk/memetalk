@@ -562,9 +562,11 @@ def prim_compiled_class_set_fields(proc):
     rm =  diff(klass['fields'], fields)
     add = diff(fields, klass['fields'])
 
-    for _, obj in proc.interpreter.shared['instances_by_class'][klass['@id']].iteritems():
-        for f in rm: del obj[f]
-        for f in add: obj[f] = None
+    class_id = klass['@id']
+    if class_id in proc.interpreter.shared['instances_by_class']:
+        for _, obj in proc.interpreter.shared['instances_by_class'][class_id].iteritems():
+            for f in rm: del obj[f]
+            for f in add: obj[f] = None
 
     klass['fields'] = fields
 
