@@ -53,12 +53,6 @@ def prim_get_module(proc):
 def prim_save_module(proc):
     return proc.interpreter.save_module(proc,proc.locals()['name'])
 
-def prim_break_at(proc):
-    cfun = proc.locals()['cfun']
-    line = proc.locals()['line']
-    proc.interpreter.break_at(cfun, line)
-    return proc.reg('r_rdp')
-
 def prim_import(proc):
     compiled_module = proc.interpreter.compiled_module_by_filename(proc.locals()["mname"])
     args = dict(zip(compiled_module["params"],proc.locals()["margs"]).items())
@@ -74,11 +68,11 @@ def prim_exception_type(proc):
 
 #### VMProcess
 def prim_vmprocess_spawn(proc):
-    raise Exception("TODO")
     logger.debug('prim_vmprocess_spawn')
     procid = proc.call_interpreter(True, 'spawn')
     logger.debug('prim_vmprocess_spawn got id:' + str(procid))
-    proc.reg('r_rdp')['procid'] = proc.interpreter.process_for(procid)
+    proc.reg('r_rdp')['self'] = proc.interpreter.processes[str(procid)]
+    logger.debug('prim_vmprocess_spawn, proc::' + P(proc.reg('r_rdp')['self'],1,True))
     return proc.reg('r_rp')
 
 def prim_vmprocess_from_procid(proc):
@@ -112,6 +106,14 @@ def prim_vmprocess_stack_frames(proc):
     logger.debug('got frames, assemblying and caching...')
     frames = [proc.interpreter.alloc_object(VMStackFrameClass,{'self':x}) for x in raw_frames]
     return frames
+
+def prim_vmprocess_break_at(proc):
+    logger.debug('prim_vmprocess_break_at')
+    _proc = proc.reg('r_rdp')['self']
+    cfun = proc.locals()['cfun']
+    line = proc.locals()['line']
+    _proc.break_at(cfun, line)
+    return proc.reg('r_rdp')
 
 
 
@@ -161,8 +163,12 @@ def prim_vmprocess_detach(proc):
 
 
 def prim_vmprocess_run(proc):
-    raise Exception("TODO")
-    proc.call_interpreter(True, 'proc_exec_fun', proc.reg('r_rdp')['procid'], proc.locals()['fn'], [])
+    logger.debug("prim_vmprocess_run");
+    fn = proc.locals()['fn']
+    _proc = proc.reg('r_rdp')['self']
+    _proc.setup('exec_fun', fn, [])
+    logger.debug("prim_vmprocess_run sending proc_start");
+    print proc.call_interpreter(True, 'proc_start', _proc.procid)
 
 def prim_vmprocess_run_and_halt(proc):
     raise Exception("TODO")
@@ -177,17 +183,15 @@ def prim_vmprocess_halt(proc):
     proc.debug_me()
 
 def prim_vmprocess_halt_fn(proc):
-    raise Exception("TODO")
-    logger.debug("prim_vmprocess_debug_fn")
-    # proc.debug_me()
-    # logger.debug("prim_vmprocess_debug_fn: calling fn...")
-    # fn = proc.locals()['fn']
-    # return proc.setup_and_run_unprotected(None, None, fn['compiled_function']['name'], fn, [], True)
+    logger.debug("prim_vmprocess_halt_fn")
+    proc.debug_me()
+    logger.debug("prim_vmprocess_halt_fn: calling fn...")
+    fn = proc.locals()['fn']
+    return proc.setup_and_run_unprotected(None, None, fn['compiled_function']['name'], fn, [], True)
 
 def prim_vmprocess_debug_on_exception(proc):
-    raise Exception("TODO")
-    assert(proc.reg('r_rdp')['procid'] == proc.procid)
-    proc.flag_debug_on_exception = True
+    _proc = proc.reg('r_rdp')['self']
+    _proc.flag_debug_on_exception = True
 
 #### VMStackFrame
 

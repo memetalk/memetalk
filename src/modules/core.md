@@ -508,6 +508,10 @@ module core() {
       <primitive "vmprocess_is_running">
     }
 
+    instance_method breakAt: fun(cfun, line) {
+      <primitive "vmprocess_break_at">
+    }
+
     instance_method handShakeTarget: fun() {
       <primitive "vmprocess_handshake_target">
     }
@@ -609,10 +613,6 @@ module core() {
 
   save_module: fun(name) {
     <primitive "save_module">
-  }
-
-  break_at: fun(cfun, line) {
-    <primitive "break_at">
   }
 
   exception_unprotected: fun(fn) {

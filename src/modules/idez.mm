@@ -515,10 +515,15 @@ init new: fun(parent, cfun) {
   }
 }
 
+instance_method cfun: fun() {
+  return @cfun;
+}
+
 instance_method accept: fun() {
   if (@cfun != null) {
     try {
       @cfun.setCode(this.text());
+      this.saved();
     } catch(ex) {
       this.appendSelectedText(ex.message());
     }
@@ -1334,9 +1339,10 @@ instance_method action_evalUntil: fun() {
         imod = thisModule;
       }
 
-      break_at(e.cfun, e.getCursorPosition["line"] + 1);
-      var r = evalWithVars(expr, {}, imod);
-      @statusLabel.setText(r["result"].toString());
+      VMProcess.current.breakAt(e.cfun, e.getCursorPosition["line"] + 1);
+      var ctx = Context.withVars(expr, {}, imod);
+      var r = ctx();
+      @statusLabel.setText(r.toString());
     } catch(ex) {
       @statusLabel.setText(ex.message);
     }

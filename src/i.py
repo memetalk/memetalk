@@ -766,10 +766,10 @@ class Interpreter():
         logger.debug("interpreter_loop: SEND created procid")
         ipc.interpreter_channel().put(self.spawn().procid)
 
-    def cmdproc_proc_exec_fun(self, procid, fn, args, state = 'running'):
-        self.processes[procid].setup('exec_fun', fn, args, state)
-        self.processes[procid].start()
-        logger.debug("interpreter_loop: SEND done exec_fun")
+    def cmdproc_proc_start(self, procid):
+        logger.debug("cmdproc_proc_start");
+        self.processes[str(procid)].start()
+        logger.debug("interpreter_loop: SEND done")
         ipc.interpreter_channel().put('done')
 
     def cmdproc_kill_process(self, procid):
@@ -989,7 +989,7 @@ class Process():
 
         self.volatile_breakpoints = []
 
-        self.entry = {} # data for executing the entry point
+        self.entry = dshared.dict() # data for executing the entry point
 
         self.state = None
 
@@ -1020,7 +1020,7 @@ class Process():
         return self.mm_self_obj
 
     def break_at(self, cfun, line):
-        logger.debug("Breaking at: " + str(line) + " --- " + P(cfun,1,True))
+        logger.debug(str(self.procid) + ": breaking at: " + str(line) + " --- " + P(cfun,1,True))
         self.volatile_breakpoints.append({"cfun":cfun, "line":line})
 
     def call_target_process(self, block, procid, name, *args):
@@ -1060,7 +1060,7 @@ class Process():
         logger.debug(str(self.procid) + ': RECV: should receive "paused":' + P(data,1,True))
 
     def setup(self, name, *args):
-        self.entry = {'name': name, 'args': args}
+        self.entry.update({'name': name, 'args': list(args)})
 
     def terminate(self):
         global _module
@@ -1589,7 +1589,8 @@ class Process():
                 logger.debug("Checking line: " + str(line) + " --- " + str(self.reg('r_ip')))
                 if line == bp['line'] and id_eq(self.reg('r_cp')['compiled_function'], bp['cfun']):
                     logger.debug("BP activated at line: " + str(line) + " --- " + str(self.reg('r_ip')))
-                    self.state = 'paused'
+                    #self.state = 'paused'
+                    self.debug_me()
                     del self.volatile_breakpoints[idx]
                     return
 
