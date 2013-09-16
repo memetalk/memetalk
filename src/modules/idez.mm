@@ -29,10 +29,10 @@ SOFTWARE.
 
 // -- module functions --
 
-debug: fun(procid, exception) {
+debug: fun(process, exception) {
   io.print("::in idez:debug()");
   var app = qt.QApplication.new;
-  var dbg = DebuggerUI.new(VMRemoteProcess.new(procid), exception);
+  var dbg = DebuggerUI.new(process, exception);
   dbg.show();
   return app.exec();
 }
@@ -124,8 +124,6 @@ init new: fun(process, ex) {
   @continued = false;
 
   @shouldUpdateVars = false;
-
-  @process.initComWithTarget();
 
   this.resize(700,800);
   this.setWindowTitle("Debugger");

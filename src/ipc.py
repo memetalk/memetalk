@@ -1,57 +1,69 @@
-import pickle as pickle
-from cStringIO import StringIO
-import ctypes
-from mmpprint import P
+import multiprocessing
+import sys
 
+# 1) We can't put a Manager.Queue() into a dshared container
+#    -That means we can't put it on an instance (eg. Process) that
+#     will live in a dshared container.
+#
+# 2) We can't put a Manager.Queue() into a Manager.dict() into another
+#    Manager.dict().
+#    -It also means we can't create a class with Queues
+#     and put these instances in a Manager.dict() and so on.
+#
+# 3) It seems we can't have a python dicts mapping procids -> Manager.dicts
+#    because the simple minded dicts are not shared, and changes on them won't
+#    be visible (or I'm too sleepy to think about why it wasn't working).
+#
+# 4) BUT we can have a Manager.dict() containing Queues on a single nesting
+#    level.
+#
+# All we need is the channels to be set up in a Manager.dict before
+# forking. After that, changing the channels (say, to store the dbg channel on
+# the target process dbg slot) will work. So, instead of having Manager.dict
+# mapping procids to other manager.dict will be creating these guys as module
+# attributes.
 
-# def get_object_by_id(idnum):
-#     return ctypes.cast(idnum, ctypes.py_object).value
+_manager             = multiprocessing.Manager()
+_interpreter_channel = _manager.Queue()
+_this_mod             = sys.modules[__name__]
 
-# def persistent_id(obj):
-#     if hasattr(obj, '__module__') and 'PyQt' in obj.__module__:
-#         return str(obj) + "::" + str(id(obj))
-#     else:
-#         return None
+def create_channels_for_proc(procid, target_process):
+    global _manager
+    global _interpreter_channel
+    global _this_mod
 
-# def persistent_load(persid):
-#     if type(persid) == str and 'PyQt' in persid:
-#         objid =  long(persid[persid.index("::")+2:])
-#         obj = get_object_by_id(objid)
-#         return obj
-#     else:
-#         raise pickle.UnpicklingError, 'Invalid persistent id'
+    entry_name = 'channel_' + str(procid)
+    setattr(_this_mod, entry_name, multiprocessing.Manager().dict())
+    channels = getattr(_this_mod, entry_name)
 
-# def pickle_data(data):
-#     src = StringIO()
-#     p = pickle.Pickler(src)
-#     p.persistent_id = persistent_id
-#     print '+++pickling data'
-#     try:
-#         a_tank = Tank( data )
-#         p.dump(a_tank)
-#     except Exception as e:
-#         print "+++ pickling data EXC: " + str(e)
-#     print '+++pickling DONE data'
-#     return src.getvalue()
-#     #datastream = src.getvalue()
-#     #print repr(datastream)
+    channels['my'] = multiprocessing.Manager().Queue()
 
-# def unpickle_data(data_str):
-#     dst = StringIO(data_str)
-#     up = pickle.Unpickler(dst)
-#     up.persistent_load = persistent_load
-#     print "++LOADING pickled data"
-#     ret = up.load()
-#     print "++LOADED pickled data"
-#     return ret.lift()
+    # channel where I receive commands from outside (ie. a debugger)
+    channels['my'] = _manager.Queue()
 
-def put(channel, obj):
-    try:
-        channel.put(obj)
-    except Exception:
-        P(obj, 5)
-        raise
+    # channel where I command a target process (ie. I'm a debugger)
+    if target_process != None:
+        channels['target'] = proc_channel(target_process.procid, 'my')
+    else:
+        channels['target'] = None
 
-def get(channel):
-    ret = channel.get()
-    return ret
+    # channel where I send info to my debugger  (ie. I'm a target process)
+    channels['dbg'] = None
+
+    # channel where I receive info from my target (ie. I'm a debugger)
+    channels['target_incoming'] = _manager.Queue()
+
+def interpreter_channel():
+    return _interpreter_channel
+
+def proc_channel(procid, name):
+    global _this_mod
+    entry_name = 'channel_' + str(procid)
+    channels = getattr(_this_mod, entry_name)
+    return channels[name]
+
+def set_proc_channel(procid, name, channel):
+    global _this_mod
+    entry_name = 'channel_' + str(procid)
+    channels = getattr(_this_mod, entry_name)
+    channels[name] = channel

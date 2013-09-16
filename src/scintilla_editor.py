@@ -142,8 +142,8 @@ class MemeQsciScintilla(QsciScintilla):
         # highlight expression
         if self.indicators[self.CURRENT_RANGE_IND]:
             ind = self.indicators[self.CURRENT_RANGE_IND]
-            self.clearIndicatorRange(ind['start_line'], ind['start_col'], ind['end_line'], ind['end_col'], self.CURRENT_RANGE_IND)
-        self.fillIndicatorRange(start_line,start_col,end_line,end_col,self.CURRENT_RANGE_IND)
+            self.clearIndicatorRange(ind['start_line'], ind['start_col'], ind['end_line'], ind['end_col'], int(self.CURRENT_RANGE_IND))
+        self.fillIndicatorRange(start_line,start_col,end_line,end_col,int(self.CURRENT_RANGE_IND))
         self.indicators[self.CURRENT_RANGE_IND] = \
             {'start_line':start_line,'start_col':start_col,'end_line':end_line, 'end_col':end_col}
         self.ensureLineVisible(start_line)

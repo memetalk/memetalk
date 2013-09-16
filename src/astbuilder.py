@@ -96,6 +96,8 @@ class ASTNode():
         # it should be used for stack traces and AST debugging
         return self.lst.__repr__()
 
+    def __eq__(self, other):
+        return id(other) == id(self)
 
     # dshared requires this hack
     def __getattr__(self, name):

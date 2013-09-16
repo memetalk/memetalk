@@ -478,38 +478,11 @@ module core() {
     }
   }
 
-  class VMRemoteProcess {
-   fields: self, procid, frames;
-    init new: fun(procid) {
-      @procid = procid;
-    }
-    instance_method initComWithTarget: fun() {
-      <primitive "vmremoteprocess_init_com_with_target">
-    }
-    instance_method stepInto: fun() {
-      <primitive "vmremoteprocess_step_into">
-    }
-    instance_method stepOver: fun() {
-      <primitive "vmremoteprocess_step_over">
-    }
-    instance_method continue: fun() {
-      <primitive "vmremoteprocess_continue">
-    }
-    instance_method stackFrames: fun() {
-      <primitive "vmremoteprocess_stack_frames">
-    }
-    instance_method evalInFrame: fun(text, frame_index) {
-      <primitive "vmremoteprocess_eval_in_frame">
-    }
-    instance_method updateObject: fun(obj) {
-      <primitive "vmremoteprocess_update_object">
-    }
-    instance_method reloadFrame: fun(line) {
-      <primitive "vmremoteprocess_reload_frame">
-    }
-  }
   class VMProcess {
-    fields: procid;
+    fields: self;
+    init fromProcid: fun(procid) {
+      <primitive "vmprocess_from_procid">
+    }
     init spawn: fun() {
       <primitive "vmprocess_spawn">
     }
@@ -534,6 +507,30 @@ module core() {
     instance_method isRunning: fun() {
       <primitive "vmprocess_is_running">
     }
+
+    instance_method stepInto: fun() {
+      <primitive "vmprocess_step_into">
+    }
+    instance_method stepOver: fun() {
+      <primitive "vmprocess_step_over">
+    }
+    instance_method continue: fun() {
+      <primitive "vmprocess_continue">
+    }
+    instance_method stackFrames: fun() {
+      <primitive "vmprocess_stack_frames">
+    }
+    instance_method evalInFrame: fun(text, frame_index) {
+      <primitive "vmprocess_eval_in_frame">
+    }
+    instance_method updateObject: fun(obj) {
+      <primitive "vmprocess_update_object">
+    }
+    instance_method reloadFrame: fun(line) {
+      <primitive "vmprocess_reload_frame">
+    }
+
+
     class_method current: fun() {
       <primitive "vmprocess_current">
     }

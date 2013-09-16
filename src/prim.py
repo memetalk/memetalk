@@ -72,49 +72,56 @@ def prim_exception_type(proc):
     return proc.reg('r_rp')['_vt']
 
 
-#### VMRemoteProcess
+#### VMProcess
+def prim_vmprocess_spawn(proc):
+    raise Exception("TODO")
+    logger.debug('prim_vmprocess_spawn')
+    procid = proc.call_interpreter(True, 'spawn')
+    logger.debug('prim_vmprocess_spawn got id:' + str(procid))
+    proc.reg('r_rdp')['procid'] = proc.interpreter.process_for(procid)
+    return proc.reg('r_rp')
 
-def prim_vmremoteprocess_init_com_with_target(proc):
-    logger.debug('prim_vmremoteprocess_init_com_with_target')
-    raw_frames = proc.init_debugging_session()
+def prim_vmprocess_from_procid(proc):
+    raise Exception("TODO")
+    logger.debug('prim_vmprocess_from_procid')
+    proc.reg('r_drp')['self'] = proc.interpreter.process_for(proc.locals['procid'])
+
+def prim_vmprocess_step_into(proc):
+    logger.debug('prim_vmprocess_step_into')
+    proc.call_target_process(True, proc.reg('r_rdp')['self'].procid, 'step_into')
+
+def prim_vmprocess_step_over(proc):
+    logger.debug('prim_vmprocess_step_overinto')
+    proc.call_target_process(True, proc.reg('r_rdp')['self'].procid, 'step_over')
+
+def prim_vmprocess_continue(proc):
+    logger.debug('prim_vmprocess_continue')
+    proc.call_target_process(True, proc.reg('r_rdp')['procid'], 'continue')
+
+def prim_vmprocess_stack_frames(proc):
+    logger.debug('prim_vmprocess_stack_frames')
+    _proc = proc.reg('r_rdp')['self']
+    raw_frames = _proc.all_stack_frames()
     VMStackFrameClass = proc.interpreter.get_core_class('VMStackFrame')
     logger.debug('got frames, assemblying and caching...')
-    proc.reg('r_rdp')['frames'] = [proc.interpreter.alloc_object(VMStackFrameClass,{'self':x}) for x in raw_frames]
+    frames = [proc.interpreter.alloc_object(VMStackFrameClass,{'self':x}) for x in raw_frames]
+    return frames
 
-def prim_vmremoteprocess_step_into(proc):
-    raw_frames = proc.call_target_process(True, proc.reg('r_rdp')['procid'], 'step_into')
-    VMStackFrameClass = proc.interpreter.get_core_class('VMStackFrame')
-    logger.debug('got frames, assemblying and caching...')
-    proc.reg('r_rdp')['frames'] = [proc.interpreter.alloc_object(VMStackFrameClass,{'self':x}) for x in raw_frames]
 
-def prim_vmremoteprocess_step_over(proc):
-    raw_frames = proc.call_target_process(True, proc.reg('r_rdp')['procid'], 'step_over')
-    VMStackFrameClass = proc.interpreter.get_core_class('VMStackFrame')
-    logger.debug('got frames, assemblying...')
-    proc.reg('r_rdp')['frames'] = [proc.interpreter.alloc_object(VMStackFrameClass,{'self':x}) for x in raw_frames]
 
-def prim_vmremoteprocess_continue(proc):
-    logger.debug('prim_vmremoteprocess_continue')
-    raw_frames = proc.call_target_process(True, proc.reg('r_rdp')['procid'], 'continue')
-    VMStackFrameClass = proc.interpreter.get_core_class('VMStackFrame')
-    logger.debug('got frames, assemblying...')
-    proc.reg('r_rdp')['frames'] = [proc.interpreter.alloc_object(VMStackFrameClass,{'self':x}) for x in raw_frames]
+    # if proc.reg('r_rdp')['frames']:
+    #     logger.debug('we have it cached, returning it')
+    #     return proc.reg('r_rdp')['frames']
+    # else:
+    #     logger.debug('asking stack frames...')
+    #     frames = proc.call_target_process(True, proc.reg('r_rdp')['procid'], 'get_frames')
+    #     proc.reg('r_rdp')['frames'] = frames
+    #     logger.debug('returning frames')
+    #     return proc.reg('r_rdp')['frames']
 
-def prim_vmremoteprocess_stack_frames(proc):
-    if proc.reg('r_rdp')['frames']:
-        logger.debug('we have it cached, returning it')
-        return proc.reg('r_rdp')['frames']
-    else:
-        logger.debug('asking stack frames...')
-        raw_frames = proc.call_target_process(True, proc.reg('r_rdp')['procid'], 'get_frames')
-        VMStackFrameClass = proc.interpreter.get_core_class('VMStackFrame')
-        logger.debug('got frames, assemblying...')
-        proc.reg('r_rdp')['frames'] = [proc.interpreter.alloc_object(VMStackFrameClass,{'self':x}) for x in raw_frames]
-        logger.debug('returning frames')
-        return proc.reg('r_rdp')['frames']
-
-def prim_vmremoteprocess_eval_in_frame(proc):
-    logger.debug('prim_vmremoteprocess_eval_in_frame')
+def prim_vmprocess_eval_in_frame(proc):
+    raise Exception("TODO")
+    logger.debug('prim_vmprocess_eval_in_frame')
     text = proc.locals()['text']
     frame_idx = proc.locals()['frame_index']
     (ex, res) = proc.call_target_process(True, proc.reg('r_rdp')['procid'], 'eval_in_frame', text, frame_idx)
@@ -122,86 +129,43 @@ def prim_vmremoteprocess_eval_in_frame(proc):
         proc.throw(ex)
     return res
 
-def prim_vmremoteprocess_reload_frame(proc):
-    logger.debug('prim_vmremoteprocess_reload_frame')
-    raw_frames = proc.call_target_process(True, proc.reg('r_rdp')['procid'], 'reload_frame')
-    VMStackFrameClass = proc.interpreter.get_core_class('VMStackFrame')
-    logger.debug('got frames, assemblying and caching...')
-    proc.reg('r_rdp')['frames'] = [proc.interpreter.alloc_object(VMStackFrameClass,{'self':x}) for x in raw_frames]
-
-#### VMProcess
-
-
-# def prim_vmprocess_exec_module(proc):
-#     logger.debug('prim_vmprocess_exec_module')
-#     mname = proc.locals()['mname']
-#     fname = proc.locals()['fname']
-#     args  = proc.locals()['args']
-#     procid = proc.call_interpreter(False, 'exec_module', proc.reg('r_rdp')['id'], mname, fname, args,)
-#     return proc.reg('r_rp')
-
-
-# def prim_vmprocess_rewind_and_break(proc):
-#     logger.debug('asking to rewind...')
-#     frames_count = proc.locals()['frames_count']
-#     to_line = proc.locals()['to_line']
-#     proc.call_target_process(False, proc.reg('r_rdp')['id'], 'rewind_and_break', frames_count, to_line)
+def prim_vmprocess_reload_frame(proc):
+    raise Exception("TODO")
+    logger.debug('prim_vmprocess_reload_frame')
+    frames = proc.call_target_process(True, proc.reg('r_rdp')['procid'], 'reload_frame')
+    proc.reg('r_rdp')['frames'] = frames
 
 def prim_vmprocess_current(proc):
     return proc.mm_self()
 
-# def prim_vmprocess_spawn_and_run(proc):
-#     proc.call_interpreter(False, 'spawn_and_exec_fun', proc.locals()['fn'], [])
-
-def prim_vmprocess_spawn(proc):
-    logger.debug('prim_vmprocess_spawn')
-    procid = proc.call_interpreter(True, 'spawn')
-    logger.debug('prim_vmprocess_spawn got id:' + str(procid))
-    proc.reg('r_rdp')['procid'] = procid
-    return proc.reg('r_rp')
-
 def prim_vmprocess_run(proc):
+    raise Exception("TODO")
     proc.call_interpreter(True, 'proc_exec_fun', proc.reg('r_rdp')['procid'], proc.locals()['fn'], [])
 
 def prim_vmprocess_run_and_halt(proc):
+    raise Exception("TODO")
     proc.call_interpreter(True, 'proc_exec_fun', proc.reg('r_rdp')['procid'], proc.locals()['fn'], [], 'paused')
 
 def prim_vmprocess_is_running(proc):
+    raise Exception("TODO")
     return proc.is_alive()
 
 def prim_vmprocess_halt(proc):
     logger.debug("prim_vmprocess_halt")
-    assert(proc.reg('r_rdp')['procid'] == proc.procid)
     proc.debug_me()
 
 def prim_vmprocess_halt_fn(proc):
+    raise Exception("TODO")
     logger.debug("prim_vmprocess_debug_fn")
-    assert(proc.reg('r_rdp')['procid'] == proc.procid)
-    proc.debug_me()
-    logger.debug("prim_vmprocess_debug_fn: calling fn...")
-    fn = proc.locals()['fn']
-    return proc.setup_and_run_unprotected(None, None, fn['compiled_function']['name'], fn, [], True)
-
-
-def prim_vmprocess_stack_frames(proc):
-    logger.debug('prim_vmprocess_stack_frames')
-    assert(proc.reg('r_rdp')['procid'] == proc.procid)
-    VMStackFrameClass = proc.interpreter.get_core_class('VMStackFrame')
-    return [proc.interpreter.alloc_object(VMStackFrameClass,{'self':x}) for x in proc.all_stack_frames()]
+    # proc.debug_me()
+    # logger.debug("prim_vmprocess_debug_fn: calling fn...")
+    # fn = proc.locals()['fn']
+    # return proc.setup_and_run_unprotected(None, None, fn['compiled_function']['name'], fn, [], True)
 
 def prim_vmprocess_debug_on_exception(proc):
+    raise Exception("TODO")
     assert(proc.reg('r_rdp')['procid'] == proc.procid)
     proc.flag_debug_on_exception = True
-
-# def prim_vmprocess_eval(proc):
-#     logger.debug('asking to eval...')
-#     text = proc.locals()['text']
-#     frame_level = proc.locals()['frame_level'] + 1
-#     raw = proc.call_target_process(True, proc.reg('r_rdp')['id'], 'eval', text, frame_level)
-#     import pickle
-#     return pickle.loads(raw)
-
-
 
 #### VMStackFrame
 
@@ -234,8 +198,8 @@ def prim_vmstackframe_module_pointer(proc):
 
 def prim_vmstackframe_context_pointer(proc):
     logger.debug('prim_vmstackframe_context_pointer')
-    frame = _lookup_field(proc, proc.reg('r_rp'), 'self')
-    #logger.debug('got frame: returning:' + P(frame,1,True))
+    frame = proc.reg('r_rdp')['self']
+    logger.debug('got frame: returning:' + P(frame,1,True))
     return frame['r_cp']
 
 def prim_vmstackframe_receiver_pointer(proc):
