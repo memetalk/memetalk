@@ -943,8 +943,10 @@ QWebElement.__getattr__ = qt__getattr__
 QUrl.__getattr__ = qt__getattr__
 scintilla_editor.__getattr__ = qt__getattr__
 
-def prim_qt_qapplication_new(proc):
+_refs = [] # global referenfes to qt widgets so
+           # the GC doesn't wip them out
 
+def prim_qt_qapplication_new(proc):
     global _qt_imodule
     _qt_imodule = proc.reg('r_mp')
     proc.reg('r_rdp')['self'] = QApplication(sys.argv)
@@ -983,6 +985,8 @@ def prim_qt_qwidget_new(proc):
         proc.reg('r_rdp')["self"] = QtGui.QWidget(qt_parent)
     else:
         proc.reg('r_rdp')['self'] = QtGui.QWidget()
+    global _refs
+    _refs.append(proc.reg('r_rdp')['self'])
     return proc.reg('r_rp')
 
 
@@ -1118,6 +1122,8 @@ def prim_qt_qmainwindow_new(proc):
     def get_proc():
         return proc
     proc.reg('r_rdp')['self'] = _QMainWindow(get_proc, proc.reg('r_rp'))
+    global _refs
+    _refs.append(proc.reg('r_rdp')['self'])
     return proc.reg('r_rp')
 
 
