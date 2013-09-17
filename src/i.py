@@ -1513,8 +1513,11 @@ class Process():
         self.dbg_control('eval_do_un_not')
         return not value
 
-    def eval_do_and(self, l, r, ast):
-        return l and r
+    def eval_do_and(self, lval, rexpr, ast):
+        if lval:
+            return self.evaluator.apply("expr", rexpr)[0]
+        else:
+            return False
 
     def eval_do_un_neg(self, value, ast):
         self.reg('r_ip', ast)
