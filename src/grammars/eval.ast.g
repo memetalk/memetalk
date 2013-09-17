@@ -9,6 +9,7 @@ expr = ['super-ctor-send' :s args:a]:ast     -> self.i.do_eval('eval_do_super_ct
      | ['super-send' args:a]:ast             -> self.i.do_eval('eval_do_super_send',a,ast)
      | ['var-def' :id expr:e]:ast            -> self.i.do_eval('eval_do_var_def',id,e,ast)
      | ['return' expr:x]:ast                 -> self.i.do_eval('eval_do_return',x,ast)
+     | ['non-local-return' expr:x]:ast       -> self.i.do_eval('eval_do_non_local_return',x,ast)
      | ['not' expr:x]:ast                    -> self.i.do_eval('eval_do_un_not',x,ast)
      | ['negative' expr:x]:ast               -> self.i.do_eval('eval_do_un_neg',x,ast)
      | ['and' expr:x :y]:ast                 -> self.i.do_eval('eval_do_and',x,y,ast)

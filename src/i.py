@@ -409,6 +409,11 @@ class ReturnException(VMException):
     def __init__(self, val):
         self.val = val
 
+class NonLocalReturnException(VMException):
+    def __init__(self, val, top_level_cfun):
+        self.val = val
+        self.top_level_cfun = top_level_cfun
+
 class RewindException(VMException):
     def __init__(self, count):
         self.count = count
@@ -1181,8 +1186,17 @@ class Process():
             self.evaluator.i = self
             try:
                 ret,err = self.evaluator.apply("exec_fun")
+                self.tear_fun()
             except ReturnException as e:
+                self.tear_fun()
                 ret = e.val
+            except NonLocalReturnException as e:
+                self.tear_fun()
+                cp = self.reg('r_cp')
+                if cp and not id_eq(cp['compiled_function'], e.top_level_cfun):
+                    raise
+                else:
+                    raise ReturnException(e.val)
             except RewindException as e:
                 if e.count > 1:
                     e.count = e.count - 1
@@ -1195,7 +1209,6 @@ class Process():
             except Exception as e:
                 self.tear_fun()
                 raise
-            self.tear_fun()
             if skip:
                 self.state = 'paused'
             return ret
@@ -1458,6 +1471,18 @@ class Process():
         self.reg('r_ip', ast)
         self.dbg_control('eval_do_return')
         raise ReturnException(value)
+
+    def eval_do_non_local_return(self, value, ast):
+        self.reg('r_ip', ast)
+        self.dbg_control('eval_do_explicit_return')
+
+        def top_level(cfun):
+            if cfun['is_top_level']:
+                return cfun
+            else:
+                return top_level(cfun['outer_cfun'])
+        cfun = self.reg('r_cp')['compiled_function']
+        raise NonLocalReturnException(value, top_level(cfun))
 
     def eval_do_super_send(self, args, ast):
         self.reg('r_ip', ast)
