@@ -107,6 +107,7 @@ class_method_decl = spaces token("class_method") alpha_name:name token(":")
 params = token("(") idlist:xs token(")") -> xs
 
 fparams = token("(") token(")") -> []
+        | token("(")  token("*") id:x token(")") -> [['var-arg', x]]
         | token("(")  id:x (token(",") id)*:xs token(")") -> [x]+xs
         | token("(")  id:x (token(",") id)*:xs pvar:y token(")") -> [x]+xs+[y]
 
