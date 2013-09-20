@@ -80,35 +80,33 @@ def prim_vmprocess_from_procid(proc):
     logger.debug('prim_vmprocess_from_procid')
     proc.reg('r_drp')['self'] = proc.interpreter.process_for(proc.locals['procid'])
 
-def _update_frames(proc):
+def _update_frames(proc, mproc):
     logger.debug('_update_frames')
-    #proc.reg('r_rdp')['frames'] = []
-    # _proc = proc.reg('r_rdp')['self']
-    # raw_frames = _proc.all_stack_frames()
-    # VMStackFrameClass = proc.interpreter.get_core_class('VMStackFrame')
-    # frames = [proc.interpreter.alloc_object(VMStackFrameClass,{'self':x}) for x in raw_frames]
-    # proc.reg('r_rdp')['frames'] = frames
+    raw_frames = mproc['self'].all_stack_frames()
+    VMStackFrameClass = proc.interpreter.get_core_class('VMStackFrame')
+    frames = [proc.interpreter.alloc_object(VMStackFrameClass,{'self':x}) for x in raw_frames]
+    mproc['frames'] = frames
 
 def prim_vmprocess_handshake_target(proc):
     logger.debug('prim_vmprocess_handshake_target')
     proc.init_debugging_session()
-    _update_frames(proc)
+    _update_frames(proc, proc.reg('r_rdp'))
 
 def prim_vmprocess_step_into(proc):
     logger.debug('prim_vmprocess_step_into')
     proc.call_target_process(True, proc.reg('r_rdp')['self'].procid, 'step_into')
-    _update_frames(proc)
+    #_update_frames(proc, proc.reg('r_rdp'))
 
 def prim_vmprocess_step_over(proc):
     logger.debug('prim_vmprocess_step_overinto')
     proc.call_target_process(True, proc.reg('r_rdp')['self'].procid, 'step_over')
-    _update_frames(proc)
+    #_update_frames(proc, proc.reg('r_rdp'))
 
 def prim_vmprocess_continue(proc):
     logger.debug('prim_vmprocess_continue')
     _proc = proc.reg('r_rdp')['self']
     proc.call_target_process(True, _proc.procid, 'continue')
-    _update_frames(proc)
+    #_update_frames(proc, proc.reg('r_rdp'))
 
 def prim_vmprocess_stack_frames(proc):
     logger.debug('prim_vmprocess_stack_frames')
@@ -140,7 +138,7 @@ def prim_vmprocess_reload_frame(proc):
     logger.debug('prim_vmprocess_reload_frame')
     _proc = proc.reg('r_rdp')['self']
     proc.call_target_process(True, _proc.procid, 'reload_frame')
-    _update_frames(proc)
+    _update_frames(proc, proc.reg('r_rdp'))
 
 def prim_vmprocess_rewind_and_break(proc):
     logger.debug('prim_vmprocess_rewind_and_break')
@@ -148,10 +146,12 @@ def prim_vmprocess_rewind_and_break(proc):
     to_line = proc.locals()['to_line']
     _proc = proc.reg('r_rdp')['self']
     proc.call_target_process(True, _proc.procid, 'rewind_and_break', frames_count, to_line)
-    _update_frames(proc)
+    _update_frames(proc, proc.reg('r_rdp'))
 
 def prim_vmprocess_current(proc):
-    return proc.mm_self()
+    mproc = proc.mm_self()
+    _update_frames(proc, mproc)
+    return mproc
 
 def prim_vmprocess_detach(proc):
     logger.debug('prim_vmprocess_detach')
@@ -272,14 +272,17 @@ def prim_object_to_string(proc):
     else:
         return str(obj)
 
-def prim_object_to_source(proc):
-    obj = proc.reg('r_rp')
+def _to_source(obj):
     if obj == None:
         return 'null'
     elif isinstance(obj, dict) and '@tag' in obj:
-        return  '<' + proc.reg('r_rp')['@tag'] + '>'
+        return  '<' + obj['@tag'] + '>'
     else:
         return P(obj,1,True)
+
+def prim_object_to_source(proc):
+    obj = proc.reg('r_rp')
+    return _to_source(obj)
 
 def prim_object_send(proc):
     selector_str = proc.locals()['selector']['self'] # should be a symbol
@@ -1998,6 +2001,19 @@ def prim_idez_debugger_ui_update_info(proc):
     locInfo = _create_location_info(_proc, raw_frames[frame_index])
     qteditor.paused_at_line(locInfo["start_line"], locInfo["start_col"], locInfo["end_line"], locInfo["end_col"])
 
+    localVarList = proc.reg("r_rp")['localVarList']
+    fieldVarList = proc.reg("r_rp")['fieldVarList']
+
+    _lookup_field(proc, localVarList, 'self').clear()
+    _lookup_field(proc, fieldVarList, 'self').clear()
+
+    VMStackFrameClass = proc.interpreter.get_core_class('VMStackFrame')
+    mm_frame = proc.interpreter.alloc_object(VMStackFrameClass,{'self':raw_frames[frame_index]})
+
+    if proc.reg('r_rdp')['shouldUpdateVars']:
+        proc.do_send(localVarList, 'loadFrame', [mm_frame])
+        proc.do_send(fieldVarList, 'loadReceiver', [mm_frame])
+
 def _owner_full_name(owner):
     if 'module' in owner: #compiled class
         return owner['module']['name'] + "/" + owner['name']
@@ -2031,7 +2047,11 @@ def prim_idez_stack_combo_update_info(proc):
 #   // this.setCurrentIndex(@frames.size() - 1);
 # }
     logger.debug('prim_idez_stack_combo_update_info')
+    mself = proc.reg("r_rp")
     this = _lookup_field(proc, proc.reg("r_rp"), 'self')
+
+    mself['updating'] = True
+
     this.clear()
 
     execFrames = proc.reg("r_rdp")['frames']
@@ -2039,6 +2059,154 @@ def prim_idez_stack_combo_update_info(proc):
     raw_frames = _proc.all_stack_frames()
     names = [_cfun_full_name(frame['r_cp']['compiled_function']) for frame in raw_frames]
     for name in names:
-        this.addItem(name)
+        this.addItem(name) # this shit triggers it
 
-    this.setCurrentIndex(len(raw_frames)-1)
+    idx = len(raw_frames)-1
+    this.setCurrentIndex(idx)
+    mself['updating'] = False
+    fn = mself['on_update']
+    proc.setup_and_run_fun(None, None, fn['compiled_function']['name'], fn, [idx], True)
+
+def prim_idez_variablelistwidget_load_frame(proc):
+  # this.clear();
+  # this.setHorizontalHeaderLabels(['Name', 'Value']);
+  # if (frame.environmentPointer) {
+  #   var env = frame.environmentPointer;
+  #   var table = frame.contextPointer.compiledFunction.env_table;
+  #   this.setRowCount(env.size);
+  #   var _this = env['r_rp'];
+  #   this.setItem(0, 0, VariableItem.new("this", _this));
+  #   this.setItem(0, 1, VariableItem.new(_this.toSource, _this));
+  #   var _dthis = env['r_rdp'];
+  #   this.setItem(1, 0, VariableItem.new("@this", _dthis));
+  #   this.setItem(1, 1, VariableItem.new(_dthis.toSource, _dthis));
+  #   var i = 2;
+  #   table.each(fun(idx, varname) {
+  #     var entry = env[idx];
+  #     this.setItem(i, 0, VariableItem.new(varname, entry));
+  #     this.setItem(i, 1, VariableItem.new(entry.toSource, entry));
+  #     i = i + 1;
+  #   });
+  # } else {
+  #   this.setRowCount(2 + frame.locals.size);
+  #   var _this = frame.receiverPointer;
+  #   this.setItem(0, 0, VariableItem.new("this", _this));
+  #   this.setItem(0, 1, VariableItem.new(_this.toSource, _this));
+  #   var _dthis = frame.receiverDataPointer;
+  #   this.setItem(1, 0, VariableItem.new("@this", _dthis));
+  #   this.setItem(1, 1, VariableItem.new(_dthis.toSource, _dthis));
+  #   var i = 2;
+  #   frame.locals.each(fun(name,val) {
+  #     this.setItem(i, 0, VariableItem.new(name, frame.locals[name]));
+  #     this.setItem(i, 1, VariableItem.new(val.toSource, frame.locals[name]));
+  #     i = i + 1;
+  #   });
+  # }
+
+    logger.debug('prim_idez_variablelistwidget_load_frame')
+    global _qt_imodule
+    VariableItem = proc.reg('r_mp')['VariableItem']
+
+    qtobj = _lookup_field(proc, proc.reg('r_rp'), 'self')
+    qtobj.clear()
+    qtobj.setHorizontalHeaderLabels(['Name', 'Value']);
+    frame = proc.locals()['frame']['self']
+    if frame['r_ep']:
+        env = frame['r_ep']
+        table = frame['r_cp']['compiled_function']['env_table']
+        qtobj.setRowCount(len(env))
+        _this = env['r_rp']
+
+        varitem = proc.do_send(VariableItem, 'new', ['this', _this])
+        qtobj.setItem(0,0, _lookup_field(proc, varitem, 'self'))
+        varitem = proc.do_send(VariableItem, 'new', [_to_source(_this), _this])
+        qtobj.setItem(0,1, _lookup_field(proc, varitem, 'self'))
+
+        _dthis = env['r_rdp']
+        varitem = proc.do_send(VariableItem, 'new', ['@this', _dthis])
+        qtobj.setItem(1,0, _lookup_field(proc, varitem, 'self'))
+        varitem = proc.do_send(VariableItem, 'new', [_to_source(_dthis), _dthis])
+        qtobj.setItem(1,1, _lookup_field(proc, varitem, 'self'))
+
+        i = 2
+        for idx, varname in table.iteritems():
+            entry = env[idx]
+            varitem = proc.do_send(VariableItem, 'new', [varname, entry])
+            qtobj.setItem(i,0, _lookup_field(proc, varitem, 'self'))
+            varitem = proc.do_send(VariableItem, 'new', [_to_source(entry), entry])
+            qtobj.setItem(i,1, _lookup_field(proc, varitem, 'self'))
+            i = i + 1
+    else:
+        qtobj.setRowCount(2 + len(frame['locals']))
+        _this = frame['r_rp']
+
+        varitem = proc.do_send(VariableItem, 'new', ['this', _this])
+        qtobj.setItem(0,0, _lookup_field(proc, varitem, 'self'))
+        varitem = proc.do_send(VariableItem, 'new', [_to_source(_this), _this])
+        qtobj.setItem(0,1, _lookup_field(proc, varitem, 'self'))
+
+        _dthis = frame['r_rdp']
+        varitem = proc.do_send(VariableItem, 'new', ['@this', _dthis])
+        qtobj.setItem(1,0, _lookup_field(proc, varitem, 'self'))
+        varitem = proc.do_send(VariableItem, 'new', [_to_source(_dthis), _dthis])
+        qtobj.setItem(1,1, _lookup_field(proc, varitem, 'self'))
+
+        i = 2
+        for name, val in frame['locals'].iteritems():
+            varitem = proc.do_send(VariableItem, 'new', [name, frame['locals'][name]])
+            qtobj.setItem(i,0, _lookup_field(proc, varitem, 'self'))
+            varitem = proc.do_send(VariableItem, 'new', [_to_source(val), val])
+            qtobj.setItem(i,1, _lookup_field(proc, varitem, 'self'))
+            i = i + 1
+
+def prim_idez_variablelistwidget_load_receiver(proc):
+  # this.clear();
+  # this.setHorizontalHeaderLabels(['Name', 'Value']);
+  # var _dthis = null;
+  # if (frame.environmentPointer) {
+  #   _dthis = frame.environmentPointer['r_rdp'];
+  # } else {
+  #   _dthis = frame.receiverDataPointer;
+  # }
+  # var mirror = Mirror.new(_dthis);
+  # var fields = mirror.fields();
+  # this.setRowCount(fields.size);
+  # var i = 0;
+  # fields.each(fun(name) {
+  #   this.setItem(i, 0, VariableItem.new(name, mirror.valueFor(name)));
+  #   this.setItem(i, 1, VariableItem.new(mirror.valueFor(name).toString, mirror.valueFor(name)));
+  #   i = i + 1;
+  # });
+
+    logger.debug('prim_idez_variablelistwidget_load_frame')
+
+    global _qt_imodule
+    VariableItem = proc.reg('r_mp')['VariableItem']
+
+    qtobj = _lookup_field(proc, proc.reg('r_rp'), 'self')
+    qtobj.clear()
+    qtobj.setHorizontalHeaderLabels(['Name', 'Value']);
+    frame = proc.locals()['frame']['self']
+
+    _dthis = None
+    if frame['r_ep']:
+        _dthis = frame['r_ep']['r_rdp']
+    else:
+        _dthis = frame['r_rdp']
+
+    #Mirror.fields
+    if hasattr(_dthis, 'keys'):
+        fields = _dthis.keys()
+    elif isinstance(_dthis, list):
+        fields = [str(x) for x in range(0,len(_dthis))]
+    else:
+        fields = []
+
+    qtobj.setRowCount(len(fields))
+    i = 0
+    for name in fields:
+        varitem = proc.do_send(VariableItem, 'new', [name, _dthis[name]])
+        qtobj.setItem(i, 0, _lookup_field(proc, varitem, 'self'))
+        varitem = proc.do_send(VariableItem, 'new', [_to_source(_dthis[name]), _dthis[name]])
+        qtobj.setItem(i, 1, _lookup_field(proc, varitem, 'self'))
+        i = i + 1

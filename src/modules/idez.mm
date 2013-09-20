@@ -147,7 +147,7 @@ init new: fun(process) {
 
   @editor = DebuggerEditor.new(centralWidget, @process);
 
-  @stackCombo.connect("currentIndexChanged",fun(i) {
+  @stackCombo.onUpdate(fun(i) {
     @frame_index = i;
     this.updateInfo();
   });
@@ -1859,12 +1859,22 @@ instance_method show_tutorial: fun() {
 end //idez:ModuleExplorer
 
 class StackCombo < QComboBox
-fields: frames;
+fields: frames, on_update, updating;
 init new: fun(parent, execframes) {
   super.new(parent);
   @frames = execframes;
+  @updating = false;
+
+  this.connect("currentIndexChanged", fun(idx) {
+    if (!@updating) {
+      @on_update(idx);
+    }
+  });
 }
 
+instance_method onUpdate: fun(fn) {
+  @on_update = fn;
+}
 instance_method updateInfo: fun() {
   <primitive "idez_stack_combo_update_info">
   // this.clear();
@@ -1912,71 +1922,73 @@ init new: fun(process, parent) {
 }
 
 instance_method loadFrame: fun(frame) {
-  this.clear();
-  this.setHorizontalHeaderLabels(['Name', 'Value']);
+  <primitive "idez_variablelistwidget_load_frame">
+  // this.clear();
+  // this.setHorizontalHeaderLabels(['Name', 'Value']);
 
-  if (frame.environmentPointer) {
-    var env = frame.environmentPointer;
-    var table = frame.contextPointer.compiledFunction.env_table;
+  // if (frame.environmentPointer) {
+  //   var env = frame.environmentPointer;
+  //   var table = frame.contextPointer.compiledFunction.env_table;
 
-    this.setRowCount(env.size);
+  //   this.setRowCount(env.size);
 
-    var _this = env['r_rp'];
-    this.setItem(0, 0, VariableItem.new("this", _this));
-    this.setItem(0, 1, VariableItem.new(_this.toSource, _this));
+  //   var _this = env['r_rp'];
+  //   this.setItem(0, 0, VariableItem.new("this", _this));
+  //   this.setItem(0, 1, VariableItem.new(_this.toSource, _this));
 
-    var _dthis = env['r_rdp'];
-    this.setItem(1, 0, VariableItem.new("@this", _dthis));
-    this.setItem(1, 1, VariableItem.new(_dthis.toSource, _dthis));
+  //   var _dthis = env['r_rdp'];
+  //   this.setItem(1, 0, VariableItem.new("@this", _dthis));
+  //   this.setItem(1, 1, VariableItem.new(_dthis.toSource, _dthis));
 
-    var i = 2;
-    table.each(fun(idx, varname) {
-      var entry = env[idx];
-      this.setItem(i, 0, VariableItem.new(varname, entry));
-      this.setItem(i, 1, VariableItem.new(entry.toSource, entry));
-      i = i + 1;
-    });
-  } else {
-    this.setRowCount(2 + frame.locals.size);
+  //   var i = 2;
+  //   table.each(fun(idx, varname) {
+  //     var entry = env[idx];
+  //     this.setItem(i, 0, VariableItem.new(varname, entry));
+  //     this.setItem(i, 1, VariableItem.new(entry.toSource, entry));
+  //     i = i + 1;
+  //   });
+  // } else {
+  //   this.setRowCount(2 + frame.locals.size);
 
-    var _this = frame.receiverPointer;
-    this.setItem(0, 0, VariableItem.new("this", _this));
-    this.setItem(0, 1, VariableItem.new(_this.toSource, _this));
+  //   var _this = frame.receiverPointer;
+  //   this.setItem(0, 0, VariableItem.new("this", _this));
+  //   this.setItem(0, 1, VariableItem.new(_this.toSource, _this));
 
-    var _dthis = frame.receiverDataPointer;
-    this.setItem(1, 0, VariableItem.new("@this", _dthis));
-    this.setItem(1, 1, VariableItem.new(_dthis.toSource, _dthis));
+  //   var _dthis = frame.receiverDataPointer;
+  //   this.setItem(1, 0, VariableItem.new("@this", _dthis));
+  //   this.setItem(1, 1, VariableItem.new(_dthis.toSource, _dthis));
 
-    var i = 2;
-    frame.locals.each(fun(name,val) {
-      this.setItem(i, 0, VariableItem.new(name, frame.locals[name]));
-      this.setItem(i, 1, VariableItem.new(val.toSource, frame.locals[name]));
-      i = i + 1;
-    });
-  }
+  //   var i = 2;
+  //   frame.locals.each(fun(name,val) {
+  //     this.setItem(i, 0, VariableItem.new(name, frame.locals[name]));
+  //     this.setItem(i, 1, VariableItem.new(val.toSource, frame.locals[name]));
+  //     i = i + 1;
+  //   });
+  // }
 }
 //end idez:VariableListWidget:loadFrame
 
 instance_method loadReceiver: fun(frame) {
-  this.clear();
-  this.setHorizontalHeaderLabels(['Name', 'Value']);
+  <primitive "idez_variablelistwidget_load_receiver">
+  // this.clear();
+  // this.setHorizontalHeaderLabels(['Name', 'Value']);
 
-  var _dthis = null;
-  if (frame.environmentPointer) {
-    _dthis = frame.environmentPointer['r_rdp'];
-  } else {
-    _dthis = frame.receiverDataPointer;
-  }
-  var mirror = Mirror.new(_dthis);
-  var fields = mirror.fields();
-  this.setRowCount(fields.size);
+  // var _dthis = null;
+  // if (frame.environmentPointer) {
+  //   _dthis = frame.environmentPointer['r_rdp'];
+  // } else {
+  //   _dthis = frame.receiverDataPointer;
+  // }
+  // var mirror = Mirror.new(_dthis);
+  // var fields = mirror.fields();
+  // this.setRowCount(fields.size);
 
-  var i = 0;
-  fields.each(fun(name) {
-    this.setItem(i, 0, VariableItem.new(name, mirror.valueFor(name)));
-    this.setItem(i, 1, VariableItem.new(mirror.valueFor(name).toString, mirror.valueFor(name)));
-    i = i + 1;
-  });
+  // var i = 0;
+  // fields.each(fun(name) {
+  //   this.setItem(i, 0, VariableItem.new(name, mirror.valueFor(name)));
+  //   this.setItem(i, 1, VariableItem.new(mirror.valueFor(name).toString, mirror.valueFor(name)));
+  //   i = i + 1;
+  // });
 }
 
 end //idez:VariableListWidget
