@@ -1721,9 +1721,15 @@ class Process():
         logger.debug("is_exception_protected?: " + str(self.exception_protection[-1]))
         return self.exception_protection[-1]
 
+    def current_fun_name(self):
+        if self.reg('r_cp'):
+            return self.reg('r_cp')['compiled_function']['name']
+        else:
+            return '<prelude>'
+
     def throw(self, mex):
         # MemetalkException encapsulates the memetalk exception:
-        logger.debug(str(self.procid) + ": interpreter::throw in " + self.reg('r_cp')['compiled_function']['name'])
+        logger.debug(str(self.procid) + ": interpreter::throw in " + self.current_fun_name())
         logger.debug(str(self.procid) + ": protected? " + str(self.is_exception_protected()))
         logger.debug(str(self.procid) + ": exception flag? " + str(self.shared['flag_debug_on_exception']))
 
@@ -1743,7 +1749,7 @@ class Process():
                 raise MemetalkException(mex, self.pp_stack_trace())
 
     def throw_py_exception(self, pyex, tb):
-        logger.debug(str(self.procid) + ": interpreter::throw_py in " + self.reg('r_cp')['compiled_function']['name'])
+        logger.debug(str(self.procid) + ": interpreter::throw_py in " + self.current_fun_name())
         logger.debug(str(self.procid) + ": protected? " + str(self.is_exception_protected()))
         logger.debug(str(self.procid) + ": exception flag? " + str(self.shared['flag_debug_on_exception']))
 
@@ -1765,7 +1771,7 @@ class Process():
             raise MemetalkException(ex, self.pp_stack_trace(), pyex, tb)
 
     def throw_with_message(self, msg):
-        logger.debug(str(self.procid) + ": interpreter::throw_with message in " + self.reg('r_cp')['compiled_function']['name'])
+        logger.debug(str(self.procid) + ": interpreter::throw_with message in " + self.current_fun_name())
         logger.debug(str(self.procid) + ": protected? " + str(self.is_exception_protected()))
         logger.debug(str(self.procid) + ": exception flag? " + str(self.shared['flag_debug_on_exception']))
         logger.debug("MemetalkException with message: \n" + msg)
