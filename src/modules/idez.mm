@@ -304,18 +304,19 @@ instance_method toggleVarUpdate: fun() {
 }
 
 instance_method updateInfo: fun() {
-  if (0 <= @frame_index) {
-    @editor.setText(@execFrames.codeFor(@frame_index));
-    @editor.setFrameIndex(@frame_index);
-    var locInfo = @execFrames.locationInfoFor(@frame_index);
-    @editor.pausedAtLine(locInfo["start_line"], locInfo["start_col"], locInfo["end_line"], locInfo["end_col"]);
-    @localVarList.clear();
-    @fieldVarList.clear();
-    if (@shouldUpdateVars) {
-      @localVarList.loadFrame(@execFrames.frame(@frame_index));
-      @fieldVarList.loadReceiver(@execFrames.frame(@frame_index));
-    }
-  }
+  <primitive "idez_debugger_ui_update_info">
+  // if (0 <= @frame_index) {
+  //   @editor.setText(@execFrames.codeFor(@frame_index));
+  //   @editor.setFrameIndex(@frame_index);
+  //   var locInfo = @execFrames.locationInfoFor(@frame_index);
+  //   @editor.pausedAtLine(locInfo["start_line"], locInfo["start_col"], locInfo["end_line"], locInfo["end_col"]);
+  //   @localVarList.clear();
+  //   @fieldVarList.clear();
+  //   if (@shouldUpdateVars) {
+  //     @localVarList.loadFrame(@execFrames.frame(@frame_index));
+  //     @fieldVarList.loadReceiver(@execFrames.frame(@frame_index));
+  //   }
+  // }
 }
 
 end //idez:DebuggerUI
@@ -1865,11 +1866,12 @@ init new: fun(parent, execframes) {
 }
 
 instance_method updateInfo: fun() {
-  this.clear();
-  @frames.names().each(fun(name) {
-    this.addItem(name);
-  });
-  this.setCurrentIndex(@frames.size() - 1);
+  <primitive "idez_stack_combo_update_info">
+  // this.clear();
+  // @frames.names().each(fun(name) {
+  //   this.addItem(name);
+  // });
+  // this.setCurrentIndex(@frames.size() - 1);
 }
 
 end //idez:StackCombo

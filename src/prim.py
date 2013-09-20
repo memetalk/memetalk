@@ -82,11 +82,12 @@ def prim_vmprocess_from_procid(proc):
 
 def _update_frames(proc):
     logger.debug('_update_frames')
-    _proc = proc.reg('r_rdp')['self']
-    raw_frames = _proc.all_stack_frames()
-    VMStackFrameClass = proc.interpreter.get_core_class('VMStackFrame')
-    frames = [proc.interpreter.alloc_object(VMStackFrameClass,{'self':x}) for x in raw_frames]
-    proc.reg('r_rdp')['frames'] = frames
+    #proc.reg('r_rdp')['frames'] = []
+    # _proc = proc.reg('r_rdp')['self']
+    # raw_frames = _proc.all_stack_frames()
+    # VMStackFrameClass = proc.interpreter.get_core_class('VMStackFrame')
+    # frames = [proc.interpreter.alloc_object(VMStackFrameClass,{'self':x}) for x in raw_frames]
+    # proc.reg('r_rdp')['frames'] = frames
 
 def prim_vmprocess_handshake_target(proc):
     logger.debug('prim_vmprocess_handshake_target')
@@ -203,6 +204,15 @@ def prim_vmprocess_debug_on_exception(proc):
 
 #### VMStackFrame
 
+def _create_location_info(proc, frame):
+    ast = frame['r_ip']
+    outer_cfun = proc.interpreter.shitty_get_module_from_cfunction(frame['r_cp']['compiled_function'])
+    start_line = ast.start_line - outer_cfun['line']
+    start_col = ast.start_col
+    end_line = ast.end_line - outer_cfun['line']
+    end_col = ast.end_col
+    res = {"start_line":start_line, "start_col": start_col, "end_line": end_line, "end_col":end_col}
+    return res
 
 def prim_vmstackframe_instruction_pointer(proc):
     frame = _lookup_field(proc, proc.reg('r_rp'), 'self')
@@ -212,14 +222,7 @@ def prim_vmstackframe_instruction_pointer(proc):
 
     # ast has the line numbering relative to the entire module filre.
     # we need to make it relative to the toplevel function
-
-    outer_cfun = proc.interpreter.shitty_get_module_from_cfunction(frame['r_cp']['compiled_function'])
-    start_line = ast.start_line - outer_cfun['line']
-    start_col = ast.start_col
-    end_line = ast.end_line - outer_cfun['line']
-    end_col = ast.end_col
-    res = {"start_line":start_line, "start_col": start_col, "end_line": end_line, "end_col":end_col}
-    return res
+    return _create_location_info(proc, frame)
 
 
 
@@ -1932,3 +1935,110 @@ def prim_http_get(proc):
 def prim_parse_json(proc):
     import json
     return json.loads(proc.locals['str'])
+
+
+######################### optimizing #############################
+
+
+def _top_level_compiled_function(cfun):
+      # if (this.isTopLevel()) {
+      #   return null;
+      # } else {
+      #   if (@outer_cfun.isTopLevel()) {
+      #     return @outer_cfun;
+      #   } else {
+      #     return @outer_cfun.topLevelCompiledFunction();
+      #   }
+      # }
+    if cfun['is_top_level']:
+        return None
+    elif cfun['outer_cfun']['is_top_level']:
+        return cfun['outer_cfun']
+    else:
+        return _top_level_compiled_function(cfun['outer_cfun'])
+
+def prim_idez_debugger_ui_update_info(proc):
+  # // if (0 <= @frame_index) {
+  # //   @editor.setText(@execFrames.codeFor(@frame_index));
+  # //   @editor.setFrameIndex(@frame_index);
+  # //   var locInfo = @execFrames.locationInfoFor(@frame_index);
+  # //   @editor.pausedAtLine(locInfo["start_line"], locInfo["start_col"], locInfo["end_line"], locInfo["end_col"]);
+  # //   @localVarList.clear();
+  # //   @fieldVarList.clear();
+  # //   if (@shouldUpdateVars) {
+  # //     @localVarList.loadFrame(@execFrames.frame(@frame_index));
+  # //     @fieldVarList.loadReceiver(@execFrames.frame(@frame_index));
+  # //   }
+  # // }
+    logger.debug('prim_idez_debugger_ui_update_info')
+    frame_index = proc.reg("r_rp")['frame_index']
+    if frame_index < 0:
+        return proc.reg('r_rp')
+
+    editor = proc.reg("r_rp")['editor']
+    qteditor = _lookup_field(proc, editor, 'self')
+    _proc = proc.reg("r_rp")['process']['self']
+    raw_frames = _proc.all_stack_frames()
+
+    # ExecutionFrames.codeFor:
+    cp = raw_frames[frame_index]['r_cp']['compiled_function']
+    if cp['is_top_level']:
+        code_for = cp['text']
+    elif  cp['is_embedded']:
+        code_for = _top_level_compiled_function(cp)['text']
+    else:
+        code_for = cp['text']
+
+    qteditor.setText(code_for)
+
+    # DebuggerEditor.setFrameIndex
+    editor['frame_index'] = frame_index
+
+    # ExecutionFrame.locationInfoFor
+    locInfo = _create_location_info(_proc, raw_frames[frame_index])
+    qteditor.paused_at_line(locInfo["start_line"], locInfo["start_col"], locInfo["end_line"], locInfo["end_col"])
+
+def _owner_full_name(owner):
+    if 'module' in owner: #compiled class
+        return owner['module']['name'] + "/" + owner['name']
+    else:
+        return owner['name']
+
+def _cfun_full_name(cfun):
+      # if (this.isTopLevel()) {
+      #   if (@owner) {
+      #     return @owner.fullName() + "::" + @name;
+      #   } else {
+      #     return "<deep-sea>::" + @name; //We have no class [eg. Behavior function]
+      #   }
+      # } else {
+      #   return this.topLevelCompiledFunction().fullName() + "[" + @name + "]";
+      # }
+
+    if cfun['is_top_level']:
+        if cfun['owner']:
+            return _owner_full_name(cfun['owner']) + "::" + cfun['name']
+        else:
+            return "<deep-sea>::" + cfun['name']
+    else:
+        return _cfun_full_name(_top_level_compiled_function(cfun)) + "[" + cfun['name'] + "]"
+
+def prim_idez_stack_combo_update_info(proc):
+#   // this.clear();
+#   // @frames.names().each(fun(name) {
+#   //   this.addItem(name);
+#   // });
+#   // this.setCurrentIndex(@frames.size() - 1);
+# }
+    logger.debug('prim_idez_stack_combo_update_info')
+    this = _lookup_field(proc, proc.reg("r_rp"), 'self')
+    this.clear()
+
+    execFrames = proc.reg("r_rdp")['frames']
+    _proc = execFrames['vmproc']['self']
+    raw_frames = _proc.all_stack_frames()
+    names = [_cfun_full_name(frame['r_cp']['compiled_function']) for frame in raw_frames]
+    for name in names:
+        this.addItem(name)
+
+    this.setCurrentIndex(len(raw_frames)-1)
