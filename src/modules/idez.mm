@@ -85,20 +85,10 @@ init new: fun(parent, process) {
   super.new(parent);
   @process = process;
 }
-instance_method setFrameIndex: fun(idx) {
-  @frame_index = idx;
-}
+
 instance_method doIt: fun() {
   try {
     @process.evalInFrame(this.selectedText(), @frame_index);
-  } catch(ex) {
-    this.insertSelectedText(ex.message());
-  }
-}
-instance_method printIt: fun() {
-  try {
-    var res = @process.evalInFrame(this.selectedText(), @frame_index);
-    this.insertSelectedText(res.toString());
   } catch(ex) {
     this.insertSelectedText(ex.message());
   }
@@ -112,6 +102,20 @@ instance_method inspectIt: fun() {
     this.insertSelectedText(ex.message());
   }
 }
+
+instance_method printIt: fun() {
+  try {
+    var res = @process.evalInFrame(this.selectedText(), @frame_index);
+    this.insertSelectedText(res.toString());
+  } catch(ex) {
+    this.insertSelectedText(ex.message());
+  }
+}
+
+instance_method setFrameIndex: fun(idx) {
+  @frame_index = idx;
+}
+
 end //idez:DebuggerEditor
 
 class DebuggerUI < QMainWindow
@@ -244,6 +248,12 @@ instance_method acceptIt: fun() {
   }
 }
 
+instance_method closeEvent: fun() {
+  if (!@continued) {
+    @process.detach();
+  }
+}
+
 instance_method continue: fun() {
   @continued = true;
   this.hide();
@@ -307,11 +317,7 @@ instance_method updateInfo: fun() {
     }
   }
 }
-instance_method closeEvent: fun() {
-  if (!@continued) {
-    @process.detach();
-  }
-}
+
 end //idez:DebuggerUI
 
 class Editor < QsciScintilla
@@ -513,10 +519,6 @@ init new: fun(parent, cfun) {
   }
 }
 
-instance_method cfun: fun() {
-  return @cfun;
-}
-
 instance_method accept: fun() {
   if (@cfun != null) {
     try {
@@ -526,6 +528,10 @@ instance_method accept: fun() {
       this.appendSelectedText(ex.message());
     }
   }
+}
+
+instance_method cfun: fun() {
+  return @cfun;
 }
 
 end //idez:ExplorerEditor
@@ -834,22 +840,22 @@ instance_method printIt: fun() {
   }
 }
 
+instance_method spawnAndDebugIt: fun() {
+  try {
+    var ctx = Context.withVars(this.selectedText(), @with_variables(), @with_imod());
+    var proc = VMProcess.spawn();
+    proc.runAndHalt(ctx, []);
+  } catch(ex) {
+    this.insertSelectedText(ex.message());
+  }
+}
+
 instance_method spawnAndDoIt: fun() {
   try {
     var ctx = Context.withVars(this.selectedText(), @with_variables(), @with_imod());
     var proc = VMProcess.spawn();
     proc.debugOnException();
     proc.run(ctx, []);
-  } catch(ex) {
-    this.insertSelectedText(ex.message());
-  }
-}
-
-instance_method spawnAndDebugIt: fun() {
-  try {
-    var ctx = Context.withVars(this.selectedText(), @with_variables(), @with_imod());
-    var proc = VMProcess.spawn();
-    proc.runAndHalt(ctx, []);
   } catch(ex) {
     this.insertSelectedText(ex.message());
   }
@@ -1299,74 +1305,6 @@ instance_method action_eval: fun() {
   });
 }
 
-instance_method action_spawnAndEval: fun() {
-  @miniBuffer.prompt("Eval [spawn]: ", "", fun(expr) {
-    try {
-      var imod = null;
-      if (@imodule) {
-        imod = @imodule;
-      } else {
-        imod = thisModule;
-      }
-      var ctx = Context.withVars(expr, {}, imod);
-      var proc = VMProcess.spawn();
-      proc.debugOnException();
-      proc.run(ctx, []);
-    } catch(e) {
-      @statusLabel.setText(e.message);
-    }
-  });
-}
-
-instance_method action_spawnAndDebug: fun() {
-  @miniBuffer.prompt("Debug [spawn]: ", "", fun(expr) {
-    try {
-      var imod = null;
-      if (@imodule) {
-        imod = @imodule;
-      } else {
-        imod = thisModule;
-      }
-      var ctx = Context.withVars(expr, {}, imod);
-      var proc = VMProcess.spawn();
-      proc.debugOnException();
-      proc.runAndHalt(ctx, []);
-    } catch(e) {
-      @statusLabel.setText(e.message);
-    }
-  });
-}
-
-instance_method action_spawnAndEvalUntil: fun() {
-  if (@current_cmodule == null) {
-    @statusLabel.setText("No current module");
-    return null;
-  }
-  var e = qt.QApplication.focusWidget();
-  if (Mirror.vtFor(e) != ExplorerEditor) {
-    @statusLabel.setText("No function selected");
-    return null;
-  }
-  @miniBuffer.prompt("Spawn/Eval [until]: ", "", fun(expr) {
-    try {
-      var imod = null;
-      if (@imodule) {
-        imod = @imodule;
-      } else {
-        imod = thisModule;
-      }
-
-      var ctx = Context.withVars(expr, {}, imod);
-      var proc = VMProcess.spawn();
-      proc.debugOnException();
-      proc.breakAt(e.cfun, e.getCursorPosition["line"] + 1);
-      proc.run(ctx, []);
-    } catch(ex) {
-      @statusLabel.setText(ex.message);
-    }
-  });
-}
-
 instance_method action_evalUntil: fun() {
   if (@current_cmodule == null) {
     @statusLabel.setText("No current module");
@@ -1450,6 +1388,74 @@ instance_method action_reset: fun() {
 instance_method action_saveToFileSystem: fun() {
   available_modules().each(save_module);
   @statusLabel.setText("System saved");
+}
+
+instance_method action_spawnAndDebug: fun() {
+  @miniBuffer.prompt("Debug [spawn]: ", "", fun(expr) {
+    try {
+      var imod = null;
+      if (@imodule) {
+        imod = @imodule;
+      } else {
+        imod = thisModule;
+      }
+      var ctx = Context.withVars(expr, {}, imod);
+      var proc = VMProcess.spawn();
+      proc.debugOnException();
+      proc.runAndHalt(ctx, []);
+    } catch(e) {
+      @statusLabel.setText(e.message);
+    }
+  });
+}
+
+instance_method action_spawnAndEval: fun() {
+  @miniBuffer.prompt("Eval [spawn]: ", "", fun(expr) {
+    try {
+      var imod = null;
+      if (@imodule) {
+        imod = @imodule;
+      } else {
+        imod = thisModule;
+      }
+      var ctx = Context.withVars(expr, {}, imod);
+      var proc = VMProcess.spawn();
+      proc.debugOnException();
+      proc.run(ctx, []);
+    } catch(e) {
+      @statusLabel.setText(e.message);
+    }
+  });
+}
+
+instance_method action_spawnAndEvalUntil: fun() {
+  if (@current_cmodule == null) {
+    @statusLabel.setText("No current module");
+    return null;
+  }
+  var e = qt.QApplication.focusWidget();
+  if (Mirror.vtFor(e) != ExplorerEditor) {
+    @statusLabel.setText("No function selected");
+    return null;
+  }
+  @miniBuffer.prompt("Spawn/Eval [until]: ", "", fun(expr) {
+    try {
+      var imod = null;
+      if (@imodule) {
+        imod = @imodule;
+      } else {
+        imod = thisModule;
+      }
+
+      var ctx = Context.withVars(expr, {}, imod);
+      var proc = VMProcess.spawn();
+      proc.debugOnException();
+      proc.breakAt(e.cfun, e.getCursorPosition["line"] + 1);
+      proc.run(ctx, []);
+    } catch(ex) {
+      @statusLabel.setText(ex.message);
+    }
+  });
 }
 
 instance_method action_toggleCtor: fun() {

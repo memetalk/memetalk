@@ -1723,7 +1723,7 @@ class Process():
 
     def throw(self, mex):
         # MemetalkException encapsulates the memetalk exception:
-        logger.debug(str(self.procid) + ": interpreter::throw")
+        logger.debug(str(self.procid) + ": interpreter::throw in " + self.reg('r_cp')['compiled_function']['name'])
         logger.debug(str(self.procid) + ": protected? " + str(self.is_exception_protected()))
         logger.debug(str(self.procid) + ": exception flag? " + str(self.shared['flag_debug_on_exception']))
 
@@ -1743,7 +1743,7 @@ class Process():
                 raise MemetalkException(mex, self.pp_stack_trace())
 
     def throw_py_exception(self, pyex, tb):
-        logger.debug(str(self.procid) + ": interpreter::throw_py_exception")
+        logger.debug(str(self.procid) + ": interpreter::throw_py in " + self.reg('r_cp')['compiled_function']['name'])
         logger.debug(str(self.procid) + ": protected? " + str(self.is_exception_protected()))
         logger.debug(str(self.procid) + ": exception flag? " + str(self.shared['flag_debug_on_exception']))
 
@@ -1765,7 +1765,7 @@ class Process():
             raise MemetalkException(ex, self.pp_stack_trace(), pyex, tb)
 
     def throw_with_message(self, msg):
-        logger.debug(str(self.procid) + ": interpreter::throw_with_message")
+        logger.debug(str(self.procid) + ": interpreter::throw_with message in " + self.reg('r_cp')['compiled_function']['name'])
         logger.debug(str(self.procid) + ": protected? " + str(self.is_exception_protected()))
         logger.debug(str(self.procid) + ": exception flag? " + str(self.shared['flag_debug_on_exception']))
         logger.debug("MemetalkException with message: \n" + msg)

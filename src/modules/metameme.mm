@@ -75,7 +75,7 @@ instance_method many: fun(fn, *opt) {
       ret = ret + [fn()];
     } catch(ex) {
       if (ex.type != Fail) {
-        ex.rethrow();
+        ex.throw();
       } else {
         @input = input;
         return ret;
@@ -117,10 +117,10 @@ instance_method or: fun(fns) {
   fns.each(fun(fn) {
     try { //cl-ometa checks if fn == null, don't remember why
       @input = input;
-      return fn();
+      ^ fn();
     } catch(ex) {
       if (ex.type == Exception) { //not an ometa match-fail
-        e.rethrow();
+        ex.throw();
       }
     }
   });

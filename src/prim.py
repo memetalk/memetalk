@@ -80,32 +80,38 @@ def prim_vmprocess_from_procid(proc):
     logger.debug('prim_vmprocess_from_procid')
     proc.reg('r_drp')['self'] = proc.interpreter.process_for(proc.locals['procid'])
 
+def _update_frames(proc):
+    logger.debug('_update_frames')
+    _proc = proc.reg('r_rdp')['self']
+    raw_frames = _proc.all_stack_frames()
+    VMStackFrameClass = proc.interpreter.get_core_class('VMStackFrame')
+    frames = [proc.interpreter.alloc_object(VMStackFrameClass,{'self':x}) for x in raw_frames]
+    proc.reg('r_rdp')['frames'] = frames
 
 def prim_vmprocess_handshake_target(proc):
     logger.debug('prim_vmprocess_handshake_target')
     proc.init_debugging_session()
+    _update_frames(proc)
 
 def prim_vmprocess_step_into(proc):
     logger.debug('prim_vmprocess_step_into')
     proc.call_target_process(True, proc.reg('r_rdp')['self'].procid, 'step_into')
+    _update_frames(proc)
 
 def prim_vmprocess_step_over(proc):
     logger.debug('prim_vmprocess_step_overinto')
     proc.call_target_process(True, proc.reg('r_rdp')['self'].procid, 'step_over')
+    _update_frames(proc)
 
 def prim_vmprocess_continue(proc):
     logger.debug('prim_vmprocess_continue')
     _proc = proc.reg('r_rdp')['self']
     proc.call_target_process(True, _proc.procid, 'continue')
+    _update_frames(proc)
 
 def prim_vmprocess_stack_frames(proc):
     logger.debug('prim_vmprocess_stack_frames')
-    _proc = proc.reg('r_rdp')['self']
-    raw_frames = _proc.all_stack_frames()
-    VMStackFrameClass = proc.interpreter.get_core_class('VMStackFrame')
-    logger.debug('got frames, assemblying and caching...')
-    frames = [proc.interpreter.alloc_object(VMStackFrameClass,{'self':x}) for x in raw_frames]
-    return frames
+    return proc.reg('r_rdp')['frames']
 
 def prim_vmprocess_break_at(proc):
     logger.debug('prim_vmprocess_break_at')
@@ -114,18 +120,6 @@ def prim_vmprocess_break_at(proc):
     line = proc.locals()['line']
     _proc.break_at(cfun, line)
     return proc.reg('r_rdp')
-
-
-
-    # if proc.reg('r_rdp')['frames']:
-    #     logger.debug('we have it cached, returning it')
-    #     return proc.reg('r_rdp')['frames']
-    # else:
-    #     logger.debug('asking stack frames...')
-    #     frames = proc.call_target_process(True, proc.reg('r_rdp')['procid'], 'get_frames')
-    #     proc.reg('r_rdp')['frames'] = frames
-    #     logger.debug('returning frames')
-    #     return proc.reg('r_rdp')['frames']
 
 def prim_vmprocess_eval_in_frame(proc):
     logger.debug('prim_vmprocess_eval_in_frame')
@@ -145,6 +139,7 @@ def prim_vmprocess_reload_frame(proc):
     logger.debug('prim_vmprocess_reload_frame')
     _proc = proc.reg('r_rdp')['self']
     proc.call_target_process(True, _proc.procid, 'reload_frame')
+    _update_frames(proc)
 
 def prim_vmprocess_rewind_and_break(proc):
     logger.debug('prim_vmprocess_rewind_and_break')
@@ -152,6 +147,7 @@ def prim_vmprocess_rewind_and_break(proc):
     to_line = proc.locals()['to_line']
     _proc = proc.reg('r_rdp')['self']
     proc.call_target_process(True, _proc.procid, 'rewind_and_break', frames_count, to_line)
+    _update_frames(proc)
 
 def prim_vmprocess_current(proc):
     return proc.mm_self()
@@ -235,9 +231,7 @@ def prim_vmstackframe_module_pointer(proc):
         return None
 
 def prim_vmstackframe_context_pointer(proc):
-    logger.debug('prim_vmstackframe_context_pointer')
     frame = proc.reg('r_rdp')['self']
-    #logger.debug('got frame: returning:' + P(frame,1,True))
     return frame['r_cp']
 
 def prim_vmstackframe_receiver_pointer(proc):
@@ -299,6 +293,9 @@ def prim_object_not_equal(proc):
 # def prim_string_replace(i):
 #     return re.sub(i.locals()['what'],i.locals()['for'],i.reg('r_rp'))
 
+def prim_symbol_to_string(proc):
+    return proc.reg('r_rdp')['self']
+
 def prim_string_size(proc):
     return len(proc.reg('r_rp'))
 
@@ -314,8 +311,11 @@ def prim_string_rindex(proc):
     except ValueError:
         return -1
 
-def prim_symbol_to_string(proc):
-    return proc.reg('r_rdp')['self']
+def prim_string_leq(proc):
+    return proc.reg('r_rp') <= proc.locals()['other']
+
+def prim_string_geq(proc):
+    return proc.reg('r_rp') >= proc.locals()['other']
 
 def prim_string_count(proc):
     return proc.reg('r_rp').count(proc.locals()['sub'])

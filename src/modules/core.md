@@ -336,6 +336,12 @@ module core() {
     instance_method charCode: fun() {
       <primitive "string_char_code">
     }
+    instance_method <=: fun(other) {
+      <primitive "string_leq">
+    }
+    instance_method >=: fun(other) {
+      <primitive "string_geq">
+    }
   }
   class Symbol {
    fields: self;
@@ -479,7 +485,7 @@ module core() {
   }
 
   class VMProcess {
-    fields: self;
+    fields: self, frames;
     init fromProcid: fun(procid) {
       <primitive "vmprocess_from_procid">
     }
