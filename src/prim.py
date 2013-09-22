@@ -338,6 +338,10 @@ def prim_string_to_symbol(proc):
 def prim_string_char_code(proc):
     return ord(proc.reg('r_rdp'))
 
+def prim_string_each(proc):
+    for x in proc.reg('r_rdp'):
+        proc.setup_and_run_fun(None, None, 'fn', proc.locals()['fn'], [x], True)
+
 def prim_module_instance_compiled_module(proc):
     return proc.reg('r_rdp')['_vt']['compiled_module']
 

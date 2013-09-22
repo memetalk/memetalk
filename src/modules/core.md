@@ -342,6 +342,9 @@ module core() {
     instance_method >=: fun(other) {
       <primitive "string_geq">
     }
+    instance_method each: fun(fn) {
+      <primitive "string_each">
+    }
   }
   class Symbol {
    fields: self;

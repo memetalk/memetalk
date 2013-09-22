@@ -97,7 +97,15 @@ class ASTNode():
         return self.lst.__repr__()
 
     def __eq__(self, other):
-        return id(other) == id(self)
+        return id(other) == id(self) or\
+            id(other) == id(self.lst) or\
+            other == self.lst
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def __getslice__(self,i,j):
+        return self.lst.__getslice__(i,j)
 
     # dshared requires this hack
     def __getattr__(self, name):
