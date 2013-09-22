@@ -933,38 +933,7 @@ init new: fun() {
   @webview.page().setLinkDelegationPolicy(2);
 
   @webview.page().enablePluginsWith("editor", fun(params) {
-
-    var cfn = null;
-    var e = null;
-    if (params.has("function_type")) {
-      if (params["function_type"] == "module") {
-        cfn = get_module(params["module_name"]).compiled_functions()[params["function_name"]];
-      }
-      if (params["function_type"] == "ctor_method") {
-        cfn = get_module(params["module_name"]).compiled_classes()[params["class_name"]].constructors()[params["function_name"]];
-      }
-      if (params["function_type"] == "class_method") {
-        cfn = get_module(params["module_name"]).compiled_classes()[params["class_name"]].classMethods()[params["function_name"]];
-      }
-      if (params["function_type"] == "instance_method") {
-        cfn = get_module(params["module_name"]).compiled_classes()[params["class_name"]].instanceMethods()[params["function_name"]];
-      }
-      if (cfn) {
-        e =ExplorerEditor.new(null, cfn);
-        e.withVariables(fun() { @variables });
-        e.withIModule(fun() { this.currentIModule() });
-        e.onFinish(fun(env) { @variables = env + @variables;});
-      }
-    } else {
-      if (params.has("code")) {
-        e = ExplorerEditor.new(null, null);
-        e.withVariables(fun() { @variables });
-        e.withIModule(fun() { this.currentIModule() });
-        e.onFinish(fun(env) { @variables = env + @variables;});
-        e.setText(params["code"]);
-      }
-    }
-    return e;
+    this.editor_for_plugin(params)
   });
 
   @webview.connect('linkClicked', fun(url) {
@@ -1708,98 +1677,143 @@ instance_method initActions: fun() {
 //end idez:ModuleExplorer:initActions
 
 instance_method show_class: fun(module_name, class_name) {
-  this.show_module_basic(module_name);
-  var doc = @webview.page().mainFrame().documentElement();
-  var mlist = doc.findFirst("#menu-listing .link-list");
+  <primitive "idez_module_explorer_show_class">
+  // this.show_module_basic(module_name);
+  // var doc = @webview.page().mainFrame().documentElement();
+  // var mlist = doc.findFirst("#menu-listing .link-list");
+  // var klass = @current_cmodule.compiled_classes[class_name];
+  // var div = doc.findFirst("div[id=templates] .class_template").clone();
+  // doc.findFirst(".module-classes").appendInside(div);
+  // div.setStyleProperty("display","block");
+  // div.setAttribute("id", klass.fullName);
+  // div.findFirst(".class_name").setPlainText(klass.name);
+  // div.findFirst(".super_class").setPlainText(klass.super_class_name);
+  // div.findFirst(".fields_list").setPlainText(klass.fields.toString());
+  // var ctors = div.findFirst(".constructors");
+  // ctors.setAttribute("id", "ctors_" + klass.name);
+  // klass.constructors.sortedEach(fun(name, cfn) {
+  //   mlist.appendInside("<li><a href='#" + cfn.fullName + "'>*" + cfn.fullName + "</a></li>");
+  //   this.show_function(cfn, "ctor_method", "div[id='ctors_" + klass.name + "']");
+  // });
+  // var ims = div.findFirst(".instance_methods");
+  // ims.setAttribute("id", "imethods_" + klass.name);
+  // klass.instanceMethods.sortedEach(fun(name, cfn) {
+  //  mlist.appendInside("<li><a href='#" + cfn.fullName + "'>" + cfn.fullName + "</a></li>");
+  //  this.show_function(cfn, "instance_method", "div[id='imethods_" + klass.name + "']");
+  // });
+  // var cms = div.findFirst(".class_methods");
+  // cms.setAttribute("id", "cmethods_" + klass.name);
+  // klass.classMethods.sortedEach(fun(name, cfn) {
+  //   mlist.appendInside("<li><a href='#" + cfn.fullName + "'>[" + cfn.fullName + "]</a></li>");
+  //   this.show_function(cfn, "class_method", "div[id='cmethods_" + klass.name + "']");
+  // });
+}
 
-  var klass = @current_cmodule.compiled_classes[class_name];
+instance_method editor_for_plugin: fun(params) {
+  <primitive "idez_module_explorer_editor_for_plugin">
+  // var cfn = null;
+  // var e = null;
+  // if (params.has("function_type")) {
+  //   if (params["function_type"] == "module") {
+  //     cfn = get_module(params["module_name"]).compiled_functions()[params["function_name"]];
+  //   }
+  //   if (params["function_type"] == "ctor_method") {
+  //     cfn = get_module(params["module_name"]).compiled_classes()[params["class_name"]].constructors()[params["function_name"]];
+  //   }
+  //   if (params["function_type"] == "class_method") {
+  //     cfn = get_module(params["module_name"]).compiled_classes()[params["class_name"]].classMethods()[params["function_name"]];
+  //   }
+  //   if (params["function_type"] == "instance_method") {
+  //     cfn = get_module(params["module_name"]).compiled_classes()[params["class_name"]].instanceMethods()[params["function_name"]];
+  //   }
+  //   if (cfn) {
+  //     e =ExplorerEditor.new(null, cfn);
+  //     e.withVariables(fun() { @variables });
+  //     e.withIModule(fun() { this.currentIModule() });
+  //     e.onFinish(fun(env) { @variables = env + @variables;});
+  //   }
+  // } else {
+  //   if (params.has("code")) {
+  //     e = ExplorerEditor.new(null, null);
+  //     e.withVariables(fun() { @variables });
+  //     e.withIModule(fun() { this.currentIModule() });
+  //     e.onFinish(fun(env) { @variables = env + @variables;});
+  //     e.setText(params["code"]);
+  //   }
+  // }
+  // return e;
+}
 
-  var div = doc.findFirst("div[id=templates] .class_template").clone();
-  doc.findFirst(".module-classes").appendInside(div);
-  div.setStyleProperty("display","block");
-  div.setAttribute("id", klass.fullName);
+instance_method editor_for_cfun: fun(cfn) {
+  var e = ExplorerEditor.new(null, cfn);
+  e.withVariables(fun() { @variables });
+  e.withIModule(fun() { this.currentIModule() });
+  e.onFinish(fun(env) { @variables = env + @variables;});
+  return e;
+}
 
-  div.findFirst(".class_name").setPlainText(klass.name);
-  div.findFirst(".super_class").setPlainText(klass.super_class_name);
-
-  div.findFirst(".fields_list").setPlainText(klass.fields.toString());
-
-  var ctors = div.findFirst(".constructors");
-  ctors.setAttribute("id", "ctors_" + klass.name);
-
-  klass.constructors.sortedEach(fun(name, cfn) {
-    mlist.appendInside("<li><a href='#" + cfn.fullName + "'>*" + cfn.fullName + "</a></li>");
-    this.show_function(cfn, "ctor_method", "div[id='ctors_" + klass.name + "']");
-  });
-  var ims = div.findFirst(".instance_methods");
-  ims.setAttribute("id", "imethods_" + klass.name);
-
-  klass.instanceMethods.sortedEach(fun(name, cfn) {
-   mlist.appendInside("<li><a href='#" + cfn.fullName + "'>" + cfn.fullName + "</a></li>");
-   this.show_function(cfn, "instance_method", "div[id='imethods_" + klass.name + "']");
-  });
-
-  var cms = div.findFirst(".class_methods");
-  cms.setAttribute("id", "cmethods_" + klass.name);
-
-  klass.classMethods.sortedEach(fun(name, cfn) {
-    mlist.appendInside("<li><a href='#" + cfn.fullName + "'>[" + cfn.fullName + "]</a></li>");
-    this.show_function(cfn, "class_method", "div[id='cmethods_" + klass.name + "']");
-  });
+instance_method editor_for_code: fun(code) {
+  var e = ExplorerEditor.new(null, null);
+  e.withVariables(fun() { @variables });
+  e.withIModule(fun() { this.currentIModule() });
+  e.onFinish(fun(env) { @variables = env + @variables;});
+  e.setText(code);
+  return e;
 }
 
 instance_method show_editor: fun(id, name, type, class_name) {
-  var doc = @webview.page().mainFrame().documentElement();
-  var div = doc.findFirst("div[id='" + id + "']");
-  var cfn = null;
+  <primitive "idez_module_explorer_show_editor">
+  // var doc = @webview.page().mainFrame().documentElement();
+  // var div = doc.findFirst("div[id='" + id + "']");
+  // var cfn = null;
 
-  div.findFirst(".method-click-advice").takeFromDocument();
+  // div.findFirst(".method-click-advice").takeFromDocument();
 
-  var divcode = div.findFirst(".function-source-code");
-  divcode.appendInside("<object width=800></object>");
-  var obj = divcode.findFirst("object");
-  obj.takeFromDocument;
-  obj.setInnerXml("<param name='class_name'/><param name='function_type'/><param name='module_name'/><param name='function_name'/><param name='code'/>");
+  // var divcode = div.findFirst(".function-source-code");
+  // divcode.appendInside("<object width=800></object>");
+  // var obj = divcode.findFirst("object");
+  // obj.takeFromDocument;
+  // obj.setInnerXml("<param name='class_name'/><param name='function_type'/><param name='module_name'/><param name='function_name'/><param name='code'/>");
 
-  if (type == "module") {
-    cfn = @current_cmodule.compiled_functions[name];
-  }
-  if (type == "ctor_method") {
-    cfn = @current_cmodule.compiled_classes[class_name].constructors[name];
-    obj.findFirst("param[name='class_name']").setAttribute("value",cfn.owner.name);
-  }
-  if (type == "class_method") {
-    cfn = @current_cmodule.compiled_classes[class_name].classMethods[name];
-    obj.findFirst("param[name='class_name']").setAttribute("value",cfn.owner.name);
-  }
-  if (type == "instance_method") {
-    cfn = @current_cmodule.compiled_classes[class_name].instanceMethods[name];
-    obj.findFirst("param[name='class_name']").setAttribute("value",cfn.owner.name);
-  }
+  // if (type == "module") {
+  //   cfn = @current_cmodule.compiled_functions[name];
+  // }
+  // if (type == "ctor_method") {
+  //   cfn = @current_cmodule.compiled_classes[class_name].constructors[name];
+  //   obj.findFirst("param[name='class_name']").setAttribute("value",cfn.owner.name);
+  // }
+  // if (type == "class_method") {
+  //   cfn = @current_cmodule.compiled_classes[class_name].classMethods[name];
+  //   obj.findFirst("param[name='class_name']").setAttribute("value",cfn.owner.name);
+  // }
+  // if (type == "instance_method") {
+  //   cfn = @current_cmodule.compiled_classes[class_name].instanceMethods[name];
+  //   obj.findFirst("param[name='class_name']").setAttribute("value",cfn.owner.name);
+  // }
 
-  obj.findFirst("param[name='function_type']").setAttribute("value",type);
-  obj.findFirst("param[name='module_name']").setAttribute("value",@current_cmodule.name);
-  obj.findFirst("param[name='function_name']").setAttribute("value",cfn.name);
-  obj.findFirst("param[name='code']").setAttribute("value",cfn.text);
-  obj.setAttribute("type","x-pyqt/editor");
-  divcode.appendInside(obj);
+  // obj.findFirst("param[name='function_type']").setAttribute("value",type);
+  // obj.findFirst("param[name='module_name']").setAttribute("value",@current_cmodule.name);
+  // obj.findFirst("param[name='function_name']").setAttribute("value",cfn.name);
+  // obj.findFirst("param[name='code']").setAttribute("value",cfn.text);
+  // obj.setAttribute("type","x-pyqt/editor");
+  // divcode.appendInside(obj);
 }
 
 instance_method show_function: fun(cfn, function_type, parent_sel) {
-  var doc = @webview.page().mainFrame().documentElement();
-  var parent = doc.findFirst(parent_sel);
-  var div = doc.findFirst("div[id=templates] .function_template").clone();
-  div.setAttribute("id", cfn.fullName);
-  div.setStyleProperty("display","block");
-  div.findFirst(".function_name").setPlainText(cfn.fullName);
-  div.findFirst(".function_name").setAttribute("name",cfn.fullName);
-
-  if (Mirror.vtFor(cfn.owner) == CompiledClass) {
-    div.findFirst(".method-click-advice").setAttribute("href","/show-editor?class=" + cfn.owner.name + "&name=" + cfn.name + "&type=" + function_type + "&id=" + cfn.fullName);
-  } else {
-    div.findFirst(".method-click-advice").setAttribute("href","/show-editor?name=" + cfn.name  + "&id=" + cfn.fullName + "&type=" + function_type);
-  }
-  parent.appendInside(div);
+  <primitive "idez_module_explorer_show_function">
+  // var doc = @webview.page().mainFrame().documentElement();
+  // var parent = doc.findFirst(parent_sel);
+  // var div = doc.findFirst("div[id=templates] .function_template").clone();
+  // div.setAttribute("id", cfn.fullName);
+  // div.setStyleProperty("display","block");
+  // div.findFirst(".function_name").setPlainText(cfn.fullName);
+  // div.findFirst(".function_name").setAttribute("name",cfn.fullName);
+  // if (Mirror.vtFor(cfn.owner) == CompiledClass) {
+  //   div.findFirst(".method-click-advice").setAttribute("href","/show-editor?class=" + cfn.owner.name + "&name=" + cfn.name + "&type=" + function_type + "&id=" + cfn.fullName);
+  // } else {
+  //   div.findFirst(".method-click-advice").setAttribute("href","/show-editor?name=" + cfn.name  + "&id=" + cfn.fullName + "&type=" + function_type);
+  // }
+  // parent.appendInside(div);
 }
 
 instance_method show_home: fun() {
@@ -1809,20 +1823,19 @@ instance_method show_home: fun() {
 }
 
 instance_method show_module: fun(name) {
-  this.show_module_basic(name);
-
-  var doc = @webview.page().mainFrame().documentElement();
-  var mlist = doc.findFirst("#menu-listing .link-list");
-  var fns = @current_cmodule.compiled_functions();
-  fns.sortedEach(fun(name,cfn) {
-    mlist.appendInside("<li><a href='#" + cfn.fullName + "'>" + cfn.fullName + "</a></li>");
-    this.show_function(cfn, "module", ".module-functions");
-  });
-
-  doc.findFirst(".module-functions").setAttribute("style","display:block");
-  @current_cmodule.compiled_classes().sortedEach(fun(name, klass) {
-    mlist.appendInside("<li><a href='/class?module=" + klass.module.name + "&class=" + klass.name + "'>" + klass.fullName + "</a></li>");
-  });
+  <primitive "idez_module_explorer_show_module">
+  // this.show_module_basic(name);
+  // var doc = @webview.page().mainFrame().documentElement();
+  // var mlist = doc.findFirst("#menu-listing .link-list");
+  // var fns = @current_cmodule.compiled_functions();
+  // fns.sortedEach(fun(name,cfn) {
+  //   mlist.appendInside("<li><a href='#" + cfn.fullName + "'>" + cfn.fullName + "</a></li>");
+  //   this.show_function(cfn, "module", ".module-functions");
+  // });
+  // doc.findFirst(".module-functions").setAttribute("style","display:block");
+  // @current_cmodule.compiled_classes().sortedEach(fun(name, klass) {
+  //   mlist.appendInside("<li><a href='/class?module=" + klass.module.name + "&class=" + klass.name + "'>" + klass.fullName + "</a></li>");
+  // });
 }
 
 instance_method show_module_basic: fun(name) {

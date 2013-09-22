@@ -47,8 +47,11 @@ def prim_modules_path(proc):
 def prim_available_modules(proc):
     return [f[:-3] for f in listdir(MODULES_PATH) if isfile(join(MODULES_PATH,f)) and f != "core.md"]
 
+def _get_module(proc, name):
+    return proc.interpreter.compiled_module_by_filename(proc, name + ".mm")
+
 def prim_get_module(proc):
-    return proc.interpreter.compiled_module_by_filename(proc, proc.locals()['name'] + ".mm")
+    return _get_module(proc,  proc.locals()['name'])
 
 def prim_save_module(proc):
     return proc.interpreter.save_module(proc,proc.locals()['name'])
@@ -548,8 +551,11 @@ def prim_get_compiled_module(proc):
 def prim_get_compiled_class(proc):
     return proc.locals()['klass']['compiled_class']
 
+def _compiled_class_constructors(cclass):
+    return dict([(name, cfun) for name,cfun in cclass['own_methods'].iteritems() if cfun['is_ctor']])
+
 def prim_compiled_class_constructors(proc):
-    return dict([(name, cfun) for name,cfun in proc.reg('r_rdp')['own_methods'].iteritems() if cfun['is_ctor']])
+    return _compiled_class_constructor(proc.reg('r_rdp'))
 
 def prim_compiled_class_rename(proc):
     klass = proc.reg('r_rdp')
@@ -592,8 +598,11 @@ def prim_compiled_class_set_fields(proc):
 
     klass['fields'] = fields
 
+def _compiled_class_class_methods(cclass):
+    return dict([(name, cfun) for name,cfun in cclass['own_methods'].iteritems() if not cfun['is_ctor']])
+
 def prim_compiled_class_class_methods(proc):
-    return dict([(name, cfun) for name,cfun in proc.reg('r_rdp')['own_methods'].iteritems() if not cfun['is_ctor']])
+    return _compiled_class_class_methods(proc.reg('r_rdp')['own_methods'])
 
 def prim_compiled_class_add_method(proc):
     cfun = proc.locals()['cfun']
@@ -2214,3 +2223,306 @@ def prim_idez_variablelistwidget_load_receiver(proc):
         varitem = proc.do_send(VariableItem, 'new', [_to_source(_dthis[name]), _dthis[name]])
         qtobj.setItem(i, 1, _lookup_field(proc, varitem, 'self'))
         i = i + 1
+
+
+
+
+def prim_idez_module_explorer_show_class(proc):
+# fun(module_name, class_name) {
+#   this.show_module_basic(module_name);
+#   var doc = @webview.page().mainFrame().documentElement();
+#   var mlist = doc.findFirst("#menu-listing .link-list");
+#   var klass = @current_cmodule.compiled_classes[class_name];
+#   var div = doc.findFirst("div[id=templates] .class_template").clone();
+#   doc.findFirst(".module-classes").appendInside(div);
+#   div.setStyleProperty("display","block");
+#   div.setAttribute("id", klass.fullName);
+#   div.findFirst(".class_name").setPlainText(klass.name);
+#   div.findFirst(".super_class").setPlainText(klass.super_class_name);
+#   div.findFirst(".fields_list").setPlainText(klass.fields.toString());
+#   var ctors = div.findFirst(".constructors");
+#   ctors.setAttribute("id", "ctors_" + klass.name);
+#   klass.constructors.sortedEach(fun(name, cfn) {
+#     mlist.appendInside("<li><a href='#" + cfn.fullName + "'>*" + cfn.fullName + "</a></li>");
+#     this.show_function(cfn, "ctor_method", "div[id='ctors_" + klass.name + "']");
+#   });
+#   var ims = div.findFirst(".instance_methods");
+#   ims.setAttribute("id", "imethods_" + klass.name);
+#   klass.instanceMethods.sortedEach(fun(name, cfn) {
+#    mlist.appendInside("<li><a href='#" + cfn.fullName + "'>" + cfn.fullName + "</a></li>");
+#    this.show_function(cfn, "instance_method", "div[id='imethods_" + klass.name + "']");
+#   });
+#   var cms = div.findFirst(".class_methods");
+#   cms.setAttribute("id", "cmethods_" + klass.name);
+#   klass.classMethods.sortedEach(fun(name, cfn) {
+#     mlist.appendInside("<li><a href='#" + cfn.fullName + "'>[" + cfn.fullName + "]</a></li>");
+#     this.show_function(cfn, "class_method", "div[id='cmethods_" + klass.name + "']");
+#   });
+# }
+    module_name = proc.locals()['module_name']
+    class_name = proc.locals()['class_name']
+    qt_webview = _lookup_field(proc, proc.reg('r_rdp')['webview'], 'self')
+    current_cmodule = proc.reg('r_rdp')['current_cmodule']
+    proc.do_send(proc.reg('r_rp'), 'show_module_basic', [module_name])
+    doc = qt_webview.page().mainFrame().documentElement()
+    mlist = doc.findFirst("#menu-listing .link-list")
+    klass = current_cmodule['compiled_classes'][class_name]
+    div = doc.findFirst("div[id=templates] .class_template").clone()
+    doc.findFirst(".module-classes").appendInside(div)
+    div.setStyleProperty("display", "block")
+    div.setAttribute("id", _owner_full_name(klass))
+    div.findFirst(".class_name").setPlainText(klass['name'])
+    div.findFirst(".super_class").setPlainText(klass['super_class_name'])
+    div.findFirst(".fields_list").setPlainText(str(klass['fields']))
+    ctors = div.findFirst(".constructors")
+    ctors.setAttribute("id", "ctors_" + klass['name'])
+
+    #sortedEach
+    d = _compiled_class_constructors(klass)
+    dsorted = [(key,d[key]) for key in sorted(d.keys())]
+    for t in dsorted:
+        name = t[0]
+        cfn = t[1]
+        mlist.appendInside("<li><a href='#" + _cfun_full_name(cfn) + "'>*" + _cfun_full_name(cfn) + "</a></li>");
+        proc.do_send(proc.reg('r_rp'), 'show_function', [cfn, "ctor_method", "div[id='ctors_" + klass['name'] + "']"])
+
+    ims = div.findFirst(".instance_methods")
+    ims.setAttribute("id", "imethods_" + klass['name'])
+
+    #sortedEach
+    d = klass['methods']
+    dsorted = [(key,d[key]) for key in sorted(d.keys())]
+    for t in dsorted:
+        name = t[0]
+        cfn = t[1]
+        mlist.appendInside("<li><a href='#" + _cfun_full_name(cfn) + "'>" + _cfun_full_name(cfn) + "</a></li>");
+        proc.do_send(proc.reg('r_rp'), 'show_function', [cfn, "instance_method", "div[id='imethods_" + klass['name'] + "']"])
+
+
+    cms = div.findFirst(".class_methods")
+    cms.setAttribute("id", "cmethods_" + klass['name'])
+
+    #sortedEach
+    d = _compiled_class_class_methods(klass)
+    dsorted = [(key,d[key]) for key in sorted(d.keys())]
+    for t in dsorted:
+        name = t[0]
+        cfn = t[1]
+        mlist.appendInside("<li><a href='#" + _cfun_full_name(cfn) + "'>[" + _cfun_full_name(cfn) + "]</a></li>");
+        proc.do_send(proc.reg('r_rp'), 'show_function', [cfn, "class_method", "div[id='cmethods_" + klass['name'] + "']"])
+
+
+def prim_idez_module_explorer_show_function(proc):
+# show_function: fun(cfn, function_type, parent_sel) {
+#   var doc = @webview.page().mainFrame().documentElement();
+#   var parent = doc.findFirst(parent_sel);
+#   var div = doc.findFirst("div[id=templates] .function_template").clone();
+#   div.setAttribute("id", cfn.fullName);
+#   div.setStyleProperty("display","block");
+#   div.findFirst(".function_name").setPlainText(cfn.fullName);
+#   div.findFirst(".function_name").setAttribute("name",cfn.fullName);
+#   if (Mirror.vtFor(cfn.owner) == CompiledClass) {
+#     div.findFirst(".method-click-advice").setAttribute("href","/show-editor?class=" + cfn.owner.name + "&name=" + cfn.name + "&type=" + function_type + "&id=" + cfn.fullName);
+#   } else {
+#     div.findFirst(".method-click-advice").setAttribute("href","/show-editor?name=" + cfn.name  + "&id=" + cfn.fullName + "&type=" + function_type);
+#   }
+#   parent.appendInside(div);
+# }
+    cfn = proc.locals()['cfn']
+    function_type = proc.locals()['function_type']
+    parent_sel = proc.locals()['parent_sel']
+    qt_webview = _lookup_field(proc, proc.reg('r_rdp')['webview'], 'self')
+
+    doc = qt_webview.page().mainFrame().documentElement()
+    parent = doc.findFirst(parent_sel)
+
+    div = doc.findFirst("div[id=templates] .function_template").clone()
+    div.setAttribute("id", _cfun_full_name(cfn))
+    div.setStyleProperty("display", "block")
+    div.findFirst(".function_name").setPlainText(_cfun_full_name(cfn))
+    div.findFirst(".function_name").setAttribute("name", _cfun_full_name(cfn))
+
+    if 'module' in cfn['owner']: #compiled class
+        div.findFirst(".method-click-advice").setAttribute("href","/show-editor?class=" + cfn['owner']['name'] +\
+                                                               "&name=" + cfn['name'] + "&type=" + function_type + "&id=" + _cfun_full_name(cfn))
+    else:
+        div.findFirst(".method-click-advice").setAttribute("href","/show-editor?name=" + cfn['name'] +\
+                                                               "&id=" + _cfun_full_name(cfn) + "&type=" + function_type);
+
+    parent.appendInside(div);
+
+
+def prim_idez_module_explorer_show_module(proc):
+# instance_method show_module: fun(name) {
+#   this.show_module_basic(name);
+#   var doc = @webview.page().mainFrame().documentElement();
+#   var mlist = doc.findFirst("#menu-listing .link-list");
+#   var fns = @current_cmodule.compiled_functions();
+#   fns.sortedEach(fun(name,cfn) {
+#     mlist.appendInside("<li><a href='#" + cfn.fullName + "'>" + cfn.fullName + "</a></li>");
+#     this.show_function(cfn, "module", ".module-functions");
+#   });
+#   doc.findFirst(".module-functions").setAttribute("style","display:block");
+#   @current_cmodule.compiled_classes().sortedEach(fun(name, klass) {
+#     mlist.appendInside("<li><a href='/class?module=" + klass.module.name + "&class=" + klass.name + "'>" + klass.fullName + "</a></li>");
+#   });
+
+    name = proc.locals()['name']
+    proc.do_send(proc.reg('r_rp'), 'show_module_basic', [name])
+    qt_webview = _lookup_field(proc, proc.reg('r_rdp')['webview'], 'self')
+    doc = qt_webview.page().mainFrame().documentElement()
+    current_cmodule = proc.reg('r_rdp')['current_cmodule']
+
+    mlist = doc.findFirst("#menu-listing .link-list")
+    fns = current_cmodule['compiled_functions']
+
+    #sortedEach
+    d = fns
+    dsorted = [(key,d[key]) for key in sorted(d.keys())]
+    for t in dsorted:
+        name = t[0]
+        cfn = t[1]
+        mlist.appendInside("<li><a href='#" + _cfun_full_name(cfn) + "'>" + _cfun_full_name(cfn) + "</a></li>");
+        proc.do_send(proc.reg('r_rp'), 'show_function', [cfn, "module", ".module-functions"])
+
+    doc.findFirst(".module-functions").setAttribute("style", "diplay:block")
+
+
+    #sortedEach
+    d = current_cmodule['compiled_classes']
+    dsorted = [(key,d[key]) for key in sorted(d.keys())]
+    for t in dsorted:
+        name = t[0]
+        klass = t[1]
+        mlist.appendInside("<li><a href='/class?module=" + klass['module']['name'] + "&class=" + klass['name'] + "'>" + _owner_full_name(klass) + "</a></li>");
+
+
+def prim_idez_module_explorer_show_editor(proc):
+# instance_method show_editor: fun(id, name, type, class_name) {
+#   var doc = @webview.page().mainFrame().documentElement();
+#   var div = doc.findFirst("div[id='" + id + "']");
+#   var cfn = null;
+#   div.findFirst(".method-click-advice").takeFromDocument();
+#   var divcode = div.findFirst(".function-source-code");
+#   divcode.appendInside("<object width=800></object>");
+#   var obj = divcode.findFirst("object");
+#   obj.takeFromDocument;
+#   obj.setInnerXml("<param name='class_name'/><param name='function_type'/><param name='module_name'/><param name='function_name'/><param name='code'/>");
+#   if (type == "module") {
+#     cfn = @current_cmodule.compiled_functions[name];
+#   }
+#   if (type == "ctor_method") {
+#     cfn = @current_cmodule.compiled_classes[class_name].constructors[name];
+#     obj.findFirst("param[name='class_name']").setAttribute("value",cfn.owner.name);
+#   }
+#   if (type == "class_method") {
+#     cfn = @current_cmodule.compiled_classes[class_name].classMethods[name];
+#     obj.findFirst("param[name='class_name']").setAttribute("value",cfn.owner.name);
+#   }
+#   if (type == "instance_method") {
+#     cfn = @current_cmodule.compiled_classes[class_name].instanceMethods[name];
+#     obj.findFirst("param[name='class_name']").setAttribute("value",cfn.owner.name);
+#   }
+#   obj.findFirst("param[name='function_type']").setAttribute("value",type);
+#   obj.findFirst("param[name='module_name']").setAttribute("value",@current_cmodule.name);
+#   obj.findFirst("param[name='function_name']").setAttribute("value",cfn.name);
+#   obj.findFirst("param[name='code']").setAttribute("value",cfn.text);
+#   obj.setAttribute("type","x-pyqt/editor");
+#   divcode.appendInside(obj);
+# }
+    id = proc.locals()['id']
+    name = proc.locals()['name']
+    type = proc.locals()['type']
+    class_name = proc.locals()['class_name']
+
+    current_cmodule = proc.reg('r_rdp')['current_cmodule']
+
+    qt_webview = _lookup_field(proc, proc.reg('r_rdp')['webview'], 'self')
+    doc = qt_webview.page().mainFrame().documentElement()
+
+    div = doc.findFirst("div[id='" + id + "']")
+    cfn = None
+    div.findFirst(".method-click-advice").takeFromDocument()
+    divcode = div.findFirst(".function-source-code")
+    divcode.appendInside("<object width=800></object>")
+    obj = divcode.findFirst("object")
+    obj.takeFromDocument()
+    obj.setInnerXml("<param name='class_name'/><param name='function_type'/><param name='module_name'/><param name='function_name'/><param name='code'/>");
+    if type == "module":
+        cfn = current_cmodule['compiled_functions'][name]
+    elif type == "ctor_method":
+        cfn = _compiled_class_constructors(current_cmodule['compiled_classes'][class_name])[name]
+        obj.findFirst("param[name='class_name']").setAttribute("value",cfn['owner']['name'])
+    elif type == "class_method":
+        cfn = _compiled_class_class_methods(current_cmodule['compiled_classes'][class_name])[name]
+        obj.findFirst("param[name='class_name']").setAttribute("value",cfn['owner']['name']);
+    elif type == "instance_method":
+        cfn = current_cmodule['compiled_classes'][class_name]['methods'][name];
+        obj.findFirst("param[name='class_name']").setAttribute("value",cfn['owner']['name']);
+    else:
+        proc.throw_with_message('unexpected method type')
+
+    obj.findFirst("param[name='function_type']").setAttribute("value",type);
+    obj.findFirst("param[name='module_name']").setAttribute("value",current_cmodule['name']);
+    obj.findFirst("param[name='function_name']").setAttribute("value",cfn['name']);
+    obj.findFirst("param[name='code']").setAttribute("value",cfn['text']);
+    obj.setAttribute("type","x-pyqt/editor");
+    divcode.appendInside(obj);
+
+
+def prim_idez_module_explorer_editor_for_plugin(proc):
+# instance_method editor_for_plugin: fun(params) {
+#   var cfn = null;
+#   var e = null;
+#   if (params.has("function_type")) {
+#     if (params["function_type"] == "module") {
+#       cfn = get_module(params["module_name"]).compiled_functions()[params["function_name"]];
+#     }
+#     if (params["function_type"] == "ctor_method") {
+#       cfn = get_module(params["module_name"]).compiled_classes()[params["class_name"]].constructors()[params["function_name"]];
+#     }
+#     if (params["function_type"] == "class_method") {
+#       cfn = get_module(params["module_name"]).compiled_classes()[params["class_name"]].classMethods()[params["function_name"]];
+#     }
+#     if (params["function_type"] == "instance_method") {
+#       cfn = get_module(params["module_name"]).compiled_classes()[params["class_name"]].instanceMethods()[params["function_name"]];
+#     }
+#     if (cfn) {
+#       e =ExplorerEditor.new(null, cfn);
+#       e.withVariables(fun() { @variables });
+#       e.withIModule(fun() { this.currentIModule() });
+#       e.onFinish(fun(env) { @variables = env + @variables;});
+#     }
+#   } else {
+#     if (params.has("code")) {
+#       e = ExplorerEditor.new(null, null);
+#       e.withVariables(fun() { @variables });
+#       e.withIModule(fun() { this.currentIModule() });
+#       e.onFinish(fun(env) { @variables = env + @variables;});
+#       e.setText(params["code"]);
+#     }
+#   }
+#   return e;
+# }
+    params = proc.locals()['params']
+    cfn = None
+    if 'function_type' in params:
+        if params['function_type'] == 'module':
+            cfn = _get_module(proc, params["module_name"])['compiled_functions'][params["function_name"]]
+        if params["function_type"] == "ctor_method":
+            mod = _get_module(proc, params["module_name"])
+            cfn = _compiled_class_constructors(mod['compiled_classes'][params["class_name"]])[params["function_name"]]
+        if params["function_type"] == "class_method":
+            mod = _get_module(proc, params["module_name"])
+            cfn = _compiled_class_class_methods(mod['compiled_classes'][params["class_name"]])[params["function_name"]]
+        if params["function_type"] == "instance_method":
+            mod = _get_module(proc, params["module_name"])
+            cfn = mod['compiled_classes'][params["class_name"]]['methods'][params["function_name"]]
+        if cfn:
+            e = proc.do_send(proc.reg('r_rp'), 'editor_for_cfun', [cfn])
+    else:
+        if 'code' in params:
+            e = proc.do_send(proc.reg('r_rp'), 'editor_for_code', [params["code"]])
+    if e == None:
+        logger.warning("returning editor as None!")
+    return e;
