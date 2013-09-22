@@ -95,18 +95,18 @@ def prim_vmprocess_handshake_target(proc):
 def prim_vmprocess_step_into(proc):
     logger.debug('prim_vmprocess_step_into')
     proc.call_target_process(True, proc.reg('r_rdp')['self'].procid, 'step_into')
-    #_update_frames(proc, proc.reg('r_rdp'))
+    _update_frames(proc, proc.reg('r_rdp'))
 
 def prim_vmprocess_step_over(proc):
     logger.debug('prim_vmprocess_step_overinto')
     proc.call_target_process(True, proc.reg('r_rdp')['self'].procid, 'step_over')
-    #_update_frames(proc, proc.reg('r_rdp'))
+    _update_frames(proc, proc.reg('r_rdp'))
 
 def prim_vmprocess_continue(proc):
     logger.debug('prim_vmprocess_continue')
     _proc = proc.reg('r_rdp')['self']
     proc.call_target_process(True, _proc.procid, 'continue')
-    #_update_frames(proc, proc.reg('r_rdp'))
+    _update_frames(proc, proc.reg('r_rdp'))
 
 def prim_vmprocess_stack_frames(proc):
     logger.debug('prim_vmprocess_stack_frames')
