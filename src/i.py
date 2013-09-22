@@ -688,7 +688,7 @@ class Interpreter():
     def cleanup(self):
         try:
             for k,p in self.processes.iteritems(): # list of your processes
-                p.terminate() # supported from python 2.6
+                p.terminate_pyprocess() # supported from python 2.6
         except:
             pass
 
@@ -778,11 +778,19 @@ class Interpreter():
         ipc.interpreter_channel().put('done')
 
     def cmdproc_kill_process(self, procid):
-        self.processes[str(procid)].terminate()
+        logger.debug("cmdproc_kill_process: " + str(procid))
+        proc = self.processes[str(procid)]
+        proc.terminate_pyprocess()
+        if ipc.proc_channel(procid, 'dbg') != None: # we have a debugger, kill it
+            self.cmdproc_kill_process(proc.shared['mydbg.pid'])
         del self.processes[str(procid)]
         self.maybe_exit()
 
     def cmdproc_process_terminated(self, procid):
+        logger.debug("cmdproc_process_terminated: " + str(procid))
+        proc = self.processes[str(procid)]
+        if ipc.proc_channel(procid, 'dbg') != None: # we have a debugger, kill it
+            self.cmdproc_kill_process(proc.shared['mydbg.pid'])
         del self.processes[str(procid)]
         self.maybe_exit()
 
@@ -1069,9 +1077,14 @@ class Process():
     def setup(self, name, *args):
         self.entry.update({'name': name, 'args': list(args)})
 
-    def terminate(self):
+    def terminate_pyprocess(self):
         global _module
         getattr(_module, 'process_' + str(self.procid)).terminate()
+
+    def terminate(self):
+        self.call_interpreter(False, 'kill_process', self.procid)
+        # if ipc.proc_channel(self.procid, 'dbg') != None: # we have a debugger, kill it
+        #     self.call_interpreter(False, 'kill_process', self.shared['mydbg.pid'])
 
     def start(self):
         # self can't have references to multiprocess.Process
@@ -1110,9 +1123,6 @@ class Process():
             print (str(self.procid) + ": Exception raised during exec_module : " + e.mmobj()['message'])
             print (e.mmobj()['py_trace'])
 
-        if ipc.proc_channel(self.procid, 'dbg') != None: # we have a debugger, kill it
-            self.call_interpreter(False, 'kill_process', self.shared['mydbg.pid'])
-
         self.call_interpreter(False, 'process_terminated', self.procid)
 
     def exec_module(self, filename, entry, args, state = 'running'):
@@ -1133,9 +1143,6 @@ class Process():
         except MemetalkException as e:
             print (str(self.procid) + ": Exception raised during exec_module : " + e.mmobj()['message'])
             print (e.mmobj()['py_trace'])
-
-        if ipc.proc_channel(self.procid, 'dbg') != None: # we have a debugger, kill it
-            self.call_interpreter(False, 'kill_process', self.shared['mydbg.pid'])
 
         self.call_interpreter(False, 'process_terminated', self.procid)
 

@@ -555,6 +555,10 @@ module core() {
       <primitive "vmprocess_detach">
     }
 
+    instance_method terminate: fun() {
+      <primitive "vmprocess_terminate">
+    }
+
     class_method current: fun() {
       <primitive "vmprocess_current">
     }

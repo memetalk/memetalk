@@ -119,13 +119,13 @@ instance_method setFrameIndex: fun(idx) {
 end //idez:DebuggerEditor
 
 class DebuggerUI < QMainWindow
-fields: frame_index, process, exception, execFrames, stackCombo, editor, localVarList, fieldVarList, statusLabel, execMenu, shouldUpdateVars, continued;
+fields: frame_index, process, exception, execFrames, stackCombo, editor, localVarList, fieldVarList, statusLabel, execMenu, shouldUpdateVars, should_detach;
 init new: fun(process) {
   super.new();
   @process = process;
   @frame_index = 0;
 
-  @continued = false;
+  @should_detach = true;
 
   @shouldUpdateVars = false;
 
@@ -210,6 +210,13 @@ init new: fun(process) {
   });
   execMenu.addAction(action);
 
+  action = qt.QAction.new("Terminate", execMenu);
+  action.setShortcut("ctrl+x,k");
+  action.connect("triggered", fun() {
+    this.terminate();
+  });
+  execMenu.addAction(action);
+
   action = qt.QAction.new("Toggle Var Update", execMenu);
   action.setShortcut("ctrl+u");
   action.connect("triggered", fun() {
@@ -237,6 +244,12 @@ init new: fun(process) {
 }
 //end idez:DebuggerUI:new
 
+instance_method terminate: fun() {
+//  @should_detach = false;
+  @process.terminate();
+//  this.close();
+}
+
 instance_method acceptIt: fun() {
   var text = @editor.text();
   try {
@@ -249,17 +262,17 @@ instance_method acceptIt: fun() {
 }
 
 instance_method closeEvent: fun() {
-  if (!@continued) {
+  if (@should_detach) {
     @process.detach();
   }
 }
 
 instance_method continue: fun() {
-  @continued = true;
+  @should_detach = false;
   this.hide();
   @process.continue();
   // if @process.continue return, means were are active  again
-  @continued = false;
+  @should_detach = true;
   @stackCombo.updateInfo();
   this.show();
 }

@@ -111,6 +111,11 @@ def prim_vmprocess_continue(proc):
     proc.call_target_process(True, _proc.procid, 'continue')
     _update_frames(proc, proc.reg('r_rdp'))
 
+def prim_vmprocess_terminate(proc):
+    logger.debug('prim_vmprocess_terminate')
+    _proc = proc.reg('r_rdp')['self']
+    _proc.terminate()
+
 def prim_vmprocess_stack_frames(proc):
     logger.debug('prim_vmprocess_stack_frames')
     return proc.reg('r_rdp')['frames']
