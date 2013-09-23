@@ -107,8 +107,13 @@ def prim_vmprocess_step_into(proc):
     _update_frames(proc, proc.reg('r_rdp'))
 
 def prim_vmprocess_step_over(proc):
-    logger.debug('prim_vmprocess_step_overinto')
+    logger.debug('prim_vmprocess_step_over')
     proc.call_target_process(True, proc.reg('r_rdp')['self'].procid, 'step_over')
+    _update_frames(proc, proc.reg('r_rdp'))
+
+def prim_vmprocess_step_line(proc):
+    logger.debug('prim_vmprocess_step_line')
+    proc.call_target_process(True, proc.reg('r_rdp')['self'].procid, 'step_line')
     _update_frames(proc, proc.reg('r_rdp'))
 
 def prim_vmprocess_continue(proc):

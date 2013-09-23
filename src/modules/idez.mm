@@ -182,6 +182,13 @@ init new: fun(process) {
   });
   execMenu.addAction(action);
 
+  action = qt.QAction.new("Step Line", execMenu);
+  action.setShortcut("F8");
+  action.connect("triggered", fun() {
+    this.stepLine()
+  });
+  execMenu.addAction(action);
+
   action = qt.QAction.new("Continue", execMenu);
   action.setShortcut("F5");
   action.connect("triggered", fun() {
@@ -303,6 +310,11 @@ instance_method save: fun() {
 
 instance_method stepInto: fun() {
   @process.stepInto();
+  @stackCombo.updateInfo();
+}
+
+instance_method stepLine: fun() {
+  @process.stepLine();
   @stackCombo.updateInfo();
 }
 

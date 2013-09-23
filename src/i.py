@@ -1027,6 +1027,7 @@ class Process():
         self.shared['last_exception'] = None
 
         self.volatile_breakpoints = []
+        self.bp_current_line = None
 
         self.entry = dshared.dict() # data for executing the entry point
 
@@ -1649,14 +1650,25 @@ class Process():
     def dbg_control(self, name):
 
         def process_breakpoints():
+            # volatile_breakpoints
+            line = self.reg('r_ip').start_line - self.reg('r_cp')['compiled_function']['line']+1
             for idx, bp in enumerate(self.volatile_breakpoints):
-                line = self.reg('r_ip').start_line - self.reg('r_cp')['compiled_function']['line']+1
                 logger.debug("Checking line: " + str(line) + " --- " + str(self.reg('r_ip')))
                 if line == bp['line'] and id_eq(self.reg('r_cp')['compiled_function'], bp['cfun']):
                     logger.debug("BP activated at line: " + str(line) + " --- " + str(self.reg('r_ip')))
                     #self.state = 'paused'
                     self.debug_me()
                     del self.volatile_breakpoints[idx]
+                    return
+
+            # next line breakpoints
+            if self.bp_current_line:
+                logger.debug("BPLINE: Checking line: " + str(line) + " --- " + str(self.reg('r_ip')))
+                if id_eq(self.reg('r_cp')['compiled_function'], self.bp_current_line['cp']['compiled_function']) and\
+                        line != self.bp_current_line['line']:
+                    logger.debug("BPLINE: Matched!")
+                    self.bp_current_line = None
+                    self.debug_me()
                     return
 
         def process_dbg_msg(msg):
@@ -1675,6 +1687,10 @@ class Process():
                 return True
             if msg['cmd'] == 'step_over':
                 self.state = 'next'
+                return True
+            if msg['cmd'] == 'step_line':
+                self.state = 'continue'
+                self.bp_current_line = {'cp': self.reg('r_cp'), 'line': self.reg('r_ip').start_line - self.reg('r_cp')['compiled_function']['line']+1}
                 return True
             if msg['cmd'] == 'continue':
                 logger.debug('target: received continue')
@@ -1727,6 +1743,7 @@ class Process():
                 logger.debug(str(self.procid) + ': we will break at: ' + self.reg('r_cp')['compiled_function']['name'])
                 self.break_at(self.reg('r_cp')['compiled_function'], to_line)
                 raise RewindException(frames_count)
+
         process_breakpoints()
 
         # intercepting while we are running:

@@ -534,6 +534,9 @@ module core() {
     instance_method stepOver: fun() {
       <primitive "vmprocess_step_over">
     }
+    instance_method stepLine: fun() {
+      <primitive "vmprocess_step_line">
+    }
     instance_method continue: fun() {
       <primitive "vmprocess_continue">
     }
