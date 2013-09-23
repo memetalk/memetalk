@@ -560,7 +560,7 @@ def _compiled_class_constructors(cclass):
     return dict([(name, cfun) for name,cfun in cclass['own_methods'].iteritems() if cfun['is_ctor']])
 
 def prim_compiled_class_constructors(proc):
-    return _compiled_class_constructor(proc.reg('r_rdp'))
+    return _compiled_class_constructors(proc.reg('r_rdp'))
 
 def prim_compiled_class_rename(proc):
     klass = proc.reg('r_rdp')
