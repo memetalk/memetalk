@@ -203,17 +203,17 @@ init new: fun(process) {
   });
   execMenu.addAction(action);
 
+  action = qt.QAction.new("Continue To Line", execMenu);
+  action.setShortcut("ctrl+l");
+  action.connect("triggered", fun() {
+    this.continueToLine();
+  });
+  execMenu.addAction(action);
+
   action = qt.QAction.new("Rewind And Go", execMenu);
   action.setShortcut("ctrl+g");
   action.connect("triggered", fun() {
     this.rewindAndGo()
-  });
-  execMenu.addAction(action);
-
-  action = qt.QAction.new("Reload To Line", execMenu);
-  action.setShortcut("ctrl+l");
-  action.connect("triggered", fun() {
-    this.reloadToLine();
   });
   execMenu.addAction(action);
 
@@ -285,19 +285,19 @@ instance_method continue: fun() {
 }
 
 instance_method reloadFrame: fun() {
-  @process.reloadFrame(0);
+  @process.reloadFrame();
+  @stackCombo.updateInfo();
+}
+
+instance_method continueToLine: fun() {
+  var pos = @editor.getCursorPosition();
+  @process.continueToLine(pos["line"]+1);
   @stackCombo.updateInfo();
 }
 
 instance_method rewindAndGo: fun() {
-  var line = @execFrames.topFrame.instructionPointer["start_line"];
+  var line = @execFrames.topFrame.instructionPointer["start_line"]+1;
   @process.rewindAndBreak(@stackCombo.count - @frame_index, line);
-  @stackCombo.updateInfo();
-}
-
-instance_method reloadToLine: fun() {
-  var pos = @editor.getCursorPosition();
-  @process.reloadFrame(pos["line"] + 1);
   @stackCombo.updateInfo();
 }
 

@@ -153,6 +153,14 @@ def prim_vmprocess_eval_in_frame(proc):
         proc.throw(ex)
     return res
 
+def prim_vmprocess_continue_to_line(proc):
+    logger.debug('prim_vmprocess_continue_to_line')
+    _proc = proc.reg('r_rdp')['self']
+    line = proc.locals()['line']
+    logger.debug('going to line:' + str(line))
+    proc.call_target_process(True, _proc.procid, 'continue_to_line', line)
+    _update_frames(proc, proc.reg('r_rdp'))
+
 def prim_vmprocess_reload_frame(proc):
     logger.debug('prim_vmprocess_reload_frame')
     _proc = proc.reg('r_rdp')['self']

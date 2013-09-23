@@ -1064,7 +1064,7 @@ class Process():
         return self.mm_self_obj
 
     def break_at(self, cfun, line):
-        logger.debug(str(self.procid) + ": breaking at: " + str(line) + " --- " + P(cfun,1,True))
+        logger.debug(str(self.procid) + ": breaking at: " + str(line) + " --- " + cfun['name'])
         self.volatile_breakpoints.append({"cfun":cfun, "line":line})
 
     def call_target_process(self, block, procid, name, *args):
@@ -1652,20 +1652,23 @@ class Process():
 
         def process_breakpoints():
             # volatile_breakpoints
-            line = self.reg('r_ip').start_line - self.reg('r_cp')['compiled_function']['line']+1
-            for idx, bp in enumerate(self.volatile_breakpoints):
-                logger.debug("Checking line: " + str(line) + " --- " + str(self.reg('r_ip')))
-                if line == bp['line'] and id_eq(self.reg('r_cp')['compiled_function'], bp['cfun']):
-                    logger.debug("BP activated at line: " + str(line) + " --- " + str(self.reg('r_ip')))
-                    #self.state = 'paused'
-                    self.debug_me()
-                    del self.volatile_breakpoints[idx]
-                    return
+            if len(self.volatile_breakpoints) > 0:
+                cfun = self.interpreter.get_top_level(self.reg('r_cp')['compiled_function'])
+                line = self.reg('r_ip').start_line - cfun['line']+1
+                for idx, bp in enumerate(self.volatile_breakpoints):
+                    logger.debug("Checking line: " + str(line) + " --- " + bp['cfun']['name'] + " :: " + str(self.reg('r_ip')))
+                    if line == bp['line'] and id_eq(cfun, bp['cfun']):
+                        logger.debug("BP activated at line: " + str(line) + " --- " + str(self.reg('r_ip')))
+                        #self.state = 'paused'
+                        self.debug_me()
+                        del self.volatile_breakpoints[idx]
+                        return
 
             # next line breakpoints
             if self.bp_current_line:
-                logger.debug("BPLINE: Checking line: " + str(line) + " --- " + str(self.reg('r_ip')))
                 cfun = self.interpreter.get_top_level(self.reg('r_cp')['compiled_function'])
+                line = self.reg('r_ip').start_line - cfun['line']+1
+                logger.debug("BPLINE: Checking line: " + str(line) + " --- " + str(self.reg('r_ip')))
                 if id_eq(cfun, self.bp_current_line['cfun']) and\
                         line != self.bp_current_line['line']:
                     logger.debug("BPLINE: Matched!")
@@ -1698,6 +1701,12 @@ class Process():
                 return True
             if msg['cmd'] == 'continue':
                 logger.debug('target: received continue')
+                self.state = 'running'
+                return True
+            if msg['cmd'] == 'continue_to_line':
+                logger.debug('target: received continue_to_line')
+                line = msg['args'][0]
+                self.break_at(self.interpreter.get_top_level(self.reg('r_cp')['compiled_function']), line)
                 self.state = 'running'
                 return True
             if msg['cmd'] == 'detach':
@@ -1745,7 +1754,7 @@ class Process():
                 logger.debug('line: ' + str(to_line))
 
                 logger.debug(str(self.procid) + ': we will break at: ' + self.reg('r_cp')['compiled_function']['name'])
-                self.break_at(self.reg('r_cp')['compiled_function'], to_line)
+                self.break_at(self.interpreter.get_top_level(self.reg('r_cp')['compiled_function']), to_line)
                 raise RewindException(frames_count)
 
         process_breakpoints()

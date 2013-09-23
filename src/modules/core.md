@@ -549,8 +549,11 @@ module core() {
     instance_method updateObject: fun(obj) {
       <primitive "vmprocess_update_object">
     }
-    instance_method reloadFrame: fun(line) {
+    instance_method reloadFrame: fun() {
       <primitive "vmprocess_reload_frame">
+    }
+    instance_method continueToLine: fun(line) {
+      <primitive "vmprocess_continue_to_line">
     }
     instance_method rewindAndBreak: fun(frames_count, to_line) {
       <primitive "vmprocess_rewind_and_break">
