@@ -645,7 +645,7 @@ class Interpreter():
                                                         "parent": super_class,
                                                         "dict": self.compiled_functions_to_functions(c["methods"],imodule),
                                                         "compiled_class":c,
-                                                        "@tag":c["name"]+" Class"})
+                                                        "@tag":c["name"]+" class"})
                 bclasses[c["name"]] = cbehavior
             else:
                 # FooClassBehavior
@@ -900,6 +900,12 @@ class Interpreter():
             return name in obj
         else:
             return False
+
+    def tag_for(self, obj):
+        if isinstance(obj, (dict, dshared.dict)) and '@tag' in obj:
+            return obj['@tag']
+        else:
+            return '@?'
 
     def is_wrapper_class(self, klass):
         return id_eq(klass, self.core_imod['String']) or\

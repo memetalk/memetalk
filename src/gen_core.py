@@ -111,7 +111,9 @@ class CoreGenerator(ASTBuilder):
 
         for k,v in self.classes.iteritems():
             append(k + " = i.new_object()")
+            append(k + "['@tag'] = '" + k + " class'")
             append(k+"Behavior = i.new_object({'_vt': Behavior,'parent':"+self.supers[k]+"Behavior, 'dict':{}, '@tag':'"+k+"Behavior'})")
+            append(k+"Behavior" + "['@tag'] = '" + k + " behavior'")
 
         for name, val in self.classes.iteritems():
             append("kernel_imodule["+to_source(name)+"] = " + name)
