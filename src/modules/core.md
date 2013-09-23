@@ -460,9 +460,10 @@ module core() {
     instance_method type: fun() {
       <primitive "exception_type">
     }
-    class_method throw: fun(value) {
-      var self = Exception.new(value);
-      self.throw();
+    class_method throw: fun(message) {
+      <primitive "exception_cl_throw">
+      // var self = Exception.new(message);
+      // self.throw();
     }
   }
 

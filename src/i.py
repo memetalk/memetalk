@@ -913,6 +913,22 @@ class Interpreter():
             id_eq(klass, self.core_imod['List']) or\
             id_eq(klass, self.core_imod['Number'])
 
+
+    def is_subclass(self, super_class, sub_class):
+        logger.debug("is_subclass: " + self.tag_for(sub_class) + " < " + self.tag_for(super_class))
+        if sub_class == None:
+            return False
+        if id_eq(super_class, sub_class):
+            return True
+        else:
+            return self.is_subclass(super_class, sub_class['parent'])
+
+    def get_exception_message(self, mex):
+        if 'message' in mex:
+            return mex['message']
+        else:
+            return self.get_exception_message(mex['_delegate'])
+
     def new_wrapper_object_for(self, klass):
         if id_eq(klass, self.core_imod['String']):
             return str()
@@ -1126,9 +1142,10 @@ class Process():
 
             print str(self.procid) + ": RETVAL: " + P(ret,1,True)
         except MemetalkException as e:
-            print (str(self.procid) + ": Exception raised during exec_module : " + e.mmobj()['message'])
+            msg = self.interpreter.get_exception_message(e.mmobj())
+            print (str(self.procid) + ": Exception raised during exec_fun : " + msg)
             print (e.mmobj()['py_trace'])
-
+            print (e.mmobj()['mtrace'])
         self.call_interpreter(False, 'process_terminated', self.procid)
 
     def exec_module(self, filename, entry, args, state = 'running'):
@@ -1147,8 +1164,10 @@ class Process():
 
             print str(self.procid) + ": RETVAL: " + P(ret,1,True)
         except MemetalkException as e:
-            print (str(self.procid) + ": Exception raised during exec_module : " + e.mmobj()['message'])
+            msg = self.interpreter.get_exception_message(e.mmobj())
+            print (str(self.procid) + ": Exception raised during exec_module : " + msg)
             print (e.mmobj()['py_trace'])
+            print (e.mmobj()['mtrace'])
 
         self.call_interpreter(False, 'process_terminated', self.procid)
 
@@ -1608,18 +1627,21 @@ class Process():
                 break
             self.evaluator.apply("exprlist", yes_expr)
 
-    def eval_do_try(self, ast, tr, bind, ct):
+    def eval_do_try(self, ast, tr, type_bind, id_bind, ct):
         self.reg('r_ip', ast)
         try:
-            self.exception_protection.append(True)
+            self.exception_protection.append({'type': type_bind})
             ev = Eval([tr])
             ev.i = self
             return ev.apply("exprlist")[0]
         except MemetalkException as e:
-            self.exception_protection.pop()
-            self.set_local_value(bind, e.mmobj())
-            return self.evaluator.apply("exprlist", ct)[0]
-
+            if type_bind == None or\
+                    self.interpreter.is_subclass(type_bind, e.mmobj()['_vt']):
+                self.exception_protection.pop()
+                self.set_local_value(id_bind, e.mmobj())
+                return self.evaluator.apply("exprlist", ct)[0]
+            else:
+                raise
     def eval_do_debug(self,ast):
         self.reg('r_ip', ast)
         self.state = 'paused'
@@ -1671,7 +1693,7 @@ class Process():
                 old_state = self.state
                 self.state = 'running'
                 try:
-                    self.exception_protection.append(True) #run in protected mode
+                    self.exception_protection.append({'type':None}) #run in protected mode
                     fn = _context_with_frame(self, text, self.all_stack_frames()[frame_index])
                     val = self.setup_and_run_fun(None, None, fn['compiled_function']['name'], fn, [], True)
                     self.shared['eval.result'] = val
@@ -1730,9 +1752,14 @@ class Process():
         return self.shared['last_exception'] != None
 
 
-    def is_exception_protected(self):
+    def is_exception_protected(self, for_type):
         logger.debug("is_exception_protected?: " + str(self.exception_protection[-1]))
-        return self.exception_protection[-1]
+        if self.exception_protection[-1] == False:
+            return False
+        elif self.exception_protection[-1]['type'] == None: # there is a catchall
+            return True
+        else:
+            return self.interpreter.is_subclass(self.exception_protection[-1]['type'], for_type)
 
     def current_fun_name(self):
         if self.reg('r_cp'):
@@ -1743,10 +1770,9 @@ class Process():
     def throw(self, mex):
         # MemetalkException encapsulates the memetalk exception:
         logger.debug(str(self.procid) + ": interpreter::throw in " + self.current_fun_name())
-        logger.debug(str(self.procid) + ": protected? " + str(self.is_exception_protected()))
         logger.debug(str(self.procid) + ": exception flag? " + str(self.shared['flag_debug_on_exception']))
 
-        if not self.is_exception_protected() and self.shared['flag_debug_on_exception']:
+        if not self.is_exception_protected(mex['_vt']) and self.shared['flag_debug_on_exception']:
             logger.debug(str(self.procid) + ": throw: in exception state")
             self.shared['last_exception'] = mex
             self.debug_me('exception')
@@ -1763,7 +1789,6 @@ class Process():
 
     def throw_py_exception(self, pyex, tb):
         logger.debug(str(self.procid) + ": interpreter::throw_py in " + self.current_fun_name())
-        logger.debug(str(self.procid) + ": protected? " + str(self.is_exception_protected()))
         logger.debug(str(self.procid) + ": exception flag? " + str(self.shared['flag_debug_on_exception']))
 
         logger.debug("Python exception with message: \n" + str(pyex.message))
@@ -1773,7 +1798,7 @@ class Process():
         # ...and this me being stupid:
         ex['message'] =  "Python exception: " + str(pyex.message)
 
-        if not self.is_exception_protected() and self.shared['flag_debug_on_exception']:
+        if not self.is_exception_protected(ex['_vt']) and self.shared['flag_debug_on_exception']:
             logger.debug(str(self.procid) + ": throw_py: in exception state")
             self.shared['last_exception'] = ex
             self.debug_me('exception')
@@ -1785,7 +1810,6 @@ class Process():
 
     def throw_with_message(self, msg):
         logger.debug(str(self.procid) + ": interpreter::throw_with message in " + self.current_fun_name())
-        logger.debug(str(self.procid) + ": protected? " + str(self.is_exception_protected()))
         logger.debug(str(self.procid) + ": exception flag? " + str(self.shared['flag_debug_on_exception']))
         logger.debug("MemetalkException with message: \n" + msg)
         logger.debug(self.pp_stack_trace())
@@ -1794,7 +1818,7 @@ class Process():
         # ...and this me being stupid:
         ex['message'] =  msg
 
-        if not self.is_exception_protected() and self.shared['flag_debug_on_exception']:
+        if not self.is_exception_protected(ex['_vt']) and self.shared['flag_debug_on_exception']:
             logger.debug(str(self.procid) + ": throw_py: in exception state")
             self.shared['last_exception'] = ex
             self.debug_me('exception')
@@ -1809,8 +1833,6 @@ class Process():
         for frame in self.all_stack_frames():
             if frame['r_cp']:
                 st = st +  (frame['r_cp']['compiled_function']['name'] + " :::" + str(frame['r_cp']['compiled_function']['body']))[0:80] + "...\n"
-        if self.reg('r_cp'):
-            st = st + (self.reg('r_cp')['compiled_function']['name'] + " ::: " + str(self.reg('r_cp')['compiled_function']['body']))[0:80] + "...\n"
         return st
 
 ###################################################

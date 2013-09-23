@@ -65,6 +65,12 @@ def prim_import(proc):
 def prim_exception_throw(proc):
     proc.throw(proc.reg('r_rp'))
 
+def prim_exception_cl_throw(proc):
+    ExceptionClass = proc.reg('r_rp')
+    msg = proc.locals()['message']
+    ex = proc.do_send(ExceptionClass, 'new', [msg])
+    proc.throw(ex)
+
 def prim_exception_type(proc):
     return proc.reg('r_rp')['_vt']
 

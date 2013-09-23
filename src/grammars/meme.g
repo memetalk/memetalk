@@ -162,10 +162,15 @@ expr_while = spaces !(self.input.position):begin token("while") token("(") expr:
 
 expr_try = spaces !(self.input.position):begin token("try") token("{")
              stmts:s_try
-           token("}") token("catch") token("(") alpha_name:id token(")") token("{")
+           token("}") catch_part:c token("{")
              stmts:s_catch
            token("}")
-          -> self.i.ast(begin, ['try', s_try, id, s_catch])
+          -> self.i.ast(begin, ['try', s_try, c, s_catch])
+
+catch_part = token("catch") token("(") alpha_name:id token(")")
+             -> ['catch', id]
+           | token("catch") token("(") alpha_name:type alpha_name:id token(")")
+             -> ['catch', ['id', type], id]
 
 expr = spaces expr_or
 
