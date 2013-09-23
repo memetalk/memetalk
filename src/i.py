@@ -901,6 +901,12 @@ class Interpreter():
         else:
             return False
 
+    def get_top_level(self, cfun):
+        if cfun['is_top_level']:
+            return cfun
+        else:
+            return self.get_top_level(cfun['outer_cfun'])
+
     def tag_for(self, obj):
         if isinstance(obj, (dict, dshared.dict)) and '@tag' in obj:
             return obj['@tag']
@@ -1509,13 +1515,8 @@ class Process():
         self.reg('r_ip', ast)
         self.dbg_control('eval_do_explicit_return')
 
-        def top_level(cfun):
-            if cfun['is_top_level']:
-                return cfun
-            else:
-                return top_level(cfun['outer_cfun'])
         cfun = self.reg('r_cp')['compiled_function']
-        raise NonLocalReturnException(value, top_level(cfun))
+        raise NonLocalReturnException(value, self.interpreter.get_top_level(cfun))
 
     def eval_do_super_send(self, args, ast):
         self.reg('r_ip', ast)
@@ -1664,7 +1665,8 @@ class Process():
             # next line breakpoints
             if self.bp_current_line:
                 logger.debug("BPLINE: Checking line: " + str(line) + " --- " + str(self.reg('r_ip')))
-                if id_eq(self.reg('r_cp')['compiled_function'], self.bp_current_line['cp']['compiled_function']) and\
+                cfun = self.interpreter.get_top_level(self.reg('r_cp')['compiled_function'])
+                if id_eq(cfun, self.bp_current_line['cfun']) and\
                         line != self.bp_current_line['line']:
                     logger.debug("BPLINE: Matched!")
                     self.bp_current_line = None
@@ -1690,7 +1692,9 @@ class Process():
                 return True
             if msg['cmd'] == 'step_line':
                 self.state = 'continue'
-                self.bp_current_line = {'cp': self.reg('r_cp'), 'line': self.reg('r_ip').start_line - self.reg('r_cp')['compiled_function']['line']+1}
+                line = self.reg('r_ip').start_line - self.reg('r_cp')['compiled_function']['line']+1
+                cfun = self.interpreter.get_top_level(self.reg('r_cp')['compiled_function'])
+                self.bp_current_line = {'cfun': cfun, 'line': line}
                 return True
             if msg['cmd'] == 'continue':
                 logger.debug('target: received continue')
