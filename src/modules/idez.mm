@@ -210,10 +210,10 @@ init new: fun(process) {
   });
   execMenu.addAction(action);
 
-  action = qt.QAction.new("Run To Line", execMenu);
+  action = qt.QAction.new("Reload To Line", execMenu);
   action.setShortcut("ctrl+l");
   action.connect("triggered", fun() {
-    this.runToLine();
+    this.reloadToLine();
   });
   execMenu.addAction(action);
 
@@ -295,13 +295,10 @@ instance_method rewindAndGo: fun() {
   @stackCombo.updateInfo();
 }
 
-instance_method runToLine: fun() {
-  @statusLabel.setText("Run to line...");
-  this.disableActions();
+instance_method reloadToLine: fun() {
   var pos = @editor.getCursorPosition();
   @process.reloadFrame(pos["line"] + 1);
   @stackCombo.updateInfo();
-  this.enableActions();
 }
 
 instance_method save: fun() {
