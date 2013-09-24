@@ -43,6 +43,12 @@ main: fun() {
   } catch(Exception e) {
     assert(true, "Caught 2");
   }
+
+  try {
+    Fail.throw("msg4");
+  } catch(Exception e) {
+    //
+  }
 }
 
 .end

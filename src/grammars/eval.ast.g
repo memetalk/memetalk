@@ -2,6 +2,7 @@ exec_fun = exprlist:x -> x
          | [['primitive' ['literal-string' :name]]:ast (:ignore)*]   -> self.i.do_eval('eval_prim', name,ast)
 
 exprlist = [(expr:x)+] -> x
+         | [] -> None
 
 pair = ['pair' expr:key expr:val] -> (key,val)
 
