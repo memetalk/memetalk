@@ -167,10 +167,12 @@ expr_try = spaces !(self.input.position):begin token("try") token("{")
            token("}")
           -> self.i.ast(begin, ['try', s_try, c, s_catch])
 
-catch_part = token("catch") token("(") alpha_name:id token(")")
-             -> ['catch', id]
-           | token("catch") token("(") alpha_name:type alpha_name:id token(")")
-             -> ['catch', ['id', type], id]
+catch_part = !(self.input.position):begin token("catch") token("(") alpha_name:id token(")")
+             -> self.i.ast(begin, ['catch', id])
+           | !(self.input.position):begin token("catch") token("(") catch_type:t alpha_name:id token(")")
+             -> self.i.ast(begin, ['catch', t, id])
+
+catch_type = !(self.input.position):begin alpha_name:type -> self.i.ast(begin, ['id', type])
 
 expr = spaces expr_or
 
