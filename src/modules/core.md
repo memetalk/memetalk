@@ -20,9 +20,11 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 .endlicense
 
-module core() {
+.preamble()
 
-  object Behavior {
+.code
+
+  object Behavior
     _vt: Behavior; //self-referencing
     parent: null;
     functions {
@@ -33,9 +35,9 @@ module core() {
           <primitive "object_to_string">
       }
     }
-  }
+  end
 
-  object ObjectBehavior {
+  object ObjectBehavior
     _vt: Behavior;
     parent: null;
     functions {
@@ -58,9 +60,9 @@ module core() {
           <primitive "object_send">
       }
     }
-  }
+  end
 
-  object Object_CompiledClass {
+  object Object_CompiledClass
     _vt: CompiledClass; //declared below
     _delegate: null;
     name: "Object";
@@ -68,9 +70,9 @@ module core() {
     fields: [];
     methods: {};
     own_methods: {};
-  }
+  end
 
-  object Object {
+  object Object
     _vt: ObjectBehavior;
     parent: null;
     size: 0;
@@ -92,9 +94,9 @@ module core() {
           <primitive "object_send">
       }
     }
-  }
+  end
 
-  class CompiledClass {
+  class CompiledClass
     fields: module, name, super_class_name, fields, methods, own_methods;
     instance_method fullName: fun() {
       return @module.fullName() + "/" + @name;
@@ -135,9 +137,9 @@ module core() {
     instance_method methodFlag: fun(cfun) { //null | :class_method | :instance_method
       <primitive "compiled_class_method_flag">
     }
-  }
+  end
 
-  class CompiledFunction {
+  class CompiledFunction
     fields: _delegate, body, env_table, env_table_skel, fun_literals, is_ctor,
             is_prim, is_top_level, is_embedded, name, params, prim_name,
             uses_env, outer_cfun, owner, text;
@@ -212,9 +214,9 @@ module core() {
         return this.topLevelCompiledFunction().fullName() + "[" + @name + "]";
       }
     }
-  }
+  end
 
-  class Function {
+  class Function
     fields: compiled_function, module, _delegate;
     instance_method compiledFunction: fun() {
       return @compiled_function;
@@ -222,9 +224,9 @@ module core() {
     instance_method apply: fun(args) {
       <primitive "function_apply">
     }
-  }
+  end
 
-  class Context {
+  class Context
     fields: _delegate, compiled_function, env, module;
     instance_method apply: fun(args) {
       <primitive "context_apply">
@@ -245,9 +247,9 @@ module core() {
     class_method withFrame: fun(text, frame) {
       <primitive "context_with_frame">
     }
-  }
+  end
 
-  class CompiledModule {
+  class CompiledModule
     fields: _delegate, name, params, default_params, aliases, compiled_functions, compiled_classes;
     instance_method name: fun() {
       return @name;
@@ -300,15 +302,15 @@ module core() {
     instance_method instantiate: fun(args) {
       <primitive "compiled_module_instantiate">
     }
-  }
+  end
 
-  object ModuleBehavior { //the behavior of module instances
+  object ModuleBehavior //the behavior of module instances
     _vt: Behavior;
     parent: ObjectBehavior;
     dict: {};
-  }
+  end
 
-  class String {
+  class String
     instance_method size: fun() {
       <primitive "string_size">
     }
@@ -345,15 +347,16 @@ module core() {
     instance_method each: fun(fn) {
       <primitive "string_each">
     }
-  }
-  class Symbol {
-   fields: self;
-   instance_method toString: fun() {
-     <primitive "symbol_to_string">
-   }
-  }
+  end
 
-  class Dictionary {
+  class Symbol
+    fields: self;
+    instance_method toString: fun() {
+      <primitive "symbol_to_string">
+    }
+  end
+
+  class Dictionary
     instance_method +: fun(arg) {
       <primitive "dictionary_plus">
     }
@@ -378,9 +381,9 @@ module core() {
     instance_method sortedEach: fun(fn) {
       <primitive "dictionary_sorted_each">
     }
-  }
+  end
 
-  class List {
+  class List
     init new: fun(lst) {
       <primitive "list_ctor">
     }
@@ -423,9 +426,9 @@ module core() {
     instance_method reversed: fun() {
       <primitive "list_reversed">
     }
-  }
+  end
 
-  class Number {
+  class Number
     instance_method +: fun(arg) {
       <primitive "number_plus">
     }
@@ -441,9 +444,9 @@ module core() {
     instance_method >=: fun(arg) {
       <primitive "number_grteq">
     }
-  }
+  end
 
-  class Exception {
+  class Exception
     fields: message, py_exception, py_trace;
     init new: fun(message) {
       @message = message;
@@ -465,11 +468,11 @@ module core() {
       // var self = Exception.new(message);
       // self.throw();
     }
-  }
+  end
 
   // temporary home for infrastructure classes
 
-  class Mirror {
+  class Mirror
     fields: mirrored;
     init new: fun(mirrored) {
       @mirrored = mirrored;
@@ -486,9 +489,9 @@ module core() {
     class_method vtFor: fun(obj) {
       <primitive "mirror_vt">
     }
-  }
+  end
 
-  class VMProcess {
+  class VMProcess
     fields: self, frames;
     init fromProcid: fun(procid) {
       <primitive "vmprocess_from_procid">
@@ -586,9 +589,9 @@ module core() {
     //   <primitive "vmprocess_set_debugger_process">
     // }
     //
-  }
+  end
 
-  class VMStackFrame {
+  class VMStackFrame
     instance_method modulePointer: fun() {
       <primitive "vmstackframe_module_pointer">
     }
@@ -610,7 +613,7 @@ module core() {
     instance_method locals: fun() {
       <primitive "vmstackframe_locals">
     }
-  }
+  end
 
   //temporary home for some infrastructure functions
 
@@ -652,4 +655,5 @@ module core() {
   parse_json: fun(str) {
     <primitive "parse_json">
   }
-}
+
+.end

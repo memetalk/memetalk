@@ -19,7 +19,7 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 
-from coreparser import CoreParser
+from parser import MemeParser
 from coretr import CoreTr
 from pprint import pprint, pformat
 from pdb import set_trace as br
@@ -80,7 +80,7 @@ class CoreGenerator(ASTBuilder):
 
     def gen(self):
 
-        self.parser = CoreParser(open(os.path.join(MODULES_PATH,self.filename)).read())
+        self.parser = MemeParser(open(os.path.join(MODULES_PATH,self.filename)).read())
         self.parser.i = self
         try:
             ast = self.parser.apply("start")[0]

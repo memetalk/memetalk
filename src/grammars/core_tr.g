@@ -1,8 +1,6 @@
-start = ['module' :name params:p module_definitions]
+start = ['module' :license :meta :pre code_sec]
 
-module_definitions = ['defs' []]
-                   | ['defs' [definition+]]
-
+code_sec = ['.code' [definition*]]
 
 definition = object_definition | class_definition | function_definition
 
