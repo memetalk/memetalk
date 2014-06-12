@@ -1,15 +1,3 @@
-# -tag integers when appending them.
-# -still missing the CompiledModule, Module, ModuleBehavior
-#  and the synth of the core instance of CompiledModule and Module.
-#
-# == Phase-2
-#
-# -Dump data to file
-# -write disassembler of core to debug it.
-#   -maybe parse the same core.md to get the expected structure of each object.
-# -do functions for objects
-# -do instance/class methods
-
 from parser import MemeParser
 from coretr import CoreTr
 from astbuilder import *
