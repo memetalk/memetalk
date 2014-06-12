@@ -21,23 +21,29 @@
     _vt: CompiledClass; //declared below
     _delegate: null;
     parent: null;
+    name: "Object";
+    super_class_name: "";
+    fields: [];
+    methods: {};
+    own_methods: {};
   end
 
   object Object
     _vt: ObjectBehavior;
     _delegate: null;
     parent: null;
+//    size: 0;
     compiled_class: Object_CompiledClass;
   end
 
   class CompiledClass
   end
 
-  class String
-  end
+  // class String
+  // end
 
-  class Symbol
-  end
+  // class Symbol
+  // end
 
   class Dictionary
   end
@@ -45,8 +51,8 @@
   class List
   end
 
-  class Number
-  end
+  // class Number
+  // end
 
   // class CompiledFunction
   // end

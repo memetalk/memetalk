@@ -7,7 +7,7 @@ class IntCell(Cell):
         self.etable = etable
         self.num = num
 
-    def __call__(self):
+    def __call__(self, _):
         return self.num
 
 class StringCell(Cell):
@@ -15,10 +15,29 @@ class StringCell(Cell):
         self.etable = etable
         self.string = string
 
-    def __call__(self):
-        chars = [c for c in self.string] + [0] # \0
-        chars += (len(chars) % 8) * [0]        # padding
-        return chars
+    def chunks32(self, ords):
+        res = []
+        curr = None
+        for idx, x in enumerate(ords):
+            if idx % 4 == 0:
+                curr = []
+                res.append(curr)
+            curr.append(x)
+        return res
+
+    def __call__(self, _):
+        chars = list(self.string)
+        ords = map(ord, chars) + [0]  # \0
+        chunks = self.chunks32(ords)
+        data = []
+        for chunk in chunks:
+            value = 0
+            bit_offset = 0
+            for c in chunk:
+                value += c << bit_offset
+                bit_offset += 8
+            data.append(value)
+        return data
 
 class PointerCell(Cell):
     def __init__(self, etable, label=None, cell=None):
@@ -34,11 +53,11 @@ class PointerCell(Cell):
         if label is None and cell is None:
             raise Exception('label or cell required')
 
-    def __call__(self):
+    def __call__(self, ptr_offset=0):
         if self.target_cell:
-            return self.etable.base + self.etable.entries.index(self.target_cell)
+            return ptr_offset + self.etable.base + self.etable.entries.index(self.target_cell)
         else:
-            return self.etable.base + self.etable.index[self.target_label]
+            return ptr_offset + self.etable.base + self.etable.index[self.target_label]
 
 class VirtualEntryTable(object):
     def __init__(self):
@@ -96,19 +115,23 @@ class VirtualEntryTable(object):
         return [self.base + idx for idx, x in enumerate(self.entries) if type(x) == PointerCell]
 
     def object_table(self):
-        ot = [x() for x in self.entries]
-        # TODO: expand variable sized cells (eg. string) updating the references
-        #  ie. some items in ot are not 32 bit values, but arrays of variable length.
-        #      they should be flattened with ot and all further references from that point should be updated.
-        #      for value in ot:
-        #        if type(value) == list:
-        #            ot = ot[:here] + value + ot[here:]
-        #            update_refs(len(value) ot[here:])
+        # literal strings and arrays are expanded inline,
+        # so we need to update upcoming references with the
+        # amount of offset (= len(expanded_value))
+        ot = []
+        offset = 0
+        for entry in self.entries:
+            value = entry(offset)
+            if type(value) == list:
+                ot += value
+                offset += len(value) - 1 # its already assume value occupies 1; add only extra space needed
+            else:
+                ot.append(value)
         return ot
 
     def dump(self):
-        for idx, x in enumerate(self.entries):
-            print "[{}]: {}".format(self.base + idx, x())
+        for idx, val in enumerate(self.object_table()):
+            print "[{}]: {}".format(self.base + idx, val)
 
 if __name__ == '__main__':
     tb = VirtualEntryTable()
@@ -117,8 +140,12 @@ if __name__ == '__main__':
     c2 = tb.append_int(20)
     c3 = tb.append_label_ref('Object')
     c4 = tb.append_int(30)
-    c5 = tb.append_pointer_to(c3)
-    c5 = tb.append_label_ref('Foo') # forward reference
-    c7 = tb.append_int(40, 'Foo')
+    tb.append_pointer_to(c3)
+    tb.append_label_ref('Foo')
+
+    tb.append_string("abcde")
+    tb.append_label_ref('Foo') # forward reference
+    tb.append_int(40, 'Foo')
+
     tb.set_base(100)
     tb.dump()

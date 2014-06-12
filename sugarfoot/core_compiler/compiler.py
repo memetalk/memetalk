@@ -1,8 +1,14 @@
-# -Make all "dict" point to a dict instance
-# -For each entry so far, add the slots that have literals as value
+# -Make numbers work
+# -Review the structure of CompiledClass, ClassBehavior and Class
+#    -add missing slots to these structs
+#    -eg: list of fields: will require fully working list objects
+#
+# == Phase-2
+#
+# -Dump data to file
 # -write disassembler of core to debug it.
 # -do functions for objects
-# -do methods
+# -do instance/class methods
 
 from parser import MemeParser
 from coretr import CoreTr
@@ -25,6 +31,17 @@ class ObjectEntry(Entry):
     def add_slot_ref(self, name, value):
         self.slots.append({'type': 'ref', 'name': name, 'value': value})
 
+    def add_slot_literal_string(self, name, value):
+        self.slots.append({'type': 'string', 'name': name, 'value': value})
+
+    def add_slot_empty_dict(self, name):
+        # TODO: this will become dict
+        self.slots.append({'type': 'empty_dict', 'name': name})
+
+    def add_slot_empty_list(self, name):
+        # TODO: this will become list
+        self.slots.append({'type': 'empty_list', 'name': name})
+
     def add_slot_literal_null(self, name):
         self.slots.append({'type': 'null', 'name': name})
 
@@ -35,9 +52,15 @@ class ObjectEntry(Entry):
 
     def emit_slot(self, etable, slot, label=None):
         if slot['type'] == 'ref':
-            return etable.append_label_ref(slot['value'], label)
+            return etable.append_label_ref(slot['value'], label) # Behavior needs this
         elif slot['type'] == 'null':
             return etable.append_int(0)
+        elif slot['type'] == 'string':
+            return etable.append_string(slot['value'])
+        elif slot['type'] == 'empty_list':
+            return append_empty_list(etable)
+        elif slot['type'] == 'empty_dict':
+            return append_empty_dict(etable)
         else:
             raise Exception('TODO')
 
@@ -79,17 +102,13 @@ class CompiledClassEntry(Entry):
         self.name = name + '_CompiledClass'
 
     def fill(self, etable):
+        delegate = append_object_instance(etable)
         etable.append_label_ref('CompiledClass', self.name) # vt
-        etable.append_int(0)                                # delegate
+        etable.append_pointer_to(delegate)                  # delegate
 
 
 ## instance entries
 
-# def append_object_behavior_instance(etable):
-#     delegate = create_object_instance()
-#     oop = etable.append_label_ref('Object') # vt
-#     etable.append_int(delegate)             # delegate
-#     return oop
 
 def append_object_instance(etable):
     oop = etable.append_label_ref('Object') # vt
@@ -100,7 +119,7 @@ def append_object_instance(etable):
 def append_string_instance(etable, string):
     delegate = append_object_instance(etable) # Assumed to be object. In the future, deduce from source code and create appropriate delegate chain
     oop = etable.append_label_ref('String')   # vt
-    etable.append_int(delegate)                # delegate
+    etable.append_pointer_to(delegate)        # delegate
     etable.append_string(string)
     return oop
 
@@ -110,6 +129,14 @@ def append_empty_dict(etable):
     etable.append_pointer_to(delegate)          # delegate
     etable.append_int(0)                        # dict length
     return oop
+
+def append_empty_list(etable):
+    delegate = append_object_instance(etable)   # Assumed to be object. In the future, deduce from source code and create appropriate delegate chain
+    oop = etable.append_label_ref('List') # vt
+    etable.append_pointer_to(delegate)    # delegate
+    etable.append_int(0)                  # list length
+    return oop
+
 
 # class DictInstanceEntry(Entry):
 #     def __init__(self, d):
@@ -175,6 +202,19 @@ class Compiler(ASTBuilder):
     def add_slot_literal_null(self, name):
         self.current_object.add_slot_literal_null(name)
 
+    def add_slot_literal_string(self, name, value):
+        self.current_object.add_slot_literal_string(name, value)
+
+    def add_slot_literal_array(self, name, value):
+        if len(value) > 0:
+            raise Exception('todo')
+        self.current_object.add_slot_empty_list(name)
+
+    def add_slot_literal_dict(self, name, value):
+        if len(value) > 0:
+            raise Exception('todo')
+        self.current_object.add_slot_empty_dict(name)
+
 
     ###########
 
@@ -217,7 +257,7 @@ class Compiler(ASTBuilder):
 
         core['addr_table'] =self.etable.addr_table()
 
-        br()
+        # br()
         for idx, val in enumerate(core['object_table']):
             print idx + 100, ':', val
 
