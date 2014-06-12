@@ -1,12 +1,12 @@
-# -Make numbers work
-# -Review the structure of CompiledClass, ClassBehavior and Class
-#    -add missing slots to these structs
-#    -eg: list of fields: will require fully working list objects
+# -tag integers when appending them.
+# -still missing the CompiledModule, Module, ModuleBehavior
+#  and the synth of the core instance of CompiledModule and Module.
 #
 # == Phase-2
 #
 # -Dump data to file
 # -write disassembler of core to debug it.
+#   -maybe parse the same core.md to get the expected structure of each object.
 # -do functions for objects
 # -do instance/class methods
 
@@ -22,6 +22,7 @@ from pdb import set_trace as br
 class Entry(object):
     def fill(self, etable):
         raise Exception("Implement me")
+
 
 class ObjectEntry(Entry):
     def __init__(self, name):
@@ -45,6 +46,9 @@ class ObjectEntry(Entry):
     def add_slot_literal_null(self, name):
         self.slots.append({'type': 'null', 'name': name})
 
+    def add_slot_literal_num(self, name, value):
+        self.slots.append({'type': 'int', 'name': name, 'value': value})
+
     def fill(self, etable):
         self.emit_slot(etable, self.slots[0], self.name)
         for slot in self.slots[1:]:
@@ -61,16 +65,23 @@ class ObjectEntry(Entry):
             return append_empty_list(etable)
         elif slot['type'] == 'empty_dict':
             return append_empty_dict(etable)
+        elif slot['type'] == 'int':
+            return etable.append_int(slot['value'])
         else:
             raise Exception('TODO')
 
 
 class ClassEntry(Entry):
-    def __init__(self, name, super_class):
+    def __init__(self, name, super_class, behavior_entry, cclass_entry):
         self.name = name
         self.super_class = super_class
+        self.behavior_entry = behavior_entry
+        self.cclass_entry = cclass_entry
         if super_class != 'Object':
             raise Exception('TODO')
+
+    def set_fields(self, fields):
+        self.cclass_entry.set_fields(fields)
 
     def fill(self, etable):
         oop_dict = append_empty_dict(etable)
@@ -79,33 +90,49 @@ class ClassEntry(Entry):
         etable.append_label_ref(self.name + 'Behavior', self.name) # vt
         etable.append_pointer_to(delegate)                         # delegate
         etable.append_label_ref(self.super_class)                  # parent
-        etable.append_pointer_to(oop_dict)                         # dict
+        etable.append_pointer_to(oop_dict)                         # dict: "methods"
         etable.append_label_ref(self.name + "_CompiledClass")      # compiled_class
 
 
 class BehaviorEntry(Entry):
     def __init__(self, name, parent_name, dictionary):
-        self.name = name + 'Behavior'
+        self.name = name
         self.parent_name = parent_name
         self.dictionary = dictionary
+        if parent_name != 'Object':
+            raise Exception('TODO')
 
     def fill(self, etable):
         delegate = append_object_instance(etable)
         oop_dict = append_empty_dict(etable)
-        etable.append_label_ref('Behavior', self.name)         # vt
-        etable.append_pointer_to(delegate)                     # delegate
-        etable.append_label_ref(self.parent_name + "Behavior") # parent
-        etable.append_pointer_to(oop_dict)                     # dict
+        etable.append_label_ref('Behavior', self.name + 'Behavior') # vt
+        etable.append_pointer_to(delegate)                          # delegate
+        etable.append_label_ref(self.parent_name + "Behavior")      # parent
+        etable.append_pointer_to(oop_dict)                          # dict: "own methods"
+
 
 class CompiledClassEntry(Entry):
-    def __init__(self, name):
-        self.name = name + '_CompiledClass'
+    def __init__(self, name, super_name):
+        self.name = name
+        self.super_name = super_name
+        self.fields = []
+
+    def set_fields(self, fields):
+        self.fields = fields
 
     def fill(self, etable):
         delegate = append_object_instance(etable)
-        etable.append_label_ref('CompiledClass', self.name) # vt
-        etable.append_pointer_to(delegate)                  # delegate
-
+        fields_list_oop = append_list_of_strings(etable, self.fields)
+        own_methods_oop = append_empty_dict(etable)
+        methods_oop = append_empty_dict(etable)
+        etable.append_label_ref('CompiledClass', self.name + '_CompiledClass') # vt
+        etable.append_pointer_to(delegate)                                     # delegate
+        etable.append_string(self.name)                                        # name
+        etable.append_string(self.super_name)                                  # super_class_name
+        etable.append_int(0)                                                   # compile_module: TODO
+        etable.append_pointer_to(fields_list_oop)                              # fields
+        etable.append_pointer_to(methods_oop)                                  # methods: TODO
+        etable.append_pointer_to(own_methods_oop)                              # own methods: TODO
 
 ## instance entries
 
@@ -117,26 +144,39 @@ def append_object_instance(etable):
 
 
 def append_string_instance(etable, string):
-    delegate = append_object_instance(etable) # Assumed to be object. In the future, deduce from source code and create appropriate delegate chain
+    delegate = append_object_instance(etable) # Assumed to be object! if source change, this breaks
     oop = etable.append_label_ref('String')   # vt
     etable.append_pointer_to(delegate)        # delegate
     etable.append_string(string)
     return oop
 
+
 def append_empty_dict(etable):
-    delegate = append_object_instance(etable)   # Assumed to be object. In the future, deduce from source code and create appropriate delegate chain
+    delegate = append_object_instance(etable)   # Assumed to be object! if source change, this breaks
     oop = etable.append_label_ref('Dictionary') # vt
     etable.append_pointer_to(delegate)          # delegate
     etable.append_int(0)                        # dict length
     return oop
 
+
 def append_empty_list(etable):
-    delegate = append_object_instance(etable)   # Assumed to be object. In the future, deduce from source code and create appropriate delegate chain
-    oop = etable.append_label_ref('List') # vt
-    etable.append_pointer_to(delegate)    # delegate
-    etable.append_int(0)                  # list length
+    delegate = append_object_instance(etable)   # Assumed to be object! if source change, this breaks
+    oop = etable.append_label_ref('List')       # vt
+    etable.append_pointer_to(delegate)          # delegate
+    etable.append_int(0)                        # len
     return oop
 
+
+# used internally to create class fields list, etc.
+def append_list_of_strings(etable, lst):
+    oops_elements = [etable.append_string(string) for string in lst]
+    delegate = append_object_instance(etable)   # Assumed to be object! if source change, this breaks
+    oop = etable.append_label_ref('List')       # vt
+    etable.append_pointer_to(delegate)          # delegate
+    etable.append_int(len(lst))                 # len
+    for oop in oops_elements:                   # .. elements
+        etable.append_pointer_to(oop)
+    return oop
 
 # class DictInstanceEntry(Entry):
 #     def __init__(self, d):
@@ -183,24 +223,29 @@ class Compiler(ASTBuilder):
         self.entries.append(self.current_object)
 
     def register_class(self, name, super_class):
-        self.current_class = ClassEntry(name, super_class)
-        self.entries.append(self.current_class)
-
         # registering the behavior for that class
-        self.entries.append(BehaviorEntry(name, super_class, None))
+        behavior = BehaviorEntry(name, super_class, None)
+        self.entries.append(behavior)
 
         # registering the compiled class for that class
-        self.entries.append(CompiledClassEntry(name))
+        cclass = CompiledClassEntry(name, super_class)
+        self.entries.append(cclass)
+
+        self.current_class = ClassEntry(name, super_class, behavior, cclass)
+        self.entries.append(self.current_class)
+
 
     def add_class_fields(self, fields):
-        if len(fields) != 0:
-            raise Exception('TODO')
+        self.current_class.set_fields(fields)
 
     def add_slot_ref(self, name, value):
         self.current_object.add_slot_ref(name, value)
 
     def add_slot_literal_null(self, name):
         self.current_object.add_slot_literal_null(name)
+
+    def add_slot_literal_num(self, name, value):
+        self.current_object.add_slot_literal_num(name, value)
 
     def add_slot_literal_string(self, name, value):
         self.current_object.add_slot_literal_string(name, value)

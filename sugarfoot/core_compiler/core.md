@@ -32,11 +32,13 @@
     _vt: ObjectBehavior;
     _delegate: null;
     parent: null;
-//    size: 0;
+    size: 0;
     compiled_class: Object_CompiledClass;
   end
 
   class CompiledClass
+    fields: module, name, super_class_name,
+            fields, methods, own_methods;
   end
 
   // class String
