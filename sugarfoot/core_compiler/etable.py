@@ -2,6 +2,14 @@ class Cell(object):
     def index(self):
         return self.etable.base + self.etable.entries.index(self)
 
+class NullCell(Cell):
+    def __init__(self, etable):
+        self.etable = etable
+
+    def __call__(self, _):
+        return 0
+
+
 class IntCell(Cell):
     def __init__(self, etable, num):
         self.etable = etable
@@ -71,6 +79,13 @@ class VirtualEntryTable(object):
 
     def append_int(self, num, label=None):
         cell = IntCell(self, num)
+        if label is not None:
+            self.label_current(label)
+        self.entries.append(cell)
+        return cell
+
+    def append_null(self, label=None):
+        cell = NullCell(self)
         if label is not None:
             self.label_current(label)
         self.entries.append(cell)
