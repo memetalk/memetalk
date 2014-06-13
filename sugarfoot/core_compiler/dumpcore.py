@@ -90,6 +90,8 @@ class Decompiler(ASTBuilder):
         end_addr_section = len(file_contents)
         # ADDR section = file_contents[start_addr_section:end_addr_section]
 
+        relloc_addresses = [struct.unpack('I', pack32)[0] for pack32 in chunks(file_contents[start_addr_section:end_addr_section], 4)]
+
         br()
     ######################
 

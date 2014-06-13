@@ -131,7 +131,18 @@ class VirtualEntryTable(object):
     ###
 
     def addr_table(self):
-        return [self.base + idx for idx, x in enumerate(self.entries) if type(x) == PointerCell]
+        # literal strings and arrays are expanded inline,
+        # so we need to update upcoming references with the
+        # amount of offset (= len(expanded_value))
+        at = []
+        offset = 0
+        for idx, x in enumerate(self.entries):
+            value = x(offset)
+            if type(x) == PointerCell:
+                at.append(self.base + idx + offset)
+            elif type(value) == list:
+                offset += len(value) - 1 # its already assume value occupies 1; add only extra space needed
+        return at
 
     def object_table(self):
         # literal strings and arrays are expanded inline,
