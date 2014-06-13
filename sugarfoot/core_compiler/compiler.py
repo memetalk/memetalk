@@ -330,7 +330,7 @@ class Compiler(ASTBuilder):
 
         # addr table
         for v32 in core['addr_table']:
-            fp.write(struct.pack('i', v32))
+            fp.write(struct.pack('I', v32))
 
         fp.close()
 
