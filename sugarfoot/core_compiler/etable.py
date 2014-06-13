@@ -8,7 +8,11 @@ class IntCell(Cell):
         self.num = num
 
     def __call__(self, _):
-        return self.num
+        # tag int
+        if self.num  < 0x80000000:
+            return self.num | 0x80000000
+        else:
+            raise Exception('Unsupported big num')
 
 class StringCell(Cell):
     def __init__(self, etable, string):
