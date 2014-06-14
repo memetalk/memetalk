@@ -323,7 +323,6 @@ class Compiler(ASTBuilder):
 
         # object table
         for v8 in core['object_table']:
-            print v8
             fp.write(struct.pack('B', v8))
 
         # addr table
