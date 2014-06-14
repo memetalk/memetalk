@@ -1,7 +1,7 @@
 from parser import MemeParser
 from coretr import CoreTr
 from astbuilder import *
-import etable
+import vmem
 import math
 from pdb import set_trace as br
 import struct
@@ -13,7 +13,7 @@ WORD_SIZE = 4
 
 
 class Entry(object):
-    def fill(self, etable):
+    def fill(self, vmem):
         raise Exception("Implement me")
 
 
@@ -45,34 +45,34 @@ class ObjectEntry(Entry):
     def add_slot_literal_num(self, name, value):
         self.slots.append({'type': 'int', 'name': name, 'value': value})
 
-    def fill(self, etable):
+    def fill(self, vmem):
         # synth necessary objects:
         refs_to_literals = {}
         for idx, slot in enumerate(self.slots[1:]):
             if slot['type'] == 'string':
-                refs_to_literals[idx] = append_string_instance(etable, slot['value'])
+                refs_to_literals[idx] = append_string_instance(vmem, slot['value'])
             elif slot['type'] == 'empty_list':
-                refs_to_literals[idx] = append_empty_list(etable)
+                refs_to_literals[idx] = append_empty_list(vmem)
             elif slot['type'] == 'empty_dict':
-                refs_to_literals[idx] = append_empty_dict(etable)
+                refs_to_literals[idx] = append_empty_dict(vmem)
 
         # emit our object
 
-        etable.append_label_ref(self.slots[0]['value'], self.name) # first slot labeled by our name
+        vmem.append_label_ref(self.slots[0]['value'], self.name) # first slot labeled by our name
 
         for idx, slot in enumerate(self.slots[1:]):
             if slot['type'] == 'ref':
-                etable.append_label_ref(slot['value'])
+                vmem.append_label_ref(slot['value'])
             elif slot['type'] == 'null':
-                etable.append_null()
+                vmem.append_null()
             elif slot['type'] == 'string':
-                etable.append_pointer_to(refs_to_literals[idx])
+                vmem.append_pointer_to(refs_to_literals[idx])
             elif slot['type'] == 'empty_list':
-                etable.append_pointer_to(refs_to_literals[idx])
+                vmem.append_pointer_to(refs_to_literals[idx])
             elif slot['type'] == 'empty_dict':
-                etable.append_pointer_to(refs_to_literals[idx])
+                vmem.append_pointer_to(refs_to_literals[idx])
             elif slot['type'] == 'int':
-                etable.append_int(slot['value'])
+                vmem.append_int(slot['value'])
             else:
                 raise Exception('TODO')
 
@@ -92,15 +92,15 @@ class ClassEntry(Entry):
     def set_fields(self, fields):
         self.cclass_entry.set_fields(fields)
 
-    def fill(self, etable):
-        oop_dict = append_empty_dict(etable)
-        delegate = append_object_instance(etable)
+    def fill(self, vmem):
+        oop_dict = append_empty_dict(vmem)
+        delegate = append_object_instance(vmem)
 
-        etable.append_label_ref(self.name + 'Behavior', self.name) # vt
-        etable.append_pointer_to(delegate)                         # delegate
-        etable.append_label_ref(self.super_class)                  # parent
-        etable.append_pointer_to(oop_dict)                         # dict: "methods"
-        etable.append_label_ref(self.name + "_CompiledClass")      # compiled_class
+        vmem.append_label_ref(self.name + 'Behavior', self.name) # vt
+        vmem.append_pointer_to(delegate)                         # delegate
+        vmem.append_label_ref(self.super_class)                  # parent
+        vmem.append_pointer_to(oop_dict)                         # dict: "methods"
+        vmem.append_label_ref(self.name + "_CompiledClass")      # compiled_class
 
 
 class BehaviorEntry(Entry):
@@ -114,13 +114,13 @@ class BehaviorEntry(Entry):
     def get_name(self):
         return self.name + 'Behavior'
 
-    def fill(self, etable):
-        delegate = append_object_instance(etable)
-        oop_dict = append_empty_dict(etable)
-        etable.append_label_ref('Behavior', self.name + 'Behavior') # vt
-        etable.append_pointer_to(delegate)                          # delegate
-        etable.append_label_ref(self.parent_name + "Behavior")      # parent
-        etable.append_pointer_to(oop_dict)                          # dict: "own methods"
+    def fill(self, vmem):
+        delegate = append_object_instance(vmem)
+        oop_dict = append_empty_dict(vmem)
+        vmem.append_label_ref('Behavior', self.name + 'Behavior') # vt
+        vmem.append_pointer_to(delegate)                          # delegate
+        vmem.append_label_ref(self.parent_name + "Behavior")      # parent
+        vmem.append_pointer_to(oop_dict)                          # dict: "own methods"
 
 
 class CompiledClassEntry(Entry):
@@ -135,62 +135,62 @@ class CompiledClassEntry(Entry):
     def set_fields(self, fields):
         self.fields = fields
 
-    def fill(self, etable):
-        delegate = append_object_instance(etable)
-        fields_list_oop = append_list_of_strings(etable, self.fields)
-        own_methods_oop = append_empty_dict(etable)
-        methods_oop = append_empty_dict(etable)
-        etable.append_label_ref('CompiledClass', self.name + '_CompiledClass') # vt
-        etable.append_pointer_to(delegate)                                     # delegate
-        etable.append_string(self.name)                                        # name
-        etable.append_string(self.super_name)                                  # super_class_name
-        etable.append_null()                                                   # compile_module: TODO
-        etable.append_pointer_to(fields_list_oop)                              # fields
-        etable.append_pointer_to(methods_oop)                                  # methods: TODO
-        etable.append_pointer_to(own_methods_oop)                              # own methods: TODO
+    def fill(self, vmem):
+        delegate = append_object_instance(vmem)
+        fields_list_oop = append_list_of_strings(vmem, self.fields)
+        own_methods_oop = append_empty_dict(vmem)
+        methods_oop = append_empty_dict(vmem)
+        vmem.append_label_ref('CompiledClass', self.name + '_CompiledClass') # vt
+        vmem.append_pointer_to(delegate)                                     # delegate
+        vmem.append_string(self.name)                                        # name
+        vmem.append_string(self.super_name)                                  # super_class_name
+        vmem.append_null()                                                   # compile_module: TODO
+        vmem.append_pointer_to(fields_list_oop)                              # fields
+        vmem.append_pointer_to(methods_oop)                                  # methods: TODO
+        vmem.append_pointer_to(own_methods_oop)                              # own methods: TODO
 
 ## instance entries
 
 
-def append_object_instance(etable):
-    oop = etable.append_label_ref('Object') # vt
-    etable.append_null()                    # delegate: end of chain of delegation
+def append_object_instance(vmem):
+    oop = vmem.append_label_ref('Object') # vt
+    vmem.append_null()                    # delegate: end of chain of delegation
     return oop
 
 
-def append_string_instance(etable, string):
-    delegate = append_object_instance(etable) # Assumed to be object! if source change, this breaks
-    oop = etable.append_label_ref('String')   # vt
-    etable.append_pointer_to(delegate)        # delegate
-    etable.append_string(string)
+def append_string_instance(vmem, string):
+    delegate = append_object_instance(vmem) # Assumed to be object! if source change, this breaks
+    oop = vmem.append_label_ref('String')   # vt
+    vmem.append_pointer_to(delegate)        # delegate
+    vmem.append_string(string)
     return oop
 
 
-def append_empty_dict(etable):
-    delegate = append_object_instance(etable)   # Assumed to be object! if source change, this breaks
-    oop = etable.append_label_ref('Dictionary') # vt
-    etable.append_pointer_to(delegate)          # delegate
-    etable.append_int(0)                        # dict length
+def append_empty_dict(vmem):
+    delegate = append_object_instance(vmem)   # Assumed to be object! if source change, this breaks
+    oop = vmem.append_label_ref('Dictionary') # vt
+    vmem.append_pointer_to(delegate)          # delegate
+    vmem.append_int(0)                        # dict length
     return oop
 
 
-def append_empty_list(etable):
-    delegate = append_object_instance(etable)   # Assumed to be object! if source change, this breaks
-    oop = etable.append_label_ref('List')       # vt
-    etable.append_pointer_to(delegate)          # delegate
-    etable.append_int(0)                        # len
+def append_empty_list(vmem):
+    delegate = append_object_instance(vmem)   # Assumed to be object! if source change, this breaks
+    oop = vmem.append_label_ref('List')       # vt
+    vmem.append_pointer_to(delegate)          # delegate
+    vmem.append_int(0)                        # len
     return oop
 
 
 # used internally to create class fields list, etc.
-def append_list_of_strings(etable, lst):
-    oops_elements = [etable.append_string(string) for string in lst]
-    delegate = append_object_instance(etable)   # Assumed to be object! if source change, this breaks
-    oop = etable.append_label_ref('List')       # vt
-    etable.append_pointer_to(delegate)          # delegate
-    etable.append_int(len(lst))                 # len
+def append_list_of_strings(vmem, lst):
+    oops_elements = [vmem.append_string(string) for string in lst]
+    delegate = append_object_instance(vmem)   # Assumed to be object! if source change, this breaks
+    oop = vmem.append_label_ref('List')       # vt
+    vmem.append_pointer_to(delegate)          # delegate
+    vmem.append_int(len(lst))                 # len
     for oop in oops_elements:                   # .. elements
-        etable.append_pointer_to(oop)
+        vmem.append_pointer_to(oop)
     return oop
 
 def string_block(string):
@@ -202,7 +202,7 @@ class Compiler(ASTBuilder):
         self.entries = []
         self.current_object = None
 
-        self.etable = etable.VirtualMemory()
+        self.vmem = vmem.VirtualMemory()
         self.HEADER_SIZE = 3 * WORD_SIZE # bytes. 3 = names_size, entries, addr_table_offset
 
     def compile(self):
@@ -292,24 +292,24 @@ class Compiler(ASTBuilder):
 
         index_size = core['header']['entries'] * 2 * WORD_SIZE # *2: pair (name, entry), *4: bytes
         base = self.HEADER_SIZE + core['header']['names_size'] + index_size
-        self.etable.set_base(base)
+        self.vmem.set_base(base)
 
         # - OBJECT TABLE
         for entry in self.entries:
-            entry.fill(self.etable)
+            entry.fill(self.vmem)
 
-        core['object_table'] = self.etable.object_table()
+        core['object_table'] = self.vmem.object_table()
 
         # - HEADER ot_size
         core['header']['ot_size'] = len(core['object_table'])
 
-        core['addr_table'] = self.etable.addr_table()
+        core['addr_table'] = self.vmem.addr_table()
 
         # - INDEX section
         top_level_names = [x.name for x in self.entries]
         for name in top_level_names:
             core['index'].append(self.name_ptr_for_name(name, core))  # ptr to string
-            core['index'].append(self.etable.index_for(name))         # ptr to object
+            core['index'].append(self.vmem.index_for(name))         # ptr to object
 
         return core
         # # br()
