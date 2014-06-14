@@ -1,23 +1,7 @@
 from pdb import set_trace as br
 import math
+from . import utils
 
-
-WSIZE = 4
-
-def chunks(l, n):
-    res = []
-    for i in xrange(0, len(l), n):
-        res.append(l[i:i+n])
-    return res
-
-def ato32(num):
-    if len(num) < 4:
-        num += [0] * (4 - len(num))
-    return num[0] + (num[1] << 8)  + (num[2] << 16) + (num[3] << 32)
-
-
-def pack_int32(num):
-    return [num & 0xFF, (num & 0xFF00) >> 8, (num & 0xFF0000) >> 16, (num & 0xFF000000) >> 32]
 
 class Cell(object):
     def index(self):
@@ -28,10 +12,10 @@ class NullCell(Cell):
         self.etable = etable
 
     def __len__(self):
-        return WSIZE
+        return utils.WSIZE
 
     def __call__(self, *args):
-        return [0,0,0,0]
+        return utils.pack_int32(0)
 
 class IntCell(Cell):
     def __init__(self, etable, num):
@@ -39,12 +23,12 @@ class IntCell(Cell):
         self.num = num
 
     def __len__(self):
-        return WSIZE
+        return utils.WSIZE
 
     def __call__(self, *args):
         # tag int
         if self.num  < 0x80000000:
-            return pack_int32(self.num)# | 0x80000000)
+            return utils.pack_int32(self.num)# | 0x80000000)
         else:
             raise Exception('Unsupported big num')
 
@@ -53,8 +37,10 @@ class StringCell(Cell):
         self.etable = etable
 
         string_with_term = string + "\0"
-        words_needed = int(math.ceil(len(string_with_term) / float(WSIZE)))
-        to_fill = (words_needed * WSIZE) - len(string_with_term)
+        words_needed = int(math.ceil(len(string_with_term) / float(utils.WSIZE)))
+        to_fill = (words_needed * utils.WSIZE) - len(string_with_term)
+        # print to_fill = utils.string_block(string_with_term) - len(string_with_term)
+        # br()
         self.data = map(ord, string_with_term) + ([0] * to_fill)
 
     def __len__(self):
@@ -78,14 +64,14 @@ class PointerCell(Cell):
             raise Exception('label or cell required')
 
     def __len__(self):
-        return WSIZE
+        return utils.WSIZE
 
     def __call__(self, offset=0):
         if self.target_cell:
             to = self.etable.cells.index(self.target_cell)
-            return pack_int32(self.etable.base + sum(self.etable.cell_sizes[0:to]))
+            return utils.pack_int32(self.etable.base + sum(self.etable.cell_sizes[0:to]))
         else:
-            return pack_int32(self.etable.base + self.etable.index[self.target_label])
+            return utils.pack_int32(self.etable.base + self.etable.index[self.target_label])
 
 class VirtualMemory(object):
     def __init__(self):
@@ -144,8 +130,8 @@ class VirtualMemory(object):
 
     def dump(self):
         address_offset = 4 # each value dumped is a 32 bit pack (ie. 4 1byte value, 4 addresses within)
-        for idx, x in enumerate(chunks(self.object_table(),4)):
-            print '{} - {}'.format(self.base + (idx * address_offset), ato32(x))
+        for idx, x in enumerate(utils.chunks(self.object_table(),4)):
+            print '{} - {}'.format(self.base + (idx * address_offset), utils.ato32(x))
 
         # print '--'
         # print 'Object:', self.index_for('Object')

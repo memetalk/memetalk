@@ -256,10 +256,10 @@ class Compiler(ASTBuilder):
 
     def name_ptr_for_name(self, name, core):
         acc = 0
-        for entry_name in core['names']:
-            if entry_name[0] == name:
+        for entry_name_t, bsize in core['names']:
+            if entry_name_t[0:-1] == name:
                 return self.HEADER_SIZE + acc
-            acc += entry_name[1]
+            acc += bsize
         raise Exception('entry {} not found in NAMES'.format(name))
 
     def build_core(self):
@@ -277,7 +277,7 @@ class Compiler(ASTBuilder):
         core['header']['entries'] = len(self.entries)
 
         # names :: [(string, alloc-size in bytes, self-ptr)]
-        core['names'] = [(entry.get_name(), utils.string_block(entry.get_name())) for entry in self.entries]
+        core['names'] = [(name_t, utils.string_block(name_t)) for name_t in [e.get_name() + "\0" for e in self.entries]]
 
         core['header']['names_size'] = sum([x[1] for x in core['names']])
 
@@ -300,7 +300,7 @@ class Compiler(ASTBuilder):
         top_level_names = [x.get_name() for x in self.entries]
         for name in top_level_names:
             core['index'].append(self.name_ptr_for_name(name, core))  # ptr to string
-            core['index'].append(self.vmem.index_for(name))         # ptr to object
+            core['index'].append(self.vmem.index_for(name))           # ptr to object
 
         return core
 

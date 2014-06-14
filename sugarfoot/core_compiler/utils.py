@@ -1,13 +1,11 @@
 import math
 import struct
-
+from pdb import set_trace as br
 
 WSIZE = 4
 
-def ato32(num):
-    if len(num) < 4:
-        num += [0] * (4 - len(num))
-    return num[0] + (num[1] << 8)  + (num[2] << 16) + (num[3] << 32)
+def ato32(chunk):
+    return struct.unpack('I', ''.join(map(chr, chunk)))[0]
 
 def chunks(l, n):
     res = []
@@ -18,6 +16,9 @@ def chunks(l, n):
 def unpack(pack32):
     return struct.unpack('I', pack32)[0]
 
+def pack_int32(num):
+    return map(ord, struct.pack('I', num))
+
 def string_block(string):
-    # number of bytes required for string, aligned to 32 bits (word size)
-    return int(math.ceil((len(string)+1) / float(WSIZE)) * WSIZE)
+    # number of bytes required for string, aligned to word size
+    return int(math.ceil(len(string) / float(WSIZE)) * WSIZE)
