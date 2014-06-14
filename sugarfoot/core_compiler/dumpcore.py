@@ -3,10 +3,10 @@ from coretr import CoreTr
 from astbuilder import *
 from pprint import pprint as P
 from pdb import set_trace as br
-import struct
 import math
+import os
+from . import utils
 
-WSIZE = 4
 
 class ObjectEntry(object):
     def __init__(self, name):
@@ -33,8 +33,8 @@ class ObjectEntry(object):
 
     def dump(self, dec, ptr):
         print '[{}] -- {}'.format(ptr, self.name)
-        obj_size = WSIZE * len(self.slots)
-        objs = map(unpack, chunks(dec.file_contents[ptr:ptr+obj_size], WSIZE))
+        obj_size = utils.WSIZE * len(self.slots)
+        objs = map(utils.unpack, utils.chunks(dec.file_contents[ptr:ptr+obj_size], utils.WSIZE))
 
         for idx, slot in enumerate(self.slots):
             if slot['type'] == 'ptr':
@@ -55,8 +55,8 @@ class ClassBehaviorEntry(object):
     def dump(self, dec, ptr):
         print '[{}] -- {}'.format(ptr, self.name)
         slots = ['vt', 'delegate', 'parent', 'dict']
-        obj_size = WSIZE * len(slots)
-        objs = map(unpack, chunks(dec.file_contents[ptr:ptr+obj_size], WSIZE))
+        obj_size = utils.WSIZE * len(slots)
+        objs = map(utils.unpack, utils.chunks(dec.file_contents[ptr:ptr+obj_size], utils.WSIZE))
         for idx, slot in enumerate(slots):
             target_name = dec.get_entry_name(objs[idx])
             if target_name:
@@ -75,8 +75,8 @@ class CompiledClassEntry(object):
         print '[{}] -- {}'.format(ptr, self.name)
         slots = ['vt', 'delegate', 'name', 'super_class_name',
                  'compiled_module', 'fields', 'methods', 'own_methods']
-        obj_size = WSIZE * len(slots)
-        objs = map(unpack, chunks(dec.file_contents[ptr:ptr+obj_size], WSIZE))
+        obj_size = utils.WSIZE * len(slots)
+        objs = map(utils.unpack, utils.chunks(dec.file_contents[ptr:ptr+obj_size], utils.WSIZE))
         for idx, slot in enumerate(slots):
             target_name = dec.get_entry_name(objs[idx])
             if target_name:
@@ -101,8 +101,8 @@ class ClassEntry(object):
     def dump(self, dec, ptr):
         print '[{}] -- {}'.format(ptr, self.name)
         slots = ['vt', 'delegate', 'parent', 'dict', 'compiled_class']
-        obj_size = WSIZE * len(slots) # total slots in a class object
-        objs = map(unpack, chunks(dec.file_contents[ptr:ptr+obj_size], WSIZE))
+        obj_size = utils.WSIZE * len(slots) # total slots in a class object
+        objs = map(utils.unpack, utils.chunks(dec.file_contents[ptr:ptr+obj_size], utils.WSIZE))
         for idx, slot in enumerate(slots):
             target_name = dec.get_entry_name(objs[idx])
             if target_name:
@@ -110,20 +110,6 @@ class ClassEntry(object):
             else:
                 print '{}: <{}>'.format(slot, objs[idx])
         return obj_size
-
-def ato32(num):
-    if len(num) < 4:
-        num += [0] * (4 - len(num))
-    return num[0] + (num[1] << 8)  + (num[2] << 16) + (num[3] << 32)
-
-def chunks(l, n):
-    res = []
-    for i in xrange(0, len(l), n):
-        res.append(l[i:i+n])
-    return res
-
-def unpack(pack32):
-    return struct.unpack('I', pack32)[0]
 
 
 class Decompiler(ASTBuilder):
@@ -136,7 +122,7 @@ class Decompiler(ASTBuilder):
         # loading core.md source structure
 
         self.line_offset = 0
-        self.parser = MemeParser(open('core.md').read())
+        self.parser = MemeParser(open(os.path.join(os.path.dirname(__file__), 'core.md'), 'r').read())
         self.parser.i = self
         ast = self.parser.apply("start")[0]
         self.parser = CoreTr([ast])
@@ -148,7 +134,7 @@ class Decompiler(ASTBuilder):
         self.load_image()
 
     def get_entry_name(self, vt_ptr):
-        for name_ptr, obj_ptr in chunks([unpack(pack32) for pack32 in chunks(self.INDEX, 4)], 2):
+        for name_ptr, obj_ptr in utils.chunks([utils.unpack(pack32) for pack32 in utils.chunks(self.INDEX, 4)], 2):
             name = self.file_contents[name_ptr:self.file_contents.find('\0', name_ptr)]
             # print 'get_entry_name({}): {}/{} = {}'.format(vt_ptr, name_ptr, obj_ptr, name)
             if obj_ptr == vt_ptr:
@@ -161,7 +147,7 @@ class Decompiler(ASTBuilder):
 
         self.file_contents = open("core.img", "rb").read()
 
-        header_packs = [unpack(pack32) for pack32 in chunks(self.file_contents[0:END_OF_HEADER], 4)]
+        header_packs = [utils.unpack(pack32) for pack32 in utils.chunks(self.file_contents[0:END_OF_HEADER], 4)]
 
         header = {'entries': header_packs[0],
                   'names_size': header_packs[1],
@@ -187,7 +173,7 @@ class Decompiler(ASTBuilder):
         end_addr_section = len(self.file_contents)
         self.ADDR = self.file_contents[start_addr_section:end_addr_section]
 
-        self.relloc_addresses = [unpack(pack32) for pack32 in chunks(self.ADDR, 4)]
+        self.relloc_addresses = [utils.unpack(pack32) for pack32 in utils.chunks(self.ADDR, 4)]
 
         ###########
         idx = 0
@@ -207,34 +193,34 @@ class Decompiler(ASTBuilder):
             print '--------------------'
 
     def dump_instance(self, addr):
-        vt_addr = unpack(self.file_contents[addr:addr+4])
+        vt_addr = utils.unpack(self.file_contents[addr:addr+4])
         class_or_behavior_name = self.get_entry_name(vt_addr)
         if class_or_behavior_name is None:
             br()
         else:
             if class_or_behavior_name == 'Object':
                 # print '[{}] {} instance'.format(addr, class_or_behavior_name)
-                return 2 * WSIZE #vt+delegate
+                return 2 * utils.WSIZE #vt+delegate
             elif class_or_behavior_name == 'String':
                 print '[{}] {} instance'.format(addr, class_or_behavior_name)
-                size = unpack(self.file_contents[addr+8:addr+12])
+                size = utils.unpack(self.file_contents[addr+8:addr+12])
                 string = self.file_contents[addr+12:addr+12+size]
-                chunk_size = int(math.ceil((len(string)+1) / float(WSIZE)) * WSIZE)
+                chunk_size = int(math.ceil((len(string)+1) / float(utils.WSIZE)) * utils.WSIZE)
                 print '  *** "{}"'.format(string)
-                return (3 * WSIZE) + chunk_size
+                return (3 * utils.WSIZE) + chunk_size
             elif class_or_behavior_name == 'List':
-                size = unpack(self.file_contents[addr+8:addr+12])
+                size = utils.unpack(self.file_contents[addr+8:addr+12])
                 if size == 0:
                     print '[{}] {} instance (empty)'.format(addr, class_or_behavior_name)
-                    return 3 * WSIZE
+                    return 3 * utils.WSIZE
                 else:
                     print '[{}] {} instance ({})'.format(addr, class_or_behavior_name, size)
-                    return (3 + size) * WSIZE
+                    return (3 + size) * utils.WSIZE
             elif class_or_behavior_name == 'Dictionary':
-                size = unpack(self.file_contents[addr+8:addr+12])
+                size = utils.unpack(self.file_contents[addr+8:addr+12])
                 if size == 0:
                     print '[{}] {} instance (empty)'.format(addr, class_or_behavior_name)
-                    return 3 * WSIZE
+                    return 3 * utils.WSIZE
                 else:
                     br()
             elif class_or_behavior_name == 'Behavior':

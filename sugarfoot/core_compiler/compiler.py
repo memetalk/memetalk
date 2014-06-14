@@ -6,10 +6,9 @@ import math
 from pdb import set_trace as br
 import struct
 import ctypes
+from . import utils
 from pprint import pprint as P
-
-
-WORD_SIZE = 4
+import os
 
 
 class Entry(object):
@@ -197,9 +196,6 @@ def append_list_of_strings(vmem, lst):
         vmem.append_pointer_to(oop)
     return oop
 
-def string_block(string):
-    # number of bytes required for string, aligned to 32 bits (word size)
-    return int(math.ceil((len(string)+1) / float(WORD_SIZE)) * WORD_SIZE)
 
 class Compiler(ASTBuilder):
     def __init__(self):
@@ -207,11 +203,11 @@ class Compiler(ASTBuilder):
         self.current_object = None
 
         self.vmem = vmem.VirtualMemory()
-        self.HEADER_SIZE = 3 * WORD_SIZE # bytes. 3 = names_size, entries, addr_table_offset
+        self.HEADER_SIZE = 3 * utils.WSIZE # bytes. 3 = names_size, entries, addr_table_offset
 
     def compile(self):
         self.line_offset = 0
-        self.parser = MemeParser(open('core.md').read())
+        self.parser = MemeParser(open(os.path.join(os.path.dirname(__file__), 'core.md'), 'r').read())
         self.parser.i = self
         ast = self.parser.apply("start")[0]
         self.parser = CoreTr([ast])
@@ -290,11 +286,11 @@ class Compiler(ASTBuilder):
         core['header']['entries'] = len(self.entries)
 
         # names :: [(string, alloc-size in bytes, self-ptr)]
-        core['names'] = [(entry.get_name(), string_block(entry.get_name())) for entry in self.entries]
+        core['names'] = [(entry.get_name(), utils.string_block(entry.get_name())) for entry in self.entries]
 
         core['header']['names_size'] = sum([x[1] for x in core['names']])
 
-        index_size = core['header']['entries'] * 2 * WORD_SIZE # *2: pair (name, entry), *4: bytes
+        index_size = core['header']['entries'] * 2 * utils.WSIZE # *2: pair (name, entry), *4: bytes
         base = self.HEADER_SIZE + core['header']['names_size'] + index_size
         self.vmem.set_base(base)
 
