@@ -140,10 +140,13 @@ class CompiledClassEntry(Entry):
         fields_list_oop = append_list_of_strings(vmem, self.fields)
         own_methods_oop = append_empty_dict(vmem)
         methods_oop = append_empty_dict(vmem)
+        name_oop = append_string_instance(vmem, self.name)
+        super_name_oop = append_string_instance(vmem, self.super_name)
+
         vmem.append_label_ref('CompiledClass', self.name + '_CompiledClass') # vt
         vmem.append_pointer_to(delegate)                                     # delegate
-        vmem.append_string(self.name)                                        # name
-        vmem.append_string(self.super_name)                                  # super_class_name
+        vmem.append_pointer_to(name_oop)                                     # name
+        vmem.append_pointer_to(super_name_oop)                               # super_class_name
         vmem.append_null()                                                   # compile_module: TODO
         vmem.append_pointer_to(fields_list_oop)                              # fields
         vmem.append_pointer_to(methods_oop)                                  # methods: TODO
@@ -162,6 +165,7 @@ def append_string_instance(vmem, string):
     delegate = append_object_instance(vmem) # Assumed to be object! if source change, this breaks
     oop = vmem.append_label_ref('String')   # vt
     vmem.append_pointer_to(delegate)        # delegate
+    vmem.append_int(len(string))
     vmem.append_string(string)
     return oop
 
@@ -184,7 +188,7 @@ def append_empty_list(vmem):
 
 # used internally to create class fields list, etc.
 def append_list_of_strings(vmem, lst):
-    oops_elements = [vmem.append_string(string) for string in lst]
+    oops_elements = [append_string_instance(vmem, string) for string in lst]
     delegate = append_object_instance(vmem)   # Assumed to be object! if source change, this breaks
     oop = vmem.append_label_ref('List')       # vt
     vmem.append_pointer_to(delegate)          # delegate
@@ -306,7 +310,8 @@ class Compiler(ASTBuilder):
         core['addr_table'] = self.vmem.addr_table()
 
         # - INDEX section
-        top_level_names = [x.name for x in self.entries]
+        top_level_names = [x.get_name() for x in self.entries]
+        br()
         for name in top_level_names:
             core['index'].append(self.name_ptr_for_name(name, core))  # ptr to string
             core['index'].append(self.vmem.index_for(name))         # ptr to object

@@ -4,6 +4,7 @@ from astbuilder import *
 from pprint import pprint as P
 from pdb import set_trace as br
 import struct
+import math
 
 WSIZE = 4
 
@@ -46,10 +47,50 @@ class ObjectEntry(object):
                 print '{}: {}'.format(slot['name'], objs[idx])
         return obj_size
 
-class ClassEntry(object):
+class ClassBehaviorEntry(object):
     def __init__(self, name, super_class):
+        self.name = name + 'Behavior'
+        self.super_class = super_class
+
+    def dump(self, dec, ptr):
+        print '[{}] -- {}'.format(ptr, self.name)
+        slots = ['vt', 'delegate', 'parent', 'dict']
+        obj_size = WSIZE * len(slots)
+        objs = map(unpack, chunks(dec.file_contents[ptr:ptr+obj_size], WSIZE))
+        for idx, slot in enumerate(slots):
+            target_name = dec.get_entry_name(objs[idx])
+            if target_name:
+                print '{}: #{} <{}>'.format(slot, target_name, objs[idx])
+            else:
+                print '{}: <{}>'.format(slot, objs[idx])
+        return obj_size
+
+
+class CompiledClassEntry(object):
+    def __init__(self, name, super_class):
+        self.name = name + '_CompiledClass'
+        self.super_class = super_class
+
+    def dump(self, dec, ptr):
+        print '[{}] -- {}'.format(ptr, self.name)
+        slots = ['vt', 'delegate', 'name', 'super_class_name',
+                 'compiled_module', 'fields', 'methods', 'own_methods']
+        obj_size = WSIZE * len(slots)
+        objs = map(unpack, chunks(dec.file_contents[ptr:ptr+obj_size], WSIZE))
+        for idx, slot in enumerate(slots):
+            target_name = dec.get_entry_name(objs[idx])
+            if target_name:
+                print '{}: #{} <{}>'.format(slot, target_name, objs[idx])
+            else:
+                print '{}: <{}>'.format(slot, objs[idx])
+        return obj_size
+
+class ClassEntry(object):
+    def __init__(self, name, super_class, behavior, cclass):
         self.name = name
         self.super_class = super_class
+        self.behavior = behavior
+        self.cclass = cclass
         self.fields = []
         if super_class != 'Object':
             raise Exception('TODO')
@@ -58,7 +99,17 @@ class ClassEntry(object):
         self.fields = fields
 
     def dump(self, dec, ptr):
-        br()
+        print '[{}] -- {}'.format(ptr, self.name)
+        slots = ['vt', 'delegate', 'parent', 'dict', 'compiled_class']
+        obj_size = WSIZE * len(slots) # total slots in a class object
+        objs = map(unpack, chunks(dec.file_contents[ptr:ptr+obj_size], WSIZE))
+        for idx, slot in enumerate(slots):
+            target_name = dec.get_entry_name(objs[idx])
+            if target_name:
+                print '{}: #{} <{}>'.format(slot, target_name, objs[idx])
+            else:
+                print '{}: <{}>'.format(slot, objs[idx])
+        return obj_size
 
 def ato32(num):
     if len(num) < 4:
@@ -141,22 +192,53 @@ class Decompiler(ASTBuilder):
         ###########
         idx = 0
         while True:
-            # vt_ptr = unpack(self.file_contents[start_ot_section + idx:start_ot_section + idx+4])
-            # 432
-            # print start_ot_section + idx
-            name = self.get_entry_name(start_ot_section + idx)
+            current_addr = start_ot_section + idx
+
+            if current_addr == end_ot_section:
+                break
+
+            name = self.get_entry_name(current_addr)
             if name is None:
-                self.dump_unknown(start_ot_section + idx)
-                idx += WSIZE
+                idx += self.dump_instance(current_addr)
             elif name in self.entries:
-                idx += self.entries[name].dump(self, start_ot_section + idx)
+                idx += self.entries[name].dump(self, current_addr)
             else:
-                raise 'No entry for dumping {}'.format(name)
+                raise Exception('No entry for dumping {}'.format(name))
             print '--------------------'
 
-    def dump_unknown(self, addr):
-        print '{}: [{}]'.format(addr, unpack(self.file_contents[addr:addr+4]))
-
+    def dump_instance(self, addr):
+        vt_addr = unpack(self.file_contents[addr:addr+4])
+        class_or_behavior_name = self.get_entry_name(vt_addr)
+        if class_or_behavior_name is None:
+            br()
+        else:
+            if class_or_behavior_name == 'Object':
+                # print '[{}] {} instance'.format(addr, class_or_behavior_name)
+                return 2 * WSIZE #vt+delegate
+            elif class_or_behavior_name == 'String':
+                print '[{}] {} instance'.format(addr, class_or_behavior_name)
+                size = unpack(self.file_contents[addr+8:addr+12])
+                string = self.file_contents[addr+12:addr+12+size]
+                chunk_size = int(math.ceil((len(string)+1) / float(WSIZE)) * WSIZE)
+                print '  *** "{}"'.format(string)
+                return (3 * WSIZE) + chunk_size
+            elif class_or_behavior_name == 'List':
+                size = unpack(self.file_contents[addr+8:addr+12])
+                if size == 0:
+                    print '[{}] {} instance (empty)'.format(addr, class_or_behavior_name)
+                    return 3 * WSIZE
+                else:
+                    print '[{}] {} instance ({})'.format(addr, class_or_behavior_name, size)
+                    return (3 + size) * WSIZE
+            elif class_or_behavior_name == 'Dictionary':
+                size = unpack(self.file_contents[addr+8:addr+12])
+                if size == 0:
+                    print '[{}] {} instance (empty)'.format(addr, class_or_behavior_name)
+                    return 3 * WSIZE
+                else:
+                    br()
+            elif class_or_behavior_name == 'Behavior':
+                br()
     ######################
 
     def register_object(self, name):
@@ -164,7 +246,15 @@ class Decompiler(ASTBuilder):
         self.entries[name] = self.current_object
 
     def register_class(self, name, super_class):
-        self.current_class = ClassEntry(name, super_class)
+        # registering the behavior for that class
+        behavior = ClassBehaviorEntry(name, super_class)
+        self.entries[behavior.name] = behavior
+
+        # registering the compiled class for that class
+        cclass = CompiledClassEntry(name, super_class)
+        self.entries[cclass.name] = cclass
+
+        self.current_class = ClassEntry(name, super_class, behavior, cclass)
         self.entries[name] = self.current_class
 
     def add_class_fields(self, fields):
