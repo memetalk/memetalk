@@ -91,17 +91,17 @@ class ClassEntry(Entry):
         oop_dict = append_empty_dict(vmem)
         delegate = append_object_instance(vmem)
 
-        vmem.append_label_ref(self.name + 'Behavior', self.name) # vt
-        vmem.append_pointer_to(delegate)                         # delegate
-        vmem.append_label_ref(self.super_class)                  # parent
-        vmem.append_pointer_to(oop_dict)                         # dict: "methods"
-        vmem.append_label_ref(self.name + "_CompiledClass")      # compiled_class
+        vmem.append_label_ref(utils.behavior_name(self.name), self.name)   # vt
+        vmem.append_pointer_to(delegate)                                   # delegate
+        vmem.append_label_ref(self.super_class)                            # parent
+        vmem.append_pointer_to(oop_dict)                                   # dict: "methods"
+        vmem.append_label_ref(utils.compiled_class_name(self.name))         # compiled_class
 
 
 class BehaviorEntry(Entry):
     def __init__(self, name, parent_name, dictionary):
-        self.name = name + 'Behavior'
-        self.parent_name = parent_name + "Behavior"
+        self.name = utils.behavior_name(name)
+        self.parent_name = utils.behavior_name(parent_name)
         self.dictionary = dictionary
         if parent_name != 'Object':
             raise Exception('TODO')
@@ -117,7 +117,7 @@ class BehaviorEntry(Entry):
 
 class CompiledClassEntry(Entry):
     def __init__(self, name, super_name):
-        self.name = name + "_CompiledClass"
+        self.name = utils.compiled_class_name(name)
         self.class_name = name
         self.super_name = super_name
         self.fields = []

@@ -4,6 +4,15 @@ from pdb import set_trace as br
 
 WSIZE = 4
 
+CC_NAME_SEP = ''
+B_NAME_SEP = ''
+
+def behavior_name(name):
+    return name + B_NAME_SEP + 'Behavior'
+
+def compiled_class_name(name):
+    return name + CC_NAME_SEP + 'CompiledClass'
+
 def ato32(chunk):
     return struct.unpack('I', ''.join(map(chr, chunk)))[0]
 

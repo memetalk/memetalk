@@ -51,7 +51,7 @@ class ObjectEntry(object):
 
 class ClassBehaviorEntry(object):
     def __init__(self, name, super_class):
-        self.name = name + 'Behavior'
+        self.name = utils.behavior_name(name)
         self.super_class = super_class
 
     def dump(self, dec, ptr):
@@ -70,7 +70,7 @@ class ClassBehaviorEntry(object):
 
 class CompiledClassEntry(object):
     def __init__(self, name, super_class):
-        self.name = name + '_CompiledClass'
+        self.name = utils.compiled_class_name(name)
         self.super_class = super_class
 
     def dump(self, dec, ptr):
@@ -201,7 +201,7 @@ class Decompiler(ASTBuilder):
             br()
         else:
             if class_or_behavior_name == 'Object':
-                # print '[{}] {} instance'.format(addr, class_or_behavior_name)
+                print '[{}] {} instance'.format(addr, class_or_behavior_name)
                 return 2 * utils.WSIZE #vt+delegate
             elif class_or_behavior_name == 'String':
                 print '[{}] {} instance'.format(addr, class_or_behavior_name)
