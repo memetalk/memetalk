@@ -3,10 +3,14 @@ from coretr import CoreTr
 from astbuilder import *
 import etable
 import math
-from pprint import pprint as P
 from pdb import set_trace as br
 import struct
 import ctypes
+from pprint import pprint as P
+
+
+WORD_SIZE = 4
+
 
 class Entry(object):
     def fill(self, etable):
@@ -42,25 +46,35 @@ class ObjectEntry(Entry):
         self.slots.append({'type': 'int', 'name': name, 'value': value})
 
     def fill(self, etable):
-        self.emit_slot(etable, self.slots[0], self.name)
-        for slot in self.slots[1:]:
-            self.emit_slot(etable, slot)
+        # synth necessary objects:
+        refs_to_literals = {}
+        for idx, slot in enumerate(self.slots[1:]):
+            if slot['type'] == 'string':
+                refs_to_literals[idx] = append_string_instance(etable, slot['value'])
+            elif slot['type'] == 'empty_list':
+                refs_to_literals[idx] = append_empty_list(etable)
+            elif slot['type'] == 'empty_dict':
+                refs_to_literals[idx] = append_empty_dict(etable)
 
-    def emit_slot(self, etable, slot, label=None):
-        if slot['type'] == 'ref':
-            return etable.append_label_ref(slot['value'], label) # Behavior needs this
-        elif slot['type'] == 'null':
-            return etable.append_null()
-        elif slot['type'] == 'string':
-            return etable.append_string(slot['value'])
-        elif slot['type'] == 'empty_list':
-            return append_empty_list(etable)
-        elif slot['type'] == 'empty_dict':
-            return append_empty_dict(etable)
-        elif slot['type'] == 'int':
-            return etable.append_int(slot['value'])
-        else:
-            raise Exception('TODO')
+        # emit our object
+
+        etable.append_label_ref(self.slots[0]['value'], self.name) # first slot labeled by our name
+
+        for idx, slot in enumerate(self.slots[1:]):
+            if slot['type'] == 'ref':
+                etable.append_label_ref(slot['value'])
+            elif slot['type'] == 'null':
+                etable.append_null()
+            elif slot['type'] == 'string':
+                etable.append_pointer_to(refs_to_literals[idx])
+            elif slot['type'] == 'empty_list':
+                etable.append_pointer_to(refs_to_literals[idx])
+            elif slot['type'] == 'empty_dict':
+                etable.append_pointer_to(refs_to_literals[idx])
+            elif slot['type'] == 'int':
+                etable.append_int(slot['value'])
+            else:
+                raise Exception('TODO')
 
 
 class ClassEntry(Entry):
@@ -179,14 +193,17 @@ def append_list_of_strings(etable, lst):
         etable.append_pointer_to(oop)
     return oop
 
+def string_block(string):
+    # number of bytes required for string, aligned to 32 bits (word size)
+    return int(math.ceil((len(string)+1) / float(WORD_SIZE)) * WORD_SIZE)
 
 class Compiler(ASTBuilder):
     def __init__(self):
         self.entries = []
         self.current_object = None
 
-        self.etable = etable.VirtualEntryTable()
-        self.HEADER_SIZE = 3 * 4 # bytes. 3 = names_size, entries, addr_table_offset
+        self.etable = etable.VirtualMemory()
+        self.HEADER_SIZE = 3 * WORD_SIZE # bytes. 3 = names_size, entries, addr_table_offset
 
     def compile(self):
         self.line_offset = 0
@@ -217,7 +234,6 @@ class Compiler(ASTBuilder):
 
         self.current_class = ClassEntry(name, super_class, behavior, cclass)
         self.entries.append(self.current_class)
-
 
     def add_class_fields(self, fields):
         self.current_class.set_fields(fields)
@@ -270,13 +286,11 @@ class Compiler(ASTBuilder):
         core['header']['entries'] = len(self.entries)
 
         # names :: [(string, alloc-size in bytes, self-ptr)]
-        core['names'] = [(entry.get_name(),
-                          int(math.ceil((len(entry.get_name()) + 1) * 8 / 32.0)) * 4) for entry in self.entries] # +1: "\0"
+        core['names'] = [(entry.get_name(), string_block(entry.get_name())) for entry in self.entries]
 
         core['header']['names_size'] = sum([x[1] for x in core['names']])
-        core['header']['entries'] = len(self.entries)
 
-        index_size = core['header']['entries'] * 2 * 4 # *2: pair (name, entry), *4: bytes
+        index_size = core['header']['entries'] * 2 * WORD_SIZE # *2: pair (name, entry), *4: bytes
         base = self.HEADER_SIZE + core['header']['names_size'] + index_size
         self.etable.set_base(base)
 
@@ -287,15 +301,15 @@ class Compiler(ASTBuilder):
         core['object_table'] = self.etable.object_table()
 
         # - HEADER ot_size
-        core['header']['ot_size'] = len(core['object_table']) * 4
+        core['header']['ot_size'] = len(core['object_table'])
 
-        core['addr_table'] =self.etable.addr_table()
+        core['addr_table'] = self.etable.addr_table()
 
         # - INDEX section
         top_level_names = [x.name for x in self.entries]
         for name in top_level_names:
             core['index'].append(self.name_ptr_for_name(name, core))  # ptr to string
-            core['index'].append(self.etable.index[name])             # ptr to object
+            core['index'].append(self.etable.index_for(name))         # ptr to object
 
         return core
         # # br()
@@ -303,8 +317,7 @@ class Compiler(ASTBuilder):
         #     print idx + 100, ':', val
 
     def dump(self, core):
-        P(core['header'])
-
+        br()
         fp = open("core.img", "w")
 
         # header
@@ -322,11 +335,13 @@ class Compiler(ASTBuilder):
             fp.write(struct.pack('I', ptr))
 
         # object table
-        for v32 in core['object_table']:
-            fp.write(struct.pack('I', v32))
-            # except Exception as e:
-            #     br()
-            #     fp.write(struct.pack('I', ctypes.c_uint32(~v32).value))
+        for v8 in core['object_table']:
+            print v8
+            try:
+                fp.write(struct.pack('B', v8))
+            except Exception as e:
+                br()
+                fp.write(struct.pack('I', ctypes.c_uint32(~v32).value))
 
         # addr table
         for v32 in core['addr_table']:

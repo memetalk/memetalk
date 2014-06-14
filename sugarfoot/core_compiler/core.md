@@ -41,8 +41,8 @@
             fields, methods, own_methods;
   end
 
-  // class String
-  // end
+  class String
+  end
 
   // class Symbol
   // end

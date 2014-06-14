@@ -1,55 +1,90 @@
+from pdb import set_trace as br
+import math
+
+
+WSIZE = 4
+
+def chunks(l, n):
+    res = []
+    for i in xrange(0, len(l), n):
+        res.append(l[i:i+n])
+    return res
+
+def ato32(num):
+    if len(num) < 4:
+        num += [0] * (4 - len(num))
+    return num[0] + (num[1] << 8)  + (num[2] << 16) + (num[3] << 32)
+
+# def string_to_word_list(string):
+#     chars = list(string)
+#     ords = map(ord, chars) + [0]  # \0
+#     res = []
+#     curr = None
+#     for idx, x in enumerate(ords):
+#         if idx % WORD_SIZE == 0:
+#             curr = []
+#             res.append(curr)
+#         curr.append(x)
+#     return res
+
+# def pack_string(string):
+#     chunks = string_to_word_list(string)
+#     data = []
+#     for chunk in chunks:
+#         value = 0
+#         bit_offset = 0
+#         for c in chunk:
+#             value += c << bit_offset
+#             bit_offset += 8
+#         data.append(value)
+#     return data
+
+def pack_int32(num):
+    return [num & 0xFF, (num & 0xFF00) >> 8, (num & 0xFF0000) >> 16, (num & 0xFF000000) >> 32]
+
 class Cell(object):
     def index(self):
-        return self.etable.base + self.etable.entries.index(self)
+        return self.etable.offset + self.etable.entries.index(self)
 
 class NullCell(Cell):
     def __init__(self, etable):
         self.etable = etable
 
-    def __call__(self, _):
-        return 0
+    def __len__(self):
+        return WSIZE
 
+    def __call__(self, *args):
+        return [0,0,0,0]
 
 class IntCell(Cell):
     def __init__(self, etable, num):
         self.etable = etable
         self.num = num
 
-    def __call__(self, _):
+    def __len__(self):
+        return WSIZE
+
+    def __call__(self, *args):
         # tag int
         if self.num  < 0x80000000:
-            return self.num | 0x80000000
+            return pack_int32(self.num)# | 0x80000000)
         else:
             raise Exception('Unsupported big num')
 
 class StringCell(Cell):
     def __init__(self, etable, string):
         self.etable = etable
-        self.string = string
 
-    def chunks32(self, ords):
-        res = []
-        curr = None
-        for idx, x in enumerate(ords):
-            if idx % 4 == 0:
-                curr = []
-                res.append(curr)
-            curr.append(x)
-        return res
+        string_with_term = string + "\0"
+        words_needed = int(math.ceil(len(string_with_term) / float(WSIZE)))
+        to_fill = (words_needed * WSIZE) - len(string_with_term)
+        self.data = map(ord, string_with_term) + ([0] * to_fill)
 
-    def __call__(self, _):
-        chars = list(self.string)
-        ords = map(ord, chars) + [0]  # \0
-        chunks = self.chunks32(ords)
-        data = []
-        for chunk in chunks:
-            value = 0
-            bit_offset = 0
-            for c in chunk:
-                value += c << bit_offset
-                bit_offset += 8
-            data.append(value)
-        return data
+    def __len__(self):
+        return len(self.data)
+
+    def __call__(self, *args):
+        return self.data
 
 class PointerCell(Cell):
     def __init__(self, etable, label=None, cell=None):
@@ -65,117 +100,95 @@ class PointerCell(Cell):
         if label is None and cell is None:
             raise Exception('label or cell required')
 
-    def __call__(self, ptr_offset=0):
+    def __len__(self):
+        return WSIZE
+
+    def __call__(self, offset=0):
         if self.target_cell:
-            return ptr_offset + self.etable.base + self.etable.entries.index(self.target_cell)
+            to = self.etable.cells.index(self.target_cell)
+            return pack_int32(self.etable.base + sum(self.etable.cell_sizes[0:to]))
         else:
-            return ptr_offset + self.etable.base + self.etable.index[self.target_label]
+            return pack_int32(self.etable.base + self.etable.index[self.target_label])
 
-class VirtualEntryTable(object):
+class VirtualMemory(object):
     def __init__(self):
-        self.entries = []
-        self.base = 0
+        self.cells = []
+        self.cell_sizes = []
         self.index = {}
+        self.base = 0
 
-    def append_int(self, num, label=None):
-        cell = IntCell(self, num)
+    def _append_cell(self, cell, label):
         if label is not None:
             self.label_current(label)
-        self.entries.append(cell)
-        return cell
-
-    def append_null(self, label=None):
-        cell = NullCell(self)
-        if label is not None:
-            self.label_current(label)
-        self.entries.append(cell)
-        return cell
-
-    def append_string(self, string, label=None):
-        cell = StringCell(self, string)
-        if label is not None:
-            self.label_current(label)
-        self.entries.append(cell)
-        return cell
-
-    def append_pointer_to(self, cell, label=None):
-        cell = PointerCell(self, cell=cell)
-        if label is not None:
-            self.label_current(label)
-        self.entries.append(cell)
-        return cell
-
-    def append_label_ref(self, target_label, label=None):
-        # if target_label == label:
-        #     cell = PointerCell(self, label)
-        #     cell = self.circular_cell(label)
-        # else:
-        #     print target_label
-        #     br()
-        cell = PointerCell(self, label=target_label)
-        if label is not None:
-            self.label_current(label)
-        self.entries.append(cell)
-        return cell
-
-    # def circular_cell(self, label):
-    #     cell = PointerCell(self, label)
-    #     return cell
+        self.cells.append(cell)
+        self.cell_sizes.append(len(cell))
 
     def set_base(self, base):
         self.base = base
 
     def label_current(self, label):
-        self.index[label] = len(self.entries)
+        self.index[label] = sum(self.cell_sizes)
+
+    def append_int(self, num, label=None):
+        cell = IntCell(self, num)
+        self._append_cell(cell, label)
+        return cell
+
+    def append_null(self, label=None):
+        cell = NullCell(self)
+        self._append_cell(cell, label)
+        return cell
+
+    def append_string(self, string, label=None):
+        cell = StringCell(self, string)
+        self._append_cell(cell, label)
+        return cell
+
+    def append_pointer_to(self, cell, label=None):
+        cell = PointerCell(self, cell=cell)
+        self._append_cell(cell, label)
+        return cell
+
+    def append_label_ref(self, target_label, label=None):
+        cell = PointerCell(self, label=target_label)
+        self._append_cell(cell, label)
+        return cell
 
     ###
 
+    def index_for(self, name):
+        return self.base + self.index[name]
+
     def addr_table(self):
-        # literal strings and arrays are expanded inline,
-        # so we need to update upcoming references with the
-        # amount of offset (= len(expanded_value))
-        at = []
-        offset = 0
-        for idx, x in enumerate(self.entries):
-            value = x(offset)
-            if type(x) == PointerCell:
-                at.append(self.base + idx + offset)
-            elif type(value) == list:
-                offset += len(value) - 1 # its already assume value occupies 1; add only extra space needed
-        return at
+        return [self.base + sum(self.cell_sizes[0:idx]) for idx,entry in enumerate(self.cells) if type(entry) == PointerCell]
 
     def object_table(self):
-        # literal strings and arrays are expanded inline,
-        # so we need to update upcoming references with the
-        # amount of offset (= len(expanded_value))
-        ot = []
-        offset = 0
-        for entry in self.entries:
-            value = entry(offset)
-            if type(value) == list:
-                ot += value
-                offset += len(value) - 1 # its already assume value occupies 1; add only extra space needed
-            else:
-                ot.append(value)
-        return ot
+        return reduce(lambda x,y: x+y, [e() for e in self.cells])
 
     def dump(self):
-        for idx, val in enumerate(self.object_table()):
-            print "[{}]: {}".format(self.base + idx, val)
+        address_offset = 4 # each value dumped is a 32 bit pack (ie. 4 1byte value, 4 addresses within)
+        for idx, x in enumerate(chunks(self.object_table(),4)):
+            print '{} - {}'.format(self.base + (idx * address_offset), ato32(x))
+
+        # print '--'
+        # print 'Object:', self.index_for('Object')
+        # print 'Foo:', self.index_for('Foo')
+        # print self.addr_table()
 
 if __name__ == '__main__':
-    tb = VirtualEntryTable()
-    c0 = tb.append_label_ref('Behavior', 'Behavior')
-    c1 = tb.append_int(10, 'Object')
-    c2 = tb.append_int(20)
-    c3 = tb.append_label_ref('Object')
-    c4 = tb.append_int(30)
-    tb.append_pointer_to(c3)
-    tb.append_label_ref('Foo')
+    tb = VirtualMemory()
+    c0 = tb.append_label_ref('Behavior', 'Behavior')   # 100 -> 100
+    c1 = tb.append_int(14, 'Object')                   # 104 = 14
+    c2 = tb.append_int(18)                             # 108 = 18
+    c3 = tb.append_label_ref('Object')                 # 112 -> 104
+    c4 = tb.append_int(16)                             # 116 = 16
+    tb.append_pointer_to(c3)                           # 120 -> 112
+    tb.append_label_ref('Foo')                         # 124 -> 144 -- forward reference
 
-    tb.append_string("abcde")
-    tb.append_label_ref('Foo') # forward reference
-    tb.append_int(40, 'Foo')
+    tb.append_string("abceghijkl")                     # 128-136
+    tb.append_label_ref('Foo')                         # 140 -> 144 -- forward reference
+    c9 = tb.append_int(21, 'Foo')                      # 144 = 21
+    tb.append_pointer_to(c9)                           # 148 -> 144
 
     tb.set_base(100)
     tb.dump()
