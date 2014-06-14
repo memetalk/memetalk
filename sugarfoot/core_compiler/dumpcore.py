@@ -43,6 +43,8 @@ class ObjectEntry(object):
                     print '{}: #{} <{}>'.format(slot['name'], target_name, objs[idx])
                 else:
                     print '{}: <{}>'.format(slot['name'], objs[idx])
+            elif slot['type'] == 'int':
+                print '{}: {}'.format(slot['name'], utils.untag(objs[idx]))
             else:
                 print '{}: {}'.format(slot['name'], objs[idx])
         return obj_size
@@ -203,13 +205,13 @@ class Decompiler(ASTBuilder):
                 return 2 * utils.WSIZE #vt+delegate
             elif class_or_behavior_name == 'String':
                 print '[{}] {} instance'.format(addr, class_or_behavior_name)
-                size = utils.unpack(self.file_contents[addr+8:addr+12])
+                size = utils.unpack_tagged(self.file_contents[addr+8:addr+12])
                 string = self.file_contents[addr+12:addr+12+size]
                 chunk_size = int(math.ceil((len(string)+1) / float(utils.WSIZE)) * utils.WSIZE)
                 print '  *** "{}"'.format(string)
                 return (3 * utils.WSIZE) + chunk_size
             elif class_or_behavior_name == 'List':
-                size = utils.unpack(self.file_contents[addr+8:addr+12])
+                size = utils.unpack_tagged(self.file_contents[addr+8:addr+12])
                 if size == 0:
                     print '[{}] {} instance (empty)'.format(addr, class_or_behavior_name)
                     return 3 * utils.WSIZE
@@ -217,7 +219,7 @@ class Decompiler(ASTBuilder):
                     print '[{}] {} instance ({})'.format(addr, class_or_behavior_name, size)
                     return (3 + size) * utils.WSIZE
             elif class_or_behavior_name == 'Dictionary':
-                size = utils.unpack(self.file_contents[addr+8:addr+12])
+                size = utils.unpack_tagged(self.file_contents[addr+8:addr+12])
                 if size == 0:
                     print '[{}] {} instance (empty)'.format(addr, class_or_behavior_name)
                     return 3 * utils.WSIZE

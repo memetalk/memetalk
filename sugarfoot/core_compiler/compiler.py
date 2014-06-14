@@ -277,7 +277,7 @@ class Compiler(ASTBuilder):
         core['header']['entries'] = len(self.entries)
 
         # names :: [(string, alloc-size in bytes, self-ptr)]
-        core['names'] = [(name_t, utils.string_block(name_t)) for name_t in [e.get_name() + "\0" for e in self.entries]]
+        core['names'] = [(name_t, utils.string_block_size(name_t)) for name_t in [e.get_name() + "\0" for e in self.entries]]
 
         core['header']['names_size'] = sum([x[1] for x in core['names']])
 
