@@ -311,18 +311,13 @@ class Compiler(ASTBuilder):
 
         # - INDEX section
         top_level_names = [x.get_name() for x in self.entries]
-        br()
         for name in top_level_names:
             core['index'].append(self.name_ptr_for_name(name, core))  # ptr to string
             core['index'].append(self.vmem.index_for(name))         # ptr to object
 
         return core
-        # # br()
-        # for idx, val in enumerate(core['object_table']):
-        #     print idx + 100, ':', val
 
     def dump(self, core):
-        br()
         fp = open("core.img", "w")
 
         # header
@@ -342,11 +337,7 @@ class Compiler(ASTBuilder):
         # object table
         for v8 in core['object_table']:
             print v8
-            try:
-                fp.write(struct.pack('B', v8))
-            except Exception as e:
-                br()
-                fp.write(struct.pack('I', ctypes.c_uint32(~v32).value))
+            fp.write(struct.pack('B', v8))
 
         # addr table
         for v32 in core['addr_table']:
