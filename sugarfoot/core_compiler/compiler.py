@@ -15,14 +15,13 @@ class Entry(object):
     def fill(self, vmem):
         raise Exception("Implement me")
 
+    def get_name(self):
+        return self.name
 
 class ObjectEntry(Entry):
     def __init__(self, name):
         self.name = name
         self.slots = []
-
-    def get_name(self):
-        return self.name
 
     def add_slot_ref(self, name, value):
         self.slots.append({'type': 'ref', 'name': name, 'value': value})
@@ -85,9 +84,6 @@ class ClassEntry(Entry):
         if super_class != 'Object':
             raise Exception('TODO')
 
-    def get_name(self):
-        return self.name
-
     def set_fields(self, fields):
         self.cclass_entry.set_fields(fields)
 
@@ -104,32 +100,27 @@ class ClassEntry(Entry):
 
 class BehaviorEntry(Entry):
     def __init__(self, name, parent_name, dictionary):
-        self.name = name
-        self.parent_name = parent_name
+        self.name = name + 'Behavior'
+        self.parent_name = parent_name + "Behavior"
         self.dictionary = dictionary
         if parent_name != 'Object':
             raise Exception('TODO')
 
-    def get_name(self):
-        return self.name + 'Behavior'
-
     def fill(self, vmem):
         delegate = append_object_instance(vmem)
         oop_dict = append_empty_dict(vmem)
-        vmem.append_label_ref('Behavior', self.name + 'Behavior') # vt
+        vmem.append_label_ref('Behavior', self.name)              # vt
         vmem.append_pointer_to(delegate)                          # delegate
-        vmem.append_label_ref(self.parent_name + "Behavior")      # parent
+        vmem.append_label_ref(self.parent_name)                   # parent
         vmem.append_pointer_to(oop_dict)                          # dict: "own methods"
 
 
 class CompiledClassEntry(Entry):
     def __init__(self, name, super_name):
-        self.name = name
+        self.name = name + "_CompiledClass"
+        self.class_name = name
         self.super_name = super_name
         self.fields = []
-
-    def get_name(self):
-        return self.name + '_CompiledClass'
 
     def set_fields(self, fields):
         self.fields = fields
@@ -139,10 +130,10 @@ class CompiledClassEntry(Entry):
         fields_list_oop = append_list_of_strings(vmem, self.fields)
         own_methods_oop = append_empty_dict(vmem)
         methods_oop = append_empty_dict(vmem)
-        name_oop = append_string_instance(vmem, self.name)
+        name_oop = append_string_instance(vmem, self.class_name)
         super_name_oop = append_string_instance(vmem, self.super_name)
 
-        vmem.append_label_ref('CompiledClass', self.name + '_CompiledClass') # vt
+        vmem.append_label_ref('CompiledClass', self.name)                   # vt
         vmem.append_pointer_to(delegate)                                     # delegate
         vmem.append_pointer_to(name_oop)                                     # name
         vmem.append_pointer_to(super_name_oop)                               # super_class_name
