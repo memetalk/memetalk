@@ -15,29 +15,6 @@ def ato32(num):
         num += [0] * (4 - len(num))
     return num[0] + (num[1] << 8)  + (num[2] << 16) + (num[3] << 32)
 
-# def string_to_word_list(string):
-#     chars = list(string)
-#     ords = map(ord, chars) + [0]  # \0
-#     res = []
-#     curr = None
-#     for idx, x in enumerate(ords):
-#         if idx % WORD_SIZE == 0:
-#             curr = []
-#             res.append(curr)
-#         curr.append(x)
-#     return res
-
-# def pack_string(string):
-#     chunks = string_to_word_list(string)
-#     data = []
-#     for chunk in chunks:
-#         value = 0
-#         bit_offset = 0
-#         for c in chunk:
-#             value += c << bit_offset
-#             bit_offset += 8
-#         data.append(value)
-#     return data
 
 def pack_int32(num):
     return [num & 0xFF, (num & 0xFF00) >> 8, (num & 0xFF0000) >> 16, (num & 0xFF000000) >> 32]
