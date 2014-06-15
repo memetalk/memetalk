@@ -1,6 +1,6 @@
-sf-vm:
-	g++ -Wall main.cpp vm.cpp -o sf-vm
-sf-vm: vm.hpp main.cpp vm.cpp
+sf-vm: clean
+	g++ -Wall loader.cpp -o sf-vm
+sf-vm: loader.hpp loader.cpp
 
 clean:
 	rm -f sf-vm
