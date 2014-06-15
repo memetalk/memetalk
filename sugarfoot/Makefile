@@ -1,5 +1,5 @@
 sf-vm: clean
-	g++ -Wall loader.cpp -o sf-vm
+	g++ -Wall -g loader.cpp -o sf-vm
 sf-vm: loader.hpp loader.cpp
 
 clean:
