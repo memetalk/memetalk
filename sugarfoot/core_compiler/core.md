@@ -11,13 +11,13 @@
     parent: null;
   end
 
-  object ObjectBehavior
+  object Object_Behavior
     _vt: Behavior;
     _delegate: null;
     parent: null;
   end
 
-  object ObjectCompiledClass
+  object Object_CompiledClass
     _vt: CompiledClass; //declared below
     _delegate: null;
     parent: null;
@@ -29,11 +29,11 @@
   end
 
   object Object
-    _vt: ObjectBehavior;
+    _vt: Object_Behavior;
     _delegate: null;
     parent: null;
     size: 0;
-    compiled_class: ObjectCompiledClass;
+    compiled_class: Object_CompiledClass;
   end
 
   class CompiledClass
@@ -42,6 +42,9 @@
   end
 
   class CompiledModule
+    instance_method instantiate: fun() {
+      <primitive "compiled_module_instantiate">
+    }
   end
 
   class String

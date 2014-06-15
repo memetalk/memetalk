@@ -94,11 +94,15 @@ class ClassEntry(object):
         self.behavior = behavior
         self.cclass = cclass
         self.fields = []
+        self.methods = []
         if super_class != 'Object':
             raise Exception('TODO')
 
     def set_fields(self, fields):
         self.fields = fields
+
+    def add_method(self, name):
+        self.methods.append(name)
 
     def dump(self, dec, ptr):
         print '[{}] -- {}'.format(ptr, self.name)
@@ -113,6 +117,71 @@ class ClassEntry(object):
                 print '{}: <{}>'.format(slot, objs[idx])
         return obj_size
 
+
+def dump_object_instance(dec, addr, class_or_behavior_name):
+    print '[{}] {} instance'.format(addr, class_or_behavior_name)
+    return 2 * utils.WSIZE #vt+delegate
+
+def _str_from_string_instance(dec, addr):
+    size = utils.unpack_tagged(dec.file_contents[addr+8:addr+12])
+    string = dec.file_contents[addr+12:addr+12+size]
+    chunk_size = int(math.ceil((len(string)+1) / float(utils.WSIZE)) * utils.WSIZE)
+    return string, chunk_size
+
+def dump_string_instance(dec, addr, class_or_behavior_name):
+    print '[{}] {} instance'.format(addr, class_or_behavior_name)
+    string, chunk_size = _str_from_string_instance(dec, addr)
+    print '  *** "{}"'.format(string)
+    return (3 * utils.WSIZE) + chunk_size
+
+def dump_dictionary_instance(dec, addr, class_or_behavior_name):
+    size = utils.unpack_tagged(dec.file_contents[addr+8:addr+12])
+    if size == 0:
+        print '[{}] {} instance (empty)'.format(addr, class_or_behavior_name)
+        return 3 * utils.WSIZE
+    else:
+        print '[{}] {} instance ({})'.format(addr, class_or_behavior_name, size)
+        objs = map(utils.unpack, utils.chunks(dec.file_contents[addr+12:addr+12+((size*2)*utils.WSIZE)], utils.WSIZE))
+        for key_oop, val_oop in utils.chunks(objs,2):
+            string, _ = _str_from_string_instance(dec, key_oop)
+            print ' ** d[{}:{}] = <{}>'.format(key_oop, string, val_oop)
+        return (3 * utils.WSIZE) + len(objs) * utils.WSIZE
+
+def dump_compiled_function_instance(dec, addr, class_or_behavior_name):
+    print '[{}] {} instance'.format(addr, class_or_behavior_name)
+    slots = ['vt', 'delegate', 'name', 'params', 'prim_name', 'owner']
+    obj_size = utils.WSIZE * len(slots) # total slots in a class object
+    objs = map(utils.unpack, utils.chunks(dec.file_contents[addr:addr+obj_size], utils.WSIZE))
+    for idx, slot in enumerate(slots):
+        target_name = dec.get_entry_name(objs[idx])
+        if target_name:
+            print '{}: #{} <{}>'.format(slot, target_name, objs[idx])
+        else:
+            print '{}: <{}>'.format(slot, objs[idx])
+    return obj_size
+
+def dump_function_instance(dec, addr, class_or_behavior_name):
+    print '[{}] {} instance'.format(addr, class_or_behavior_name)
+    slots = ['vt', 'delegate', 'compiled_function', 'module']
+    obj_size = utils.WSIZE * len(slots) # total slots in a class object
+    objs = map(utils.unpack, utils.chunks(dec.file_contents[addr:addr+obj_size], utils.WSIZE))
+    for idx, slot in enumerate(slots):
+        target_name = dec.get_entry_name(objs[idx])
+        if target_name:
+            print '{}: #{} <{}>'.format(slot, target_name, objs[idx])
+        else:
+            print '{}: <{}>'.format(slot, objs[idx])
+    return obj_size
+
+
+def dump_list_instance(dec, addr, class_or_behavior_name):
+    size = utils.unpack_tagged(dec.file_contents[addr+8:addr+12])
+    if size == 0:
+        print '[{}] {} instance (empty)'.format(addr, class_or_behavior_name)
+        return 3 * utils.WSIZE
+    else:
+        print '[{}] {} instance ({})'.format(addr, class_or_behavior_name, size)
+        return (3 + size) * utils.WSIZE
 
 class Decompiler(ASTBuilder):
     def __init__(self):
@@ -185,47 +254,37 @@ class Decompiler(ASTBuilder):
             if current_addr == end_ot_section:
                 break
 
+            # Entry classes om self.entries are for named objects in the index
             name = self.get_entry_name(current_addr)
             if name is None:
-                idx += self.dump_instance(current_addr)
+                idx += self.dump_anonymous(current_addr)
             elif name in self.entries:
                 idx += self.entries[name].dump(self, current_addr)
             else:
                 raise Exception('No entry for dumping {}'.format(name))
             print '--------------------'
 
-    def dump_instance(self, addr):
+    def dump_anonymous(self, addr):
         vt_addr = utils.unpack(self.file_contents[addr:addr+4])
         class_or_behavior_name = self.get_entry_name(vt_addr)
         if class_or_behavior_name is None:
             br()
         else:
             if class_or_behavior_name == 'Object':
-                print '[{}] {} instance'.format(addr, class_or_behavior_name)
-                return 2 * utils.WSIZE #vt+delegate
+                return dump_object_instance(self, addr, class_or_behavior_name)
             elif class_or_behavior_name == 'String':
-                print '[{}] {} instance'.format(addr, class_or_behavior_name)
-                size = utils.unpack_tagged(self.file_contents[addr+8:addr+12])
-                string = self.file_contents[addr+12:addr+12+size]
-                chunk_size = int(math.ceil((len(string)+1) / float(utils.WSIZE)) * utils.WSIZE)
-                print '  *** "{}"'.format(string)
-                return (3 * utils.WSIZE) + chunk_size
+                return dump_string_instance(self, addr, class_or_behavior_name)
             elif class_or_behavior_name == 'List':
-                size = utils.unpack_tagged(self.file_contents[addr+8:addr+12])
-                if size == 0:
-                    print '[{}] {} instance (empty)'.format(addr, class_or_behavior_name)
-                    return 3 * utils.WSIZE
-                else:
-                    print '[{}] {} instance ({})'.format(addr, class_or_behavior_name, size)
-                    return (3 + size) * utils.WSIZE
+                return dump_list_instance(self, addr, class_or_behavior_name)
             elif class_or_behavior_name == 'Dictionary':
-                size = utils.unpack_tagged(self.file_contents[addr+8:addr+12])
-                if size == 0:
-                    print '[{}] {} instance (empty)'.format(addr, class_or_behavior_name)
-                    return 3 * utils.WSIZE
-                else:
-                    br()
+                return dump_dictionary_instance(self, addr, class_or_behavior_name)
             elif class_or_behavior_name == 'Behavior':
+                br()
+            elif class_or_behavior_name == 'CompiledFunction':
+                return dump_compiled_function_instance(self, addr, class_or_behavior_name)
+            elif class_or_behavior_name == 'Function':
+                return dump_function_instance(self, addr, class_or_behavior_name)
+            else:
                 br()
     ######################
 
@@ -266,5 +325,7 @@ class Decompiler(ASTBuilder):
     def add_slot_literal_dict(self, name, value):
         self.current_object.add_slot_dict(name, value)
 
+    def add_class_method(self, name, params, body_ast):
+        self.current_class.add_method(name)
 
 Decompiler().decompile()

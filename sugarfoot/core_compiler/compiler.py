@@ -56,7 +56,7 @@ class ObjectEntry(Entry):
 
         # emit our object
 
-        vmem.append_label_ref(self.slots[0]['value'], self.name) # first slot labeled by our name
+        oop = vmem.append_label_ref(self.slots[0]['value'], self.name) # first slot labeled by our name
 
         for idx, slot in enumerate(self.slots[1:]):
             if slot['type'] == 'ref':
@@ -73,7 +73,7 @@ class ObjectEntry(Entry):
                 vmem.append_int(slot['value'])
             else:
                 raise Exception('TODO')
-
+        return oop
 
 class ClassEntry(Entry):
     def __init__(self, name, super_class, behavior_entry, cclass_entry):
@@ -81,22 +81,29 @@ class ClassEntry(Entry):
         self.super_class = super_class
         self.behavior_entry = behavior_entry
         self.cclass_entry = cclass_entry
+        self.dictionary = {}
         if super_class != 'Object':
             raise Exception('TODO')
+
+    def compiled_class(self):
+        return self.cclass_entry
 
     def set_fields(self, fields):
         self.cclass_entry.set_fields(fields)
 
+    def add_method(self, fun):
+        self.dictionary[fun.name] = fun
+
     def fill(self, vmem):
-        oop_dict = append_empty_dict(vmem)
+        oop_dict = append_entries_dict(vmem, self.dictionary)
         delegate = append_object_instance(vmem)
 
-        vmem.append_label_ref(utils.behavior_name(self.name), self.name)   # vt
-        vmem.append_pointer_to(delegate)                                   # delegate
-        vmem.append_label_ref(self.super_class)                            # parent
-        vmem.append_pointer_to(oop_dict)                                   # dict: "methods"
-        vmem.append_label_ref(utils.compiled_class_name(self.name))         # compiled_class
-
+        oop = vmem.append_label_ref(utils.behavior_name(self.name), self.name)   # vt
+        vmem.append_pointer_to(delegate)                                         # delegate
+        vmem.append_label_ref(self.super_class)                                  # parent
+        vmem.append_pointer_to(oop_dict)                                         # dict: "methods"
+        vmem.append_label_ref(utils.compiled_class_name(self.name))              # compiled_class
+        return oop
 
 class BehaviorEntry(Entry):
     def __init__(self, name, parent_name, dictionary):
@@ -109,10 +116,11 @@ class BehaviorEntry(Entry):
     def fill(self, vmem):
         delegate = append_object_instance(vmem)
         oop_dict = append_empty_dict(vmem)
-        vmem.append_label_ref('Behavior', self.name)              # vt
+        oop = vmem.append_label_ref('Behavior', self.name)        # vt
         vmem.append_pointer_to(delegate)                          # delegate
         vmem.append_label_ref(self.parent_name)                   # parent
         vmem.append_pointer_to(oop_dict)                          # dict: "own methods"
+        return oop
 
 
 class CompiledClassEntry(Entry):
@@ -121,19 +129,23 @@ class CompiledClassEntry(Entry):
         self.class_name = name
         self.super_name = super_name
         self.fields = []
+        self.methods = {}
 
     def set_fields(self, fields):
         self.fields = fields
+
+    def add_method(self, name, cfun):
+        self.methods[name] = cfun
 
     def fill(self, vmem):
         delegate = append_object_instance(vmem)
         fields_list_oop = append_list_of_strings(vmem, self.fields)
         own_methods_oop = append_empty_dict(vmem)
-        methods_oop = append_empty_dict(vmem)
+        methods_oop = append_entries_dict(vmem, self.methods)
         name_oop = append_string_instance(vmem, self.class_name)
         super_name_oop = append_string_instance(vmem, self.super_name)
 
-        vmem.append_label_ref('CompiledClass', self.name)                   # vt
+        oop = vmem.append_label_ref('CompiledClass', self.name)              # vt
         vmem.append_pointer_to(delegate)                                     # delegate
         vmem.append_pointer_to(name_oop)                                     # name
         vmem.append_pointer_to(super_name_oop)                               # super_class_name
@@ -141,6 +153,47 @@ class CompiledClassEntry(Entry):
         vmem.append_pointer_to(fields_list_oop)                              # fields
         vmem.append_pointer_to(methods_oop)                                  # methods: TODO
         vmem.append_pointer_to(own_methods_oop)                              # own methods: TODO
+        return oop
+
+class CompiledFunction(Entry):
+    def __init__(self, owner_name, name, params, prim_name):
+        self.owner_name = owner_name
+        self.name = name
+        self.params = params
+        self.prim_name = prim_name
+
+    def fill(self, vmem):
+        delegate = append_object_instance(vmem)
+        name_oop = append_string_instance(vmem, self.name)
+        params_list_oop = append_list_of_strings(vmem, self.params)
+        prim_name_oop = append_string_instance(vmem, self.prim_name)
+
+        label = utils.compiled_fun_name(self.owner_name, self.name)
+
+        oop = vmem.append_label_ref('CompiledFunction', label)          # vt
+        vmem.append_pointer_to(delegate)                                # delegate
+        vmem.append_pointer_to(name_oop)                                # name
+        vmem.append_pointer_to(params_list_oop)                         # params
+        vmem.append_pointer_to(prim_name_oop)                           # prim_name
+        vmem.append_label_ref(self.owner_name)                          # owner
+        return oop
+
+class Function(Entry):
+    def __init__(self, owner_name, name, params, prim_name):
+        self.owner_name = owner_name
+        self.name = name
+        self.params = params
+        self.prim_name = prim_name
+
+    def fill(self, vmem):
+        delegate = append_object_instance(vmem)
+        oop = vmem.append_label_ref('Function')                         # vt
+        vmem.append_pointer_to(delegate)                                # delegate
+        vmem.append_label_ref(
+            utils.compiled_fun_name(self.owner_name, self.name))        # compiled_function
+        vmem.append_null()                                              # module: TODO
+        return oop
+
 
 ## instance entries
 
@@ -165,6 +218,20 @@ def append_empty_dict(vmem):
     oop = vmem.append_label_ref('Dictionary') # vt
     vmem.append_pointer_to(delegate)          # delegate
     vmem.append_int(0)                        # dict length
+    return oop
+
+def append_entries_dict(vmem, entries_pydict):
+    pairs_oop = []
+    for key, entry, in entries_pydict.iteritems():
+        pairs_oop.append(append_string_instance(vmem, key))
+        pairs_oop.append(entry.fill(vmem))
+
+    delegate = append_object_instance(vmem)   # Assumed to be object! if source change, this breaks
+    oop = vmem.append_label_ref('Dictionary') # vt
+    vmem.append_pointer_to(delegate)          # delegate
+    vmem.append_int(len(entries_pydict))      # dict length
+    for oop in pairs_oop:
+        vmem.append_pointer_to(oop)
     return oop
 
 
@@ -251,8 +318,16 @@ class Compiler(ASTBuilder):
             raise Exception('todo')
         self.current_object.add_slot_empty_dict(name)
 
+    def add_class_method(self, name, params, body_ast):
+        primitive_name =  body_ast[0][1][0]
+        self.current_class.add_method(
+            Function(self.current_class.get_name(), name, params, primitive_name))
 
-    ###########
+        self.current_class.compiled_class().add_method(
+            name, CompiledFunction(self.current_class.get_name(), name, params, primitive_name))
+
+    #################################################
+
 
     def name_ptr_for_name(self, name, core):
         acc = 0
