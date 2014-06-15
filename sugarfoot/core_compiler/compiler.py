@@ -340,7 +340,7 @@ class Compiler(ASTBuilder):
     def build_core(self):
         core = {
             'header': {
-                'entries': None,             # number of top level objects
+                'entries': None,             # number of labeled objects (top-levels, behaviors, cclasses)
                 'names_size': None,          # size in bytes of NAMES section
                 'ot_size': None},            # size of OBJECT TABLE in bytes
             'names': [],
@@ -372,8 +372,7 @@ class Compiler(ASTBuilder):
         core['addr_table'] = self.vmem.addr_table()
 
         # - INDEX section
-        top_level_names = [x.get_name() for x in self.entries]
-        for name in top_level_names:
+        for name in [x.get_name() for x in self.entries]:
             core['index'].append(self.name_ptr_for_name(name, core))  # ptr to string
             core['index'].append(self.vmem.index_for(name))           # ptr to object
 
