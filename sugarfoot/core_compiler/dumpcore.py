@@ -51,7 +51,7 @@ class ObjectEntry(object):
 
 class ClassBehaviorEntry(object):
     def __init__(self, name, super_class):
-        self.name = utils.behavior_name(name)
+        self.name = utils.behavior_label(name)
         self.super_class = super_class
 
     def dump(self, dec, ptr):
@@ -70,7 +70,7 @@ class ClassBehaviorEntry(object):
 
 class CompiledClassEntry(object):
     def __init__(self, name, super_class):
-        self.name = utils.compiled_class_name(name)
+        self.name = utils.cclass_label(name)
         self.super_class = super_class
 
     def dump(self, dec, ptr):
@@ -117,6 +117,35 @@ class ClassEntry(object):
                 print '{}: <{}>'.format(slot, objs[idx])
         return obj_size
 
+
+class CoreCompiledModule(object):
+    def dump(self, dec, ptr):
+        print '[{}] {} instance'.format(ptr, '@core_compiled_module')
+        slots = ['vt', 'delegate', 'name', 'license', 'params',
+                 'compiled_functions', 'compiled_classes', 'parent_module']
+        obj_size = utils.WSIZE * len(slots) # total slots in a class object
+        objs = map(utils.unpack, utils.chunks(dec.file_contents[ptr:ptr+obj_size], utils.WSIZE))
+        for idx, slot in enumerate(slots):
+            target_name = dec.get_entry_name(objs[idx])
+            if target_name:
+                print '{}: #{} <{}>'.format(slot, target_name, objs[idx])
+            else:
+                print '{}: <{}>'.format(slot, objs[idx])
+        return obj_size
+
+class CoreModule(object):
+    def dump(self, dec, ptr):
+        print '[{}] {} instance'.format(ptr, '@core_module')
+        slots = ['vt', 'delegate', 'parent', 'dict', 'compiled_module']
+        obj_size = utils.WSIZE * len(slots) # total slots in a class object
+        objs = map(utils.unpack, utils.chunks(dec.file_contents[ptr:ptr+obj_size], utils.WSIZE))
+        for idx, slot in enumerate(slots):
+            target_name = dec.get_entry_name(objs[idx])
+            if target_name:
+                print '{}: #{} <{}>'.format(slot, target_name, objs[idx])
+            else:
+                print '{}: <{}>'.format(slot, objs[idx])
+        return obj_size
 
 def dump_object_instance(dec, addr, class_or_behavior_name):
     print '[{}] {} instance'.format(addr, class_or_behavior_name)
@@ -185,7 +214,8 @@ def dump_list_instance(dec, addr, class_or_behavior_name):
 
 class Decompiler(ASTBuilder):
     def __init__(self):
-        self.entries = {}
+        self.entries = {'@core_compiled_module': CoreCompiledModule(),
+                        '@core_module': CoreModule()}
         self.current_object = None
 
     def decompile(self):
@@ -203,6 +233,14 @@ class Decompiler(ASTBuilder):
         # loading binary image
 
         self.load_image()
+
+    def dump_names(self):
+        print '** NAMES **'
+        for name_ptr, obj_ptr in utils.chunks([utils.unpack(pack32) for pack32 in utils.chunks(self.INDEX, 4)], 2):
+            name = self.file_contents[name_ptr:self.file_contents.find('\0', name_ptr)]
+            print name, obj_ptr
+
+        print '======================='
 
     def get_entry_name(self, vt_ptr):
         for name_ptr, obj_ptr in utils.chunks([utils.unpack(pack32) for pack32 in utils.chunks(self.INDEX, 4)], 2):
@@ -245,6 +283,9 @@ class Decompiler(ASTBuilder):
         self.ADDR = self.file_contents[start_addr_section:end_addr_section]
 
         self.relloc_addresses = [utils.unpack(pack32) for pack32 in utils.chunks(self.ADDR, 4)]
+
+        print header
+        self.dump_names()
 
         ###########
         idx = 0
@@ -327,5 +368,8 @@ class Decompiler(ASTBuilder):
 
     def add_class_method(self, name, params, body_ast):
         self.current_class.add_method(name)
+
+    def add_module_function(self, name, params, body_ast):
+        pass
 
 Decompiler().decompile()

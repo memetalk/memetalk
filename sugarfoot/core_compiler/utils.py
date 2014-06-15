@@ -4,18 +4,22 @@ from pdb import set_trace as br
 
 WSIZE = 4
 
-CC_NAME_SEP = '_'
-B_NAME_SEP = '_'
-CF_NAME_SEP = '_'
+SEP='_'
 
-def behavior_name(name):
-    return name + B_NAME_SEP + 'Behavior'
+def behavior_label(name):
+    return name + SEP + 'Behavior'
 
-def compiled_class_name(name):
-    return name + CC_NAME_SEP + 'CompiledClass'
+def cclass_label(name):
+    return name + SEP + 'CompiledClass'
 
-def compiled_fun_name(owner_name, name):
-    return owner_name + CF_NAME_SEP + name + CF_NAME_SEP + 'CompiledFunction'
+def class_label(name):
+    return name # + SEP + "Class"
+
+def cfun_label(owner_name, name):
+    return owner_name + SEP + name + SEP + 'CompiledFunction'
+
+def fun_label(cfun_label, name):
+    return cfun_label + SEP + name + SEP + "Function"
 
 
 def ato32(chunk):

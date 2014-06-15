@@ -70,4 +70,8 @@
 
   class Context
   end
+
+  main: fun() {
+      <primitive "main">
+  }
 .end
