@@ -62,9 +62,9 @@ bool CoreImage::is_prime(const char* name) {
 }
 
 void CoreImage::load_header() {
-  _num_entries = unpack_word(_data, 0);
-  _names_size = unpack_word(_data, WSIZE);
-  _ot_size = unpack_word(_data, WSIZE * 2);
+  _num_entries = unpack_word(_data, 0 * WSIZE);
+  _names_size = unpack_word(_data, 1 * WSIZE);
+  _ot_size = unpack_word(_data,  2 * WSIZE);
   debug() << "Header:entries: " << _num_entries << endl;
   debug() << "Header:names_size: " << _names_size << endl;
   debug() << "Header:ot_size: " << _ot_size << endl;
