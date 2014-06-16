@@ -320,12 +320,16 @@ def append_object_instance(c):
 
 
 def append_string_instance(c, string):
-    delegate = append_object_instance(c) # Assumed to be object! if source change, this breaks
-    oop = c.vmem.append_label_ref(utils.class_label('String'))   # vt
-    c.vmem.append_pointer_to(delegate)        # delegate
-    c.vmem.append_int(len(string))
-    c.vmem.append_string(string)
-    return oop
+    if string in c.string_table:
+        return c.string_table[string]
+    else:
+        delegate = append_object_instance(c) # Assumed to be object! if source change, this breaks
+        oop = c.vmem.append_label_ref(utils.class_label('String'))   # vt
+        c.vmem.append_pointer_to(delegate)        # delegate
+        c.vmem.append_int(len(string))
+        c.vmem.append_string(string)
+        c.string_table[string] = oop
+        return oop
 
 
 ## dict
@@ -389,6 +393,7 @@ class Compiler(ASTBuilder):
 
         self.entries = []
         self.current_object = None
+        self.string_table = {}
 
         self.vmem = vmem.VirtualMemory()
         self.HEADER_SIZE = 3 * utils.WSIZE # bytes. 3 = names_size, entries, addr_table_offset
