@@ -23,13 +23,13 @@ import os, sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 from pymeta import builder, grammar
 
-fp = open(os.path.dirname(__file__) + 'parser.py', 'wb')
-ometa_grammar = grammar.OMetaGrammar(open(os.path.dirname(__file__)+"meme.g").read())
+fp = open(os.path.join(os.path.dirname(__file__), 'parser.py'), 'wb')
+ometa_grammar = grammar.OMetaGrammar(open(os.path.join(os.path.dirname(__file__),"meme.g")).read())
 tree = ometa_grammar.parseGrammar('MemeParser', builder.TreeBuilder)
 fp.write(builder.writeBoot(tree))
 
-fp = open(os.path.dirname(__file__) + 'coretr.py', 'wb')
-ometa_grammar = grammar.OMetaGrammar(open(os.path.dirname(__file__)+"core_tr.g").read())
+fp = open(os.path.join(os.path.dirname(__file__), 'coretr.py'), 'wb')
+ometa_grammar = grammar.OMetaGrammar(open(os.path.join(os.path.dirname(__file__),"core_tr.g")).read())
 tree = ometa_grammar.parseGrammar('CoreTr', builder.TreeBuilder)
 fp.write(builder.writeBoot(tree))
 

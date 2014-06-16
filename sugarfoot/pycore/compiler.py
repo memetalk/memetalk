@@ -1,13 +1,13 @@
-from parser import MemeParser
-from coretr import CoreTr
-from astbuilder import *
-import vmem
+from pyparsers.parser import MemeParser
+from pyparsers.coretr import CoreTr
+from pyparsers.astbuilder import *
+from . import vmem
+from . import utils
 import math
-from pdb import set_trace as br
 import struct
 import ctypes
-from . import utils
 from pprint import pprint as P
+from pdb import set_trace as br
 import os
 
 
@@ -400,7 +400,7 @@ class Compiler(ASTBuilder):
 
     def compile(self):
         self.line_offset = 0
-        self.parser = MemeParser(open(os.path.join(os.path.dirname(__file__), 'core.md'), 'r').read())
+        self.parser = MemeParser(open(os.path.join(os.path.dirname(__file__), '../mm/core.md'), 'r').read())
         self.parser.i = self
         ast = self.parser.apply("start")[0]
         self.parser = CoreTr([ast])
