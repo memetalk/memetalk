@@ -2,7 +2,7 @@ from pyparsers.parser import MemeParser
 from pyparsers.coretr import CoreTr
 from pyparsers.astbuilder import *
 from pyutils import bits
-from . import vmem
+from . import core_vmem
 from . import utils
 import math
 import struct
@@ -396,7 +396,7 @@ class Compiler(ASTBuilder):
         self.current_object = None
         self.string_table = {}
 
-        self.vmem = vmem.VirtualMemory()
+        self.vmem = core_vmem.CoreVirtualMemory()
         self.HEADER_SIZE = 3 * bits.WSIZE # bytes. 3 = names_size, entries, addr_table_offset
 
     def compile(self):

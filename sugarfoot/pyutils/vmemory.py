@@ -119,18 +119,9 @@ class VirtualMemory(object):
 
     ###
 
-    def index_for(self, name):
-        return self.base + self.index[name]
-
-    def addr_table(self):
-        return [self.base + sum(self.cell_sizes[0:idx]) for idx,entry in enumerate(self.cells) if type(entry) == PointerCell]
-
-    def object_table(self):
-        return reduce(lambda x,y: x+y, [e() for e in self.cells])
-
     def dump(self):
         address_offset = 4 # each value dumped is a 32 bit pack (ie. 4 1byte value, 4 addresses within)
-        for idx, x in enumerate(bits.chunks(self.object_table(),4)):
+        for idx, x in enumerate(bits.chunks(reduce(lambda x,y: x+y, [e() for e in self.cells]),4)):
             print '{} - {}'.format(self.base + (idx * address_offset), bits.ato32(x))
 
         # print '--'
