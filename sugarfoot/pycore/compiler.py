@@ -1,6 +1,7 @@
 from pyparsers.parser import MemeParser
 from pyparsers.coretr import CoreTr
 from pyparsers.astbuilder import *
+from pyutils import bits
 from . import vmem
 from . import utils
 import math
@@ -396,7 +397,7 @@ class Compiler(ASTBuilder):
         self.string_table = {}
 
         self.vmem = vmem.VirtualMemory()
-        self.HEADER_SIZE = 3 * utils.WSIZE # bytes. 3 = names_size, entries, addr_table_offset
+        self.HEADER_SIZE = 3 * bits.WSIZE # bytes. 3 = names_size, entries, addr_table_offset
 
     def compile(self):
         self.line_offset = 0
@@ -507,11 +508,11 @@ class Compiler(ASTBuilder):
         core['header']['entries'] = len(self.entries)
 
         # names :: [(string, alloc-size in bytes, self-ptr)]
-        core['names'] = [(name_t, utils.string_block_size(name_t)) for name_t in [e.label + "\0" for e in self.entries]]
+        core['names'] = [(name_t, bits.string_block_size(name_t)) for name_t in [e.label + "\0" for e in self.entries]]
 
         core['header']['names_size'] = sum([x[1] for x in core['names']])
 
-        index_size = core['header']['entries'] * 2 * utils.WSIZE # *2: pair (name, entry), *4: bytes
+        index_size = core['header']['entries'] * 2 * bits.WSIZE # *2: pair (name, entry), *4: bytes
         base = self.HEADER_SIZE + core['header']['names_size'] + index_size
         self.vmem.set_base(base)
 

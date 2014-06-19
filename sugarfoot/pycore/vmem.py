@@ -1,6 +1,6 @@
 from pdb import set_trace as br
 import math
-from . import utils
+from pyutils import bits
 
 
 class Cell(object):
@@ -12,10 +12,10 @@ class NullCell(Cell):
         self.etable = etable
 
     def __len__(self):
-        return utils.WSIZE
+        return bits.WSIZE
 
     def __call__(self, *args):
-        return utils.pack32(0)
+        return bits.pack32(0)
 
 class IntCell(Cell):
     def __init__(self, etable, num):
@@ -23,12 +23,12 @@ class IntCell(Cell):
         self.num = num
 
     def __len__(self):
-        return utils.WSIZE
+        return bits.WSIZE
 
     def __call__(self, *args):
         # tag int
         if self.num  < 0x80000000:
-            return utils.pack32_tag(self.num)
+            return bits.pack32_tag(self.num)
         else:
             raise Exception('Unsupported big num')
 
@@ -39,7 +39,7 @@ class StringCell(Cell):
         string_with_term = string + "\0"
         # words_needed = int(math.ceil(len(string_with_term) / float(utils.WSIZE)))
         # to_fill = (words_needed * utils.WSIZE) - len(string_with_term)
-        to_fill = utils.string_block_size(string_with_term) - len(string_with_term)
+        to_fill = bits.string_block_size(string_with_term) - len(string_with_term)
         # br()
         self.data = map(ord, string_with_term) + ([0] * to_fill)
 
@@ -64,14 +64,14 @@ class PointerCell(Cell):
             raise Exception('label or cell required')
 
     def __len__(self):
-        return utils.WSIZE
+        return bits.WSIZE
 
     def __call__(self, offset=0):
         if self.target_cell:
             to = self.etable.cells.index(self.target_cell)
-            return utils.pack32(self.etable.base + sum(self.etable.cell_sizes[0:to]))
+            return bits.pack32(self.etable.base + sum(self.etable.cell_sizes[0:to]))
         else:
-            return utils.pack32(self.etable.base + self.etable.index[self.target_label])
+            return bits.pack32(self.etable.base + self.etable.index[self.target_label])
 
 class VirtualMemory(object):
     def __init__(self):
@@ -130,8 +130,8 @@ class VirtualMemory(object):
 
     def dump(self):
         address_offset = 4 # each value dumped is a 32 bit pack (ie. 4 1byte value, 4 addresses within)
-        for idx, x in enumerate(utils.chunks(self.object_table(),4)):
-            print '{} - {}'.format(self.base + (idx * address_offset), utils.ato32(x))
+        for idx, x in enumerate(bits.chunks(self.object_table(),4)):
+            print '{} - {}'.format(self.base + (idx * address_offset), bits.ato32(x))
 
         # print '--'
         # print 'Object:', self.index_for('Object')

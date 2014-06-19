@@ -1,11 +1,12 @@
 from pyparsers.parser import MemeParser
 from pyparsers.coretr import CoreTr
 from pyparsers.astbuilder import *
+from pyutils import bits
 from pprint import pprint as P
 from pdb import set_trace as br
+from . import utils
 import math
 import os
-from . import utils
 
 
 class ObjectEntry(object):
@@ -33,8 +34,8 @@ class ObjectEntry(object):
 
     def dump(self, dec, ptr):
         print '[{}] -- {}'.format(ptr, self.name)
-        obj_size = utils.WSIZE * len(self.slots)
-        objs = map(utils.unpack, utils.chunks(dec.file_contents[ptr:ptr+obj_size], utils.WSIZE))
+        obj_size = bits.WSIZE * len(self.slots)
+        objs = map(bits.unpack, bits.chunks(dec.file_contents[ptr:ptr+obj_size], bits.WSIZE))
 
         for idx, slot in enumerate(self.slots):
             if slot['type'] == 'ptr':
@@ -44,21 +45,21 @@ class ObjectEntry(object):
                 else:
                     print '{}: <{}>'.format(slot['name'], objs[idx])
             elif slot['type'] == 'int':
-                print '{}: {}'.format(slot['name'], utils.untag(objs[idx]))
+                print '{}: {}'.format(slot['name'], bits.untag(objs[idx]))
             else:
                 print '{}: {}'.format(slot['name'], objs[idx])
         return obj_size
 
 class ClassBehaviorEntry(object):
     def __init__(self, name, super_class):
-        self.name = utils.behavior_label(name)
+        self.name = bits.behavior_label(name)
         self.super_class = super_class
 
     def dump(self, dec, ptr):
         print '[{}] -- {}'.format(ptr, self.name)
         slots = ['vt', 'delegate', 'parent', 'dict']
-        obj_size = utils.WSIZE * len(slots)
-        objs = map(utils.unpack, utils.chunks(dec.file_contents[ptr:ptr+obj_size], utils.WSIZE))
+        obj_size = bits.WSIZE * len(slots)
+        objs = map(bits.unpack, bits.chunks(dec.file_contents[ptr:ptr+obj_size], bits.WSIZE))
         for idx, slot in enumerate(slots):
             target_name = dec.get_entry_name(objs[idx])
             if target_name:
@@ -77,8 +78,8 @@ class CompiledClassEntry(object):
         print '[{}] -- {}'.format(ptr, self.name)
         slots = ['vt', 'delegate', 'name', 'super_class_name',
                  'compiled_module', 'fields', 'methods', 'own_methods']
-        obj_size = utils.WSIZE * len(slots)
-        objs = map(utils.unpack, utils.chunks(dec.file_contents[ptr:ptr+obj_size], utils.WSIZE))
+        obj_size = bits.WSIZE * len(slots)
+        objs = map(bits.unpack, bits.chunks(dec.file_contents[ptr:ptr+obj_size], bits.WSIZE))
         for idx, slot in enumerate(slots):
             target_name = dec.get_entry_name(objs[idx])
             if target_name:
@@ -107,8 +108,8 @@ class ClassEntry(object):
     def dump(self, dec, ptr):
         print '[{}] -- {}'.format(ptr, self.name)
         slots = ['vt', 'delegate', 'parent', 'dict', 'compiled_class']
-        obj_size = utils.WSIZE * len(slots) # total slots in a class object
-        objs = map(utils.unpack, utils.chunks(dec.file_contents[ptr:ptr+obj_size], utils.WSIZE))
+        obj_size = bits.WSIZE * len(slots) # total slots in a class object
+        objs = map(bits.unpack, bits.chunks(dec.file_contents[ptr:ptr+obj_size], bits.WSIZE))
         for idx, slot in enumerate(slots):
             target_name = dec.get_entry_name(objs[idx])
             if target_name:
@@ -123,8 +124,8 @@ class CoreCompiledModule(object):
         print '[{}] {} instance'.format(ptr, '@core_compiled_module')
         slots = ['vt', 'delegate', 'name', 'license', 'params',
                  'compiled_functions', 'compiled_classes', 'parent_module']
-        obj_size = utils.WSIZE * len(slots) # total slots in a class object
-        objs = map(utils.unpack, utils.chunks(dec.file_contents[ptr:ptr+obj_size], utils.WSIZE))
+        obj_size = bits.WSIZE * len(slots) # total slots in a class object
+        objs = map(bits.unpack, bits.chunks(dec.file_contents[ptr:ptr+obj_size], bits.WSIZE))
         for idx, slot in enumerate(slots):
             target_name = dec.get_entry_name(objs[idx])
             if target_name:
@@ -137,8 +138,8 @@ class CoreModule(object):
     def dump(self, dec, ptr):
         print '[{}] {} instance'.format(ptr, '@core_module')
         slots = ['vt', 'delegate', 'parent', 'dict', 'compiled_module']
-        obj_size = utils.WSIZE * len(slots) # total slots in a class object
-        objs = map(utils.unpack, utils.chunks(dec.file_contents[ptr:ptr+obj_size], utils.WSIZE))
+        obj_size = bits.WSIZE * len(slots) # total slots in a class object
+        objs = map(bits.unpack, bits.chunks(dec.file_contents[ptr:ptr+obj_size], bits.WSIZE))
         for idx, slot in enumerate(slots):
             target_name = dec.get_entry_name(objs[idx])
             if target_name:
@@ -149,38 +150,38 @@ class CoreModule(object):
 
 def dump_object_instance(dec, addr, class_or_behavior_name):
     print '[{}] {} instance'.format(addr, class_or_behavior_name)
-    return 2 * utils.WSIZE #vt+delegate
+    return 2 * bits.WSIZE #vt+delegate
 
 def _str_from_string_instance(dec, addr):
-    size = utils.unpack_tagged(dec.file_contents[addr+8:addr+12])
+    size = bits.unpack_tagged(dec.file_contents[addr+8:addr+12])
     string = dec.file_contents[addr+12:addr+12+size]
-    chunk_size = int(math.ceil((len(string)+1) / float(utils.WSIZE)) * utils.WSIZE)
+    chunk_size = int(math.ceil((len(string)+1) / float(bits.WSIZE)) * bits.WSIZE)
     return string, chunk_size
 
 def dump_string_instance(dec, addr, class_or_behavior_name):
     print '[{}] {} instance'.format(addr, class_or_behavior_name)
     string, chunk_size = _str_from_string_instance(dec, addr)
     print '  *** "{}"'.format(string)
-    return (3 * utils.WSIZE) + chunk_size
+    return (3 * bits.WSIZE) + chunk_size
 
 def dump_dictionary_instance(dec, addr, class_or_behavior_name):
-    size = utils.unpack_tagged(dec.file_contents[addr+8:addr+12])
+    size = bits.unpack_tagged(dec.file_contents[addr+8:addr+12])
     if size == 0:
         print '[{}] {} instance (empty)'.format(addr, class_or_behavior_name)
-        return 3 * utils.WSIZE
+        return 3 * bits.WSIZE
     else:
         print '[{}] {} instance ({})'.format(addr, class_or_behavior_name, size)
-        objs = map(utils.unpack, utils.chunks(dec.file_contents[addr+12:addr+12+((size*2)*utils.WSIZE)], utils.WSIZE))
-        for key_oop, val_oop in utils.chunks(objs,2):
+        objs = map(bits.unpack, bits.chunks(dec.file_contents[addr+12:addr+12+((size*2)*bits.WSIZE)], bits.WSIZE))
+        for key_oop, val_oop in bits.chunks(objs,2):
             string, _ = _str_from_string_instance(dec, key_oop)
             print ' ** d[{}:{}] = <{}>'.format(key_oop, string, val_oop)
-        return (3 * utils.WSIZE) + len(objs) * utils.WSIZE
+        return (3 * bits.WSIZE) + len(objs) * bits.WSIZE
 
 def dump_compiled_function_instance(dec, addr, class_or_behavior_name):
     print '[{}] {} instance'.format(addr, class_or_behavior_name)
     slots = ['vt', 'delegate', 'name', 'params', 'prim_name', 'owner']
-    obj_size = utils.WSIZE * len(slots) # total slots in a class object
-    objs = map(utils.unpack, utils.chunks(dec.file_contents[addr:addr+obj_size], utils.WSIZE))
+    obj_size = bits.WSIZE * len(slots) # total slots in a class object
+    objs = map(bits.unpack, bits.chunks(dec.file_contents[addr:addr+obj_size], bits.WSIZE))
     for idx, slot in enumerate(slots):
         target_name = dec.get_entry_name(objs[idx])
         if target_name:
@@ -192,8 +193,8 @@ def dump_compiled_function_instance(dec, addr, class_or_behavior_name):
 def dump_function_instance(dec, addr, class_or_behavior_name):
     print '[{}] {} instance'.format(addr, class_or_behavior_name)
     slots = ['vt', 'delegate', 'compiled_function', 'module']
-    obj_size = utils.WSIZE * len(slots) # total slots in a class object
-    objs = map(utils.unpack, utils.chunks(dec.file_contents[addr:addr+obj_size], utils.WSIZE))
+    obj_size = bits.WSIZE * len(slots) # total slots in a class object
+    objs = map(bits.unpack, bits.chunks(dec.file_contents[addr:addr+obj_size], bits.WSIZE))
     for idx, slot in enumerate(slots):
         target_name = dec.get_entry_name(objs[idx])
         if target_name:
@@ -204,13 +205,13 @@ def dump_function_instance(dec, addr, class_or_behavior_name):
 
 
 def dump_list_instance(dec, addr, class_or_behavior_name):
-    size = utils.unpack_tagged(dec.file_contents[addr+8:addr+12])
+    size = bits.unpack_tagged(dec.file_contents[addr+8:addr+12])
     if size == 0:
         print '[{}] {} instance (empty)'.format(addr, class_or_behavior_name)
-        return 3 * utils.WSIZE
+        return 3 * bits.WSIZE
     else:
         print '[{}] {} instance ({})'.format(addr, class_or_behavior_name, size)
-        return (3 + size) * utils.WSIZE
+        return (3 + size) * bits.WSIZE
 
 class Decompiler(ASTBuilder):
     def __init__(self):
@@ -236,14 +237,14 @@ class Decompiler(ASTBuilder):
 
     def dump_names(self):
         print '** NAMES **'
-        for name_ptr, obj_ptr in utils.chunks([utils.unpack(pack32) for pack32 in utils.chunks(self.INDEX, 4)], 2):
+        for name_ptr, obj_ptr in bits.chunks([bits.unpack(pack32) for pack32 in bits.chunks(self.INDEX, 4)], 2):
             name = self.file_contents[name_ptr:self.file_contents.find('\0', name_ptr)]
             print name, obj_ptr
 
         print '======================='
 
     def get_entry_name(self, vt_ptr):
-        for name_ptr, obj_ptr in utils.chunks([utils.unpack(pack32) for pack32 in utils.chunks(self.INDEX, 4)], 2):
+        for name_ptr, obj_ptr in bits.chunks([bits.unpack(pack32) for pack32 in bits.chunks(self.INDEX, 4)], 2):
             name = self.file_contents[name_ptr:self.file_contents.find('\0', name_ptr)]
             # print 'get_entry_name({}): {}/{} = {}'.format(vt_ptr, name_ptr, obj_ptr, name)
             if obj_ptr == vt_ptr:
@@ -256,7 +257,7 @@ class Decompiler(ASTBuilder):
 
         self.file_contents = open("core.img", "rb").read()
 
-        header_packs = [utils.unpack(pack32) for pack32 in utils.chunks(self.file_contents[0:END_OF_HEADER], 4)]
+        header_packs = [bits.unpack(pack32) for pack32 in bits.chunks(self.file_contents[0:END_OF_HEADER], 4)]
 
         header = {'entries': header_packs[0],
                   'names_size': header_packs[1],
@@ -282,7 +283,7 @@ class Decompiler(ASTBuilder):
         end_addr_section = len(self.file_contents)
         self.ADDR = self.file_contents[start_addr_section:end_addr_section]
 
-        self.relloc_addresses = [utils.unpack(pack32) for pack32 in utils.chunks(self.ADDR, 4)]
+        self.relloc_addresses = [bits.unpack(pack32) for pack32 in bits.chunks(self.ADDR, 4)]
 
         print header
         self.dump_names()
@@ -306,7 +307,7 @@ class Decompiler(ASTBuilder):
             print '--------------------'
 
     def dump_anonymous(self, addr):
-        vt_addr = utils.unpack(self.file_contents[addr:addr+4])
+        vt_addr = bits.unpack(self.file_contents[addr:addr+4])
         class_or_behavior_name = self.get_entry_name(vt_addr)
         if class_or_behavior_name is None:
             br()
