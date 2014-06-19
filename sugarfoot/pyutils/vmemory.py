@@ -26,6 +26,17 @@ class IntCell(Cell):
         return bits.WSIZE
 
     def __call__(self, *args):
+        return bits.pack32(self.num)
+
+class TaggedIntCell(Cell):
+    def __init__(self, etable, num):
+        self.etable = etable
+        self.num = num
+
+    def __len__(self):
+        return bits.WSIZE
+
+    def __call__(self, *args):
         # tag int
         if self.num  < 0x80000000:
             return bits.pack32_tag(self.num)
@@ -94,6 +105,11 @@ class VirtualMemory(object):
 
     def append_int(self, num, label=None):
         cell = IntCell(self, num)
+        self._append_cell(cell, label)
+        return cell
+
+    def append_tagged_int(self, num, label=None):
+        cell = TaggedIntCell(self, num)
         self._append_cell(cell, label)
         return cell
 

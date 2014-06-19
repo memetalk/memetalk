@@ -69,7 +69,7 @@ class ObjectEntry(Entry):
             elif slot['type'] == 'empty_dict':
                 c.vmem.append_pointer_to(refs_to_literals[idx])
             elif slot['type'] == 'int':
-                c.vmem.append_int(slot['value'])
+                c.vmem.append_tagged_int(slot['value'])
             else:
                 raise Exception('TODO')
         return oop
