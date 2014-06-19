@@ -2,8 +2,8 @@ from pyutils import vmemory
 from . import utils
 
 class CoreVirtualMemory(vmemory.VirtualMemory):
-    def __init__(self, string_table):
-        self.string_table = string_table
+    def __init__(self):
+        self.string_table = {}
         super(CoreVirtualMemory, self).__init__()
 
     def index_for(self, name):

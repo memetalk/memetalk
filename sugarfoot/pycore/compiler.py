@@ -13,7 +13,7 @@ import os
 
 
 class Entry(object):
-    def fill(self, c):
+    def fill(self, vmem):
         raise Exception("Implement me")
 
 class ObjectEntry(Entry):
@@ -308,9 +308,8 @@ class Compiler(ASTBuilder):
 
         self.entries = []
         self.current_object = None
-        self.string_table = {}
 
-        self.vmem = core_vmem.CoreVirtualMemory(self.string_table)
+        self.vmem = core_vmem.CoreVirtualMemory()
         self.HEADER_SIZE = 3 * bits.WSIZE # bytes. 3 = names_size, entries, addr_table_offset
 
     def compile(self):
@@ -321,7 +320,6 @@ class Compiler(ASTBuilder):
         self.parser = CoreTr([ast])
         self.parser.i = self
         self.parser.apply('start')
-
 
         self.synth_core_module()
         core = self.build_core()
