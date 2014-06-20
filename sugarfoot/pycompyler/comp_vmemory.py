@@ -12,6 +12,9 @@ class CompVirtualMemory(vmemory.VirtualMemory):
     def external_symbols(self):
         return [(x[0], self.base + sum(self.cell_sizes[0:self.cells.index(x[1])])) for x in self.ext_ref_table]
 
+    def external_names(self):
+        return sorted(set([x[0] for x in self.ext_ref_table]))
+
     def reloc_table(self):
         return [self.base + sum(self.cell_sizes[0:idx]) for idx,entry in enumerate(self.cells) if type(entry) == vmemory.PointerCell]
 

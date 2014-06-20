@@ -138,9 +138,9 @@ class MMC(object):
     def __init__(self, module):
         self.module = module
 
-    def name_ptr_for(self, name, names_section):
+    def name_ptr_for(self, name, mmc):
         acc = 0
-        for entry_name_t, bsize in names_section:
+        for entry_name_t, bsize in mmc['names']:
             if entry_name_t[0:-1] == name:
                 return self.HEADER_SIZE + acc
             acc += bsize
@@ -152,37 +152,34 @@ class MMC(object):
                 'ot_size': None,
                 'es_size': None,
                 'names_size': None},
+               'names': [],
                'object_table': [],
                'external_symbols': [],
-               'names': [],
                'reloc_table': []
             }
 
 
-        vmem.set_base(self.HEADER_SIZE)
         self.module.fill(vmem)
 
         mmc['header']['magic_number'] = self.MAGIC_NUMBER
 
-        mmc['object_table'] = vmem.object_table()
 
-        mmc['header']['ot_size'] = len(mmc['object_table'])
-
-        external_symbols = vmem.external_symbols()
-        strings_in_names = sorted(set([x[0] for x in external_symbols]))
-
-        mmc['names'] = [(name_t, bits.string_block_size(name_t)) for name_t in [name + '\0' for name in strings_in_names]]
-
+        mmc['names'] = [(name_t, bits.string_block_size(name_t)) for name_t in [name + '\0' for name in vmem.external_names()]]
         mmc['header']['names_size'] = sum([x[1] for x in mmc['names']])
 
-        for pair in external_symbols:
-            mmc['external_symbols'].append(self.name_ptr_for(pair[0], mmc['names']))
+        base = self.HEADER_SIZE + mmc['header']['names_size']
+        vmem.set_base(base)
+
+        mmc['object_table'] = vmem.object_table()
+        mmc['header']['ot_size'] = len(mmc['object_table'])
+
+        for pair in vmem.external_symbols():
+            mmc['external_symbols'].append(self.name_ptr_for(pair[0], mmc))
             mmc['external_symbols'].append(pair[1])
 
-        mmc['header']['es_size'] = len(mmc['external_symbols']) * 2 * bits.WSIZE
+        mmc['header']['es_size'] = len(mmc['external_symbols']) * bits.WSIZE
 
         mmc['reloc_table'] = vmem.reloc_table()
-
         return mmc
 
     def dump(self, vmem):
@@ -195,6 +192,11 @@ class MMC(object):
             fp.write(struct.pack('I', mmc['header']['es_size']))
             fp.write(struct.pack('I', mmc['header']['names_size']))
 
+            # names
+            for name, chunk_size in mmc['names']:
+                text = name + ((chunk_size - len(name)) * '\0')
+                fp.write(text)
+
             # object table
             for v8 in mmc['object_table']:
                 fp.write(struct.pack('B', v8))
@@ -202,11 +204,6 @@ class MMC(object):
             # external symbols
             for ptr in mmc['external_symbols']:
                 fp.write(struct.pack('I', ptr))
-
-            # names
-            for name, chunk_size in mmc['names']:
-                text = name + ((chunk_size - len(name)) * '\0')
-                fp.write(text)
 
             # reloc table
             for v32 in mmc['reloc_table']:
