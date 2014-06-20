@@ -22,33 +22,36 @@ static ostream& debug() {
   return cout;
 }
 
-static int unpack_word(const string& data, int offset) {
-  assert((offset+3) < data.size());
-  int d = (int) (unsigned char) data[offset];
-  d += (data[offset+1] << 8) + (data[offset+2] << 12) + (data[offset+3] << 16);
-  return (long) d;
+CoreImage::CoreImage(const char* filepath)
+  : _filepath(filepath) {
+}
+
+word CoreImage::unpack_word(const char* data, int offset) {
+  assert((offset+WSIZE-1) < _data_size);
+  return *((word*) &(data[offset]));
+}
+
+void CoreImage::write_word(char* data, word target, word value) {
+  word* d = (word*) &(data[target]);
+  *d = value;
 }
 
 
-static string read_file(const char* filepath) {
+void CoreImage::read_file() {
   fstream file;
-  file.open (filepath, fstream::in | fstream::binary);
+  file.open (_filepath, fstream::in | fstream::binary);
 
   if (!file.is_open()) {
-    bail(s("file not found: " + s(filepath)));
+    bail(s("file not found: " + s(_filepath)));
   }
 
   string contents(static_cast<stringstream const&>(stringstream() << file.rdbuf()).str());
-  long size = file.tellg();
+  _data_size = file.tellg();
 
-  debug() << "file size: "<< size << endl;
+  debug() << "file size: "<< _data_size << endl;
 
   file.close();
-  return contents;
-}
-
-CoreImage::CoreImage(const string& data)
-  : _data(data) {
+  _data = (char*) contents.c_str();
 }
 
 bool CoreImage::is_prime(const char* name) {
@@ -72,13 +75,13 @@ void CoreImage::load_header() {
 
 void CoreImage::load_prime_objects_table() {
   int start_index = HEADER_SIZE + _names_size;
-  const char* base = _data.c_str();
+  const char* base = _data;
 
-  for (int i = 0; i < _num_entries*2; i+=2) {
-    int name_offset = unpack_word(_data, start_index + (i * WSIZE));
+  for (int i = 0; i < _num_entries * 2; i += 2) {
+    word name_offset = unpack_word(_data, start_index + (i * WSIZE));
     char* prime_name = (char*) (base + name_offset);
     if (is_prime(prime_name)) {
-      int obj_offset = unpack_word(_data, start_index + ((i+1) * WSIZE));
+      word obj_offset = unpack_word(_data, start_index + ((i+1) * WSIZE));
       debug() << "found prime " << prime_name << ":" << obj_offset << endl;
       oop prime_oop = (char*) (base + obj_offset);
       _primes[prime_name] = prime_oop;
@@ -86,17 +89,32 @@ void CoreImage::load_prime_objects_table() {
   }
 }
 
+void CoreImage::relocate_addresses() {
+  word index_size = _num_entries * 2 * WSIZE;
+  int start_reloc_table = HEADER_SIZE + _names_size + index_size + _ot_size;
+
+  const char* base = _data;
+
+  for (int i = start_reloc_table; i < _data_size; i += WSIZE) {
+    word target = unpack_word(_data,  i);
+    word local_ptr = unpack_word(_data,  target);
+    debug() << target << "-" << local_ptr << endl;
+    write_word(_data, target, (long) (base + local_ptr));
+  }
+}
+
 void CoreImage::load() {
+  read_file();
   load_header();
   load_prime_objects_table();
+  relocate_addresses();
 }
 
 int main(int argc, char** argv) {
   if (argc != 2) {
     bail("usage: sf-vm <coreimage>");
   }
-  string contents = read_file(argv[1]);
-  CoreImage c = CoreImage(contents);
+  CoreImage c = CoreImage(argv[1]);
   c.load();
 
   return 0;

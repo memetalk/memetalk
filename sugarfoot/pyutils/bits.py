@@ -2,7 +2,7 @@ import math
 import struct
 from pdb import set_trace as br
 
-WSIZE = 4
+WSIZE = 8
 
 SEP='_'
 
