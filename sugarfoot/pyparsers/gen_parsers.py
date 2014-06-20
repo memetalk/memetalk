@@ -33,6 +33,11 @@ ometa_grammar = grammar.OMetaGrammar(open(os.path.join(os.path.dirname(__file__)
 tree = ometa_grammar.parseGrammar('CoreTr', builder.TreeBuilder)
 fp.write(builder.writeBoot(tree))
 
+fp = open(os.path.join(os.path.dirname(__file__), 'memetr.py'), 'wb')
+ometa_grammar = grammar.OMetaGrammar(open(os.path.join(os.path.dirname(__file__),"meme_tr.g")).read())
+tree = ometa_grammar.parseGrammar('MemeTr', builder.TreeBuilder)
+fp.write(builder.writeBoot(tree))
+
 # fp = open(os.path.dirname(__file__) + '/../loader.py', 'wb')
 # ometa_grammar = grammar.OMetaGrammar(open(os.path.dirname(__file__)+"/load_module.ast.g").read())
 # tree = ometa_grammar.parseGrammar('Loader', builder.TreeBuilder)
