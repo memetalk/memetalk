@@ -447,30 +447,28 @@ class Compiler(ASTBuilder):
         return core
 
     def dump(self, core):
-        fp = open("core.img", "w")
+        with open("core.img", "w") as fp:
+            # header
+            fp.write(struct.pack('I', core['header']['entries']))
+            fp.write(struct.pack('I', core['header']['names_size']))
+            fp.write(struct.pack('I', core['header']['ot_size']))
 
-        # header
-        fp.write(struct.pack('I', core['header']['entries']))
-        fp.write(struct.pack('I', core['header']['names_size']))
-        fp.write(struct.pack('I', core['header']['ot_size']))
+            # names
+            for name, chunk_size in core['names']:
+                text = name + ((chunk_size - len(name)) * '\0')
+                fp.write(text)
 
-        # names
-        for name, chunk_size in core['names']:
-            text = name + ((chunk_size - len(name)) * '\0')
-            fp.write(text)
+            # index
+            for ptr in core['index']:
+                fp.write(struct.pack('I', ptr))
 
-        # index
-        for ptr in core['index']:
-            fp.write(struct.pack('I', ptr))
+            # object table
+            for v8 in core['object_table']:
+                fp.write(struct.pack('B', v8))
 
-        # object table
-        for v8 in core['object_table']:
-            fp.write(struct.pack('B', v8))
+            # addr table
+            for v32 in core['reloc_table']:
+                fp.write(struct.pack('I', v32))
 
-        # addr table
-        for v32 in core['reloc_table']:
-            fp.write(struct.pack('I', v32))
-
-        fp.close()
 
 Compiler().compile()
