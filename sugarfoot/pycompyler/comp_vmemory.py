@@ -6,8 +6,14 @@ class CompVirtualMemory(vmemory.VirtualMemory):
         self.ext_ref_table = []
         self.string_table = {}
 
-    def external_references(self):
+    def object_table(self):
+        return reduce(lambda x,y: x+y, [e() for e in self.cells])
+
+    def external_symbols(self):
         return [(x[0], self.base + sum(self.cell_sizes[0:self.cells.index(x[1])])) for x in self.ext_ref_table]
+
+    def reloc_table(self):
+        return [self.base + sum(self.cell_sizes[0:idx]) for idx,entry in enumerate(self.cells) if type(entry) == vmemory.PointerCell]
 
     def append_external_ref(self, name, label=None):
         oop = self.append_int(999, label)

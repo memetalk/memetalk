@@ -466,7 +466,7 @@ class Compiler(ASTBuilder):
             for v8 in core['object_table']:
                 fp.write(struct.pack('B', v8))
 
-            # addr table
+            # reloc table
             for v32 in core['reloc_table']:
                 fp.write(struct.pack('I', v32))
 

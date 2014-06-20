@@ -1,11 +1,13 @@
 from pyparsers.parser import MemeParser
 from pyparsers.memetr import MemeTr
 from pyparsers.astbuilder import *
+from pyutils import bits
 from pprint import pprint as P
 import traceback
 from pdb import set_trace as br
 import os
 import sys
+import struct
 from . import opcode
 from . import comp_vmemory
 
@@ -109,6 +111,9 @@ class CompiledModule(object):
         return fn
 
     def fill(self, vmem):
+        # first word on object table is a pointer to the CompiledModule
+        vmem.append_label_ref(self.label())
+
         delegate = vmem.append_object_instance()
         oop_name = vmem.append_string_instance(self.name)
         oop_license = vmem.append_string_instance("")
@@ -128,24 +133,84 @@ class CompiledModule(object):
 
 class MMC(object):
     MAGIC_NUMBER = 0x420
+    HEADER_SIZE = 4 * bits.WSIZE
 
     def __init__(self, module):
         self.module = module
 
-    def fill(self, vmem):
-        # header
-        vmem.append_int(self.MAGIC_NUMBER)
-        vmem.append_int(self.module.num_top_level_entries())
-        vmem.append_label_ref(self.module.label())
+    def name_ptr_for(self, name, names_section):
+        acc = 0
+        for entry_name_t, bsize in names_section:
+            if entry_name_t[0:-1] == name:
+                return self.HEADER_SIZE + acc
+            acc += bsize
+        raise Exception('entry {} not found in NAMES'.format(name))
 
-        # -- obj table --
+    def create_mmc_struct(self, vmem):
+        mmc = {'header':
+               {'magic_number': None,
+                'ot_size': None,
+                'es_size': None,
+                'names_size': None},
+               'object_table': [],
+               'external_symbols': [],
+               'names': [],
+               'reloc_table': []
+            }
+
+
+        vmem.set_base(self.HEADER_SIZE)
         self.module.fill(vmem)
 
-        # -- ext refs --
-        # -- names --
-        # -- relloc table --
-        vmem.dump()
-        print vmem.external_references()
+        mmc['header']['magic_number'] = self.MAGIC_NUMBER
+
+        mmc['object_table'] = vmem.object_table()
+
+        mmc['header']['ot_size'] = len(mmc['object_table'])
+
+        external_symbols = vmem.external_symbols()
+        strings_in_names = sorted(set([x[0] for x in external_symbols]))
+
+        mmc['names'] = [(name_t, bits.string_block_size(name_t)) for name_t in [name + '\0' for name in strings_in_names]]
+
+        mmc['header']['names_size'] = sum([x[1] for x in mmc['names']])
+
+        for pair in external_symbols:
+            mmc['external_symbols'].append(self.name_ptr_for(pair[0], mmc['names']))
+            mmc['external_symbols'].append(pair[1])
+
+        mmc['header']['es_size'] = len(mmc['external_symbols']) * 2 * bits.WSIZE
+
+        mmc['reloc_table'] = vmem.reloc_table()
+
+        return mmc
+
+    def dump(self, vmem):
+        mmc = self.create_mmc_struct(vmem)
+
+        with open(self.module.name + ".mmc", "w") as fp:
+            # header
+            fp.write(struct.pack('I', mmc['header']['magic_number']))
+            fp.write(struct.pack('I', mmc['header']['ot_size']))
+            fp.write(struct.pack('I', mmc['header']['es_size']))
+            fp.write(struct.pack('I', mmc['header']['names_size']))
+
+            # object table
+            for v8 in mmc['object_table']:
+                fp.write(struct.pack('B', v8))
+
+            # external symbols
+            for ptr in mmc['external_symbols']:
+                fp.write(struct.pack('I', ptr))
+
+            # names
+            for name, chunk_size in mmc['names']:
+                text = name + ((chunk_size - len(name)) * '\0')
+                fp.write(text)
+
+            # reloc table
+            for v32 in mmc['reloc_table']:
+                fp.write(struct.pack('I', v32))
 
 
 class Compiler(ASTBuilder):
@@ -180,7 +245,7 @@ class Compiler(ASTBuilder):
 
         vmem = comp_vmemory.CompVirtualMemory()
         mmc = MMC(self.cmodule)
-        mmc.fill(vmem)
+        mmc.dump(vmem)
 
     def new_module(self):
         module_name =  os.path.splitext(os.path.basename(self.filepath))[0]
