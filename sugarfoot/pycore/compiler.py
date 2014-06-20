@@ -414,7 +414,7 @@ class Compiler(ASTBuilder):
             'names': [],
             'index': [],
             'object_table': [],
-            'addr_table': []}
+            'reloc_table': []}
 
         # -- HEADER and NAMES section
         core['header']['entries'] = len(self.entries)
@@ -437,7 +437,7 @@ class Compiler(ASTBuilder):
         # - HEADER ot_size
         core['header']['ot_size'] = len(core['object_table'])
 
-        core['addr_table'] = self.vmem.addr_table()
+        core['reloc_table'] = self.vmem.reloc_table()
 
         # - INDEX section
         for name in [x.label for x in self.entries]:
@@ -468,7 +468,7 @@ class Compiler(ASTBuilder):
             fp.write(struct.pack('B', v8))
 
         # addr table
-        for v32 in core['addr_table']:
+        for v32 in core['reloc_table']:
             fp.write(struct.pack('I', v32))
 
         fp.close()

@@ -278,12 +278,12 @@ class Decompiler(ASTBuilder):
         end_ot_section = start_ot_section + header['ot_size']
         self.OT = self.file_contents[start_ot_section:end_ot_section]
 
-        # ADDR
-        start_addr_section = end_ot_section
-        end_addr_section = len(self.file_contents)
-        self.ADDR = self.file_contents[start_addr_section:end_addr_section]
+        # RELOC
+        start_reloc_section = end_ot_section
+        end_reloc_section = len(self.file_contents)
+        self.RELOC = self.file_contents[start_reloc_section:end_reloc_section]
 
-        self.relloc_addresses = [bits.unpack(pack32) for pack32 in bits.chunks(self.ADDR, 4)]
+        self.reloc_addresses = [bits.unpack(pack32) for pack32 in bits.chunks(self.RELOC, 4)]
 
         print header
         self.dump_names()
