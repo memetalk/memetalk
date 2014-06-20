@@ -4,9 +4,7 @@
 #include <string>
 #include <string.h>
 #include <sstream>
-#include "loader.hpp"
-
-#include <arpa/inet.h>
+#include "core_loader.hpp"
 #include <assert.h>
 
 
@@ -98,7 +96,7 @@ void CoreImage::relocate_addresses() {
   for (int i = start_reloc_table; i < _data_size; i += WSIZE) {
     word target = unpack_word(_data,  i);
     word local_ptr = unpack_word(_data,  target);
-    debug() << target << "-" << local_ptr << endl;
+    // debug() << target << "-" << local_ptr << endl;
     write_word(_data, target, (long) (base + local_ptr));
   }
 }
