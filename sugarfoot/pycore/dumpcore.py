@@ -8,6 +8,20 @@ from . import utils
 import math
 import os
 
+def dump_slots(dec, addr, slots):
+    obj_size = bits.WSIZE * len(slots) # total slots in a class object
+    objs = map(bits.unpack, bits.chunks(dec.file_contents[addr:addr+obj_size], bits.WSIZE))
+    for idx, slot in enumerate(slots):
+        target_name = dec.get_entry_name(objs[idx])
+        if target_name:
+            print '{}: #{} <{}>'.format(slot, target_name, objs[idx])
+        else:
+            print '{}: <{}>'.format(slot, objs[idx])
+    return obj_size
+
+class Entry(object):
+    def dump_with_slots(self, dec, ptr, slots):
+        return dump_slots(dec, ptr, slots)
 
 class ObjectEntry(object):
     def __init__(self, name):
@@ -50,45 +64,26 @@ class ObjectEntry(object):
                 print '{}: {}'.format(slot['name'], objs[idx])
         return obj_size
 
-class ClassBehaviorEntry(object):
+class ClassBehaviorEntry(Entry):
     def __init__(self, name, super_class):
         self.name = bits.behavior_label(name)
         self.super_class = super_class
 
     def dump(self, dec, ptr):
-        print '[{}] -- {}'.format(ptr, self.name)
-        slots = ['vt', 'delegate', 'parent', 'dict']
-        obj_size = bits.WSIZE * len(slots)
-        objs = map(bits.unpack, bits.chunks(dec.file_contents[ptr:ptr+obj_size], bits.WSIZE))
-        for idx, slot in enumerate(slots):
-            target_name = dec.get_entry_name(objs[idx])
-            if target_name:
-                print '{}: #{} <{}>'.format(slot, target_name, objs[idx])
-            else:
-                print '{}: <{}>'.format(slot, objs[idx])
-        return obj_size
+        return self.dump_with_slots(dec, ptr, ['vt', 'delegate', 'parent', 'dict'])
 
 
-class CompiledClassEntry(object):
+class CompiledClassEntry(Entry):
     def __init__(self, name, super_class):
         self.name = utils.cclass_label(name)
         self.super_class = super_class
 
     def dump(self, dec, ptr):
         print '[{}] -- {}'.format(ptr, self.name)
-        slots = ['vt', 'delegate', 'name', 'super_class_name',
-                 'compiled_module', 'fields', 'methods', 'own_methods']
-        obj_size = bits.WSIZE * len(slots)
-        objs = map(bits.unpack, bits.chunks(dec.file_contents[ptr:ptr+obj_size], bits.WSIZE))
-        for idx, slot in enumerate(slots):
-            target_name = dec.get_entry_name(objs[idx])
-            if target_name:
-                print '{}: #{} <{}>'.format(slot, target_name, objs[idx])
-            else:
-                print '{}: <{}>'.format(slot, objs[idx])
-        return obj_size
+        return self.dump_with_slots(dec, ptr, ['vt', 'delegate', 'name', 'super_class_name',
+                 'compiled_module', 'fields', 'methods', 'own_methods'])
 
-class ClassEntry(object):
+class ClassEntry(Entry):
     def __init__(self, name, super_class, behavior, cclass):
         self.name = name
         self.super_class = super_class
@@ -107,46 +102,19 @@ class ClassEntry(object):
 
     def dump(self, dec, ptr):
         print '[{}] -- {}'.format(ptr, self.name)
-        slots = ['vt', 'delegate', 'parent', 'dict', 'compiled_class']
-        obj_size = bits.WSIZE * len(slots) # total slots in a class object
-        objs = map(bits.unpack, bits.chunks(dec.file_contents[ptr:ptr+obj_size], bits.WSIZE))
-        for idx, slot in enumerate(slots):
-            target_name = dec.get_entry_name(objs[idx])
-            if target_name:
-                print '{}: #{} <{}>'.format(slot, target_name, objs[idx])
-            else:
-                print '{}: <{}>'.format(slot, objs[idx])
-        return obj_size
+        return self.dump_with_slots(dec, ptr, ['vt', 'delegate', 'parent', 'dict', 'compiled_class'])
 
 
-class CoreCompiledModule(object):
+class CoreCompiledModule(Entry):
     def dump(self, dec, ptr):
         print '[{}] {} instance'.format(ptr, '@core_compiled_module')
-        slots = ['vt', 'delegate', 'name', 'license', 'params',
-                 'compiled_functions', 'compiled_classes', 'parent_module']
-        obj_size = bits.WSIZE * len(slots) # total slots in a class object
-        objs = map(bits.unpack, bits.chunks(dec.file_contents[ptr:ptr+obj_size], bits.WSIZE))
-        for idx, slot in enumerate(slots):
-            target_name = dec.get_entry_name(objs[idx])
-            if target_name:
-                print '{}: #{} <{}>'.format(slot, target_name, objs[idx])
-            else:
-                print '{}: <{}>'.format(slot, objs[idx])
-        return obj_size
+        return self.dump_with_slots(dec, ptr, ['vt', 'delegate', 'name', 'license', 'params',
+                 'compiled_functions', 'compiled_classes', 'parent_module'])
 
-class CoreModule(object):
+class CoreModule(Entry):
     def dump(self, dec, ptr):
         print '[{}] {} instance'.format(ptr, '@core_module')
-        slots = ['vt', 'delegate', 'parent', 'dict', 'compiled_module']
-        obj_size = bits.WSIZE * len(slots) # total slots in a class object
-        objs = map(bits.unpack, bits.chunks(dec.file_contents[ptr:ptr+obj_size], bits.WSIZE))
-        for idx, slot in enumerate(slots):
-            target_name = dec.get_entry_name(objs[idx])
-            if target_name:
-                print '{}: #{} <{}>'.format(slot, target_name, objs[idx])
-            else:
-                print '{}: <{}>'.format(slot, objs[idx])
-        return obj_size
+        return self.dump_with_slots(dec, ptr, ['vt', 'delegate', 'parent', 'dict', 'compiled_module'])
 
 def dump_object_instance(dec, addr, class_or_behavior_name):
     print '[{}] {} instance'.format(addr, class_or_behavior_name)
@@ -180,28 +148,12 @@ def dump_dictionary_instance(dec, addr, class_or_behavior_name):
 def dump_compiled_function_instance(dec, addr, class_or_behavior_name):
     print '[{}] {} instance'.format(addr, class_or_behavior_name)
     slots = ['vt', 'delegate', 'name', 'params', 'prim_name', 'owner']
-    obj_size = bits.WSIZE * len(slots) # total slots in a class object
-    objs = map(bits.unpack, bits.chunks(dec.file_contents[addr:addr+obj_size], bits.WSIZE))
-    for idx, slot in enumerate(slots):
-        target_name = dec.get_entry_name(objs[idx])
-        if target_name:
-            print '{}: #{} <{}>'.format(slot, target_name, objs[idx])
-        else:
-            print '{}: <{}>'.format(slot, objs[idx])
-    return obj_size
+    return dump_slots(dec, addr, slots)
 
 def dump_function_instance(dec, addr, class_or_behavior_name):
     print '[{}] {} instance'.format(addr, class_or_behavior_name)
     slots = ['vt', 'delegate', 'compiled_function', 'module']
-    obj_size = bits.WSIZE * len(slots) # total slots in a class object
-    objs = map(bits.unpack, bits.chunks(dec.file_contents[addr:addr+obj_size], bits.WSIZE))
-    for idx, slot in enumerate(slots):
-        target_name = dec.get_entry_name(objs[idx])
-        if target_name:
-            print '{}: #{} <{}>'.format(slot, target_name, objs[idx])
-        else:
-            print '{}: <{}>'.format(slot, objs[idx])
-    return obj_size
+    return dump_slots(dec, addr, slots)
 
 
 def dump_list_instance(dec, addr, class_or_behavior_name):
