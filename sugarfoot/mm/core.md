@@ -42,7 +42,7 @@
   end
 
   class CompiledModule
-    instance_method instantiate: fun() {
+    instance_method instantiate: fun(args) {
       <primitive "compiled_module_instantiate">
     }
   end

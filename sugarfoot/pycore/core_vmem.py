@@ -76,6 +76,6 @@ class CoreVirtualMemory(vmemory.VirtualMemory):
         oop = self.append_label_ref('List')       # vt
         self.append_pointer_to(delegate)          # delegate
         self.append_int(len(lst))                 # len
-        for oop in oops_elements:                   # .. elements
-            self.append_pointer_to(oop)
+        for oop_element in oops_elements:                   # .. elements
+            self.append_pointer_to(oop_element)
         return oop
