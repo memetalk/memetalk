@@ -1,6 +1,6 @@
 sf-vm: clean
-	g++ -Wall -g core_loader.cpp -o sf-vm
-sf-vm: core_loader.hpp core_loader.cpp
+	g++ -Wall -g report.cpp vm.cpp core_loader.cpp -o sf-vm
+sf-vm: core_loader.hpp core_loader.cpp vm.cpp vm.hpp defs.hpp report.cpp report.hpp
 
 clean:
 	rm -f sf-vm

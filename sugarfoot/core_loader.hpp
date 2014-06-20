@@ -1,21 +1,10 @@
-#ifndef SF_LOADER_HPP
-#define SF_LOADER_HPP
+#ifndef CORE_LOADER_HPP
+#define CORE_LOADER_HPP
 
 #include <list>
 #include <string>
 #include <map>
-
-#define  WSIZE 8
-
-using namespace std;
-
-typedef void* oop;
-
-#if WSIZE == 4
-  typedef int word;
-#elif WSIZE == 8
-  typedef long word;
-#endif
+#include "defs.hpp"
 
 class CoreImage {
   static word HEADER_SIZE;
@@ -23,8 +12,7 @@ class CoreImage {
   static int TOTAL_PRIMES;
 
 public:
-  CoreImage(const char*
-);
+  CoreImage(const char*);
   // oop oop_entry();
   // oop oop_imodule();
   void load();
@@ -49,22 +37,5 @@ private:
 
   std::map<std::string, oop> _primes;
 };
-word CoreImage::HEADER_SIZE = 3 * WSIZE;
-
-const char* CoreImage::PRIMES_NAMES[] = {"Behavior",
-                                        "Object_Behavior",
-                                        "Object",
-                                        "CompiledClass",
-                                        "CompiledModule",
-                                        "String",
-                                        "Symbol",
-                                        "Dictionary",
-                                        "List",
-                                        "Number",
-                                        "CompiledFunction",
-                                        "Function",
-                                        "Context"};
-int CoreImage::TOTAL_PRIMES = 13;
-
 
 #endif

@@ -4,21 +4,27 @@
 #include <string>
 #include <string.h>
 #include <sstream>
-#include "core_loader.hpp"
 #include <assert.h>
+#include "core_loader.hpp"
+#include "report.hpp"
 
+word CoreImage::HEADER_SIZE = 3 * WSIZE;
 
-#define s(x) (string(x))
+const char* CoreImage::PRIMES_NAMES[] = {"Behavior",
+                                        "Object_Behavior",
+                                        "Object",
+                                        "CompiledClass",
+                                        "CompiledModule",
+                                        "String",
+                                        "Symbol",
+                                        "Dictionary",
+                                        "List",
+                                        "Number",
+                                        "CompiledFunction",
+                                        "Function",
+                                        "Context"};
+int CoreImage::TOTAL_PRIMES = 13;
 
-
-static void bail(const string& msg) {
-  cout << msg << "\n";
-  exit(1);
-}
-
-static ostream& debug() {
-  return cout;
-}
 
 CoreImage::CoreImage(const char* filepath)
   : _filepath(filepath) {
@@ -40,7 +46,7 @@ void CoreImage::read_file() {
   file.open (_filepath, fstream::in | fstream::binary);
 
   if (!file.is_open()) {
-    bail(s("file not found: " + s(_filepath)));
+    bail(string("file not found: ") + _filepath);
   }
 
   string contents(static_cast<stringstream const&>(stringstream() << file.rdbuf()).str());
@@ -106,14 +112,4 @@ void CoreImage::load() {
   load_header();
   load_prime_objects_table();
   relocate_addresses();
-}
-
-int main(int argc, char** argv) {
-  if (argc != 2) {
-    bail("usage: sf-vm <coreimage>");
-  }
-  CoreImage c = CoreImage(argv[1]);
-  c.load();
-
-  return 0;
 }
