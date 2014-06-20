@@ -22,8 +22,13 @@ def fun_label(cfun_label, name):
     return cfun_label + SEP + name + SEP + "Function"
 
 
-def ato32(chunk):
-    return struct.unpack('I', ''.join(map(chr, chunk)))[0]
+def atoword(bytelist):
+    if WSIZE == 4:
+        return struct.unpack('I', ''.join(map(chr, bytelist)))[0]
+    elif WSIZE == 8:
+        return struct.unpack('Q', ''.join(map(chr, bytelist)))[0]
+    else:
+        raise Exception('Not implemented')
 
 def chunks(l, n):
     res = []
@@ -31,20 +36,56 @@ def chunks(l, n):
         res.append(l[i:i+n])
     return res
 
-def unpack(pack32):
-    return struct.unpack('I', pack32)[0]
+def unpack(string_word):
+    if WSIZE == 4:
+        return struct.unpack('I', string_word)[0]
+    elif WSIZE == 8:
+        return struct.unpack('Q', string_word)[0]
+    else:
+        raise Exception('Not implemented')
 
-def unpack_tagged(pack32):
-    return untag(struct.unpack('I', pack32)[0])
+def unpack_tagged(string_word):
+    if WSIZE == 4:
+        return untag(struct.unpack('I', string_word)[0])
+    elif WSIZE == 8:
+        return untag(struct.unpack('Q', string_word)[0])
+    else:
+        raise Exception('Not implemented')
+
+def pack_word(num):
+    if WSIZE == 4:
+        return struct.pack('I', num)
+    elif WSIZE == 8:
+        return struct.pack('Q', num)
+    else:
+        raise Exception('Not implemented')
+
+def pack_byte(num):
+    return struct.pack('B', num)
 
 def untag(num):
-    return num & 0x7FFFFFFF
+    if WSIZE == 4:
+        return num & 0x7FFFFFFF
+    elif WSIZE == 8:
+        return num & 0x7FFFFFFFFFFFFFFF
+    else:
+        raise Exception('Not implemented')
 
-def pack32(int32):
-    return map(ord, struct.pack('I', int32))
+def bytelist(num):
+    if WSIZE == 4:
+        return map(ord, struct.pack('I', num))
+    elif WSIZE == 8:
+        return map(ord, struct.pack('Q', num))
+    else:
+        raise Exception('Not implemented')
 
-def pack32_tag(int32):
-    return map(ord, struct.pack('I', int32 | 0x80000000))
+def bytelist_tag(num):
+    if WSIZE == 4:
+        return map(ord, struct.pack('I', num | 0x80000000))
+    elif WSIZE == 8:
+        return map(ord, struct.pack('Q', num | 0x8000000000000000))
+    else:
+        raise Exception('Not implemented')
 
 def string_block_size(string):
     # number of bytes required for string, aligned to word size

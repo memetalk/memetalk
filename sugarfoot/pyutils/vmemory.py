@@ -15,7 +15,7 @@ class NullCell(Cell):
         return bits.WSIZE
 
     def __call__(self, *args):
-        return bits.pack32(0)
+        return bits.bytelist(0)
 
 class IntCell(Cell):
     def __init__(self, etable, num):
@@ -26,7 +26,7 @@ class IntCell(Cell):
         return bits.WSIZE
 
     def __call__(self, *args):
-        return bits.pack32(self.num)
+        return bits.bytelist(self.num)
 
 class TaggedIntCell(Cell):
     def __init__(self, etable, num):
@@ -39,7 +39,7 @@ class TaggedIntCell(Cell):
     def __call__(self, *args):
         # tag int
         if self.num  < 0x80000000:
-            return bits.pack32_tag(self.num)
+            return bits.bytelist_tag(self.num)
         else:
             raise Exception('Unsupported big num')
 
@@ -80,9 +80,9 @@ class PointerCell(Cell):
     def __call__(self, offset=0):
         if self.target_cell:
             to = self.etable.cells.index(self.target_cell)
-            return bits.pack32(self.etable.base + sum(self.etable.cell_sizes[0:to]))
+            return bits.bytelist(self.etable.base + sum(self.etable.cell_sizes[0:to]))
         else:
-            return bits.pack32(self.etable.base + self.etable.index[self.target_label])
+            return bits.bytelist(self.etable.base + self.etable.index[self.target_label])
 
 class VirtualMemory(object):
     def __init__(self):
@@ -138,7 +138,7 @@ class VirtualMemory(object):
     def dump(self):
         address_offset = 4 # each value dumped is a 32 bit pack (ie. 4 1byte value, 4 addresses within)
         for idx, x in enumerate(bits.chunks(reduce(lambda x,y: x+y, [e() for e in self.cells]),4)):
-            print '{} - {}'.format(self.base + (idx * address_offset), bits.ato32(x))
+            print '{} - {}'.format(self.base + (idx * address_offset), bits.atoword(x))
 
         # print '--'
         # print 'Object:', self.index_for('Object')

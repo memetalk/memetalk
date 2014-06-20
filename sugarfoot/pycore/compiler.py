@@ -424,7 +424,7 @@ class Compiler(ASTBuilder):
 
         core['header']['names_size'] = sum([x[1] for x in core['names']])
 
-        index_size = core['header']['entries'] * 2 * bits.WSIZE # *2: pair (name, entry), *4: bytes
+        index_size = core['header']['entries'] * 2 * bits.WSIZE # *2: pair (name, entry),
         base = self.HEADER_SIZE + core['header']['names_size'] + index_size
         self.vmem.set_base(base)
 
@@ -449,9 +449,10 @@ class Compiler(ASTBuilder):
     def dump(self, core):
         with open("core.img", "w") as fp:
             # header
-            fp.write(struct.pack('I', core['header']['entries']))
-            fp.write(struct.pack('I', core['header']['names_size']))
-            fp.write(struct.pack('I', core['header']['ot_size']))
+
+            fp.write(bits.pack_word(core['header']['entries']))
+            fp.write(bits.pack_word(core['header']['names_size']))
+            fp.write(bits.pack_word(core['header']['ot_size']))
 
             # names
             for name, chunk_size in core['names']:
@@ -460,15 +461,15 @@ class Compiler(ASTBuilder):
 
             # index
             for ptr in core['index']:
-                fp.write(struct.pack('I', ptr))
+                fp.write(bits.pack_word(ptr))
 
             # object table
             for v8 in core['object_table']:
-                fp.write(struct.pack('B', v8))
+                fp.write(bits.pack_byte(v8))
 
             # reloc table
-            for v32 in core['reloc_table']:
-                fp.write(struct.pack('I', v32))
+            for word in core['reloc_table']:
+                fp.write(bits.pack_word(word))
 
 
 Compiler().compile()

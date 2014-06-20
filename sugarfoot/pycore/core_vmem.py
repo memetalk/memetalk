@@ -72,10 +72,10 @@ class CoreVirtualMemory(vmemory.VirtualMemory):
     # used internally to create class fields list, etc.
     def append_list_of_strings(self, lst):
         oops_elements = [self.append_string_instance(string) for string in lst]
-        delegate = self.append_object_instance()    # Assumed to be object! if source change, this breaks
+        delegate = self.append_object_instance()  # Assumed to be object! if source change, this breaks
         oop = self.append_label_ref('List')       # vt
         self.append_pointer_to(delegate)          # delegate
         self.append_int(len(lst))                 # len
-        for oop_element in oops_elements:                   # .. elements
+        for oop_element in oops_elements:         # .. elements
             self.append_pointer_to(oop_element)
         return oop

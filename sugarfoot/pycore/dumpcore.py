@@ -121,8 +121,8 @@ def dump_object_instance(dec, addr, class_or_behavior_name):
     return 2 * bits.WSIZE #vt+delegate
 
 def _str_from_string_instance(dec, addr):
-    size = bits.unpack_tagged(dec.file_contents[addr+8:addr+12])
-    string = dec.file_contents[addr+12:addr+12+size]
+    size = bits.unpack_tagged(dec.file_contents[addr+(bits.WSIZE*2):addr+(bits.WSIZE*3)])
+    string = dec.file_contents[addr+(bits.WSIZE*3):addr+(bits.WSIZE*3)+size]
     chunk_size = int(math.ceil((len(string)+1) / float(bits.WSIZE)) * bits.WSIZE)
     return string, chunk_size
 
@@ -133,13 +133,13 @@ def dump_string_instance(dec, addr, class_or_behavior_name):
     return (3 * bits.WSIZE) + chunk_size
 
 def dump_dictionary_instance(dec, addr, class_or_behavior_name):
-    size = bits.unpack_tagged(dec.file_contents[addr+8:addr+12])
+    size = bits.unpack_tagged(dec.file_contents[addr+(bits.WSIZE*2):addr+(bits.WSIZE*3)])
     if size == 0:
         print '[{}] {} instance (empty)'.format(addr, class_or_behavior_name)
         return 3 * bits.WSIZE
     else:
         print '[{}] {} instance ({})'.format(addr, class_or_behavior_name, size)
-        objs = map(bits.unpack, bits.chunks(dec.file_contents[addr+12:addr+12+((size*2)*bits.WSIZE)], bits.WSIZE))
+        objs = map(bits.unpack, bits.chunks(dec.file_contents[addr+(bits.WSIZE*3):addr+(bits.WSIZE*3)+((size*2)*bits.WSIZE)], bits.WSIZE))
         for key_oop, val_oop in bits.chunks(objs,2):
             string, _ = _str_from_string_instance(dec, key_oop)
             print ' ** d[{}:{}] = <{}>'.format(key_oop, string, val_oop)
@@ -157,7 +157,7 @@ def dump_function_instance(dec, addr, class_or_behavior_name):
 
 
 def dump_list_instance(dec, addr, class_or_behavior_name):
-    size = bits.unpack_tagged(dec.file_contents[addr+8:addr+12])
+    size = bits.unpack_tagged(dec.file_contents[addr+(bits.WSIZE*2):addr+(bits.WSIZE*3)])
     if size == 0:
         print '[{}] {} instance (empty)'.format(addr, class_or_behavior_name)
         return 3 * bits.WSIZE
@@ -189,14 +189,14 @@ class Decompiler(ASTBuilder):
 
     def dump_names(self):
         print '** NAMES **'
-        for name_ptr, obj_ptr in bits.chunks([bits.unpack(pack32) for pack32 in bits.chunks(self.INDEX, 4)], 2):
+        for name_ptr, obj_ptr in bits.chunks([bits.unpack(pack32) for pack32 in bits.chunks(self.INDEX, bits.WSIZE)], 2):
             name = self.file_contents[name_ptr:self.file_contents.find('\0', name_ptr)]
             print name, obj_ptr
 
         print '======================='
 
     def get_entry_name(self, vt_ptr):
-        for name_ptr, obj_ptr in bits.chunks([bits.unpack(pack32) for pack32 in bits.chunks(self.INDEX, 4)], 2):
+        for name_ptr, obj_ptr in bits.chunks([bits.unpack(pack32) for pack32 in bits.chunks(self.INDEX, bits.WSIZE)], 2):
             name = self.file_contents[name_ptr:self.file_contents.find('\0', name_ptr)]
             # print 'get_entry_name({}): {}/{} = {}'.format(vt_ptr, name_ptr, obj_ptr, name)
             if obj_ptr == vt_ptr:
@@ -205,11 +205,11 @@ class Decompiler(ASTBuilder):
 
     def load_image(self):
 
-        END_OF_HEADER = 12
+        END_OF_HEADER = bits.WSIZE * 3
 
         self.file_contents = open("core.img", "rb").read()
 
-        header_packs = [bits.unpack(pack32) for pack32 in bits.chunks(self.file_contents[0:END_OF_HEADER], 4)]
+        header_packs = [bits.unpack(pack32) for pack32 in bits.chunks(self.file_contents[0:END_OF_HEADER], bits.WSIZE)]
 
         header = {'entries': header_packs[0],
                   'names_size': header_packs[1],
@@ -222,7 +222,7 @@ class Decompiler(ASTBuilder):
 
         # INDEX
         start_index_section = end_names_section
-        end_index_section = start_index_section + header['entries'] * 2 * 4 # *2: pairs, *4: 32 bits
+        end_index_section = start_index_section + header['entries'] * 2 * bits.WSIZE # *2: pairs
         self.INDEX = self.file_contents[start_index_section:end_index_section]
 
         # OT
@@ -235,7 +235,7 @@ class Decompiler(ASTBuilder):
         end_reloc_section = len(self.file_contents)
         self.RELOC = self.file_contents[start_reloc_section:end_reloc_section]
 
-        self.reloc_addresses = [bits.unpack(pack32) for pack32 in bits.chunks(self.RELOC, 4)]
+        self.reloc_addresses = [bits.unpack(pack32) for pack32 in bits.chunks(self.RELOC, bits.WSIZE)]
 
         print header
         self.dump_names()
@@ -258,8 +258,11 @@ class Decompiler(ASTBuilder):
                 raise Exception('No entry for dumping {}'.format(name))
             print '--------------------'
 
+        print self.reloc_addresses
+        br()
+
     def dump_anonymous(self, addr):
-        vt_addr = bits.unpack(self.file_contents[addr:addr+4])
+        vt_addr = bits.unpack(self.file_contents[addr:addr+bits.WSIZE])
         class_or_behavior_name = self.get_entry_name(vt_addr)
         if class_or_behavior_name is None:
             br()
