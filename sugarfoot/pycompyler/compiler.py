@@ -187,10 +187,10 @@ class MMC(object):
 
         with open(self.module.name + ".mmc", "w") as fp:
             # header
-            fp.write(struct.pack('I', mmc['header']['magic_number']))
-            fp.write(struct.pack('I', mmc['header']['ot_size']))
-            fp.write(struct.pack('I', mmc['header']['es_size']))
-            fp.write(struct.pack('I', mmc['header']['names_size']))
+            fp.write(bits.pack_word(mmc['header']['magic_number']))
+            fp.write(bits.pack_word(mmc['header']['ot_size']))
+            fp.write(bits.pack_word(mmc['header']['es_size']))
+            fp.write(bits.pack_word(mmc['header']['names_size']))
 
             # names
             for name, chunk_size in mmc['names']:
@@ -198,16 +198,16 @@ class MMC(object):
                 fp.write(text)
 
             # object table
-            for v8 in mmc['object_table']:
-                fp.write(struct.pack('B', v8))
+            for v in mmc['object_table']:
+                fp.write(bits.pack_byte(v))
 
             # external symbols
-            for ptr in mmc['external_symbols']:
-                fp.write(struct.pack('I', ptr))
+            for v in mmc['external_symbols']:
+                fp.write(bits.pack_word(v))
 
             # reloc table
-            for v32 in mmc['reloc_table']:
-                fp.write(struct.pack('I', v32))
+            for word in mmc['reloc_table']:
+                fp.write(bits.pack_word(word))
 
 
 class Compiler(ASTBuilder):

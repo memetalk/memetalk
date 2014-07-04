@@ -7,12 +7,12 @@ import sys
 
 with open(sys.argv[1], 'r') as fp:
     text = fp.read()
-    HEADER_SIZE = 16
+    HEADER_SIZE = bits.WSIZE * 4
 
-    magic = hex(bits.unpack(text[0:4]))
-    ot_size = bits.unpack(text[4:8])
-    es_size = bits.unpack(text[8:12])
-    names_size = bits.unpack(text[12:16])
+    magic = hex(bits.unpack(text[0:bits.WSIZE]))
+    ot_size = bits.unpack(text[bits.WSIZE:bits.WSIZE*2])
+    es_size = bits.unpack(text[bits.WSIZE*2:bits.WSIZE*3])
+    names_size = bits.unpack(text[bits.WSIZE*3:bits.WSIZE*4])
 
     print 'MAGIC', magic
     print 'ot_size', ot_size

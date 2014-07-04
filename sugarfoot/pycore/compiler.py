@@ -464,8 +464,8 @@ class Compiler(ASTBuilder):
                 fp.write(bits.pack_word(ptr))
 
             # object table
-            for v8 in core['object_table']:
-                fp.write(bits.pack_byte(v8))
+            for v in core['object_table']:
+                fp.write(bits.pack_byte(v))
 
             # reloc table
             for word in core['reloc_table']:
