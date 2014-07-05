@@ -6,4 +6,4 @@
   typedef long word;
 #endif
 
-typedef void* oop;
+typedef word* oop;

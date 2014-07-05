@@ -40,7 +40,7 @@ void relocate_addresses(char* data, int data_size, int start_reloc_table) {
   for (int i = start_reloc_table; i < data_size; i += WSIZE) {
     word target = unpack_word(data,  i);
     word local_ptr = unpack_word(data,  target);
-    debug() << target << "-" << local_ptr << endl;
+    // debug() << target << "-" << local_ptr << endl;
     write_word(data, target, (word) (base + local_ptr));
   }
 }

@@ -15,11 +15,12 @@ public:
   CoreImage(const char*);
   void load();
   oop get_prime(const char*);
+  oop get_module_instance();
 private:
   void load_header();
   void load_prime_objects_table();
   bool is_prime(const char*);
-
+  bool is_core_instance(const char*);
 
   const char* _filepath;
   int _data_size;
@@ -29,6 +30,8 @@ private:
   word _num_entries;
   word _names_size;
   word _ot_size;
+
+  oop _core_imod;
 
   std::map<std::string, oop> _primes;
 };

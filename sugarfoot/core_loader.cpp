@@ -39,6 +39,10 @@ bool CoreImage::is_prime(const char* name) {
   return false;
 }
 
+bool CoreImage::is_core_instance(const char* name) {
+  return strcmp(name, "@core_module") == 0;
+}
+
 void CoreImage::load_header() {
   _num_entries = unpack_word(_data, 0 * WSIZE);
   _names_size = unpack_word(_data, 1 * WSIZE);
@@ -57,14 +61,24 @@ void CoreImage::load_prime_objects_table() {
     char* prime_name = (char*) (base + name_offset);
     if (is_prime(prime_name)) {
       word obj_offset = unpack_word(_data, start_index + ((i+1) * WSIZE));
-      debug() << "found prime " << prime_name << ":" << obj_offset << endl;
-      oop prime_oop = (char*) (base + obj_offset);
+      oop prime_oop = (oop) (base + obj_offset);
       _primes[prime_name] = prime_oop;
+      debug() << "found prime " << prime_name << ":" << obj_offset << " (" << _primes[prime_name] << ")" << endl;
+    } else if (is_core_instance(prime_name)) {
+      word obj_offset = unpack_word(_data, start_index + ((i+1) * WSIZE));
+      oop prime_oop = (oop) (base + obj_offset);
+      _core_imod = prime_oop;
+      debug() << "found core instance " << prime_name << ":" << obj_offset << " (" << _core_imod << ")" << endl;
+
     }
   }
 }
 oop CoreImage::get_prime(const char* name) {
   return _primes[name];
+}
+
+oop CoreImage::get_module_instance() {
+  return _core_imod;
 }
 
 void CoreImage::load() {

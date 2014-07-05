@@ -1,6 +1,8 @@
 #ifndef MMC_LOADER
 #define MMC_LOADER
 
+#include "defs.hpp"
+
 class CoreImage;
 
 class MMCImage {
@@ -9,7 +11,7 @@ class MMCImage {
 public:
   MMCImage(CoreImage*, const char*);
   void load();
-  void instantiate_module();
+  oop instantiate_module();
 private:
   void load_header();
   void fix_external_references();
