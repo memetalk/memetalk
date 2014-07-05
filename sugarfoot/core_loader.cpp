@@ -1,12 +1,10 @@
 #include <stdlib.h>
-#include <fstream>
-#include <iostream>
-#include <string>
-#include <string.h>
-#include <sstream>
-#include <assert.h>
 #include "core_loader.hpp"
 #include "report.hpp"
+#include "utils.hpp"
+
+using namespace std;
+
 
 word CoreImage::HEADER_SIZE = 3 * WSIZE;
 
@@ -30,33 +28,6 @@ CoreImage::CoreImage(const char* filepath)
   : _filepath(filepath) {
 }
 
-word CoreImage::unpack_word(const char* data, int offset) {
-  assert((offset+WSIZE-1) < _data_size);
-  return *((word*) &(data[offset]));
-}
-
-void CoreImage::write_word(char* data, word target, word value) {
-  word* d = (word*) &(data[target]);
-  *d = value;
-}
-
-
-void CoreImage::read_file() {
-  fstream file;
-  file.open (_filepath, fstream::in | fstream::binary);
-
-  if (!file.is_open()) {
-    bail(string("file not found: ") + _filepath);
-  }
-
-  string contents(static_cast<stringstream const&>(stringstream() << file.rdbuf()).str());
-  _data_size = file.tellg();
-
-  debug() << "file size: "<< _data_size << endl;
-
-  file.close();
-  _data = (char*) contents.c_str();
-}
 
 bool CoreImage::is_prime(const char* name) {
   for (int i = 0; i < TOTAL_PRIMES; i++) {
@@ -92,24 +63,15 @@ void CoreImage::load_prime_objects_table() {
     }
   }
 }
-
-void CoreImage::relocate_addresses() {
-  word index_size = _num_entries * 2 * WSIZE;
-  int start_reloc_table = HEADER_SIZE + _names_size + index_size + _ot_size;
-
-  const char* base = _data;
-
-  for (int i = start_reloc_table; i < _data_size; i += WSIZE) {
-    word target = unpack_word(_data,  i);
-    word local_ptr = unpack_word(_data,  target);
-    // debug() << target << "-" << local_ptr << endl;
-    write_word(_data, target, (long) (base + local_ptr));
-  }
+oop CoreImage::get_prime(const char* name) {
+  return _primes[name];
 }
 
 void CoreImage::load() {
-  read_file();
+  _data = read_file(_filepath, &_data_size);
   load_header();
   load_prime_objects_table();
-  relocate_addresses();
+
+  word index_size = _num_entries * 2 * WSIZE;
+  relocate_addresses(_data, _data_size, HEADER_SIZE + _names_size + index_size + _ot_size);
 }

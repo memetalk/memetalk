@@ -13,21 +13,16 @@ class CoreImage {
 
 public:
   CoreImage(const char*);
-  // oop oop_entry();
-  // oop oop_imodule();
   void load();
+  oop get_prime(const char*);
 private:
   void load_header();
   void load_prime_objects_table();
-  void relocate_addresses();
   bool is_prime(const char*);
-  void read_file();
-  word unpack_word(const char* data, int offset);
-  void write_word(char* data, word target, word value);
 
 
   const char* _filepath;
-  long _data_size;
+  int _data_size;
   char* _data;
 
   //header

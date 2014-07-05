@@ -1,4 +1,7 @@
 #include "report.hpp"
+#include <iostream>
+
+using namespace std;
 
 void bail(const string& msg) {
   cout << msg << "\n";

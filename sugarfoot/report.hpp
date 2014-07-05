@@ -3,10 +3,9 @@
 
 #include <iostream>
 #include <string>
+#include <fstream>
 
-using namespace std;
-
-void bail(const string& msg);
-ostream& debug();
+void bail(const std::string& msg);
+std::ostream& debug();
 
 #endif

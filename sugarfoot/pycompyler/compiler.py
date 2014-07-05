@@ -180,11 +180,11 @@ class MMC(object):
         mmc['header']['es_size'] = len(mmc['external_symbols']) * bits.WSIZE
 
         mmc['reloc_table'] = vmem.reloc_table()
+
         return mmc
 
     def dump(self, vmem):
         mmc = self.create_mmc_struct(vmem)
-
         with open(self.module.name + ".mmc", "w") as fp:
             # header
             fp.write(bits.pack_word(mmc['header']['magic_number']))

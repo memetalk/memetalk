@@ -5,6 +5,7 @@
 #include <string>
 #include <string.h>
 #include "core_loader.hpp"
+#include "mmc_loader.hpp"
 #include "report.hpp"
 
 VM::VM(const char* core_img_filepath)
@@ -13,6 +14,10 @@ VM::VM(const char* core_img_filepath)
 
 int VM::start(char* filepath) {
   _core_image->load();
+
+  MMCImage* mmc = new MMCImage(_core_image, filepath);
+  mmc->load();
+
   return 0;
 }
 
