@@ -3,6 +3,7 @@
 #include "report.hpp"
 #include "mmc_loader.hpp"
 #include "core_loader.hpp"
+#include "mmobj.hpp"
 
 using namespace std;
 
@@ -46,40 +47,36 @@ oop MMCImage::instantiate_module(/* module arguments */) {
   // debug() << "CompiledModule: " << cmod << endl;
   // debug() << "CompiledModule vt: " << (word*) *cmod << endl;
 
-  oop class_dict = (oop) ((word*)_compiled_module)[6];
+  oop class_dict = mm_compiled_module_classes(_compiled_module);
 
   // debug() << "CompiledModule class_dict: " << class_dict << endl;
   // debug() << "CompiledModule class_dict vt: " << (word*) *((word*)class_dict) << endl;
 
-  long num_classes = ((word*)class_dict)[2];
+  number num_classes = mm_dictionary_size(class_dict);
   // debug() << "CompiledModule num_classes: " << num_classes << endl;
 
-  int num_entries = 3 +  num_classes; /* 3: vt + delegate + dict */
+  oop imodule = mm_module_new(num_classes, _core_image->get_module_instance());
 
-  oop imodule = (oop) malloc(sizeof(word) * num_entries);
+  oop fun_dict = mm_compiled_module_functions(_compiled_module);
+  number num_funs = mm_dictionary_size(fun_dict);
 
-  ((word**) imodule)[0] = imodule; //imodule[vt] = imodule
-  ((word**) imodule)[1] = _core_image->get_module_instance(); // imodule[delegate]
+  // debug() << "CompiledModule num_functions: " << num_funs << endl;
 
+  oop imod_dict = mm_dictionary_new(num_funs, _core_image);
 
-  // oop fun_dict = (oop) ((word*)_compiled_module)[6];
-  // long num_funs = ((word*)fun_dict)[2];
-
-  // oop dict = mm_dict_new(num_funs);
-  // ((word**) imodule)[2] = dict;
+  mm_module_set_dictionary(imodule, imod_dict);
 
   // //for each CompiledFunction:
   // // mod[dict] += Function
   // // mod[i] = Function
 
-  // for (int i = 0; i < num_funs; i++) {
-  //   char* name = mm_dict_name(fun_dict, i);
-  //   mm_dict_set_name(dict, i, name);
-
-  //   oop cfun = mm_dict_value(fun_dict, i);
-  //   oop fun = mm_function_from_cfunction(cfun);
-  //   mm_dict_set_value(dict, i, fun);
-  // }
+  for (int i = 0; i < num_funs; i++) {
+    oop str_name = mm_dictionary_entry_name(fun_dict, i);
+    char* str = mm_string_cstr(str_name);
+    oop cfun = mm_dictionary_entry_value(fun_dict, i);
+    oop fun = mm_function_from_cfunction(cfun, imodule, _core_image);
+    mm_dictionary_set(imod_dict, i, str_name, fun);
+  }
 
   //for each CompiledClass:
   // lookup parent (params, module, parent module recursively)
