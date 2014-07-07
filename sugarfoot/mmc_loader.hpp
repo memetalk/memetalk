@@ -4,18 +4,20 @@
 #include "defs.hpp"
 
 class CoreImage;
+class VM;
 
 class MMCImage {
   static word MAGIC_NUMBER;
   static word HEADER_SIZE;
 public:
-  MMCImage(CoreImage*, const char*);
-  void load();
-  oop instantiate_module();
+  MMCImage(VM*, CoreImage*, const char*);
+  oop load();
 private:
+  oop instantiate_module();
   void load_header();
   void fix_external_references();
 
+  VM* _vm;
   CoreImage* _core_image;
 
   const char* _filepath;

@@ -39,6 +39,13 @@ bool CoreImage::is_prime(const char* name) {
   return false;
 }
 
+bool CoreImage::has_class(const char* name) {
+  return (strcmp(name, "Behavior") != 0) &&
+    (strcmp(name, "Object_Behavior") != 0) &&
+    is_prime(name);
+}
+
+
 bool CoreImage::is_core_instance(const char* name) {
   return strcmp(name, "@core_module") == 0;
 }

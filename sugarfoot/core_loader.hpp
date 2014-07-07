@@ -15,6 +15,7 @@ public:
   CoreImage(const char*);
   void load();
   oop get_prime(const char*);
+  bool has_class(const char*);
   oop get_module_instance();
 private:
   void load_header();

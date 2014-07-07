@@ -4,14 +4,15 @@
 #include "mmc_loader.hpp"
 #include "core_loader.hpp"
 #include "mmobj.hpp"
+#include "vm.hpp"
 
 using namespace std;
 
 word MMCImage::HEADER_SIZE = 4 * WSIZE;
 word MMCImage::MAGIC_NUMBER = 0x420;
 
-MMCImage::MMCImage(CoreImage* core_image, const char* filepath)
-  : _core_image(core_image), _filepath(filepath) {
+MMCImage::MMCImage(VM* vm, CoreImage* core_image, const char* filepath)
+  : _vm(vm), _core_image(core_image), _filepath(filepath) {
 }
 
 void MMCImage::load_header() {
@@ -62,8 +63,8 @@ oop MMCImage::instantiate_module(/* module arguments */) {
 
   // debug() << "CompiledModule num_functions: " << num_funs << endl;
 
-  oop imod_dict = mm_dictionary_new(num_funs, _core_image);
-
+  oop imod_dict = mm_dictionary_new(num_funs + num_classes, _core_image); // num_classes -> getters
+  int imod_dict_idx = 0;
   mm_module_set_dictionary(imodule, imod_dict);
 
   // //for each CompiledFunction:
@@ -75,21 +76,52 @@ oop MMCImage::instantiate_module(/* module arguments */) {
     char* str = mm_string_cstr(str_name);
     oop cfun = mm_dictionary_entry_value(fun_dict, i);
     oop fun = mm_function_from_cfunction(cfun, imodule, _core_image);
-    mm_dictionary_set(imod_dict, i, str_name, fun);
+    mm_dictionary_set(imod_dict, imod_dict_idx++, _vm->new_symbol(str), fun);
   }
 
-  //for each CompiledClass:
-  // lookup parent (params, module, parent module recursively)
-  // create ClassBehavior
-  // mod[i] Class
-  // mod[dict] += accessor for Class
+  std::map<std::string, oop> mod_classes; //store each Class created here, so we do parent look up more easily
+
+  int imod_idx = 2; //vt, delegate
+
+  for (int i = 0; i < num_classes; i++) {
+    oop str_name = mm_dictionary_entry_name(class_dict, i);
+    char* cname = mm_string_cstr(str_name);
+    // debug() << "Class " << cname << endl;
+    oop cclass = mm_dictionary_entry_value(class_dict, i);
+
+    oop super_name = mm_compiled_class_super_name(cclass);
+    char* super_name_str = mm_string_cstr(super_name);
+    // debug() << "Super " << super_name_str << endl;
+
+    oop super_class = NULL;
+    if (mod_classes.find(super_name_str) != mod_classes.end()) {
+      super_class = mod_classes[super_name_str];
+    } //else if (super_name in module arguments) {
+    else if (_core_image->has_class(super_name_str)) {
+      super_class = _core_image->get_prime(super_name_str);
+    } else {
+      bail("Super class not found");
+    }
+
+    oop class_funs_dict = mm_cfuns_to_funs_dict(mm_compiled_class_own_methods(cclass), imodule, _core_image);
+    oop class_behavior = mm_class_behavior_new(super_class, class_funs_dict, _core_image);
+    oop klass = mm_class_new(class_behavior, super_class, class_funs_dict, cclass);
+
+    * (oop*) & imodule[imod_idx] = klass;
+    oop klass_getter = mm_new_class_getter(imodule, cclass, str_name, imod_idx, _core_image);
+
+    imod_idx++;
+
+    mm_dictionary_set(imod_dict, imod_dict_idx++, _vm->new_symbol(cname), klass_getter);
+  }
+  return imodule;
 }
 
-void MMCImage::load() {
+oop MMCImage::load() {
   _data = read_file(_filepath, &_data_size);
   load_header();
   relocate_addresses(_data, _data_size, HEADER_SIZE + _names_size + _ot_size + _es_size);
   fix_external_references();
   _compiled_module = (oop) * (word*)(& _data[HEADER_SIZE + _names_size]);
-  instantiate_module();
+  return instantiate_module();
 }

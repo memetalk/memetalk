@@ -12,15 +12,74 @@ from . import opcode
 from . import comp_vmemory
 
 
+class CompiledClass(object):
+    def __init__(self, cmod, name, super_name, fields):
+        self.cmod = cmod
+        self.name = name
+        self.super_name = super_name
+        self.fields = fields
+        self.instance_methods = {}
+        self.class_methods = {}
+
+    def label(self):
+        return self.cmod.label() + '_' + self.name + "_CompiledClass"
+
+    def new_ctor(self, name):
+        fn = CompiledFunction(self, name, ctor=True)
+        self.class_methods[name] = fn
+        return fn
+
+    def new_instance_method(self, name):
+        fn = CompiledFunction(self, name)
+        self.instance_methods[name] = fn
+        return fn
+
+    def new_class_method(self, name):
+        fn = CompiledFunction(self, name)
+        self.class_methods[name] = fn
+        return fn
+
+    def fill(self, vmem):
+        # vt: CompiledClass
+        # delegate: ...
+        # module: ...
+        # name: ...
+        # super_class_name: ...
+        # fields
+        # methods
+        # class_methods ...
+
+        delegate = vmem.append_object_instance()
+        oop_name = vmem.append_string_instance(self.name)
+        oop_super = vmem.append_string_instance(self.super_name)
+        oop_fields = vmem.append_list_of_strings(self.fields)
+        oop_methods = vmem.append_dict_emiting_entries(self.instance_methods)
+        oop_class_methods = vmem.append_dict_emiting_entries(self.class_methods)
+
+        oop = vmem.append_external_ref('CompiledClass', self.label()) # vt: CompiledClass
+        vmem.append_pointer_to(delegate)
+        vmem.append_label_ref(self.cmod.label())
+        vmem.append_pointer_to(oop_name)
+        vmem.append_pointer_to(oop_super)
+        vmem.append_pointer_to(oop_fields)
+        vmem.append_pointer_to(oop_methods)
+        vmem.append_pointer_to(oop_class_methods)
+        return oop
+
 class CompiledFunction(object):
 
-    def __init__(self, owner, name):
+    def __init__(self, owner, name, ctor=False):
         self.name = name
         self.literal_frame = []
         self.bytecodes = []
         self.is_prim = False
         self.prim_name = ''
         self.owner = owner
+        self.is_ctor = ctor
+
+    def set_primitive(self, prim_name):
+        self.prim_name = prim_name
+        self.is_prim = True
 
     def label(self):
         return self.owner.label() + '_' + self.name + "_CompiledFunction"
@@ -48,6 +107,10 @@ class CompiledFunction(object):
         # ...
         # literal_frame: <pointer to a block of memory where the literal table is>
 
+        # todo:
+        #   uses env / env size
+        #   num_locals
+
         oop_delegate = vmem.append_object_instance()
         oop_name = vmem.append_string_instance(self.name)
         oop_params = vmem.append_list_of_strings(self.params)
@@ -59,8 +122,13 @@ class CompiledFunction(object):
         vmem.append_pointer_to(oop_delegate)
         vmem.append_pointer_to(oop_name)
         vmem.append_pointer_to(oop_params)
+        vmem.append_int(int(self.is_ctor))
         vmem.append_int(int(self.is_prim))
         vmem.append_pointer_to(oop_prim_name)
+
+        vmem.append_int(0) # normal=0/getter=1/setter=2
+        vmem.append_int(0) # getter/setter field index
+
         vmem.append_label_ref(self.owner.label())
         vmem.append_int(len(self.literal_frame))
 
@@ -109,6 +177,11 @@ class CompiledModule(object):
         fn = CompiledFunction(self, name)
         self.functions[name] = fn
         return fn
+
+    def new_class(self, name, parent, fields):
+        klass = CompiledClass(self, name, parent, fields)
+        self.classes[name] = klass
+        return klass
 
     def fill(self, vmem):
         # first word on object table is a pointer to the CompiledModule
