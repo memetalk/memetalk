@@ -59,6 +59,7 @@ oop MMCImage::instantiate_module(/* module arguments */) {
   oop imodule = mm_module_new(num_classes, _core_image->get_module_instance());
 
   oop fun_dict = mm_compiled_module_functions(_compiled_module);
+
   number num_funs = mm_dictionary_size(fun_dict);
 
   // debug() << "CompiledModule num_functions: " << num_funs << endl;
@@ -72,7 +73,7 @@ oop MMCImage::instantiate_module(/* module arguments */) {
   // // mod[i] = Function
 
   for (int i = 0; i < num_funs; i++) {
-    oop str_name = mm_dictionary_entry_name(fun_dict, i);
+    oop str_name = mm_dictionary_entry_key(fun_dict, i);
     char* str = mm_string_cstr(str_name);
     oop cfun = mm_dictionary_entry_value(fun_dict, i);
     oop fun = mm_function_from_cfunction(cfun, imodule, _core_image);
@@ -81,10 +82,10 @@ oop MMCImage::instantiate_module(/* module arguments */) {
 
   std::map<std::string, oop> mod_classes; //store each Class created here, so we do parent look up more easily
 
-  int imod_idx = 2; //vt, delegate
+  int imod_idx = 3; //vt, delegate, dict
 
   for (int i = 0; i < num_classes; i++) {
-    oop str_name = mm_dictionary_entry_name(class_dict, i);
+    oop str_name = mm_dictionary_entry_key(class_dict, i);
     char* cname = mm_string_cstr(str_name);
     // debug() << "Class " << cname << endl;
     oop cclass = mm_dictionary_entry_value(class_dict, i);

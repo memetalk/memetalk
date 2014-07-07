@@ -15,7 +15,7 @@ class X
 end
 
 main: fun() {
-  return 42;
+  <primitive "main">
 }
 
 .endcode

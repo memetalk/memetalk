@@ -8,4 +8,7 @@
   typedef long number;
 #endif
 
+typedef char byte;
 typedef word* oop;
+
+#define DEFAULT_STACK_SIZE sizeof(word) * 1024 * 10

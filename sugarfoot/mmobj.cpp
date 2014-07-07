@@ -52,11 +52,31 @@ number mm_dictionary_size(oop dict) {
   return (number) ((word*)dict)[2];
 }
 
-void mm_module_set_dictionary(oop imodule, oop imod_dict) {
-  ((word**) imodule)[2] = imod_dict;
+#include "report.hpp"
+
+bool mm_dictionary_has_key(oop dict, oop key) {
+  number size = mm_dictionary_size(dict);
+  debug() << "Dict size " << size << std::endl;
+  for(int i = 0; i < size; i++) {
+    if (mm_dictionary_entry_key(dict, i) == key) {
+      return true;
+    }
+  }
+  return false;
 }
 
-oop mm_dictionary_entry_name(oop dict, int idx) {
+oop mm_dictionary_get(oop dict, oop key) {
+  number size = mm_dictionary_size(dict);
+  for(int i = 0; i < size; i++) {
+    if (mm_dictionary_entry_key(dict, i) == key) {
+      return mm_dictionary_entry_value(dict, i);
+    }
+  }
+  return NULL;
+}
+
+
+oop mm_dictionary_entry_key(oop dict, int idx) {
   //0: vt
   //1: delegate
   //2: size
@@ -73,6 +93,10 @@ oop mm_dictionary_entry_value(oop dict, int idx) {
 void mm_dictionary_set(oop dict, int idx, oop key, oop value) {
   * (oop*) &dict[3 + (idx * 2)] = key;
   * (oop*) &dict[3 + ((idx * 2)+1)] = value;
+}
+
+void mm_module_set_dictionary(oop imodule, oop imod_dict) {
+  ((word**) imodule)[2] = imod_dict;
 }
 
 char* mm_string_cstr(oop str) {
@@ -94,7 +118,21 @@ oop mm_function_from_cfunction(oop cfun, oop imod, CoreImage* core) {
 }
 
 oop mm_function_get_module(oop fun) {
-  return (oop) ((word*)fun)[3];
+  return (oop) ((oop*)fun)[3];
+}
+
+oop mm_function_get_cfun(oop fun) {
+  return (oop) ((oop*)fun)[2];
+}
+
+bool mm_function_is_prim(oop fun) {
+  oop cfun = mm_function_get_cfun(fun);
+  return (oop) ((oop*)cfun)[5];
+}
+
+oop mm_function_get_prim_name(oop fun) {
+  oop cfun = mm_function_get_cfun(fun);
+  return (oop) ((oop*)cfun)[6];
 }
 
 oop mm_compiled_class_super_name(oop cclass) {
@@ -109,7 +147,7 @@ oop mm_cfuns_to_funs_dict(oop cfuns_dict, oop imod, CoreImage* core) {
   number size = mm_dictionary_size(cfuns_dict);
   oop funs_dict = mm_dictionary_new(size, core);
   for (int i = 0; i < size; i++) {
-    oop str_name = mm_dictionary_entry_name(cfuns_dict, i);
+    oop str_name = mm_dictionary_entry_key(cfuns_dict, i);
     oop cfun = mm_dictionary_entry_value(cfuns_dict, i);
     oop fun = mm_function_from_cfunction(cfun, imod, core);
     mm_dictionary_set(funs_dict, i, str_name, fun);
@@ -165,4 +203,8 @@ oop mm_symbol_new(const char* str, CoreImage* core) {
     target[i] = str[i];
   }
   return symb;
+}
+
+oop mm_behavior_get_dict(oop behavior) {
+  return (oop) ((oop*)behavior)[2];
 }

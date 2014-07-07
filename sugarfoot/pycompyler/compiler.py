@@ -114,7 +114,7 @@ class CompiledFunction(object):
         oop_delegate = vmem.append_object_instance()
         oop_name = vmem.append_string_instance(self.name)
         oop_params = vmem.append_list_of_strings(self.params)
-        oop_prim_name = vmem.append_list_of_strings(self.prim_name)
+        oop_prim_name = vmem.append_string_instance(self.prim_name)
 
         has_lit_frame = self.fill_literal_frame(vmem)
 
