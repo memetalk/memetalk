@@ -32,6 +32,7 @@ public:
   char* mm_string_cstr(oop);
 
   oop mm_symbol_new(const char* str);
+  char* mm_symbol_cstr(oop);
 
   oop mm_function_from_cfunction(oop cfun, oop imod);
   bool mm_function_is_prim(oop fun);

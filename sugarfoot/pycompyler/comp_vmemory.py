@@ -5,6 +5,7 @@ class CompVirtualMemory(vmemory.VirtualMemory):
         super(CompVirtualMemory, self).__init__()
         self.ext_ref_table = []
         self.string_table = {}
+        self.symb_table = {}
 
     def object_table(self):
         return reduce(lambda x,y: x+y, [e() for e in self.cells])
@@ -27,6 +28,18 @@ class CompVirtualMemory(vmemory.VirtualMemory):
         oop = self.append_external_ref('Object')
         self.append_null()             # delegate
         return oop
+
+    def append_symbol_instance(self, string):
+        if string in self.symb_table:
+            return self.symb_table[string]
+        else:
+            delegate = self.append_object_instance()
+            oop = self.append_external_ref('Symbol')
+            self.append_pointer_to(delegate)        # delegate
+            self.append_int(len(string))
+            self.append_string(string)
+            self.symb_table[string] = oop
+            return oop
 
     def append_string_instance(self, string):
         if string in self.string_table:

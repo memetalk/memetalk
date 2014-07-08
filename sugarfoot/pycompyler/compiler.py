@@ -25,17 +25,17 @@ class CompiledClass(object):
         return self.cmod.label() + '_' + self.name + "_CompiledClass"
 
     def new_ctor(self, name):
-        fn = CompiledFunction(self, name, ctor=True)
+        fn = CompiledFunction(self.cmod, self, name, ctor=True)
         self.class_methods[name] = fn
         return fn
 
     def new_instance_method(self, name):
-        fn = CompiledFunction(self, name)
+        fn = CompiledFunction(self.cmod, self, name)
         self.instance_methods[name] = fn
         return fn
 
     def new_class_method(self, name):
-        fn = CompiledFunction(self, name)
+        fn = CompiledFunction(self.cmod, self, name)
         self.class_methods[name] = fn
         return fn
 
@@ -68,7 +68,8 @@ class CompiledClass(object):
 
 class CompiledFunction(object):
 
-    def __init__(self, owner, name, ctor=False):
+    def __init__(self, cmod, owner, name, ctor=False):
+        self.cmod = cmod
         self.name = name
         self.literal_frame = []
         self.bytecodes = []
@@ -99,16 +100,28 @@ class CompiledFunction(object):
         if len(self.literal_frame) == 0:
             return 0
 
-        vmem.label_current(self.literal_frame_label())
-
-        size = 0
+        # pre-append large objects
+        lit_frame = []
         for lit in self.literal_frame:
             if lit['tag'] == 'number':
-                vmem.append_int(bits.tag(lit['value']))
-                size += bits.WSIZE
+                lit_frame.append(('int', bits.tag(lit['value'])))
+            elif lit['tag'] == 'symbol':
+                oop = vmem.append_symbol_instance(lit['value'])
+                lit_frame.append(('oop', oop))
+
+        vmem.label_current(self.literal_frame_label())
+
+        # fill frame
+        for tp, val in lit_frame:
+            if tp == 'int':
+                vmem.append_int(val)
+            elif tp == 'oop':
+                vmem.append_pointer_to(val)
             else:
                 raise Exception('Todo')
-        return size
+
+        return len(lit_frame) * bits.WSIZE
+
 
     def fill_bytecodes(self, vmem):
         if len(self.bytecodes) == 0:
@@ -192,6 +205,10 @@ class CompiledFunction(object):
         entry = {"tag": "number", "value": num}
         return self.index_for_literal(entry)
 
+    def create_and_register_symbol_literal(self, string):
+        entry = {"tag": "symbol", "value": string}
+        return self.index_for_literal(entry)
+
     def index_and_popop_for(self, name):
         if name in self.params:
             return 'pop_param', self.params.index(name)
@@ -225,7 +242,7 @@ class CompiledFunction(object):
     def emit_return_this(self):
         self.bytecodes.append(opcode.bytecode_for("ret_this",0))
 
-    def emit_var_decl(self, name, expr):
+    def emit_var_decl(self, name):
         if self.has_env:
             idx = self.add_env(name)
             self.bytecodes.append(opcode.bytecode_for("pop_env",idx))
@@ -233,9 +250,30 @@ class CompiledFunction(object):
             opname, idx = self.index_and_popop_for(name)
             self.bytecodes.append(opcode.bytecode_for(opname,idx))
 
+    def emit_send_or_local_call(self, name, arity):
+        if name in self.local_vars:
+            raise Exception('todo')
+        elif name in self.params:
+            raise Exception('todo')
+        elif name in self.cmod.functions:
+            idx = self.create_and_register_symbol_literal(name)
+            self.bytecodes.append(opcode.bytecode_for('push_module', 0))
+            self.bytecodes.append(opcode.bytecode_for('push_literal', idx))
+            self.bytecodes.append(opcode.bytecode_for('send', arity))
+        elif name in self.cmod.params:
+            raise Exception('todo')
+        else:
+            raise Exception('todo')
+        # if name in module.params ...
+        # if name in module entries
+        # if name in self.params ...
+        # if name in self.local vars ...
+        # if name in self.env ...
+
 class CompiledModule(object):
     def __init__(self, name):
         self.name = name
+        self.params = []
         self.functions = {}
         self.classes = {}
 
@@ -246,7 +284,7 @@ class CompiledModule(object):
         return len(self.functions) + len(self.classes)
 
     def new_function(self, name):
-        fn = CompiledFunction(self, name)
+        fn = CompiledFunction(self, self, name)
         self.functions[name] = fn
         return fn
 

@@ -146,6 +146,25 @@ void Process::fetch_cycle(void* stop_at_fp) {
  // 579             print " ",self.stack
 }
 
+void Process::handle_send(number arity) {
+  oop selector = stack_pop();
+  oop recv = (oop) * _sp;
+
+  debug() << " SEND " << _mmobj->mm_symbol_cstr(selector) << endl;
+
+  oop behavior = (oop) * recv;
+
+  oop fun = lookup(behavior, selector);
+
+ // 755     foop = vm.lookup(behavior_oop, selector_oop)
+ // 756
+ // 757     if foop == None:
+ // 758         raise Exception("selector not found",vm.heap[selector_oop],vm.heap[recv])
+ // 759
+ // 760     vm.setup_exec_fun(foop, num_args, recv, False)
+ // 761
+}
+
 void Process::dispatch(int opcode, int arg) {
     debug() << " executing " << opcode << " " << arg << endl;
     switch(opcode) {
@@ -154,12 +173,17 @@ void Process::dispatch(int opcode, int arg) {
       case PUSH_LITERAL:
         stack_push(_mmobj->mm_function_get_literal_by_index(_cp, arg));
         break;
+      case PUSH_MODULE:
+        stack_push(_mp);
+        break;
       case RETURN_TOP:
         unload_fun_and_return(stack_pop());
         break;
       case POP_LOCAL:
         *(_fp + arg) = (word) stack_pop();
         break;
+      case SEND:
+        handle_send(arg);
       // case RETURN_THIS:
       //   break;
       default:
@@ -169,10 +193,13 @@ void Process::dispatch(int opcode, int arg) {
 }
 
 oop Process::lookup(oop vt, oop selector) {
+  // assert( *(oop*) selector == _core_image->get_prime("Symbol"));
+
   oop dict = _mmobj->mm_behavior_get_dict(vt);
   if (_mmobj->mm_dictionary_has_key(dict, selector)) {
     return _mmobj->mm_dictionary_get(dict, selector);
   }
+  debug() << "Lookup failed for " << _mmobj->mm_symbol_cstr(selector) << endl;
   return NULL;
 }
 

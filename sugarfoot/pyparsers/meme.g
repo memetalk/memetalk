@@ -236,7 +236,7 @@ call_expr =  !(self.input.position):begin call_expr:r args:p
           |  spaces !(self.input.position):begin token("super") args:p
             -> self.i.ast(begin, ['super-send', ['args',p]])
           |  spaces !(self.input.position):begin id:r args:p
-            -> self.i.ast(begin, ['send-or-call', r, ['args',p]])
+            -> self.i.ast(begin, ['send-or-local-call', r, ['args',p]])
           | prim_expr
 
 prim_expr = token("(") expr:e token(")") -> e

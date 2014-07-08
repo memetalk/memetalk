@@ -303,6 +303,16 @@ oop MMObj::mm_symbol_new(const char* str) {
   return symb;
 }
 
+char* MMObj::mm_symbol_cstr(oop sym) {
+  assert( *(oop*) sym == _core_image->get_prime("Symbol"));
+  //0: vt
+  //1: delegate
+  //2: size
+  //3: <str> ...
+  return (char*) &(sym[3]);
+}
+
+
 oop MMObj::mm_behavior_get_dict(oop behavior) {
   //assert( *(oop*) behavior == _core_image->get_prime("Behavior")); -- this can also be an imodule
   return (oop) ((oop*)behavior)[2];

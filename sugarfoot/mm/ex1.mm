@@ -14,10 +14,13 @@ class X
   }
 end
 
+f: fun(a,b) {
+  return a;
+//  return b;
+}
 
 main: fun() {
-  var x = 42;
-  return x;
+  return f(99, 98);
 }
 
 .endcode
