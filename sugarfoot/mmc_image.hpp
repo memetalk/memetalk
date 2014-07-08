@@ -5,6 +5,7 @@
 
 class CoreImage;
 class VM;
+class MMObj;
 
 class MMCImage {
   static word MAGIC_NUMBER;
@@ -18,6 +19,7 @@ private:
   void fix_external_references();
 
   VM* _vm;
+  MMObj* _mmobj;
   CoreImage* _core_image;
 
   const char* _filepath;

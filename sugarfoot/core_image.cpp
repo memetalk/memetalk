@@ -1,5 +1,5 @@
 #include <stdlib.h>
-#include "core_loader.hpp"
+#include "core_image.hpp"
 #include "report.hpp"
 #include "utils.hpp"
 

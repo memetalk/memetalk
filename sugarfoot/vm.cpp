@@ -4,14 +4,18 @@
 #include <iostream>
 #include <string>
 #include <string.h>
-#include "core_loader.hpp"
-#include "mmc_loader.hpp"
+#include "core_image.hpp"
+#include "mmc_image.hpp"
 #include "report.hpp"
 #include "defs.hpp"
 #include "mmobj.hpp"
 
 VM::VM(const char* core_img_filepath)
-  : _core_image(new CoreImage(core_img_filepath)) {
+  : _core_image(new CoreImage(core_img_filepath)), _mmobj(new MMObj(_core_image)) {
+}
+
+MMObj* VM::mmobj() {
+  return _mmobj;
 }
 
 int VM::start(char* filepath) {
@@ -29,7 +33,7 @@ int VM::start(char* filepath) {
 oop VM::new_symbol(const char* cstr) {
   std::string s = cstr;
   if (_symbols.find(s) == _symbols.end()) {
-    _symbols[s] = mm_symbol_new(cstr, _core_image);
+    _symbols[s] = _mmobj->mm_symbol_new(cstr);
   }
   return _symbols[s];
 }
@@ -71,7 +75,7 @@ void VM::load_and_exec_fun(oop fun, number num_args, oop recv) {
 
   _rp = recv;
   _dp = recv;
-  _mp = mm_function_get_module(fun);
+  _mp = _mmobj->mm_function_get_module(fun);
   _fp = _sp;
 
   exec_fun(fun);
@@ -79,12 +83,12 @@ void VM::load_and_exec_fun(oop fun, number num_args, oop recv) {
 
 
 void VM::exec_fun(oop fun) {
-  if (!mm_function_is_prim(fun)) {
+  if (!_mmobj->mm_function_is_prim(fun)) {
     bail("Only primitive functions supported");
   }
 
-  oop prim_name = mm_function_get_prim_name(fun);
-  std::string str_prim_name = mm_string_cstr(prim_name);
+  oop prim_name = _mmobj->mm_function_get_prim_name(fun);
+  std::string str_prim_name = _mmobj->mm_string_cstr(prim_name);
   debug() << "Executing fun " << str_prim_name << std::endl;
   execute_primitive(str_prim_name);
 }
@@ -105,9 +109,9 @@ void VM::fetch_cycle() {
 }
 
 oop VM::lookup(oop vt, oop selector) {
-  oop dict = mm_behavior_get_dict(vt);
-  if (mm_dictionary_has_key(dict, selector)) {
-    return mm_dictionary_get(dict, selector);
+  oop dict = _mmobj->mm_behavior_get_dict(vt);
+  if (_mmobj->mm_dictionary_has_key(dict, selector)) {
+    return _mmobj->mm_dictionary_get(dict, selector);
   }
   return NULL;
 }

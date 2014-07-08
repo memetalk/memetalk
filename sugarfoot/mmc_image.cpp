@@ -1,8 +1,8 @@
 #include "defs.hpp"
 #include "utils.hpp"
 #include "report.hpp"
-#include "mmc_loader.hpp"
-#include "core_loader.hpp"
+#include "mmc_image.hpp"
+#include "core_image.hpp"
 #include "mmobj.hpp"
 #include "vm.hpp"
 
@@ -12,7 +12,7 @@ word MMCImage::HEADER_SIZE = 4 * WSIZE;
 word MMCImage::MAGIC_NUMBER = 0x420;
 
 MMCImage::MMCImage(VM* vm, CoreImage* core_image, const char* filepath)
-  : _vm(vm), _core_image(core_image), _filepath(filepath) {
+  : _vm(vm), _mmobj(vm->mmobj()), _core_image(core_image), _filepath(filepath) {
 }
 
 void MMCImage::load_header() {
@@ -48,36 +48,36 @@ oop MMCImage::instantiate_module(/* module arguments */) {
   // debug() << "CompiledModule: " << cmod << endl;
   // debug() << "CompiledModule vt: " << (word*) *cmod << endl;
 
-  oop class_dict = mm_compiled_module_classes(_compiled_module);
+  oop class_dict = _mmobj->mm_compiled_module_classes(_compiled_module);
 
   // debug() << "CompiledModule class_dict: " << class_dict << endl;
   // debug() << "CompiledModule class_dict vt: " << (word*) *((word*)class_dict) << endl;
 
-  number num_classes = mm_dictionary_size(class_dict);
+  number num_classes = _mmobj->mm_dictionary_size(class_dict);
   // debug() << "CompiledModule num_classes: " << num_classes << endl;
 
-  oop imodule = mm_module_new(num_classes, _core_image->get_module_instance());
+  oop imodule = _mmobj->mm_module_new(num_classes, _core_image->get_module_instance());
 
-  oop fun_dict = mm_compiled_module_functions(_compiled_module);
+  oop fun_dict = _mmobj->mm_compiled_module_functions(_compiled_module);
 
-  number num_funs = mm_dictionary_size(fun_dict);
+  number num_funs = _mmobj->mm_dictionary_size(fun_dict);
 
   // debug() << "CompiledModule num_functions: " << num_funs << endl;
 
-  oop imod_dict = mm_dictionary_new(num_funs + num_classes, _core_image); // num_classes -> getters
+  oop imod_dict = _mmobj->mm_dictionary_new(num_funs + num_classes); // num_classes -> getters
   int imod_dict_idx = 0;
-  mm_module_set_dictionary(imodule, imod_dict);
+  _mmobj->mm_module_set_dictionary(imodule, imod_dict);
 
   // //for each CompiledFunction:
   // // mod[dict] += Function
   // // mod[i] = Function
 
   for (int i = 0; i < num_funs; i++) {
-    oop str_name = mm_dictionary_entry_key(fun_dict, i);
-    char* str = mm_string_cstr(str_name);
-    oop cfun = mm_dictionary_entry_value(fun_dict, i);
-    oop fun = mm_function_from_cfunction(cfun, imodule, _core_image);
-    mm_dictionary_set(imod_dict, imod_dict_idx++, _vm->new_symbol(str), fun);
+    oop str_name = _mmobj->mm_dictionary_entry_key(fun_dict, i);
+    char* str = _mmobj->mm_string_cstr(str_name);
+    oop cfun = _mmobj->mm_dictionary_entry_value(fun_dict, i);
+    oop fun = _mmobj->mm_function_from_cfunction(cfun, imodule);
+    _mmobj->mm_dictionary_set(imod_dict, imod_dict_idx++, _vm->new_symbol(str), fun);
   }
 
   std::map<std::string, oop> mod_classes; //store each Class created here, so we do parent look up more easily
@@ -85,13 +85,13 @@ oop MMCImage::instantiate_module(/* module arguments */) {
   int imod_idx = 3; //vt, delegate, dict
 
   for (int i = 0; i < num_classes; i++) {
-    oop str_name = mm_dictionary_entry_key(class_dict, i);
-    char* cname = mm_string_cstr(str_name);
+    oop str_name = _mmobj->mm_dictionary_entry_key(class_dict, i);
+    char* cname = _mmobj->mm_string_cstr(str_name);
     // debug() << "Class " << cname << endl;
-    oop cclass = mm_dictionary_entry_value(class_dict, i);
+    oop cclass = _mmobj->mm_dictionary_entry_value(class_dict, i);
 
-    oop super_name = mm_compiled_class_super_name(cclass);
-    char* super_name_str = mm_string_cstr(super_name);
+    oop super_name = _mmobj->mm_compiled_class_super_name(cclass);
+    char* super_name_str = _mmobj->mm_string_cstr(super_name);
     // debug() << "Super " << super_name_str << endl;
 
     oop super_class = NULL;
@@ -104,16 +104,16 @@ oop MMCImage::instantiate_module(/* module arguments */) {
       bail("Super class not found");
     }
 
-    oop class_funs_dict = mm_cfuns_to_funs_dict(mm_compiled_class_own_methods(cclass), imodule, _core_image);
-    oop class_behavior = mm_class_behavior_new(super_class, class_funs_dict, _core_image);
-    oop klass = mm_class_new(class_behavior, super_class, class_funs_dict, cclass);
+    oop class_funs_dict = _mmobj->mm_cfuns_to_funs_dict(_mmobj->mm_compiled_class_own_methods(cclass), imodule);
+    oop class_behavior = _mmobj->mm_class_behavior_new(super_class, class_funs_dict);
+    oop klass = _mmobj->mm_class_new(class_behavior, super_class, class_funs_dict, cclass);
 
     * (oop*) & imodule[imod_idx] = klass;
-    oop klass_getter = mm_new_class_getter(imodule, cclass, str_name, imod_idx, _core_image);
+    oop klass_getter = _mmobj->mm_new_class_getter(imodule, cclass, str_name, imod_idx);
 
     imod_idx++;
 
-    mm_dictionary_set(imod_dict, imod_dict_idx++, _vm->new_symbol(cname), klass_getter);
+    _mmobj->mm_dictionary_set(imod_dict, imod_dict_idx++, _vm->new_symbol(cname), klass_getter);
   }
   return imodule;
 }

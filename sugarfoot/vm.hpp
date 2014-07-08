@@ -7,11 +7,15 @@
 
 
 class CoreImage;
+class MMObj;
 
 class VM {
 
 public:
   VM(const char* core_img_filepath);
+
+  MMObj* mmobj();
+
   int start(char* filepath);
   oop new_symbol(const char*);
 
@@ -29,6 +33,7 @@ public:
 private:
 
   CoreImage* _core_image;
+  MMObj* _mmobj;
 
   std::map<std::string, oop> _symbols;
 
