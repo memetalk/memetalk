@@ -14,8 +14,10 @@ class X
   }
 end
 
+
 main: fun() {
-  return 42;
+  var x = 42;
+  return x;
 }
 
 .endcode

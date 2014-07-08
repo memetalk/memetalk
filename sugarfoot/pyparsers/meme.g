@@ -78,41 +78,44 @@ fields = spaces token("fields") token(":") idlist:xs token(";") -> ['fields', xs
 
 constructors = constructor*:c -> ["ctors", c]
 
-constructor = spaces
+constructor = spaces !(self.uses_literal(False))
               token("init") alpha_name:name token(":")
               spaces !(self.input.position):begin
               token("fun") fparams:p token("{")
                   top_fun_body:body !(self.input.position):end
                 token("}")
-             -> self.i.ast(begin,['ctor', name, ["params", p],
+             -> self.i.ast(begin,['ctor', name, ["params", p], self.uses_literal(),
                   ['body', self.i.ast(begin, body + [self.i.sint_ast(end,['return-this'])])]])
 
 top_level_fn = spaces alpha_name:name token(":") !(self.input.position):begin
                 expr:e token(";") -> self.i.ast(begin,['fun', name, ['params', []],
                                                               ['body', self.i.ast(begin, [e])]])
 
-top_level_fun = spaces alpha_name:name token(":")
+top_level_fun = spaces !(self.uses_literal(False))
+                alpha_name:name token(":")
                 spaces !(self.input.position):begin
                 token("fun")  fparams:p token("{")
                   top_fun_body:body !(self.input.position):end
                 token("}")
-                  -> self.i.ast(begin,['fun', name, ["params", p],
+                  -> self.i.ast(begin,['fun', name, ["params", p], self.uses_literal(),
                                               ['body', self.i.sint_ast(end, body + [self.i.sint_ast(end,['return-this'])])]])
 
-instance_method_decl = spaces token("instance_method") alpha_name:name token(":")
+instance_method_decl = spaces !(self.uses_literal(False))
+                       token("instance_method") alpha_name:name token(":")
                        spaces !(self.input.position):begin
                          token("fun") fparams:p token("{")
                            top_fun_body:body !(self.input.position):end
                          token("}")
-                      -> self.i.ast(begin,['fun', name, ["params", p],
+                      -> self.i.ast(begin,['fun', name, ["params", p], self.uses_literal(),
                          ['body', self.i.sint_ast(end, body + [self.i.sint_ast(end,['return-this'])])]])
 
-class_method_decl = spaces token("class_method") alpha_name:name token(":")
+class_method_decl = spaces !(self.uses_literal(False))
+                    token("class_method") alpha_name:name token(":")
                     spaces !(self.input.position):begin
                       token("fun") fparams:p token("{")
                         top_fun_body:body !(self.input.position):end
                       token("}")
-                    -> self.i.ast(begin,['fun', name, ["params", p],
+                    -> self.i.ast(begin,['fun', name, ["params", p], self.uses_literal(),
                        ['body', self.i.sint_ast(end, body + [self.i.sint_ast(end,['return-this'])])]])
 
 params = token("(") idlist:xs token(")") -> xs
@@ -262,7 +265,7 @@ literal = lit_number
         | spaces !(self.input.position):begin token("null")   -> self.i.ast(begin, ['literal', 'null'])
         | spaces !(self.input.position):begin token("true")   -> self.i.ast(begin,['literal', 'true'])
         | spaces !(self.input.position):begin token("false")  -> self.i.ast(begin, ['literal', 'false'])
-        | funliteral
+        | funliteral:x !(self.uses_literal(True)) -> x
 
 funliteral = spaces !(self.input.position):begin token("fun") params:p token("{")
                funliteral_body:body

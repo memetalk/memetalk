@@ -18,6 +18,12 @@ typedef oop (*prim_function_t) (Process*);
 
 #define DEFAULT_STACK_SIZE sizeof(word) * 1024 * 10
 
+// bytecodes
+
 #define PUSH_LITERAL 3
+#define PUSH_LOCAL 2
+
+#define POP_LOCAL 21
+
 #define RETURN_TOP 31
 #define RETURN_THIS 30

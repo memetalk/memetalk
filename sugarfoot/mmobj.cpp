@@ -178,26 +178,48 @@ oop MMObj::mm_function_get_literal_by_index(oop fun, int idx) {
   return mm_compiled_function_get_literal_by_index(cfun, idx);
 }
 
-number MMObj::mm_compiled_function_get_literal_frame_size(oop cfun) {
+number MMObj::mm_function_get_num_params(oop fun) {
+  assert( *(oop*) fun == _core_image->get_prime("Function"));
+  oop cfun = mm_function_get_cfun(fun);
+  return mm_compiled_function_get_num_params(cfun);
+}
+
+number MMObj::mm_function_get_num_locals(oop fun) {
+  assert( *(oop*) fun == _core_image->get_prime("Function"));
+  oop cfun = mm_function_get_cfun(fun);
+  return mm_compiled_function_get_num_locals(cfun);
+}
+
+number MMObj::mm_compiled_function_get_num_params(oop cfun) {
   assert( *(oop*) cfun == _core_image->get_prime("CompiledFunction"));
   return (number) ((oop*)cfun)[10];
 }
 
+number MMObj::mm_compiled_function_get_num_locals(oop cfun) {
+  assert( *(oop*) cfun == _core_image->get_prime("CompiledFunction"));
+  return (number) ((oop*)cfun)[11];
+}
+
+number MMObj::mm_compiled_function_get_literal_frame_size(oop cfun) {
+  assert( *(oop*) cfun == _core_image->get_prime("CompiledFunction"));
+  return (number) ((oop*)cfun)[12];
+}
+
 oop MMObj::mm_compiled_function_get_literal_by_index(oop cfun, int idx) {
   assert( *(oop*) cfun == _core_image->get_prime("CompiledFunction"));
-  oop* literal_frame =  ((oop**)cfun)[11];
+  oop* literal_frame =  ((oop**)cfun)[13];
   assert( (idx * WSIZE) < mm_compiled_function_get_literal_frame_size(cfun));
   return literal_frame[idx];
 }
 
-bytecode* MMObj::mm_compiled_function_get_code(oop cfun) {
-  assert( *(oop*) cfun == _core_image->get_prime("CompiledFunction"));
-  return (bytecode*) ((oop*)cfun)[13];
-}
-
 number MMObj::mm_compiled_function_get_code_size(oop cfun) {
   assert( *(oop*) cfun == _core_image->get_prime("CompiledFunction"));
-  return (number) ((oop*)cfun)[12];
+  return (number) ((oop*)cfun)[14];
+}
+
+bytecode* MMObj::mm_compiled_function_get_code(oop cfun) {
+  assert( *(oop*) cfun == _core_image->get_prime("CompiledFunction"));
+  return (bytecode*) ((oop*)cfun)[15];
 }
 
 oop MMObj::mm_compiled_class_super_name(oop cclass) {

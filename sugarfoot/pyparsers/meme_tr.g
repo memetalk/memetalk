@@ -6,7 +6,8 @@ definition :modobj =  function_definition(modobj)
                    |  class_definition(modobj)
 
 function_definition :modobj = ['fun' :name  !(modobj.new_function(name)):fnobj
-                                params:p   !(fnobj.set_parameters(p))
+                                params:p  !(fnobj.set_parameters(p))
+                                :uses_env !(fnobj.uses_env(uses_env))
                                 ['body' body(fnobj)]]
 
 class_definition :modobj =  ['class' [:name :parent]
@@ -18,17 +19,20 @@ class_definition :modobj =  ['class' [:name :parent]
 
 constructor :modobj = ['ctor' :name !(modobj.new_ctor(name)):fnobj
                         params:p !(fnobj.set_parameters(name))
+                        :uses_env !(fnobj.uses_env(uses_env))
                         ['body' body(fnobj)]]
 
 constructors :modobj = ['ctors' [constructor(modobj)*]]
                      | ['ctors' []]
 
 instance_method :klass = ['fun' :name  !(klass.new_instance_method(name)):fnobj
-                                params:p   !(fnobj.set_parameters(p))
+                                params:p !(fnobj.set_parameters(name))
+                                :uses_env !(fnobj.uses_env(uses_env))
                                 ['body' body(fnobj)]]
 
 class_method :klass = ['fun' :name  !(klass.new_class_method(name)):fnobj
-                                params:p   !(fnobj.set_parameters(p))
+                                params:p !(fnobj.set_parameters(name))
+                                :uses_env !(fnobj.uses_env(uses_env))
                                 ['body' body(fnobj)]]
 
 params = ['params' []]  -> []
@@ -39,8 +43,10 @@ body :fnobj = [(expr(fnobj)+):b] -> b
 
 exprs :fnobj = expr(fnobj)+
 
-expr :fnobj = ['return' expr(fnobj):x]   -> fnobj.emit_return(x)
-            | ['return-this']            -> fnobj.emit_return_this()
+expr :fnobj =  ['var-def' :id expr(fnobj):e]    -> fnobj.emit_var_decl(id, e)
+            | ['return' expr(fnobj)]          -> fnobj.emit_return_top()
+            | ['return-this']                   -> fnobj.emit_return_this()
             | atom(fnobj)
 
 atom :fnobj = ['literal-number' :x]   -> fnobj.emit_push_num_literal(x)
+              | ['id' :name]          -> fnobj.emit_push_var(name)

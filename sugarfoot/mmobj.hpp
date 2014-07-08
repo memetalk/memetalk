@@ -43,8 +43,13 @@ public:
   number mm_function_get_code_size(oop fun);
   oop mm_function_get_literal_by_index(oop fun, int idx);
 
+  number mm_function_get_num_locals(oop fun);
+  number mm_function_get_num_params(oop fun);
+
   bytecode* mm_compiled_function_get_code(oop cfun);
-  number mm_compiled_function_get_code_size(oop fun);
+  number mm_compiled_function_get_code_size(oop cfun);
+  number mm_compiled_function_get_num_locals(oop cfun);
+  number mm_compiled_function_get_num_params(oop cfun);
 
   oop mm_compiled_class_super_name(oop cclass);
   oop mm_compiled_class_own_methods(oop cclass);

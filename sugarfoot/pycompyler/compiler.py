@@ -10,7 +10,7 @@ import sys
 import struct
 from . import opcode
 from . import comp_vmemory
-
+from . import utils
 
 class CompiledClass(object):
     def __init__(self, cmod, name, super_name, fields):
@@ -76,6 +76,11 @@ class CompiledFunction(object):
         self.prim_name = ''
         self.owner = owner
         self.is_ctor = ctor
+        self.has_env = False
+        self.local_vars = []
+
+    def uses_env(self, val):
+        self.has_env = val
 
     def set_primitive(self, prim_name):
         self.prim_name = prim_name
@@ -124,6 +129,7 @@ class CompiledFunction(object):
         # flags: normal, setter, getter
         # getter/setter field index
         # owner
+        # num_locals / env_size
         # literal frame size
         # literal_frame ptr
         # bytecode size
@@ -153,6 +159,13 @@ class CompiledFunction(object):
         vmem.append_int(0) # getter/setter field index
 
         vmem.append_label_ref(self.owner.label())
+
+        vmem.append_int(len(self.params))
+        if self.has_env:
+            raise Exception('Todo')
+        else:
+            vmem.append_int(len(self.local_vars))
+
         vmem.append_int(lit_frame_size)
         if lit_frame_size > 0:
             vmem.append_label_ref(self.literal_frame_label())
@@ -179,15 +192,46 @@ class CompiledFunction(object):
         entry = {"tag": "number", "value": num}
         return self.index_for_literal(entry)
 
+    def index_and_popop_for(self, name):
+        if name in self.params:
+            return 'pop_param', self.params.index(name)
+        if name not in self.local_vars:
+            self.local_vars.append(name)
+        return 'pop_local', self.local_vars.index(name)
+
+    def index_and_pushop_for(self, name):
+        if name in self.params:
+            return 'push_param', self.params.index(name)
+        if name not in self.local_vars:
+            self.local_vars.append(name)
+        return 'push_local', self.local_vars.index(name)
+
     def emit_push_num_literal(self, num):
         idx = self.create_and_register_number_literal(num)
         self.bytecodes.append(opcode.bytecode_for("push_literal", idx))
 
-    def emit_return(self, ret):
+    def emit_push_var(self, name):
+        #TODO: module param, fun param
+        if self.has_env:
+            idx = self.local_vars.index(name)
+            self.bytecodes.append(opcode.bytecode_for("push_env",idx))
+        else:
+            opname, idx = self.index_and_pushop_for(name)
+            self.bytecodes.append(opcode.bytecode_for(opname,idx))
+
+    def emit_return_top(self):
         self.bytecodes.append(opcode.bytecode_for("ret_top",0))
 
     def emit_return_this(self):
         self.bytecodes.append(opcode.bytecode_for("ret_this",0))
+
+    def emit_var_decl(self, name, expr):
+        if self.has_env:
+            idx = self.add_env(name)
+            self.bytecodes.append(opcode.bytecode_for("pop_env",idx))
+        else:
+            opname, idx = self.index_and_popop_for(name)
+            self.bytecodes.append(opcode.bytecode_for(opname,idx))
 
 class CompiledModule(object):
     def __init__(self, name):
@@ -318,6 +362,7 @@ class Compiler(ASTBuilder):
 
     def do_parse(self, parser):
         try:
+            parser.uses_literal = utils.Flag() # pymeta uses eval() which disables assignment. This works around it
             return parser.apply("start")
         except Exception as err:
             if hasattr(err,'formatError'):

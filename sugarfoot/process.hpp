@@ -15,7 +15,7 @@ public:
 
   oop do_send(oop, oop, oop);
 
-  void load_fun(oop fun, number num_args, oop recv);
+  void load_fun(oop fun, oop recv);
   void unload_fun_and_return(oop retval);
 
   void stack_push(oop);
@@ -26,7 +26,7 @@ public:
   oop lookup(oop, oop);
   void fetch_cycle(void*);
 
-  void push_frame(number = 0);
+  void push_frame(number = 0, number = 0);
   void pop_frame();
 
 private:

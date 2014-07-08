@@ -32,22 +32,31 @@ void Process::init() {
   _ep = NULL; //env
 }
 
-void Process::push_frame(number num_args) {
-  word* fp = _fp;
-  fp = _sp;
-  stack_push(fp);
+void Process::push_frame(number num_args, number num_locals) {
+  stack_push(_fp);
   stack_push(_cp);
   stack_push(_ip);
   stack_push(_ep);
-  stack_push(num_args);
+  stack_push(num_args + num_locals);
   stack_push(_rp);
   stack_push(_dp);
+  for (int i = 0; i < num_args; i++) {
+    stack_push((oop)0);
+  }
+  _fp = _sp;
+  for (int i = 0; i < num_locals; i++) {
+    stack_push((oop)0);
+  }
 }
 
 void Process::pop_frame() {
+  number locals_size = (number) _fp[-2];
+
+  _sp -= locals_size; // purge local space
+
   _dp = stack_pop();
   _rp = stack_pop();
-  number num_args = (number) stack_pop();
+  /* num_args =  (number)*/ stack_pop();
   _ep = stack_pop();
   _ip = (bytecode*) stack_pop();
   _cp = stack_pop();
@@ -55,7 +64,6 @@ void Process::pop_frame() {
   if (_cp) {
     _mp = _mmobj->mm_function_get_module(_cp);
   }
-  // purge num_args space
 }
 
 void Process::unload_fun_and_return(oop retval) {
@@ -67,7 +75,7 @@ void Process::unload_fun_and_return(oop retval) {
   stack_push(retval);
 }
 
-void Process::load_fun(oop fun, number num_args, oop recv) {
+void Process::load_fun(oop fun, oop recv) {
   // loads frame if necessary and executes fun
 
   //if fun is accessor/mutator
@@ -81,7 +89,8 @@ void Process::load_fun(oop fun, number num_args, oop recv) {
     // setup registers
     // execute fun
 
-  push_frame(num_args);
+  push_frame(_mmobj->mm_function_get_num_params(fun),
+             _mmobj->mm_function_get_num_locals(fun));
 
   _rp = recv;
   _dp = recv;
@@ -105,7 +114,7 @@ oop Process::do_send(oop imod, oop recv, oop selector_sym) {
     bail("lookup failed"); //todo
   }
 
-  load_fun(fun, 0, recv);
+  load_fun(fun, recv);
   fetch_cycle((void*) -1);
   oop val = stack_pop();
   return val;
@@ -140,14 +149,22 @@ void Process::fetch_cycle(void* stop_at_fp) {
 void Process::dispatch(int opcode, int arg) {
     debug() << " executing " << opcode << " " << arg << endl;
     switch(opcode) {
+      case PUSH_LOCAL:
+        stack_push(*(_fp + arg));
       case PUSH_LITERAL:
         stack_push(_mmobj->mm_function_get_literal_by_index(_cp, arg));
         break;
       case RETURN_TOP:
         unload_fun_and_return(stack_pop());
         break;
-      case RETURN_THIS:
+      case POP_LOCAL:
+        *(_fp + arg) = (word) stack_pop();
         break;
+      // case RETURN_THIS:
+      //   break;
+      default:
+        debug() << "Unknown opcode " << opcode << endl;
+        bail("opcode not implemented");
     }
 }
 
