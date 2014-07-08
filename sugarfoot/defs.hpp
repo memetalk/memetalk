@@ -11,4 +11,7 @@
 typedef char byte;
 typedef word* oop;
 
+class Process;
+typedef oop (*prim_function_t) (Process*);
+
 #define DEFAULT_STACK_SIZE sizeof(word) * 1024 * 10

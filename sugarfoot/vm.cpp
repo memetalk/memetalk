@@ -1,14 +1,11 @@
 #include "vm.hpp"
-#include <stdlib.h>
-#include <fstream>
-#include <iostream>
-#include <string>
-#include <string.h>
+#include "process.hpp"
 #include "core_image.hpp"
 #include "mmc_image.hpp"
-#include "report.hpp"
 #include "defs.hpp"
 #include "mmobj.hpp"
+#include "prims.hpp"
+#include <assert.h>
 
 VM::VM(const char* core_img_filepath)
   : _core_image(new CoreImage(core_img_filepath)), _mmobj(new MMObj(_core_image)) {
@@ -24,8 +21,10 @@ int VM::start(char* filepath) {
   MMCImage* mmc = new MMCImage(this, _core_image, filepath);
   oop imod = mmc->load();
 
-  init_stack();
-  do_send(imod, imod, new_symbol("main"));
+  init_primitives(this);
+
+  _process = new Process(this);
+  _process->run(imod, imod, new_symbol("main"));
 
   return 0;
 }
@@ -38,105 +37,11 @@ oop VM::new_symbol(const char* cstr) {
   return _symbols[s];
 }
 
-void VM::init_stack() {
-  _bp = 0;
-  _sp = NULL; //stack
-  _ip = NULL; //instruction
-  _fp = NULL; //frame
-  _mp = NULL; //module
-  _cp = NULL; //context
-  _rp = NULL; //receiver
-  _dp = NULL; //receiver data
-  _ep = NULL; //env
-  _stack = (word*) malloc(DEFAULT_STACK_SIZE);
+void VM::register_primitive(std::string name, prim_function_t fun) {
+  _primitives[name] = fun;
 }
 
-void VM::load_and_exec_fun(oop fun, number num_args, oop recv) {
-  // loads frame if necessary and executes fun
-
-  //if fun is accessor/mutator
-    //if fun is getter:
-    //  ... return
-    //elif fun is setter:
-    // ... return
-    //elif: internal error: should be either getter or setter
-  // else
-    // setup frame
-    // setup registers
-    // execute fun
-
-  stack_push(_fp);
-  stack_push(_cp);
-  stack_push(_ip);
-  stack_push(_ep);
-  stack_push(num_args);
-  stack_push(_rp);
-  stack_push(_dp);
-
-  _rp = recv;
-  _dp = recv;
-  _mp = _mmobj->mm_function_get_module(fun);
-  _fp = _sp;
-
-  exec_fun(fun);
-}
-
-
-void VM::exec_fun(oop fun) {
-  if (!_mmobj->mm_function_is_prim(fun)) {
-    bail("Only primitive functions supported");
-  }
-
-  oop prim_name = _mmobj->mm_function_get_prim_name(fun);
-  std::string str_prim_name = _mmobj->mm_string_cstr(prim_name);
-  debug() << "Executing fun " << str_prim_name << std::endl;
-  execute_primitive(str_prim_name);
-}
-
-oop VM::do_send(oop imod, oop recv, oop selector_sym) {
-  oop vt =  * (oop*) recv;
-  oop fun = lookup(vt, selector_sym);
-  if (!fun) {
-    bail("lookup failed"); //todo
-  }
-
-  load_and_exec_fun(fun, 0, recv);
-  fetch_cycle();
-  return stack_pop();
-}
-
-void VM::fetch_cycle() {
-}
-
-oop VM::lookup(oop vt, oop selector) {
-  oop dict = _mmobj->mm_behavior_get_dict(vt);
-  if (_mmobj->mm_dictionary_has_key(dict, selector)) {
-    return _mmobj->mm_dictionary_get(dict, selector);
-  }
-  return NULL;
-}
-
-oop VM::stack_pop() {
-  oop val = (oop) _stack[--_bp];
-  return val;
-}
-
-void VM::stack_push(oop data) {
-  _stack[_bp++] = (word) data;
-}
-
-void VM::stack_push(word data) {
-  _stack[_bp++] = data;
-}
-
-void VM::execute_primitive(const std::string&) {
-}
-
-//
-
-int main(int argc, char** argv) {
-  if (argc != 2) {
-    bail("usage: sf-vm <file.mmc>");
-  }
-  return VM("core.img").start(argv[1]);
+prim_function_t VM::get_primitive(std::string name) {
+  assert(_primitives.find(name) != _primitives.end());
+  return _primitives[name];
 }

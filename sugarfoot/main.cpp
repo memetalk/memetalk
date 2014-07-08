@@ -1,16 +1,9 @@
-#include <iostream>
-#include <stdlib.h>
 #include "vm.hpp"
-
+#include "report.hpp"
 
 int main(int argc, char** argv) {
-  if (argc < 2) {
-    std::cout << "Usage:\n";
-    std::cout << "       sf-vm    <filename>.mmc\n";
-    std::cout << "       sf-vm    <filename>.mmi\n";
-    exit(0);
+  if (argc != 2) {
+    bail("usage: sf-vm <file.mmc>");
   }
-
-  VM* vm = new VM;
-  return vm->start(argv[1]);
+  return VM("core.img").start(argv[1]);
 }
