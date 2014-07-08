@@ -40,3 +40,11 @@ void relocate_addresses(char* data, int data_size, int start_reloc_table) {
     * (word*) &(data[target]) = (word) (base + local_ptr);
   }
 }
+
+int decode_opcode(bytecode code) {
+  return (0xFF000000 & code) >> 24;
+}
+
+int decode_args(bytecode code) {
+  return 0xFFFFFF & code;
+}

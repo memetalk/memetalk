@@ -159,6 +159,47 @@ oop MMObj::mm_function_get_prim_name(oop fun) {
   return (oop) ((oop*)cfun)[6];
 }
 
+
+bytecode* MMObj::mm_function_get_code(oop fun) {
+  assert( *(oop*) fun == _core_image->get_prime("Function"));
+  oop cfun = mm_function_get_cfun(fun);
+  return mm_compiled_function_get_code(cfun);
+}
+
+number MMObj::mm_function_get_code_size(oop fun) {
+  assert( *(oop*) fun == _core_image->get_prime("Function"));
+  oop cfun = mm_function_get_cfun(fun);
+  return mm_compiled_function_get_code_size(cfun);
+}
+
+oop MMObj::mm_function_get_literal_by_index(oop fun, int idx) {
+  assert( *(oop*) fun == _core_image->get_prime("Function"));
+  oop cfun = mm_function_get_cfun(fun);
+  return mm_compiled_function_get_literal_by_index(cfun, idx);
+}
+
+number MMObj::mm_compiled_function_get_literal_frame_size(oop cfun) {
+  assert( *(oop*) cfun == _core_image->get_prime("CompiledFunction"));
+  return (number) ((oop*)cfun)[10];
+}
+
+oop MMObj::mm_compiled_function_get_literal_by_index(oop cfun, int idx) {
+  assert( *(oop*) cfun == _core_image->get_prime("CompiledFunction"));
+  oop* literal_frame =  ((oop**)cfun)[11];
+  assert( (idx * WSIZE) < mm_compiled_function_get_literal_frame_size(cfun));
+  return literal_frame[idx];
+}
+
+bytecode* MMObj::mm_compiled_function_get_code(oop cfun) {
+  assert( *(oop*) cfun == _core_image->get_prime("CompiledFunction"));
+  return (bytecode*) ((oop*)cfun)[13];
+}
+
+number MMObj::mm_compiled_function_get_code_size(oop cfun) {
+  assert( *(oop*) cfun == _core_image->get_prime("CompiledFunction"));
+  return (number) ((oop*)cfun)[12];
+}
+
 oop MMObj::mm_compiled_class_super_name(oop cclass) {
   assert( *(oop*) cclass == _core_image->get_prime("CompiledClass"));
   return (oop) ((word*)cclass)[4];
@@ -243,4 +284,21 @@ oop MMObj::mm_symbol_new(const char* str) {
 oop MMObj::mm_behavior_get_dict(oop behavior) {
   //assert( *(oop*) behavior == _core_image->get_prime("Behavior")); -- this can also be an imodule
   return (oop) ((oop*)behavior)[2];
+}
+
+
+bool MMObj::mm_is_small_int(oop num) {
+#if WSIZE == 8
+  return (bool) ((word) num & 0x8000000000000000);
+#else
+  return (bool) ((word) num & 0x80000000);
+#endif
+}
+
+number MMObj::mm_untag_small_int(oop num) {
+#if WSIZE == 8
+  return ((word) num & 0x7FFFFFFFFFFFFFFF);
+#else
+  return ((word) num & 0x7FFFFFFF);
+#endif
 }

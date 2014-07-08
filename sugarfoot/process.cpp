@@ -1,36 +1,73 @@
+#include <stdlib.h>
+#include <string>
+#include <stdlib.h>
 #include "process.hpp"
 #include "defs.hpp"
 #include "vm.hpp"
-#include <stdlib.h>
-#include <string>
 #include "core_image.hpp"
 #include "mmc_image.hpp"
 #include "report.hpp"
 #include "mmobj.hpp"
+#include "utils.hpp"
 
 Process::Process(VM* vm)
   : _vm(vm), _mmobj(vm->mmobj()) {
 }
 
-void Process::run(oop imod, oop recv, oop selector_sym) {
+oop Process::run(oop imod, oop recv, oop selector_sym) {
   init();
-  do_send(imod, recv, selector_sym);
+  return do_send(imod, recv, selector_sym);
 }
 
 void Process::init() {
-  _bp = 0;
-  _sp = NULL; //stack
+  _stack = (word*) malloc(DEFAULT_STACK_SIZE);
+
+  _sp = _stack -1; //stack
+  _fp = _stack; //frame
   _ip = NULL; //instruction
-  _fp = NULL; //frame
   _mp = NULL; //module
   _cp = NULL; //context
   _rp = NULL; //receiver
   _dp = NULL; //receiver data
   _ep = NULL; //env
-  _stack = (word*) malloc(DEFAULT_STACK_SIZE);
 }
 
-void Process::load_and_exec_fun(oop fun, number num_args, oop recv) {
+void Process::push_frame(number num_args) {
+  word* fp = _fp;
+  fp = _sp;
+  stack_push(fp);
+  stack_push(_cp);
+  stack_push(_ip);
+  stack_push(_ep);
+  stack_push(num_args);
+  stack_push(_rp);
+  stack_push(_dp);
+}
+
+void Process::pop_frame() {
+  _dp = stack_pop();
+  _rp = stack_pop();
+  number num_args = (number) stack_pop();
+  _ep = stack_pop();
+  _ip = (bytecode*) stack_pop();
+  _cp = stack_pop();
+  _fp = stack_pop();
+  if (_cp) {
+    _mp = _mmobj->mm_function_get_module(_cp);
+  }
+  // purge num_args space
+}
+
+void Process::unload_fun_and_return(oop retval) {
+ // 664         # clean up locals
+ // 665         if len(self.stack) == 0:
+ // 666             return retval
+  // debug() << "unload and return " << retval << endl;
+  pop_frame();
+  stack_push(retval);
+}
+
+void Process::load_fun(oop fun, number num_args, oop recv) {
   // loads frame if necessary and executes fun
 
   //if fun is accessor/mutator
@@ -44,31 +81,21 @@ void Process::load_and_exec_fun(oop fun, number num_args, oop recv) {
     // setup registers
     // execute fun
 
-  stack_push(_fp);
-  stack_push(_cp);
-  stack_push(_ip);
-  stack_push(_ep);
-  stack_push(num_args);
-  stack_push(_rp);
-  stack_push(_dp);
+  push_frame(num_args);
 
   _rp = recv;
   _dp = recv;
-  _mp = _mmobj->mm_function_get_module(fun);
-  _fp = _sp;
+  _cp = fun;
+  _mp = _mmobj->mm_function_get_module(_cp);
 
-  exec_fun(fun);
-}
-
-
-void Process::exec_fun(oop fun) {
-  if (!_mmobj->mm_function_is_prim(fun)) {
-    bail("Only primitive functions supported");
+  if (_mmobj->mm_function_is_prim(fun)) {
+    oop prim_name = _mmobj->mm_function_get_prim_name(fun);
+    std::string str_prim_name = _mmobj->mm_string_cstr(prim_name);
+    execute_primitive(str_prim_name);
+  } else {
+    _ip = _mmobj->mm_function_get_code(fun);
+    _code_size = _mmobj->mm_function_get_code_size(fun);
   }
-
-  oop prim_name = _mmobj->mm_function_get_prim_name(fun);
-  std::string str_prim_name = _mmobj->mm_string_cstr(prim_name);
-  execute_primitive(str_prim_name);
 }
 
 oop Process::do_send(oop imod, oop recv, oop selector_sym) {
@@ -78,12 +105,50 @@ oop Process::do_send(oop imod, oop recv, oop selector_sym) {
     bail("lookup failed"); //todo
   }
 
-  load_and_exec_fun(fun, 0, recv);
-  fetch_cycle();
-  return stack_pop();
+  load_fun(fun, 0, recv);
+  fetch_cycle((void*) -1);
+  oop val = stack_pop();
+  return val;
 }
 
-void Process::fetch_cycle() {
+void Process::fetch_cycle(void* stop_at_fp) {
+  bytecode* start_ip = _ip;
+  while (_ip) { // /*_fp > stop_at_fp &&*/ ((_ip - start_ip) * sizeof(bytecode))  < _code_size) {
+    // debug() << "fp " << _fp << " stop " <<  stop_at_fp << " ip-start " <<  (_ip - start_ip)  << " codesize " <<  _code_size <<
+    //   "ip " << _ip << std::endl;
+    bytecode code = *_ip;
+    int opcode = decode_opcode(code);
+    int arg = decode_args(code);
+    dispatch(opcode, arg);
+
+    if (_ip != 0) { // the bottommost frame has ip = 0
+      _ip++;
+    }
+  }
+  // debug() << "fetch_cycle end\n";
+ // 571         while self.fp > stop_at_fp and self.ip < len(self.code):
+ // 572             pack32 = self.code[self.ip]
+ // 573             op,arg = opcode.decode_op(pack32)
+ // 574             handler = opcode.handler(op)
+ // 575             self.ip = self.ip + 1
+ // 576             print handler,arg
+ // 577             globals()[handler](self,arg)
+ // 578             self.print_frames()
+ // 579             print " ",self.stack
+}
+
+void Process::dispatch(int opcode, int arg) {
+    debug() << " executing " << opcode << " " << arg << endl;
+    switch(opcode) {
+      case PUSH_LITERAL:
+        stack_push(_mmobj->mm_function_get_literal_by_index(_cp, arg));
+        break;
+      case RETURN_TOP:
+        unload_fun_and_return(stack_pop());
+        break;
+      case RETURN_THIS:
+        break;
+    }
 }
 
 oop Process::lookup(oop vt, oop selector) {
@@ -95,16 +160,24 @@ oop Process::lookup(oop vt, oop selector) {
 }
 
 oop Process::stack_pop() {
-  oop val = (oop) _stack[--_bp];
+  oop val = * (oop*)_sp;
+  _sp--;
   return val;
 }
 
 void Process::stack_push(oop data) {
-  _stack[_bp++] = (word) data;
+  _sp++;
+  * (word*) _sp = (word) data;
 }
 
 void Process::stack_push(word data) {
-  _stack[_bp++] = data;
+  _sp++;
+  * (word*) _sp = data;
+}
+
+void Process::stack_push(bytecode* data) {
+  _sp++;
+  * (word*) _sp = (word) data;
 }
 
 

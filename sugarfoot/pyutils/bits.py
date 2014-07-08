@@ -60,6 +60,9 @@ def pack_word(num):
     else:
         raise Exception('Not implemented')
 
+def pack32(num):
+    return struct.pack('I', num)
+
 def pack_byte(num):
     return struct.pack('B', num)
 
@@ -68,6 +71,14 @@ def untag(num):
         return num & 0x7FFFFFFF
     elif WSIZE == 8:
         return num & 0x7FFFFFFFFFFFFFFF
+    else:
+        raise Exception('Not implemented')
+
+def tag(num):
+    if WSIZE == 4:
+        return num | 0x80000000
+    elif WSIZE == 8:
+        return num | 0x8000000000000000
     else:
         raise Exception('Not implemented')
 
@@ -81,9 +92,9 @@ def bytelist(num):
 
 def bytelist_tag(num):
     if WSIZE == 4:
-        return map(ord, struct.pack('I', num | 0x80000000))
+        return map(ord, struct.pack('I', tag(num)))
     elif WSIZE == 8:
-        return map(ord, struct.pack('Q', num | 0x8000000000000000))
+        return map(ord, struct.pack('Q', tag(num)))
     else:
         raise Exception('Not implemented')
 

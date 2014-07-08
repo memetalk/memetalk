@@ -5,6 +5,7 @@
 #include "defs.hpp"
 #include "mmobj.hpp"
 #include "prims.hpp"
+#include "report.hpp"
 #include <assert.h>
 
 VM::VM(const char* core_img_filepath)
@@ -24,8 +25,12 @@ int VM::start(char* filepath) {
   init_primitives(this);
 
   _process = new Process(this);
-  _process->run(imod, imod, new_symbol("main"));
-
+  oop retval = _process->run(imod, imod, new_symbol("main"));
+  if (_mmobj->mm_is_small_int(retval)) {
+    debug() << "RETVAL " << _mmobj->mm_untag_small_int(retval) << endl;
+  } else {
+    debug() << "RETVAL " << retval << endl;
+  }
   return 0;
 }
 

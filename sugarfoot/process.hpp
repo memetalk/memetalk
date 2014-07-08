@@ -11,36 +11,45 @@ class Process {
 public:
   Process(VM*);
 
-  void run(oop, oop, oop);
+  oop run(oop, oop, oop);
 
   oop do_send(oop, oop, oop);
-  void load_and_exec_fun(oop fun, number num_args, oop recv);
-  void exec_fun(oop fun);
+
+  void load_fun(oop fun, number num_args, oop recv);
+  void unload_fun_and_return(oop retval);
+
   void stack_push(oop);
   void stack_push(word);
+  void stack_push(bytecode*);
   oop stack_pop();
   void execute_primitive(std::string);
   oop lookup(oop, oop);
-  void fetch_cycle();
+  void fetch_cycle(void*);
+
+  void push_frame(number = 0);
+  void pop_frame();
 
 private:
   void init();
+  void dispatch(int, int);
 
   VM* _vm;
   MMObj* _mmobj;
 
-  //registers
-  number _bp;
-  oop _sp;
-  oop _ip;
-  oop _fp;
   oop _mp;
   oop _cp;
   oop _rp;
   oop _dp;
   oop _ep;
 
+  word* _fp;
+  word* _sp;
+
+  bytecode* _ip;
+
   word* _stack;
+
+  number _code_size;
 };
 
 #endif

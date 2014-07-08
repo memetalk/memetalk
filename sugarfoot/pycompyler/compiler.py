@@ -87,25 +87,47 @@ class CompiledFunction(object):
     def literal_frame_label(self):
         return self.label() + '_literal_frame'
 
+    def bytecode_label(self):
+        return self.label() + '_bytecodes'
+
     def fill_literal_frame(self, vmem):
         if len(self.literal_frame) == 0:
-            return False
+            return 0
 
         vmem.label_current(self.literal_frame_label())
 
+        size = 0
         for lit in self.literal_frame:
             if lit['tag'] == 'number':
-                vmem.append_int(lit['value'])
+                vmem.append_int(bits.tag(lit['value']))
+                size += bits.WSIZE
             else:
                 raise Exception('Todo')
-        return True
+        return size
+
+    def fill_bytecodes(self, vmem):
+        if len(self.bytecodes) == 0:
+            return 0
+
+        vmem.label_current(self.bytecode_label())
+        vmem.append_string(''.join([bits.pack32(w) for w in self.bytecodes]))
+        return len(self.bytecodes) * opcode.WORD_SIZE
 
     def fill(self, vmem):
         # vt: CompiledFunction
-        # delegate: ...
-        # name: ...
-        # ...
-        # literal_frame: <pointer to a block of memory where the literal table is>
+        # delegate
+        # name
+        # params
+        # is_ctor
+        # is_prim
+        # prim_name
+        # flags: normal, setter, getter
+        # getter/setter field index
+        # owner
+        # literal frame size
+        # literal_frame ptr
+        # bytecode size
+        # bytecode ptr
 
         # todo:
         #   uses env / env size
@@ -116,7 +138,8 @@ class CompiledFunction(object):
         oop_params = vmem.append_list_of_strings(self.params)
         oop_prim_name = vmem.append_string_instance(self.prim_name)
 
-        has_lit_frame = self.fill_literal_frame(vmem)
+        lit_frame_size = self.fill_literal_frame(vmem)
+        bytecode_size = self.fill_bytecodes(vmem)
 
         oop = vmem.append_external_ref('CompiledFunction', self.label()) # CompiledFunction vt
         vmem.append_pointer_to(oop_delegate)
@@ -130,10 +153,15 @@ class CompiledFunction(object):
         vmem.append_int(0) # getter/setter field index
 
         vmem.append_label_ref(self.owner.label())
-        vmem.append_int(len(self.literal_frame))
-
-        if has_lit_frame:
+        vmem.append_int(lit_frame_size)
+        if lit_frame_size > 0:
             vmem.append_label_ref(self.literal_frame_label())
+        else:
+            vmem.append_null()
+
+        vmem.append_int(bytecode_size)
+        if bytecode_size > 0:
+            vmem.append_label_ref(self.bytecode_label())
         else:
             vmem.append_null()
 

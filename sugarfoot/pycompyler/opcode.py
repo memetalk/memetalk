@@ -13,6 +13,8 @@
 # 5 jumps: 3
 # 6 exits: 1
 
+WORD_SIZE = 4
+
 opcode_mapping = {
     # push
     "push_param": 1,
