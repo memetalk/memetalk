@@ -18,7 +18,7 @@ class_definition :modobj =  ['class' [:name :parent]
                               [class_method(klass)*]]
 
 constructor :modobj = ['ctor' :name !(modobj.new_ctor(name)):fnobj
-                        params:p !(fnobj.set_parameters(name))
+                        params:p !(fnobj.set_parameters(p))
                         :uses_env !(fnobj.uses_env(uses_env))
                         ['body' body(fnobj)]]
 
@@ -26,12 +26,12 @@ constructors :modobj = ['ctors' [constructor(modobj)*]]
                      | ['ctors' []]
 
 instance_method :klass = ['fun' :name  !(klass.new_instance_method(name)):fnobj
-                                params:p !(fnobj.set_parameters(name))
+                                params:p !(fnobj.set_parameters(p))
                                 :uses_env !(fnobj.uses_env(uses_env))
                                 ['body' body(fnobj)]]
 
 class_method :klass = ['fun' :name  !(klass.new_class_method(name)):fnobj
-                                params:p !(fnobj.set_parameters(name))
+                                params:p !(fnobj.set_parameters(p))
                                 :uses_env !(fnobj.uses_env(uses_env))
                                 ['body' body(fnobj)]]
 
@@ -47,12 +47,13 @@ expr :fnobj =  ['var-def' :id expr(fnobj)]     -> fnobj.emit_var_decl(id)
             | ['return' expr(fnobj)]             -> fnobj.emit_return_top()
             | ['return-this']                    -> fnobj.emit_return_this()
             | ['send-or-local-call' :name args(fnobj):arity]   -> fnobj.emit_send_or_local_call(name, arity)
+            | ['send' expr(fnobj) :s args(fnobj):arity]      -> fnobj.emit_send(s, arity)
             | atom(fnobj)
 
 atom :fnobj = ['literal-number' :x]   -> fnobj.emit_push_num_literal(x)
               | ['id' :name]          -> fnobj.emit_push_var(name)
 
 args :fnobj =  ['args' arglist(fnobj):arity] -> arity
-            |  ['args' []] -> [] -> 0
+            |  ['args' []] -> 0
 
 arglist :fnobj = [expr(fnobj)+]:x -> len(x)

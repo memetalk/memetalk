@@ -194,6 +194,12 @@ class CompiledFunction(object):
     def set_parameters(self, params):
         self.params = params
 
+    def identifier_is_in_current_block(self, name):
+        return name in self.local_vars or name in self.params
+
+    def identifier_is_module_scoped(self, name):
+        return name in self.cmod.classes or name in self.cmod.functions or name in self.cmod.params
+
     def index_for_literal(self, entry):
         if entry not in self.literal_frame:
             self.literal_frame.append(entry)
@@ -210,29 +216,43 @@ class CompiledFunction(object):
     def index_and_popop_for(self, name):
         if name in self.params:
             return 'pop_param', self.params.index(name)
-        if name not in self.local_vars:
-            self.local_vars.append(name)
-        return 'pop_local', self.local_vars.index(name)
+        if name in self.local_vars:
+            return 'pop_local', self.local_vars.index(name)
+        else:
+            raise Exception('todo')
 
     def index_and_pushop_for(self, name):
         if name in self.params:
             return 'push_param', self.params.index(name)
-        if name not in self.local_vars:
-            self.local_vars.append(name)
-        return 'push_local', self.local_vars.index(name)
+        if name in self.local_vars:
+            return 'push_local', self.local_vars.index(name)
+        if name in self.cmod.classes:
+            raise Exception('todo')
 
     def emit_push_num_literal(self, num):
         idx = self.create_and_register_number_literal(num)
         self.bytecodes.append(opcode.bytecode_for("push_literal", idx))
 
     def emit_push_var(self, name):
-        #TODO: module param, fun param
+        # `name` may be:
+        #   -a local variable (env or stack allocated)      -> push_local / push_env
+        #   -a function parameter (env or stack allocated)  -> push_param / push_env
+        #   -a module parameter                             -> push_module, push_literal, send
+        #   -a module entry (function or class)             -> push_module, push_literal, send
+
         if self.has_env:
             idx = self.local_vars.index(name)
             self.bytecodes.append(opcode.bytecode_for("push_env",idx))
-        else:
+        elif self.identifier_is_in_current_block(name):
             opname, idx = self.index_and_pushop_for(name)
             self.bytecodes.append(opcode.bytecode_for(opname,idx))
+        elif self.identifier_is_module_scoped(name):
+            idx = self.create_and_register_symbol_literal(name)
+            self.bytecodes.append(opcode.bytecode_for("push_module", 0))
+            self.bytecodes.append(opcode.bytecode_for("push_literal", idx))
+            self.bytecodes.append(opcode.bytecode_for('send', 0))
+        else:
+            raise Exception('push_var: undeclared ' + name)
 
     def emit_return_top(self):
         self.bytecodes.append(opcode.bytecode_for("ret_top",0))
@@ -245,6 +265,7 @@ class CompiledFunction(object):
             idx = self.add_env(name)
             self.bytecodes.append(opcode.bytecode_for("pop_env",idx))
         else:
+            self.local_vars.append(name)
             opname, idx = self.index_and_popop_for(name)
             self.bytecodes.append(opcode.bytecode_for(opname,idx))
 
@@ -267,6 +288,11 @@ class CompiledFunction(object):
         # if name in self.params ...
         # if name in self.local vars ...
         # if name in self.env ...
+
+    def emit_send(self, selector, arity):
+        idx = self.create_and_register_symbol_literal(selector)
+        self.bytecodes.append(opcode.bytecode_for('push_literal', idx))
+        self.bytecodes.append(opcode.bytecode_for('send', arity))
 
 class CompiledModule(object):
     def __init__(self, name):

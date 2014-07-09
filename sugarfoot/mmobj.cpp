@@ -3,11 +3,12 @@
 #include "core_image.hpp"
 #include <cstdlib>
 #include "report.hpp"
+#include "vm.hpp"
 #include <assert.h>
 
 
-MMObj::MMObj(CoreImage* core)
-  : _core_image(core) {
+MMObj::MMObj(VM* vm, CoreImage* core)
+  : _vm(vm), _core_image(core) {
 }
 
 oop MMObj::mm_module_new(int num_classes, oop delegate) {
@@ -66,9 +67,11 @@ bool MMObj::mm_dictionary_has_key(oop dict, oop key) {
   assert( *(oop*) dict == _core_image->get_prime("Dictionary"));
 
   number size = mm_dictionary_size(dict);
-  debug() << "Dict size " << size << std::endl;
+  // debug() << " Dict " << dict << " size " << size << " lookup:" << key << " vt: " << (oop*) *key << std::endl;
   for(int i = 0; i < size; i++) {
-    if (mm_dictionary_entry_key(dict, i) == key) {
+    oop mykey = mm_dictionary_entry_key(dict, i);
+    // debug() << " % key " << mykey << " vt: " << (oop*) *mykey << endl;
+    if (mykey == key) {
       return true;
     }
   }
@@ -190,6 +193,29 @@ number MMObj::mm_function_get_num_locals(oop fun) {
   return mm_compiled_function_get_num_locals(cfun);
 }
 
+bool MMObj::mm_function_is_getter(oop fun) {
+  assert( *(oop*) fun == _core_image->get_prime("Function"));
+  oop cfun = mm_function_get_cfun(fun);
+  return mm_compiled_function_is_getter(cfun);
+}
+
+number MMObj::mm_function_access_field(oop fun) {
+  assert( *(oop*) fun == _core_image->get_prime("Function"));
+  oop cfun = mm_function_get_cfun(fun);
+  return mm_compiled_function_access_field(cfun);
+}
+
+number MMObj::mm_compiled_function_access_field(oop cfun) {
+  assert( *(oop*) cfun == _core_image->get_prime("CompiledFunction"));
+  return (number) ((oop*)cfun)[8];
+}
+
+
+bool MMObj::mm_compiled_function_is_getter(oop cfun) {
+  assert( *(oop*) cfun == _core_image->get_prime("CompiledFunction"));
+  return ((number) ((oop*)cfun)[7]) == 1;
+}
+
 number MMObj::mm_compiled_function_get_num_params(oop cfun) {
   assert( *(oop*) cfun == _core_image->get_prime("CompiledFunction"));
   return (number) ((oop*)cfun)[10];
@@ -239,9 +265,10 @@ oop MMObj::mm_cfuns_to_funs_dict(oop cfuns_dict, oop imod) {
   oop funs_dict = mm_dictionary_new(size);
   for (int i = 0; i < size; i++) {
     oop str_name = mm_dictionary_entry_key(cfuns_dict, i);
+    char* str = mm_string_cstr(str_name);
     oop cfun = mm_dictionary_entry_value(cfuns_dict, i);
     oop fun = mm_function_from_cfunction(cfun, imod);
-    mm_dictionary_set(funs_dict, i, str_name, fun);
+    mm_dictionary_set(funs_dict, i, _vm->new_symbol(str), fun);
   }
   return funs_dict;
 }

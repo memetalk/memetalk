@@ -82,6 +82,12 @@ void Process::unload_fun_and_return(oop retval) {
 void Process::load_fun(oop recv, oop fun) {
   // loads frame if necessary and executes fun
 
+  if (_mmobj->mm_function_is_getter(fun)) {
+    number idx = _mmobj->mm_function_access_field(fun);
+    stack_push(((oop*)recv)[idx]);
+    return;
+  }
+
   //if fun is accessor/mutator
     //if fun is getter:
     //  ... return
@@ -169,6 +175,7 @@ void Process::handle_send(number num_args) {
 
   number arity = _mmobj->mm_function_get_num_params(fun);
   if (num_args != arity) {
+    debug() << num_args << " != " << arity << endl;
     bail("arity and num_args differ");
   }
   load_fun(recv, fun);

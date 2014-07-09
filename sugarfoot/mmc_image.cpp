@@ -125,6 +125,7 @@ oop MMCImage::instantiate_module(/* module arguments */) {
     oop class_funs_dict = _mmobj->mm_cfuns_to_funs_dict(_mmobj->mm_compiled_class_own_methods(cclass), imodule);
     oop class_behavior = _mmobj->mm_class_behavior_new(super_class, class_funs_dict);
     oop klass = _mmobj->mm_class_new(class_behavior, super_class, class_funs_dict, cclass);
+    debug() << "User class " << cname << " = " << klass << " dict: " << class_funs_dict << endl;
 
     * (oop*) & imodule[imod_idx] = klass;
     oop klass_getter = _mmobj->mm_new_class_getter(imodule, cclass, str_name, imod_idx);

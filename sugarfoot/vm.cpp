@@ -9,7 +9,7 @@
 #include <assert.h>
 
 VM::VM(const char* core_img_filepath)
-  : _core_image(new CoreImage(core_img_filepath)), _mmobj(new MMObj(_core_image)) {
+  : _core_image(new CoreImage(core_img_filepath)), _mmobj(new MMObj(this, _core_image)) {
 }
 
 MMObj* VM::mmobj() {

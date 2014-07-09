@@ -4,10 +4,11 @@
 #include "defs.hpp"
 
 class CoreImage;
+class VM;
 
 class MMObj {
 public:
-  MMObj(CoreImage*);
+  MMObj(VM*, CoreImage*);
 
   oop mm_module_new(int num_classes, oop delegate);
 
@@ -47,10 +48,15 @@ public:
   number mm_function_get_num_locals(oop fun);
   number mm_function_get_num_params(oop fun);
 
+  bool mm_function_is_getter(oop fun);
+  number mm_function_access_field(oop fun);
+
   bytecode* mm_compiled_function_get_code(oop cfun);
   number mm_compiled_function_get_code_size(oop cfun);
   number mm_compiled_function_get_num_locals(oop cfun);
   number mm_compiled_function_get_num_params(oop cfun);
+  bool mm_compiled_function_is_getter(oop cfun);
+  number mm_compiled_function_access_field(oop cfun);
 
   oop mm_compiled_class_super_name(oop cclass);
   oop mm_compiled_class_own_methods(oop cclass);
@@ -69,6 +75,7 @@ public:
   number mm_untag_small_int(oop num);
 
 private:
+  VM* _vm;
   CoreImage* _core_image;
 };
 
