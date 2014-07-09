@@ -9,13 +9,13 @@ class X
   instance_method ab: fun() {
     <primitive "x_ab">
   }
-  class_method c: fun() {
-    return 1;
+  class_method c: fun(a) {
+    return a;
   }
 end
 
 main: fun() {
-  return X.c();
+  return X.c(2);
 }
 
 .endcode

@@ -43,11 +43,11 @@ body :fnobj = [(expr(fnobj)+):b] -> b
 
 exprs :fnobj = expr(fnobj)+
 
-expr :fnobj =  ['var-def' :id expr(fnobj)]     -> fnobj.emit_var_decl(id)
+expr :fnobj =  ['var-def' :id expr(fnobj)]       -> fnobj.emit_var_decl(id)
             | ['return' expr(fnobj)]             -> fnobj.emit_return_top()
             | ['return-this']                    -> fnobj.emit_return_this()
-            | ['send-or-local-call' :name args(fnobj):arity]   -> fnobj.emit_send_or_local_call(name, arity)
-            | ['send' expr(fnobj) :s args(fnobj):arity]      -> fnobj.emit_send(s, arity)
+            | ['send-or-local-call' :name args(fnobj):arity]         -> fnobj.emit_send_or_local_call(name, arity)
+            | ['send' :e :s args(fnobj):arity] apply('expr' fnobj e) -> fnobj.emit_send(s, arity)
             | atom(fnobj)
 
 atom :fnobj = ['literal-number' :x]   -> fnobj.emit_push_num_literal(x)
