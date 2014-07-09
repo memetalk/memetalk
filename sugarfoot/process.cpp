@@ -198,7 +198,8 @@ void Process::dispatch(int opcode, int arg) {
         unload_fun_and_return(stack_pop());
         break;
       case POP_LOCAL:
-        *(_fp + arg) = (word) stack_pop();
+        debug() << "POP_LOCAL " << arg << " " << (oop) *(_fp + arg + 1) << endl;
+        *(_fp + arg + 1) = (word) stack_pop();
         break;
       case SEND:
         handle_send(arg);
