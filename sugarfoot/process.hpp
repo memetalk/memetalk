@@ -26,7 +26,7 @@ public:
   oop lookup(oop, oop);
   void fetch_cycle(void*);
 
-  void push_frame(number = 0, number = 0);
+  void push_frame(number, number);
   void pop_frame();
 
 private:

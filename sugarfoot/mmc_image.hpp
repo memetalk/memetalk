@@ -16,7 +16,8 @@ public:
 private:
   oop instantiate_module();
   void load_header();
-  void fix_external_references();
+  void link_external_references();
+  void link_symbols();
 
   VM* _vm;
   MMObj* _mmobj;
@@ -29,6 +30,7 @@ private:
   //header
   word _ot_size;
   word _es_size;
+  word _er_size;
   word _names_size;
 
   oop _compiled_module;

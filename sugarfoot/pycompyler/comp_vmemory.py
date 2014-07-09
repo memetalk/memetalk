@@ -4,20 +4,23 @@ class CompVirtualMemory(vmemory.VirtualMemory):
     def __init__(self):
         super(CompVirtualMemory, self).__init__()
         self.ext_ref_table = []
+        self.symb_table = []
         self.string_table = {}
-        self.symb_table = {}
 
     def object_table(self):
         return reduce(lambda x,y: x+y, [e() for e in self.cells])
 
-    def external_symbols(self):
+    def external_references(self):
         return [(x[0], self.base + sum(self.cell_sizes[0:self.cells.index(x[1])])) for x in self.ext_ref_table]
 
     def external_names(self):
-        return sorted(set([x[0] for x in self.ext_ref_table]))
+        return sorted(set([x[0] for x in self.ext_ref_table] + [x[0] for x in self.symb_table]))
 
     def reloc_table(self):
         return [self.base + sum(self.cell_sizes[0:idx]) for idx,entry in enumerate(self.cells) if type(entry) == vmemory.PointerCell]
+
+    def symbols_references(self):
+        return [(x[0], self.base + sum(self.cell_sizes[0:self.cells.index(x[1])])) for x in self.symb_table]
 
     def append_external_ref(self, name, label=None):
         oop = self.append_int(999, label)
@@ -30,16 +33,20 @@ class CompVirtualMemory(vmemory.VirtualMemory):
         return oop
 
     def append_symbol_instance(self, string):
-        if string in self.symb_table:
-            return self.symb_table[string]
-        else:
-            delegate = self.append_object_instance()
-            oop = self.append_external_ref('Symbol')
-            self.append_pointer_to(delegate)        # delegate
-            self.append_int(len(string))
-            self.append_string(string)
-            self.symb_table[string] = oop
-            return oop
+        oop = self.append_int(888)
+        self.symb_table.append((string, oop))
+        return oop
+
+        # if string in self.symb_table:
+        #     return self.symb_table[string]
+        # else:
+        #     delegate = self.append_object_instance()
+        #     oop = self.append_external_ref('Symbol')
+        #     self.append_pointer_to(delegate)        # delegate
+        #     self.append_int(len(string))
+        #     self.append_string(string)
+        #     self.symb_table[string] = oop
+        #     return oop
 
     def append_string_instance(self, string):
         if string in self.string_table:

@@ -100,25 +100,23 @@ class CompiledFunction(object):
         if len(self.literal_frame) == 0:
             return 0
 
-        # pre-append large objects
+        # pre-append objects
         lit_frame = []
         for lit in self.literal_frame:
             if lit['tag'] == 'number':
-                lit_frame.append(('int', bits.tag(lit['value'])))
+                oop = vmem.append_int(bits.tag(lit['value']))
+                lit_frame.append(oop)
             elif lit['tag'] == 'symbol':
                 oop = vmem.append_symbol_instance(lit['value'])
-                lit_frame.append(('oop', oop))
+                lit_frame.append(oop)
+            else:
+                raise Exception('Todo')
 
         vmem.label_current(self.literal_frame_label())
 
         # fill frame
-        for tp, val in lit_frame:
-            if tp == 'int':
-                vmem.append_int(val)
-            elif tp == 'oop':
-                vmem.append_pointer_to(val)
-            else:
-                raise Exception('Todo')
+        for oop in lit_frame:
+            vmem.append_pointer_to(oop)
 
         return len(lit_frame) * bits.WSIZE
 
@@ -316,7 +314,7 @@ class CompiledModule(object):
 
 class MMC(object):
     MAGIC_NUMBER = 0x420
-    HEADER_SIZE = 4 * bits.WSIZE
+    HEADER_SIZE = 5 * bits.WSIZE
 
     def __init__(self, module):
         self.module = module
@@ -333,10 +331,12 @@ class MMC(object):
         mmc = {'header':
                {'magic_number': None,
                 'ot_size': None,
+                'er_size': None,
                 'es_size': None,
                 'names_size': None},
                'names': [],
                'object_table': [],
+               'external_references': [],
                'external_symbols': [],
                'reloc_table': []
             }
@@ -356,7 +356,13 @@ class MMC(object):
         mmc['object_table'] = vmem.object_table()
         mmc['header']['ot_size'] = len(mmc['object_table'])
 
-        for pair in vmem.external_symbols():
+        for pair in vmem.external_references():
+            mmc['external_references'].append(self.name_ptr_for(pair[0], mmc))
+            mmc['external_references'].append(pair[1])
+
+        mmc['header']['er_size'] = len(mmc['external_references']) * bits.WSIZE
+
+        for pair in vmem.symbols_references():
             mmc['external_symbols'].append(self.name_ptr_for(pair[0], mmc))
             mmc['external_symbols'].append(pair[1])
 
@@ -372,6 +378,7 @@ class MMC(object):
             # header
             fp.write(bits.pack_word(mmc['header']['magic_number']))
             fp.write(bits.pack_word(mmc['header']['ot_size']))
+            fp.write(bits.pack_word(mmc['header']['er_size']))
             fp.write(bits.pack_word(mmc['header']['es_size']))
             fp.write(bits.pack_word(mmc['header']['names_size']))
 
@@ -383,6 +390,10 @@ class MMC(object):
             # object table
             for v in mmc['object_table']:
                 fp.write(bits.pack_byte(v))
+
+            # external references
+            for v in mmc['external_references']:
+                fp.write(bits.pack_word(v))
 
             # external symbols
             for v in mmc['external_symbols']:

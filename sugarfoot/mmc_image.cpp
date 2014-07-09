@@ -8,7 +8,7 @@
 
 using namespace std;
 
-word MMCImage::HEADER_SIZE = 4 * WSIZE;
+word MMCImage::HEADER_SIZE = 5 * WSIZE;
 word MMCImage::MAGIC_NUMBER = 0x420;
 
 MMCImage::MMCImage(VM* vm, CoreImage* core_image, const char* filepath)
@@ -18,27 +18,45 @@ MMCImage::MMCImage(VM* vm, CoreImage* core_image, const char* filepath)
 void MMCImage::load_header() {
   word magic_number = unpack_word(_data, 0 * WSIZE);
   _ot_size = unpack_word(_data,  1 * WSIZE);
-  _es_size = unpack_word(_data, 2 * WSIZE);
-  _names_size = unpack_word(_data,  3 * WSIZE);
+  _er_size = unpack_word(_data, 2 * WSIZE);
+  _es_size = unpack_word(_data, 3 * WSIZE);
+  _names_size = unpack_word(_data,  4 * WSIZE);
 
   debug() << "Header:magic: " << magic_number << " =?= " << MMCImage::MAGIC_NUMBER << endl;
   debug() << "Header:ot_size: " << _ot_size << endl;
+  debug() << "Header:er_size: " << _er_size << endl;
   debug() << "Header:es_size: " << _es_size << endl;
   debug() << "Header:names_size: " << _names_size << endl;
 }
 
-void MMCImage::fix_external_references() {
+void MMCImage::link_external_references() {
   const char* base = _data;
-  int start_external_symbols = HEADER_SIZE + _names_size + _ot_size;
+  int start_external_refs = HEADER_SIZE + _names_size + _ot_size;
+
+  for (int i = 0; i < _er_size; i += (2 * WSIZE)) {
+    word name_offset = unpack_word(_data, start_external_refs + i);
+    char* name = (char*) (base + name_offset);
+    word obj_offset = unpack_word(_data, start_external_refs + i + WSIZE);
+    word* obj = (word*) (base + obj_offset);
+    // debug() << obj_offset << " - " << *obj << " [" << name << "] -> " << _core_image->get_prime(name) << endl;
+    * (word*) (base + obj_offset) = (word) _core_image->get_prime(name);
+    debug() << "External refs " << obj_offset << " - " << *obj << " [" << name << "] -> " << _core_image->get_prime(name) << endl;
+  }
+}
+
+void MMCImage::link_symbols() {
+  const char* base = _data;
+  int start_external_symbols = HEADER_SIZE + _names_size + _ot_size + _er_size;
 
   for (int i = 0; i < _es_size; i += (2 * WSIZE)) {
     word name_offset = unpack_word(_data, start_external_symbols + i);
     char* name = (char*) (base + name_offset);
     word obj_offset = unpack_word(_data, start_external_symbols + i + WSIZE);
     word* obj = (word*) (base + obj_offset);
-    // debug() << obj_offset << " - " << *obj << " [" << name << "] -> " << _core_image->get_prime(name) << endl;
-    * (word*) (base + obj_offset) = (word) _core_image->get_prime(name);
-    debug() << obj_offset << " - " << *obj << " [" << name << "] -> " << _core_image->get_prime(name) << endl;
+    debug() << "Symbol: " << obj_offset << " - " << *obj << " [" << name << "] " << endl;
+    * (word*) (base + obj_offset) = (word) _vm->new_symbol(name);
+    debug() << obj_offset << " - " << (oop) *obj << " | " << * (oop*) *obj
+            << " [" << name << "] -> " << _core_image->get_prime("Symbol") << endl;
   }
 }
 
@@ -121,8 +139,9 @@ oop MMCImage::instantiate_module(/* module arguments */) {
 oop MMCImage::load() {
   _data = read_file(_filepath, &_data_size);
   load_header();
-  relocate_addresses(_data, _data_size, HEADER_SIZE + _names_size + _ot_size + _es_size);
-  fix_external_references();
+  relocate_addresses(_data, _data_size, HEADER_SIZE + _names_size + _ot_size + _er_size + _es_size);
+  link_external_references();
+  link_symbols();
   _compiled_module = (oop) * (word*)(& _data[HEADER_SIZE + _names_size]);
   return instantiate_module();
 }

@@ -14,13 +14,18 @@ class X
   }
 end
 
+g: fun(c) {
+  return c;
+}
+
 f: fun(a,b) {
-  return a;
+  // return g(a);
+  return b;
 //  return b;
 }
 
 main: fun() {
-  return f(99, 98);
+ return f(99, 98);
 }
 
 .endcode

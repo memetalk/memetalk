@@ -20,8 +20,9 @@ typedef oop (*prim_function_t) (Process*);
 
 // bytecodes
 
-#define PUSH_LITERAL 3
+#define PUSH_PARAM 1
 #define PUSH_LOCAL 2
+#define PUSH_LITERAL 3
 #define PUSH_MODULE 7
 
 #define POP_LOCAL 21

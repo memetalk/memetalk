@@ -7,12 +7,13 @@ import sys
 
 with open(sys.argv[1], 'r') as fp:
     text = fp.read()
-    HEADER_SIZE = bits.WSIZE * 4
+    HEADER_SIZE = bits.WSIZE * 5
 
     magic = hex(bits.unpack(text[0:bits.WSIZE]))
     ot_size = bits.unpack(text[bits.WSIZE:bits.WSIZE*2])
-    es_size = bits.unpack(text[bits.WSIZE*2:bits.WSIZE*3])
-    names_size = bits.unpack(text[bits.WSIZE*3:bits.WSIZE*4])
+    er_size = bits.unpack(text[bits.WSIZE*2:bits.WSIZE*3])
+    es_size = bits.unpack(text[bits.WSIZE*3:bits.WSIZE*4])
+    names_size = bits.unpack(text[bits.WSIZE*4:bits.WSIZE*5])
 
     print 'MAGIC', magic
     print 'ot_size', ot_size
@@ -30,13 +31,19 @@ with open(sys.argv[1], 'r') as fp:
     ot = text[begin_ot:end_ot]
     print '* OT', map(bits.unpack, bits.chunks(ot, bits.WSIZE)), "\n"
 
-    # external symbols
-    begin_es = end_ot
+    # external references
+    begin_er = end_ot
+    end_er = begin_er + er_size
+    es = text[begin_er:end_er]
+    print '* ER',  map(bits.unpack, bits.chunks(es, bits.WSIZE)), "\n"
+
+    # symbols
+    begin_es = end_er
     end_es = begin_es + es_size
     es = text[begin_es:end_es]
-    print '* ES',  map(bits.unpack, bits.chunks(es, bits.WSIZE))
+    print '* ES',  map(bits.unpack, bits.chunks(es, bits.WSIZE)), "\n"
 
     # reloc table
     begin_reloc = end_es
     reloc = text[begin_reloc:]
-    print '* RELOC', map(bits.unpack, bits.chunks(reloc, bits.WSIZE))
+    print '* RELOC', map(bits.unpack, bits.chunks(reloc, bits.WSIZE)), "\n"
