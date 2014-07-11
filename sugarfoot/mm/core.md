@@ -29,6 +29,7 @@
     _vt: Object_Behavior;
     _delegate: null;
     size: 0;
+    dict: {};
     compiled_class: Object_CompiledClass;
   end
 

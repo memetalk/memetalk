@@ -2,11 +2,12 @@
 #include "core_image.hpp"
 #include "report.hpp"
 #include "utils.hpp"
+#include "vm.hpp"
 
 using namespace std;
 
 
-word CoreImage::HEADER_SIZE = 3 * WSIZE;
+word CoreImage::HEADER_SIZE = 4 * WSIZE;
 
 const char* CoreImage::PRIMES_NAMES[] = {"Behavior",
                                         "Object_Behavior",
@@ -24,8 +25,8 @@ const char* CoreImage::PRIMES_NAMES[] = {"Behavior",
 int CoreImage::TOTAL_PRIMES = 13;
 
 
-CoreImage::CoreImage(const char* filepath)
-  : _filepath(filepath) {
+CoreImage::CoreImage(VM* vm, const char* filepath)
+  : _vm(vm), _filepath(filepath) {
 }
 
 
@@ -53,9 +54,11 @@ bool CoreImage::is_core_instance(const char* name) {
 void CoreImage::load_header() {
   _num_entries = unpack_word(_data, 0 * WSIZE);
   _names_size = unpack_word(_data, 1 * WSIZE);
-  _ot_size = unpack_word(_data,  2 * WSIZE);
+  _es_size = unpack_word(_data,  2 * WSIZE);
+  _ot_size = unpack_word(_data,  3 * WSIZE);
   debug() << "Header:entries: " << _num_entries << endl;
   debug() << "Header:names_size: " << _names_size << endl;
+  debug() << "Header:es_size: " << _es_size << endl;
   debug() << "Header:ot_size: " << _ot_size << endl;
 }
 
@@ -80,6 +83,24 @@ void CoreImage::load_prime_objects_table() {
     }
   }
 }
+
+void CoreImage::link_symbols() {
+  const char* base = _data;
+  word index_size = _num_entries * 2 * WSIZE;
+  int start_external_symbols = HEADER_SIZE + _names_size + index_size + _ot_size;
+
+  for (int i = 0; i < _es_size; i += (2 * WSIZE)) {
+    word name_offset = unpack_word(_data, start_external_symbols + i);
+    char* name = (char*) (base + name_offset);
+    word obj_offset = unpack_word(_data, start_external_symbols + i + WSIZE);
+    word* obj = (word*) (base + obj_offset);
+    debug() << "Symbol: " << obj_offset << " - " << *obj << " [" << name << "] " << endl;
+    * obj = (word) _vm->new_symbol(name);
+    debug() << "offset: " << obj_offset << " - obj: " << (oop) *obj
+            << " [" << name << "] -> " << " vt: " << * (oop*) *obj << " == " << get_prime("Symbol") << endl;
+  }
+}
+
 oop CoreImage::get_prime(const char* name) {
   return _primes[name];
 }
@@ -94,5 +115,6 @@ void CoreImage::load() {
   load_prime_objects_table();
 
   word index_size = _num_entries * 2 * WSIZE;
-  relocate_addresses(_data, _data_size, HEADER_SIZE + _names_size + index_size + _ot_size);
+  link_symbols();
+  relocate_addresses(_data, _data_size, HEADER_SIZE + _names_size + index_size + _ot_size + _es_size);
 }

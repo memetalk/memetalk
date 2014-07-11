@@ -9,7 +9,7 @@
 #include <assert.h>
 
 VM::VM(const char* core_img_filepath)
-  : _core_image(new CoreImage(core_img_filepath)), _mmobj(new MMObj(this, _core_image)) {
+  : _core_image(new CoreImage(this, core_img_filepath)), _mmobj(new MMObj(this, _core_image)) {
 }
 
 MMObj* VM::mmobj() {
@@ -18,6 +18,7 @@ MMObj* VM::mmobj() {
 
 int VM::start(char* filepath) {
   _core_image->load();
+  return 1;
 
   MMCImage* mmc = new MMCImage(this, _core_image, filepath);
   oop imod = mmc->load();
