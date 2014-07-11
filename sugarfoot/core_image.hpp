@@ -24,7 +24,6 @@ private:
   void load_prime_objects_table();
   bool is_prime(const char*);
   bool is_core_instance(const char*);
-  void link_symbols();
 
   VM* _vm;
   const char* _filepath;

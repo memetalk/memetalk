@@ -84,23 +84,6 @@ void CoreImage::load_prime_objects_table() {
   }
 }
 
-void CoreImage::link_symbols() {
-  const char* base = _data;
-  word index_size = _num_entries * 2 * WSIZE;
-  int start_external_symbols = HEADER_SIZE + _names_size + index_size + _ot_size;
-
-  for (int i = 0; i < _es_size; i += (2 * WSIZE)) {
-    word name_offset = unpack_word(_data, start_external_symbols + i);
-    char* name = (char*) (base + name_offset);
-    word obj_offset = unpack_word(_data, start_external_symbols + i + WSIZE);
-    word* obj = (word*) (base + obj_offset);
-    debug() << "Symbol: " << obj_offset << " - " << (oop) *obj << " [" << name << "] " << endl;
-    * obj = (word) _vm->new_symbol(name);
-    debug() << "offset: " << obj_offset << " - obj: " << (oop) *obj
-            << " [" << name << "] -> " << " vt: " << * (oop*) *obj << " == " << get_prime("Symbol") << endl;
-  }
-}
-
 oop CoreImage::get_prime(const char* name) {
   return _primes[name];
 }
@@ -115,6 +98,6 @@ void CoreImage::load() {
   load_prime_objects_table();
 
   word index_size = _num_entries * 2 * WSIZE;
-  link_symbols();
+  link_symbols(_data, _es_size, HEADER_SIZE + _names_size + index_size + _ot_size, _vm, this);
   relocate_addresses(_data, _data_size, HEADER_SIZE + _names_size + index_size + _ot_size + _es_size);
 }

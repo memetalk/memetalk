@@ -2,6 +2,8 @@
 #include "report.hpp"
 #include <fstream>
 #include <sstream>
+#include "vm.hpp"
+#include "core_image.hpp"
 
 using namespace std;
 
@@ -38,6 +40,22 @@ void relocate_addresses(char* data, int data_size, int start_reloc_table) {
     // debug() << target << "-" << local_ptr << endl;
     // write_word(data, target, (word) (base + local_ptr));
     * (word*) &(data[target]) = (word) (base + local_ptr);
+  }
+}
+
+
+void link_symbols(char* data, int es_size, int start_external_symbols, VM* vm, CoreImage* core) {
+  const char* base = data;
+
+  for (int i = 0; i < es_size; i += (2 * WSIZE)) {
+    word name_offset = unpack_word(data, start_external_symbols + i);
+    char* name = (char*) (base + name_offset);
+    word obj_offset = unpack_word(data, start_external_symbols + i + WSIZE);
+    word* obj = (word*) (base + obj_offset);
+    debug() << "Symbol: " << obj_offset << " - " << (oop) *obj << " [" << name << "] " << endl;
+    * obj = (word) vm->new_symbol(name);
+    debug() << "offset: " << obj_offset << " - obj: " << (oop) *obj
+            << " [" << name << "] -> " << " vt: " << * (oop*) *obj << " == " << core->get_prime("Symbol") << endl;
   }
 }
 

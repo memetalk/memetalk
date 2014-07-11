@@ -44,25 +44,6 @@ void MMCImage::link_external_references() {
   }
 }
 
-void MMCImage::link_symbols() {
-  const char* base = _data;
-  int start_external_symbols = HEADER_SIZE + _names_size + _ot_size + _er_size;
-
-  for (int i = 0; i < _es_size; i += (2 * WSIZE)) {
-    word name_offset = unpack_word(_data, start_external_symbols + i);
-    char* name = (char*) (base + name_offset);
-    word obj_offset = unpack_word(_data, start_external_symbols + i + WSIZE);
-    word* obj = (word*) (base + obj_offset);
-    debug() << "Symbol: " << obj_offset << " - " << (oop) obj << " -> " << (oop) *obj << " vt: " << (oop) * (oop) *obj << " [" << name << "] " << endl;
-    // * (word*) (base + obj_offset) = (word) _vm->new_symbol(name);
-    * obj = (word) _vm->new_symbol(name);
-    debug() << "Symbol: " << obj_offset << " - " << (oop) obj << " -> " << (oop) *obj << " vt: " << (oop) * (oop) *obj << " [" << name << "] " << endl;
-    // debug() << "offset: " << obj_offset << " - obj: " << (oop) *obj
-    //         << " [" << name << "] -> " << " vt: " << * (oop*) *obj << " == " << _core_image->get_prime("Symbol") << endl;
-    // debug() << obj_offset << " - " << (oop) *obj << " | " << * (oop*) *obj
-    //         << " [" << name << "] -> " << _core_image->get_prime("Symbol") << endl;
-  }
-}
 
 oop MMCImage::instantiate_module(/* module arguments */) {
 
@@ -146,7 +127,7 @@ oop MMCImage::load() {
   load_header();
   relocate_addresses(_data, _data_size, HEADER_SIZE + _names_size + _ot_size + _er_size + _es_size);
   link_external_references();
-  link_symbols();
+  link_symbols(_data, _es_size, HEADER_SIZE + _names_size + _ot_size + _er_size, _vm, _core_image);
   _compiled_module = (oop) * (word*)(& _data[HEADER_SIZE + _names_size]);
   return instantiate_module();
 }
