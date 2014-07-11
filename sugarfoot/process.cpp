@@ -71,13 +71,24 @@ void Process::pop_frame() {
 }
 
 void Process::unload_fun_and_return(oop retval) {
- // 664         # clean up locals
- // 665         if len(self.stack) == 0:
- // 666             return retval
-  // debug() << "unload and return " << retval << endl;
   pop_frame();
   stack_push(retval);
 }
+
+// void Process:basic_new_and_load() {
+//   oop behavior = _rp;
+//   number payload = mmobj->mm_behavior_get_size(behavior);
+
+//   oop instance = calloc(sizeof(word), payload);
+//   *instance = behavior; //behavior
+//   * (oop*) instance[1] = new_parent_object(behavior); //delegate
+//   _rp = instance;
+//   _dp = instance; //?
+
+//   // *(_fp-FRAME_SIZE) = instance; //rewrite rp on the stack
+//   // *(_fp-FRAME_SIZE+1) = instance; //rewrite receiver on the stack
+//   exec_fun(instance, _cp);
+// }
 
 void Process::load_fun(oop recv, oop fun) {
   // loads frame if necessary and executes fun
@@ -88,17 +99,6 @@ void Process::load_fun(oop recv, oop fun) {
     return;
   }
 
-  //if fun is accessor/mutator
-    //if fun is getter:
-    //  ... return
-    //elif fun is setter:
-    // ... return
-    //elif: internal error: should be either getter or setter
-  // else
-    // setup frame
-    // setup registers
-    // execute fun
-
   push_frame(_mmobj->mm_function_get_num_params(fun),
              _mmobj->mm_function_get_num_locals(fun));
 
@@ -107,7 +107,10 @@ void Process::load_fun(oop recv, oop fun) {
   _cp = fun;
   _mp = _mmobj->mm_function_get_module(_cp);
 
-  if (_mmobj->mm_function_is_prim(fun)) {
+  if (_mmobj->mm_function_is_ctor(fun)) {
+    bail("TODO: ctor call");
+    //basic_new_and_load();
+  } else if (_mmobj->mm_function_is_prim(fun)) {
     oop prim_name = _mmobj->mm_function_get_prim_name(fun);
     std::string str_prim_name = _mmobj->mm_string_cstr(prim_name);
     execute_primitive(str_prim_name);

@@ -8,19 +8,16 @@
   object Behavior
     _vt: Behavior; //self-referencing
     _delegate: null;
-    parent: null;
   end
 
   object Object_Behavior
     _vt: Behavior;
     _delegate: null;
-    parent: null;
   end
 
   object Object_CompiledClass
     _vt: CompiledClass; //declared below
     _delegate: null;
-    parent: null;
     name: "Object";
     super_class_name: "";
     fields: [];
@@ -31,7 +28,6 @@
   object Object
     _vt: Object_Behavior;
     _delegate: null;
-    parent: null;
     size: 0;
     compiled_class: Object_CompiledClass;
   end
@@ -70,8 +66,4 @@
 
   class Context
   end
-
-  main: fun() {
-      <primitive "main">
-  }
 .end

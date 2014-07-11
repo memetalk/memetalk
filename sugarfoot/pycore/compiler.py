@@ -1,9 +1,10 @@
 from pyparsers.parser import MemeParser
 from pyparsers.coretr import CoreTr
 from pyparsers.astbuilder import *
+import pyutils
 from pyutils import bits
-from . import core_vmem
 from . import utils
+from . import core_vmem
 import math
 import struct
 import ctypes
@@ -97,13 +98,11 @@ class ClassEntry(Entry):
         self.dictionary[fun.name] = fun
 
     def fill(self, vmem):
-        oop_dict = vmem.append_dict_emiting_entries(self.dictionary)
-        delegate = vmem.append_object_instance()
-
+        oop_dict = vmem.append_sym_dict_emiting_entries(self.dictionary)
         oop = vmem.append_label_ref(utils.behavior_label(self.name),  self.label)  # vt
-        vmem.append_pointer_to(delegate)                                           # delegate
-        vmem.append_label_ref(self.super_class)                                    # parent
+        vmem.append_label_ref(utils.class_label(self.super_class))                 # delegate
         vmem.append_pointer_to(oop_dict)                                           # dict: "methods"
+        vmem.append_int(len(self.cclass_entry.fields))                             # payload
         vmem.append_label_ref(utils.cclass_label(self.name))                       # compiled_class
         return oop
 
@@ -119,11 +118,9 @@ class BehaviorEntry(Entry):
             raise Exception('TODO')
 
     def fill(self, vmem):
-        delegate = vmem.append_object_instance()
         oop_dict = vmem.append_empty_dict()
         oop = vmem.append_label_ref('Behavior', self.label)       # vt
-        vmem.append_pointer_to(delegate)                          # delegate
-        vmem.append_label_ref(self.parent_label)                  # parent
+        vmem.append_label_ref(self.parent_label)                  # delegate
         vmem.append_pointer_to(oop_dict)                          # dict: "own methods"
         return oop
 
@@ -158,8 +155,8 @@ class CompiledClassEntry(Entry):
         vmem.append_pointer_to(super_name_oop)                               # super_class_name
         vmem.append_label_ref('@core_compiled_module')                       # compiled_module
         vmem.append_pointer_to(fields_list_oop)                              # fields
-        vmem.append_pointer_to(methods_oop)                                  # methods: TODO
-        vmem.append_pointer_to(own_methods_oop)                              # own methods: TODO
+        vmem.append_pointer_to(methods_oop)                                  # methods
+        vmem.append_pointer_to(own_methods_oop)                              # own methods
         return oop
 
 class CompiledFunction(Entry):
@@ -269,7 +266,7 @@ class CoreModule(Entry):
     def create_dict(self, vmem):
         # dict (TODO)
         # -Functions of the module
-        return vmem.append_dict_emiting_entries(self.compiler.top_level_functions)
+        return vmem.append_sym_dict_emiting_entries(self.compiler.top_level_functions)
 
         # pairs = []
         # for fun_entry in self.compiler.top_level_functions.values():
@@ -290,11 +287,10 @@ class CoreModule(Entry):
         oop_dict = self.create_dict(vmem)
         oop = vmem.append_label_ref(self.label, self.label)     # vt
         vmem.append_null()                                      # delegate
-        vmem.append_null()                                      # parent
         vmem.append_pointer_to(oop_dict)                        # dict
         vmem.append_label_ref('@core_compiled_module')          # compiled_module
         # for name in c.top_levels:
-        #     c.vmem.append_label_ref(name)                         # compiled_module
+        #     c.vmem.append_label_ref(name)                         # classes
         return oop
 
 
@@ -315,6 +311,7 @@ class Compiler(ASTBuilder):
     def compile(self):
         self.line_offset = 0
         self.parser = MemeParser(open(os.path.join(os.path.dirname(__file__), '../mm/core.md'), 'r').read())
+        self.parser.uses_literal = pyutils.Flag() # pymeta uses eval() which disables assignment. This works around it
         self.parser.i = self
         ast = self.parser.apply("start")[0]
         self.parser = CoreTr([ast])

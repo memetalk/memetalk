@@ -1,6 +1,7 @@
 from pyparsers.parser import MemeParser
 from pyparsers.memetr import MemeTr
 from pyparsers.astbuilder import *
+import pyutils
 from pyutils import bits
 from pprint import pprint as P
 import traceback
@@ -437,7 +438,7 @@ class Compiler(ASTBuilder):
 
     def do_parse(self, parser):
         try:
-            parser.uses_literal = utils.Flag() # pymeta uses eval() which disables assignment. This works around it
+            parser.uses_literal = pyutils.Flag() # pymeta uses eval() which disables assignment. This works around it
             return parser.apply("start")
         except Exception as err:
             if hasattr(err,'formatError'):

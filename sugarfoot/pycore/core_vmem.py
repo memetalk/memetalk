@@ -4,6 +4,7 @@ from . import utils
 class CoreVirtualMemory(vmemory.VirtualMemory):
     def __init__(self):
         self.string_table = {}
+        self.symb_table = []
         super(CoreVirtualMemory, self).__init__()
 
     def index_for(self, name):
@@ -14,6 +15,9 @@ class CoreVirtualMemory(vmemory.VirtualMemory):
 
     def object_table(self):
         return reduce(lambda x,y: x+y, [e() for e in self.cells])
+
+    def symbols_references(self):
+        return [(x[0], self.base + sum(self.cell_sizes[0:self.cells.index(x[1])])) for x in self.symb_table]
 
     def append_object_instance(self):
         oop = self.append_label_ref('Object') # vt
@@ -32,6 +36,11 @@ class CoreVirtualMemory(vmemory.VirtualMemory):
             self.string_table[string] = oop
             return oop
 
+    def append_symbol_instance(self, string):
+        oop = self.append_int(888)
+        self.symb_table.append((string, oop))
+        return oop
+
     def _append_dict_prologue(self, size):
         delegate = self.append_object_instance()        # Assumed to be object! if source change, this breaks
         oop = self.append_label_ref(utils.class_label('Dictionary')) # vt
@@ -46,6 +55,14 @@ class CoreVirtualMemory(vmemory.VirtualMemory):
 
     def append_empty_dict(self):
         return self._append_dict_prologue(0)
+
+    def append_sym_dict_emiting_entries(self, entries_pydict):
+        pairs_oop = []
+        for key, entry, in entries_pydict.iteritems():
+            key_oop = self.append_symbol_instance(key)
+            val_oop = entry.fill(self)
+            pairs_oop.append((key_oop, val_oop))
+        return self.append_dict_with_pairs(pairs_oop)
 
     def append_dict_emiting_entries(self, entries_pydict):
         pairs_oop = []

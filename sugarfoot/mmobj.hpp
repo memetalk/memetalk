@@ -47,6 +47,7 @@ public:
 
   number mm_function_get_num_locals(oop fun);
   number mm_function_get_num_params(oop fun);
+  bool mm_function_is_ctor(oop fun);
 
   bool mm_function_is_getter(oop fun);
   number mm_function_access_field(oop fun);
@@ -57,6 +58,7 @@ public:
   number mm_compiled_function_get_num_params(oop cfun);
   bool mm_compiled_function_is_getter(oop cfun);
   number mm_compiled_function_access_field(oop cfun);
+  bool mm_compiled_function_is_ctor(oop cfun);
 
   oop mm_compiled_class_super_name(oop cclass);
   oop mm_compiled_class_own_methods(oop cclass);

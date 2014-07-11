@@ -12,19 +12,19 @@ class_definition = ['class' [:name :parent] !(self.i.register_class(name,parent)
                     [imethod_definition*]
                     [cmethod_definition*]]
 
-function_definition = ['fun' :name  params:p
+function_definition = ['fun' :name  params:p :uses_env
                       ['body' body:b]] -> self.i.add_module_function(name, p, b)
 
 class_constructors = ['ctors' [class_constructor*]]
                    | ['ctors' []]
 
-class_constructor = ['ctor' :name params:p
+class_constructor = ['ctor' :name params:p :uses_env
                      ['body' body:b]]:f -> self.i.add_class_ctor(name, p, b)
 
-imethod_definition = ['fun' :name  params:p
+imethod_definition = ['fun' :name  params:p :uses_env
                       ['body' body:b]] -> self.i.add_class_method(name, p, b)
 
-cmethod_definition = ['fun' :name  params:p
+cmethod_definition = ['fun' :name  params:p :uses_env
                       ['body' body:b]] -> self.i.add_class_self_method(name, p, b)
 
 obj_slot = ['slot' :name obj_slot_value(name)]
@@ -39,10 +39,10 @@ obj_slot_value :name =  ['literal-number' :x]       -> self.i.add_slot_literal_n
 obj_function = constructor
              | obj_function_definition
 
-constructor = ['ctor' :name params:p
+constructor = ['ctor' :name params:p :uses_env
                 ['body' body:b]]:f -> self.i.add_fun(name, p, b, True)
 
-obj_function_definition = ['fun' :name  params:p
+obj_function_definition = ['fun' :name  params:p :uses_env
                            ['body' body:b]] -> self.i.add_fun(name, p, b, False)
 
 params = ['params' []]  -> []

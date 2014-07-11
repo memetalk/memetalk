@@ -205,6 +205,17 @@ number MMObj::mm_function_access_field(oop fun) {
   return mm_compiled_function_access_field(cfun);
 }
 
+bool MMObj::mm_function_is_ctor(oop fun) {
+  assert( *(oop*) fun == _core_image->get_prime("Function"));
+  oop cfun = mm_function_get_cfun(fun);
+  return mm_compiled_function_is_ctor(cfun);
+}
+
+bool MMObj::mm_compiled_function_is_ctor(oop cfun) {
+  assert( *(oop*) cfun == _core_image->get_prime("CompiledFunction"));
+  return (bytecode*) ((oop*)cfun)[4];
+}
+
 number MMObj::mm_compiled_function_access_field(oop cfun) {
   assert( *(oop*) cfun == _core_image->get_prime("CompiledFunction"));
   return (number) ((oop*)cfun)[8];
