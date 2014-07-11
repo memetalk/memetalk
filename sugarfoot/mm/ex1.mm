@@ -3,19 +3,19 @@
 
 class X
   fields: a,b;
-  init new: fun() {
+  init new: fun(a) {
     <primitive "x_new">
   }
   instance_method ab: fun() {
     <primitive "x_ab">
   }
-  class_method c: fun(a) {
-    return a;
+  class_method c: fun(a, b) {
+    return b;
   }
 end
 
 main: fun() {
-  return X.c(2);
+  return X.new(99);
 }
 
 .endcode

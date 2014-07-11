@@ -18,7 +18,6 @@ MMObj* VM::mmobj() {
 
 int VM::start(char* filepath) {
   _core_image->load();
-  return 1;
 
   MMCImage* mmc = new MMCImage(this, _core_image, filepath);
   oop imod = mmc->load();

@@ -20,7 +20,14 @@ class CompVirtualMemory(vmemory.VirtualMemory):
         return [self.base + sum(self.cell_sizes[0:idx]) for idx,entry in enumerate(self.cells) if type(entry) == vmemory.PointerCell]
 
     def symbols_references(self):
-        return [(x[0], self.base + sum(self.cell_sizes[0:self.cells.index(x[1])])) for x in self.symb_table]
+        sr = []
+        for text, ptr in self.symb_table:
+             for referer in [x for x in self.cells if type(x) == vmemory.PointerCell and x.target_cell == ptr]:
+                 sr.append((text, self.base + sum(self.cell_sizes[0:self.cells.index(referer)])))
+        return sr
+
+    # def symbols_references(self):
+    #     return [(x[0], self.base + sum(self.cell_sizes[0:self.cells.index(x[1])])) for x in self.symb_table]
 
     def append_external_ref(self, name, label=None):
         oop = self.append_int(999, label)

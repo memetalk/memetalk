@@ -94,7 +94,7 @@ void CoreImage::link_symbols() {
     char* name = (char*) (base + name_offset);
     word obj_offset = unpack_word(_data, start_external_symbols + i + WSIZE);
     word* obj = (word*) (base + obj_offset);
-    debug() << "Symbol: " << obj_offset << " - " << *obj << " [" << name << "] " << endl;
+    debug() << "Symbol: " << obj_offset << " - " << (oop) *obj << " [" << name << "] " << endl;
     * obj = (word) _vm->new_symbol(name);
     debug() << "offset: " << obj_offset << " - obj: " << (oop) *obj
             << " [" << name << "] -> " << " vt: " << * (oop*) *obj << " == " << get_prime("Symbol") << endl;

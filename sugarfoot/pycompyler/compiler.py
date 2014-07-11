@@ -102,24 +102,31 @@ class CompiledFunction(object):
             return 0
 
         # pre-append objects
-        lit_frame = []
         for lit in self.literal_frame:
             if lit['tag'] == 'number':
-                oop = vmem.append_int(bits.tag(lit['value']))
-                lit_frame.append(oop)
+                pass
             elif lit['tag'] == 'symbol':
-                oop = vmem.append_symbol_instance(lit['value'])
-                lit_frame.append(oop)
+                lit['oop'] = vmem.append_symbol_instance(lit['value'])
             else:
                 raise Exception('Todo')
 
         vmem.label_current(self.literal_frame_label())
 
-        # fill frame
-        for oop in lit_frame:
-            vmem.append_pointer_to(oop)
+            # if lit['tag'] == 'number':
+            #     oop = vmem.append_int(bits.tag(lit['value']))
+            #     lit_frame.append(oop)
 
-        return len(lit_frame) * bits.WSIZE
+
+        # fill frame
+        for lit in self.literal_frame:
+            if lit['tag'] == 'number':
+                vmem.append_int(bits.tag(lit['value']))
+            elif lit['tag'] == 'symbol':
+                vmem.append_pointer_to(lit['oop'])
+            else:
+                raise Exception('Todo')
+
+        return len(self.literal_frame) * bits.WSIZE
 
 
     def fill_bytecodes(self, vmem):

@@ -246,7 +246,9 @@ oop MMObj::mm_compiled_function_get_literal_by_index(oop cfun, int idx) {
   assert( *(oop*) cfun == _core_image->get_prime("CompiledFunction"));
   oop* literal_frame =  ((oop**)cfun)[13];
   assert( (idx * WSIZE) < mm_compiled_function_get_literal_frame_size(cfun));
-  return * (oop*) literal_frame[idx];
+  // debug() << " literal frame [" << idx << "] {" << &(literal_frame[idx]) << "} " <<
+  //   (oop*) literal_frame[idx] << " = " << * (oop*) literal_frame[idx] << endl;
+  return (oop) literal_frame[idx];
 }
 
 number MMObj::mm_compiled_function_get_code_size(oop cfun) {
