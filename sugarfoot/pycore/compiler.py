@@ -264,10 +264,9 @@ class CoreModule(Entry):
         self.label = '@core_module'
 
     def create_dict(self, vmem):
-        # dict (TODO)
-        # -Functions of the module
+        # -accessor for each class
+        # -Function for each cfun in self.compiler.top_level_functions
         return vmem.append_sym_dict_emiting_entries(self.compiler.top_level_functions)
-
         # pairs = []
         # for fun_entry in self.compiler.top_level_functions.values():
         #     oop_key = vmem.append_string_instance(fun_entry.name)
@@ -289,8 +288,8 @@ class CoreModule(Entry):
         vmem.append_null()                                      # delegate
         vmem.append_pointer_to(oop_dict)                        # dict
         vmem.append_label_ref('@core_compiled_module')          # compiled_module
-        # for name in c.top_levels:
-        #     c.vmem.append_label_ref(name)                         # classes
+        # for klass in self.compiler.top_level_classes:
+        #     vmem.append_label_ref(klass.label)
         return oop
 
 
@@ -306,7 +305,7 @@ class Compiler(ASTBuilder):
         self.current_object = None
 
         self.vmem = core_vmem.CoreVirtualMemory()
-        self.HEADER_SIZE = 3 * bits.WSIZE # bytes. 3 = names_size, entries, addr_table_offset
+        self.HEADER_SIZE = 4 * bits.WSIZE # bytes. 3 = entries, names_size, es_size, ot_size
 
     def compile(self):
         self.line_offset = 0
@@ -407,17 +406,23 @@ class Compiler(ASTBuilder):
             'header': {
                 'entries': None,             # number of labeled objects (top-levels, behaviors, cclasses)
                 'names_size': None,          # size in bytes of NAMES section
+                'es_size': None,             # size of external symbols
                 'ot_size': None},            # size of OBJECT TABLE in bytes
             'names': [],
             'index': [],
             'object_table': [],
+            'external_symbols': [],
             'reloc_table': []}
+
+        for entry in self.entries:
+            entry.fill(self.vmem)
 
         # -- HEADER and NAMES section
         core['header']['entries'] = len(self.entries)
 
         # names :: [(string, alloc-size in bytes, self-ptr)]
-        core['names'] = [(name_t, bits.string_block_size(name_t)) for name_t in [e.label + "\0" for e in self.entries]]
+        names_list = [e.label + "\0" for e in self.entries] + [n + "\0" for n in self.vmem.external_names()]
+        core['names'] = [(name_t, bits.string_block_size(name_t)) for name_t in names_list]
 
         core['header']['names_size'] = sum([x[1] for x in core['names']])
 
@@ -426,20 +431,26 @@ class Compiler(ASTBuilder):
         self.vmem.set_base(base)
 
         # - OBJECT TABLE
-        for entry in self.entries:
-            entry.fill(self.vmem)
-
         core['object_table'] = self.vmem.object_table()
 
         # - HEADER ot_size
         core['header']['ot_size'] = len(core['object_table'])
 
+        # external symbols
+        for pair in self.vmem.symbols_references():
+            core['external_symbols'].append(self.name_ptr_for_name(pair[0], core))
+            core['external_symbols'].append(pair[1])
+
+        core['header']['es_size'] = len(core['external_symbols']) * bits.WSIZE
+
+        # reloc
         core['reloc_table'] = self.vmem.reloc_table()
 
         # - INDEX section
         for name in [x.label for x in self.entries]:
             core['index'].append(self.name_ptr_for_name(name, core))  # ptr to string
             core['index'].append(self.vmem.index_for(name))           # ptr to object
+
 
         return core
 
@@ -449,6 +460,7 @@ class Compiler(ASTBuilder):
 
             fp.write(bits.pack_word(core['header']['entries']))
             fp.write(bits.pack_word(core['header']['names_size']))
+            fp.write(bits.pack_word(core['header']['es_size']))
             fp.write(bits.pack_word(core['header']['ot_size']))
 
             # names
@@ -463,6 +475,10 @@ class Compiler(ASTBuilder):
             # object table
             for v in core['object_table']:
                 fp.write(bits.pack_byte(v))
+
+            # external symbols
+            for v in core['external_symbols']:
+                fp.write(bits.pack_word(v))
 
             # reloc table
             for word in core['reloc_table']:

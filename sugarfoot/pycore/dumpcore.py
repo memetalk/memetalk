@@ -1,6 +1,7 @@
 from pyparsers.parser import MemeParser
 from pyparsers.coretr import CoreTr
 from pyparsers.astbuilder import *
+import pyutils
 from pyutils import bits
 from pprint import pprint as P
 from pdb import set_trace as br
@@ -70,7 +71,8 @@ class ClassBehaviorEntry(Entry):
         self.super_class = super_class
 
     def dump(self, dec, ptr):
-        return self.dump_with_slots(dec, ptr, ['vt', 'delegate', 'parent', 'dict'])
+        print '[{}] -- {}'.format(ptr, self.name)
+        return self.dump_with_slots(dec, ptr, ['vt', 'delegate', 'dict'])
 
 
 class CompiledClassEntry(Entry):
@@ -102,7 +104,7 @@ class ClassEntry(Entry):
 
     def dump(self, dec, ptr):
         print '[{}] -- {}'.format(ptr, self.name)
-        return self.dump_with_slots(dec, ptr, ['vt', 'delegate', 'parent', 'dict', 'compiled_class'])
+        return self.dump_with_slots(dec, ptr, ['vt', 'delegate', 'dict', 'payload', 'compiled_class'])
 
 
 class CoreCompiledModule(Entry):
@@ -114,7 +116,7 @@ class CoreCompiledModule(Entry):
 class CoreModule(Entry):
     def dump(self, dec, ptr):
         print '[{}] {} instance'.format(ptr, '@core_module')
-        return self.dump_with_slots(dec, ptr, ['vt', 'delegate', 'parent', 'dict', 'compiled_module'])
+        return self.dump_with_slots(dec, ptr, ['vt', 'delegate', 'dict', 'compiled_module'])
 
 def dump_object_instance(dec, addr, class_or_behavior_name):
     print '[{}] {} instance'.format(addr, class_or_behavior_name)
@@ -127,6 +129,12 @@ def _str_from_string_instance(dec, addr):
     return string, chunk_size
 
 def dump_string_instance(dec, addr, class_or_behavior_name):
+    print '[{}] {} instance'.format(addr, class_or_behavior_name)
+    string, chunk_size = _str_from_string_instance(dec, addr)
+    print '  *** "{}"'.format(string)
+    return (3 * bits.WSIZE) + chunk_size
+
+def dump_symbol_instance(dec, addr, class_or_behavior_name):
     print '[{}] {} instance'.format(addr, class_or_behavior_name)
     string, chunk_size = _str_from_string_instance(dec, addr)
     print '  *** "{}"'.format(string)
@@ -178,6 +186,7 @@ class Decompiler(ASTBuilder):
         self.line_offset = 0
         self.parser = MemeParser(open(os.path.join(os.path.dirname(__file__), '../mm/core.md'), 'r').read())
         self.parser.i = self
+        self.parser.uses_literal = pyutils.Flag() # pymeta uses eval() which disables assignment. This works around it
         ast = self.parser.apply("start")[0]
         self.parser = CoreTr([ast])
         self.parser.i = self
@@ -205,7 +214,7 @@ class Decompiler(ASTBuilder):
 
     def load_image(self):
 
-        END_OF_HEADER = bits.WSIZE * 3
+        END_OF_HEADER = bits.WSIZE * 4
 
         self.file_contents = open("core.img", "rb").read()
 
@@ -213,7 +222,8 @@ class Decompiler(ASTBuilder):
 
         header = {'entries': header_packs[0],
                   'names_size': header_packs[1],
-                  'ot_size': header_packs[2]}
+                  'es_size': header_packs[2],
+                  'ot_size': header_packs[3]}
 
         # NAMES
         start_names_section = END_OF_HEADER
@@ -230,8 +240,14 @@ class Decompiler(ASTBuilder):
         end_ot_section = start_ot_section + header['ot_size']
         self.OT = self.file_contents[start_ot_section:end_ot_section]
 
+        start_es_section = end_ot_section
+        end_es_section = start_es_section + header['es_size']
+        self.ES = self.file_contents[start_es_section:end_es_section]
+
+        self.external_symbols = [bits.unpack(pack32) for pack32 in bits.chunks(self.ES, bits.WSIZE)]
+
         # RELOC
-        start_reloc_section = end_ot_section
+        start_reloc_section = end_es_section
         end_reloc_section = len(self.file_contents)
         self.RELOC = self.file_contents[start_reloc_section:end_reloc_section]
 
@@ -258,13 +274,15 @@ class Decompiler(ASTBuilder):
                 raise Exception('No entry for dumping {}'.format(name))
             print '--------------------'
 
-        print self.reloc_addresses
+        print 'ES', self.external_symbols
+        print 'RELOC', self.reloc_addresses
         br()
 
     def dump_anonymous(self, addr):
         vt_addr = bits.unpack(self.file_contents[addr:addr+bits.WSIZE])
         class_or_behavior_name = self.get_entry_name(vt_addr)
         if class_or_behavior_name is None:
+            print 'This is broken! fix me'
             br()
         else:
             if class_or_behavior_name == 'Object':
@@ -281,7 +299,10 @@ class Decompiler(ASTBuilder):
                 return dump_compiled_function_instance(self, addr, class_or_behavior_name)
             elif class_or_behavior_name == 'Function':
                 return dump_function_instance(self, addr, class_or_behavior_name)
+            elif class_or_behavior_name == 'Symbol':
+                return dump_symbol_instance(self, addr, class_or_behavior_name)
             else:
+                raise Exception('TODO: dump {}'.format(class_or_behavior_name))
                 br()
     ######################
 

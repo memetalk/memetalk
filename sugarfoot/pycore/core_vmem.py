@@ -16,8 +16,15 @@ class CoreVirtualMemory(vmemory.VirtualMemory):
     def object_table(self):
         return reduce(lambda x,y: x+y, [e() for e in self.cells])
 
+    def external_names(self):
+        return sorted(set([x[0] for x in self.symb_table]))
+
     def symbols_references(self):
-        return [(x[0], self.base + sum(self.cell_sizes[0:self.cells.index(x[1])])) for x in self.symb_table]
+        sr = []
+        for text, ptr in self.symb_table:
+             for referer in [x for x in self.cells if type(x) == vmemory.PointerCell and x.target_cell == ptr]:
+                 sr.append((text, self.base + sum(self.cell_sizes[0:self.cells.index(referer)])))
+        return sr
 
     def append_object_instance(self):
         oop = self.append_label_ref('Object') # vt
@@ -37,8 +44,16 @@ class CoreVirtualMemory(vmemory.VirtualMemory):
             return oop
 
     def append_symbol_instance(self, string):
-        oop = self.append_int(888)
+        # We only need a dummy/word-sized placeholder here.
+        # (actually, not event this. We only need to return a dummy cell. All we need
+        #  its the PointerCell's pointing to our dummy to construct the symbols_reference())
+        # In any case, the full data is only used by dump to display the text of the symbol
+        delegate = self.append_object_instance() # Assumed to be object! if source change, this breaks
+        oop = self.append_label_ref(utils.class_label('Symbol'))   # vt
         self.symb_table.append((string, oop))
+        self.append_pointer_to(delegate)                           # delegate
+        self.append_int(len(string))
+        self.append_string(string)
         return oop
 
     def _append_dict_prologue(self, size):
