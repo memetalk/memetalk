@@ -67,4 +67,9 @@
 
   class Context
   end
+
+  test: fun() {
+    var a = 11;
+    return 10;
+  }
 .end

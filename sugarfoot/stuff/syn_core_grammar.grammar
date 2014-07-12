@@ -1,0 +1,171 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ufwb version="1.8">
+    <grammar name="memetalk core image" start="id:153" author="thiago silva">
+        <description>Grammar for my file format</description>
+        <structure name="core" id="153" encoding="ISO_8859-1:1987" endian="little" signed="no">
+            <structref name="header" id="155" strokecolor="1F78F5" fillcolor="F29274" structure="id:154"/>
+            <structref name="names" id="157" structure="id:156"/>
+            <structref name="index" id="159" structure="id:158"/>
+            <structref name="object_table" id="161" structure="id:160"/>
+            <structref name="external_symbols" id="163" structure="id:162"/>
+            <structref name="reloc_table" id="165" structure="id:164"/>
+        </structure>
+        <structure name="header" id="154" length="32" encoding="ISO_8859-1:1987" endian="little" signed="no">
+            <number name="entries" id="167" fillcolor="00F900" type="integer" length="8"/>
+            <number name="names_size" id="168" fillcolor="00F900" type="integer" length="8"/>
+            <number name="es_size" id="169" fillcolor="00F900" type="integer" length="8"/>
+            <number name="ot_size" id="170" fillcolor="00F900" type="integer" length="8"/>
+        </structure>
+        <structure name="names" id="156" length="names_size" alignment="0" encoding="ISO_8859-1:1987" endian="big" signed="no" fillcolor="F5FC92">
+            <structure name="name" id="172">
+                <structref name="name_entry" id="174" repeatmax="-1" structure="id:173"/>
+            </structure>
+        </structure>
+        <structure name="name_entry" id="173" repeatmax="-1" encoding="ISO_8859-1:1987" endian="big" signed="no">
+            <string name="aString" id="177" fillcolor="FFEFA0" type="zero-terminated"/>
+            <structref name="padding" id="179" fillcolor="CACACA" repeatmin="0" structure="id:178"/>
+        </structure>
+        <structure name="index" id="158" length="entries * 8 * 2" alignment="1" extends="id:181" encoding="ISO_8859-1:1987" endian="little" signed="no" fillcolor="B4BEF8">
+            <structure name="index_entry" id="182">
+                <structref name="pair" id="183" fillcolor="B4BEF8" repeatmax="-1" structure="id:181"/>
+            </structure>
+        </structure>
+        <structure name="pair" id="181" encoding="ISO_8859-1:1987" endian="little" signed="no">
+            <number name="name_addr" id="186" fillcolor="D0F6B6" type="integer" length="8" display="hex"/>
+            <number name="obj_addr" id="187" fillcolor="B4BEF8" type="integer" length="8" display="hex"/>
+        </structure>
+        <structure name="padding" id="178" length="0" encoding="ISO_8859-1:1987" endian="big" signed="no">
+            <binary name="nil" mustmatch="yes" id="189" fillcolor="CACACA" repeatmax="-1" length="1">
+                <fixedvalues>
+                    <fixedvalue name="null" value="00"/>
+                </fixedvalues>
+            </binary>
+        </structure>
+        <structure name="object_table" id="160" length="ot_size" encoding="ISO_8859-1:1987" endian="little" signed="no" fillcolor="D8C5FF">
+            <structure name="frame" id="191" repeatmin="0" repeatmax="-1" order="variable">
+                <structref name="object_frame" id="193" repeatmin="0" repeatmax="-1" structure="id:192"/>
+                <structref name="literal_frame" id="195" repeatmin="0" repeatmax="-1" structure="id:194"/>
+                <structref name="bytecode_frame" id="197" repeatmin="0" repeatmax="-1" structure="id:196"/>
+                <structref name="string_object_frame" id="199" repeatmin="0" repeatmax="-1" structure="id:198"/>
+                <structref name="list_object_frame" id="201" repeatmin="0" repeatmax="-1" structure="id:200"/>
+                <structref name="dict_object_frame" id="203" repeatmin="0" repeatmax="-1" structure="id:202"/>
+            </structure>
+        </structure>
+        <structure name="external_symbols" id="162" length="es_size" encoding="ISO_8859-1:1987" endian="little" signed="no" fillcolor="71C7FF">
+            <structure name="es_entry" id="206">
+                <structref name="pair" id="207" structure="id:181"/>
+            </structure>
+        </structure>
+        <structure name="reloc_table" id="164" length="0" encoding="ISO_8859-1:1987" endian="little" signed="no">
+            <number name="addr" id="210" repeatmax="-1" type="integer" length="8" display="hex"/>
+        </structure>
+        <structure name="object_frame" id="192" encoding="ISO_8859-1:1987" endian="little" signed="no">
+            <number name="frame_type" mustmatch="yes" id="212" fillcolor="B4BEF8" type="integer" length="8">
+                <fixedvalues>
+                    <fixedvalue value="900"/>
+                </fixedvalues>
+            </number>
+            <number name="frame_size" id="213" fillcolor="FFF214" type="integer" length="8"/>
+            <structure name="oop_basic" id="214" length="frame_size">
+                <number name="vt" id="215" type="integer" length="8" display="hex"/>
+            </structure>
+        </structure>
+        <structure name="string_object_frame" id="198" length="0" encoding="ISO_8859-1:1987" endian="little" signed="no">
+            <number name="frame_type" mustmatch="yes" id="218" type="integer" length="8">
+                <fixedvalues>
+                    <fixedvalue value="901"/>
+                </fixedvalues>
+            </number>
+            <number name="frame_size" id="219" type="integer" length="8"/>
+            <structure name="oop_string_or_sym" id="220" length="frame_size">
+                <number name="vt" id="221" type="integer" length="8" display="hex"/>
+                <number name="delegate" id="222" type="integer" length="8" display="hex"/>
+                <number name="strlen" id="223" type="integer" length="8"/>
+                <string name="data" id="224" type="zero-terminated"/>
+            </structure>
+        </structure>
+        <structure name="list_object_frame" id="200" encoding="ISO_8859-1:1987" endian="little" signed="no">
+            <number name="frame_type" mustmatch="yes" id="227" type="integer" length="8">
+                <fixedvalues>
+                    <fixedvalue value="902"/>
+                </fixedvalues>
+            </number>
+            <number name="frame_size" id="228" type="integer" length="8"/>
+            <structure name="oop_list" id="229" length="frame_size">
+                <number name="vt" id="230" type="integer" length="8" display="hex"/>
+                <number name="delegate" id="231" type="integer" length="8" display="hex"/>
+                <number name="len" id="232" type="integer" length="8"/>
+                <number name="oop" id="233" repeatmin="0" repeatmax="-1" type="integer" length="8" display="hex"/>
+            </structure>
+        </structure>
+        <structure name="dict_object_frame" id="202" encoding="ISO_8859-1:1987" endian="little" signed="no">
+            <number name="frame_type" mustmatch="yes" id="236" type="integer" length="8">
+                <fixedvalues>
+                    <fixedvalue value="903"/>
+                </fixedvalues>
+            </number>
+            <number name="frame_size" id="237" type="integer" length="8"/>
+            <structure name="oop_dict" id="238" length="frame_size">
+                <number name="vt" id="239" type="integer" length="8" display="hex"/>
+                <number name="delegate" id="240" type="integer" length="8" display="hex"/>
+                <number name="len" id="241" type="integer" length="8"/>
+                <number name="oop" id="242" repeatmin="0" repeatmax="-1" type="integer" length="8" display="hex"/>
+            </structure>
+        </structure>
+        <structure name="literal_frame" id="194" encoding="ISO_8859-1:1987" endian="little" signed="no">
+            <number name="frame_type" mustmatch="yes" id="245" type="integer" length="8">
+                <fixedvalues>
+                    <fixedvalue value="904"/>
+                </fixedvalues>
+            </number>
+            <number name="frame_size" id="246" type="integer" length="8"/>
+            <number name="oop" id="285" repeatmax="frame_size / 8" type="integer" length="8" display="hex"/>
+        </structure>
+        <structure name="bytecode_frame" id="196" encoding="ISO_8859-1:1987" endian="little" signed="no">
+            <number name="frame_type" mustmatch="yes" id="249" type="integer" length="8">
+                <fixedvalues>
+                    <fixedvalue value="905"/>
+                </fixedvalues>
+            </number>
+            <number name="frame_size" id="250" type="integer" length="8"/>
+            <structure name="codes" id="278" length="frame_size" repeatmax="-1" order="variable">
+                <structref name="OP_PUSH_LITERAL" id="280" repeatmin="0" structure="id:257"/>
+                <structref name="OP_POP_LOCAL" id="281" repeatmin="0" structure="id:262"/>
+                <structref name="OP_RETURN_TOP" id="283" repeatmin="0" structure="id:267"/>
+                <structref name="OP_RETURN_THIS" id="284" repeatmin="0" structure="id:272"/>
+            </structure>
+        </structure>
+        <structure name="OP_PUSH_LITERAL" id="257" encoding="ISO_8859-1:1987" endian="big" signed="no">
+            <number name="args" id="259" type="integer" length="3"/>
+            <number name="opcode" mustmatch="yes" id="260" type="integer" length="1">
+                <fixedvalues>
+                    <fixedvalue value="3"/>
+                </fixedvalues>
+            </number>
+        </structure>
+        <structure name="OP_POP_LOCAL" id="262" encoding="ISO_8859-1:1987" endian="big" signed="no">
+            <number name="args" id="264" type="integer" length="3"/>
+            <number name="opcode" mustmatch="yes" id="265" type="integer" length="1">
+                <fixedvalues>
+                    <fixedvalue value="21"/>
+                </fixedvalues>
+            </number>
+        </structure>
+        <structure name="OP_RETURN_TOP" id="267" encoding="ISO_8859-1:1987" endian="big" signed="no">
+            <number name="args" id="269" type="integer" length="3"/>
+            <number name="opcode" mustmatch="yes" id="270" type="integer" length="1">
+                <fixedvalues>
+                    <fixedvalue value="31"/>
+                </fixedvalues>
+            </number>
+        </structure>
+        <structure name="OP_RETURN_THIS" id="272" encoding="ISO_8859-1:1987" endian="big" signed="no">
+            <number name="args" id="274" type="integer" length="3"/>
+            <number name="opcode" mustmatch="yes" id="275" type="integer" length="1">
+                <fixedvalues>
+                    <fixedvalue value="30"/>
+                </fixedvalues>
+            </number>
+        </structure>
+    </grammar>
+</ufwb>

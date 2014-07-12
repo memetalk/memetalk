@@ -67,7 +67,7 @@ class ObjectEntry(object):
 
 class ClassBehaviorEntry(Entry):
     def __init__(self, name, super_class):
-        self.name = bits.behavior_label(name)
+        self.name = pyutils.behavior_label(name)
         self.super_class = super_class
 
     def dump(self, dec, ptr):
@@ -255,7 +255,7 @@ class Decompiler(ASTBuilder):
 
         print header
         self.dump_names()
-
+        br()
         ###########
         idx = 0
         while True:
