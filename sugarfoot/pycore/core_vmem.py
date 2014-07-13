@@ -35,6 +35,7 @@ class CoreVirtualMemory(vmemory.VirtualMemory):
     def append_object_instance(self):
         self.append_int(pyutils.FRAME_TYPE_OBJECT)
         self.append_int(2 * bits.WSIZE)
+
         oop = self.append_label_ref('Object') # vt
         self.append_null()                    # delegate: end of chain of delegation
         return oop

@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ufwb version="1.8">
+    <grammar name="mmc" start="id:6" author="thiago silva">
+        <description>Grammar for my file format</description>
+        <structure name="mmc" id="6" encoding="ISO_8859-1:1987" endian="big" signed="no">
+            <structref name="header" id="8" structure="id:7"/>
+            <structref name="names" id="10" structure="id:9"/>
+            <structref name="object_table" id="12" structure="id:11"/>
+            <structref name="external_references" id="430" structure="id:333"/>
+            <structref name="external_symbols" id="437" structure="id:431"/>
+        </structure>
+        <structure name="header" id="7" encoding="ISO_8859-1:1987" endian="little" signed="no">
+            <number name="magic" mustmatch="yes" id="14" fillcolor="59F970" type="integer" length="8" display="hex">
+                <fixedvalues>
+                    <fixedvalue value="0x420"/>
+                </fixedvalues>
+            </number>
+            <number name="ot_size" id="15" fillcolor="59F970" type="integer" length="8"/>
+            <number name="er_size" id="16" fillcolor="59F970" type="integer" length="8"/>
+            <number name="es_size" id="17" fillcolor="59F970" type="integer" length="8"/>
+            <number name="names_size" id="18" fillcolor="59F970" type="integer" length="8"/>
+        </structure>
+        <structure name="names" id="9" length="names_size" encoding="ISO_8859-1:1987" endian="big" signed="no">
+            <structure name="entry" id="20" length="0" repeatmax="-1">
+                <string name="aString" id="21" fillcolor="FFB200" type="zero-terminated"/>
+                <structure name="padding" id="22" repeatmin="0">
+                    <number name="null" mustmatch="yes" id="23" fillcolor="CACACA" repeatmax="-1" type="integer" length="1">
+                        <fixedvalues>
+                            <fixedvalue value="0"/>
+                        </fixedvalues>
+                    </number>
+                </structure>
+            </structure>
+        </structure>
+        <structure name="object_table" id="11" length="ot_size" encoding="ISO_8859-1:1987" endian="big" signed="no">
+            <grammarref name="object" id="27" filename="/Users/jester/src/memetalk/sugarfoot/stuff/syn_object_table.grammar"/>
+        </structure>
+        <structure name="external_references" id="333" length="er_size" encoding="ISO_8859-1:1987" endian="little" signed="no">
+            <structure name="entry" id="335" length="0" repeatmax="-1">
+                <number name="name_addr" id="428" type="integer" length="8" display="hex"/>
+                <number name="obj_addr" id="429" type="integer" length="8" display="hex"/>
+            </structure>
+        </structure>
+        <structure name="external_symbols" id="431" length="es_size" encoding="ISO_8859-1:1987" endian="little" signed="no">
+            <structure name="entry" id="433" repeatmax="-1">
+                <number name="name_addr" id="435" type="integer" length="8" display="hex"/>
+                <number name="obj_addr" id="436" type="integer" length="8" display="hex"/>
+            </structure>
+        </structure>
+    </grammar>
+</ufwb>

@@ -45,8 +45,13 @@ class MMC(object):
 
         mmc['header']['magic_number'] = self.MAGIC_NUMBER
 
+        # mmc['names'] = [(name_t, bits.string_block_size(name_t)) for name_t in [name + '\0' for name in vmem.external_names()]]
 
-        mmc['names'] = [(name_t, bits.string_block_size(name_t)) for name_t in [name + '\0' for name in vmem.external_names()]]
+        labels = self.module.entry_labels()
+
+        names_list = [l + "\0" for l in labels] + [n + "\0" for n in vmem.external_names()]
+        mmc['names'] = [(name_t, bits.string_block_size(name_t)) for name_t in names_list]
+
         mmc['header']['names_size'] = sum([x[1] for x in mmc['names']])
 
         base = self.HEADER_SIZE + mmc['header']['names_size']
@@ -71,7 +76,8 @@ class MMC(object):
 
         return mmc
 
-    def dump(self, vmem):
+    def dump(self):
+        vmem = comp_vmemory.CompVirtualMemory()
         mmc = self.create_mmc_struct(vmem)
         with open(self.module.name + ".mmc", "w") as fp:
             # header
@@ -134,9 +140,8 @@ class Compiler(ASTBuilder):
 
         self.do_parse(self.parser)
 
-        vmem = comp_vmemory.CompVirtualMemory()
         mmc = MMC(self.cmodule)
-        mmc.dump(vmem)
+        mmc.dump()
 
     def new_module(self):
         module_name =  os.path.splitext(os.path.basename(self.filepath))[0]

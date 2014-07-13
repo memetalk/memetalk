@@ -61,3 +61,6 @@ def bytecode_for(key, arg):
 
 def encode(op, arg):
     return (op << 24) + arg
+
+def decode(word):
+    return ((0xFF000000 & word) >> 24), (0xFFFFFF & word)

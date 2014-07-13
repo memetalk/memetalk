@@ -288,7 +288,6 @@ class CompiledFunction(Entry):
             return 0
 
         bytecodes = ''.join([bits.pack32(w) for w in self.bytecodes])
-
         vmem.append_int(FRAME_TYPE_BYTECODE_FRAME)
         vmem.append_int(bits.string_block_size('x' * ((len(self.bytecodes) * opcode.WORD_SIZE) + 1)))
 
@@ -508,6 +507,9 @@ class CompiledModule(Entry):
         self.params = []
         self.functions = {}
         self.classes = {}
+
+    def entry_labels(self):
+        return self.functions.keys() + self.classes.keys()
 
     def label(self):
         return cmod_label(self.name)

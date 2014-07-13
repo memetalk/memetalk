@@ -10,7 +10,7 @@ class X
     <primitive "x_ab">
   }
   class_method c: fun(a, b) {
-    return b;
+    <primitive "x_c">
   }
 end
 

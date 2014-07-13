@@ -1,4 +1,8 @@
+import pyutils
+from pyutils import bits
 from pyutils import vmemory
+from pdb import set_trace as br
+
 
 class CompVirtualMemory(vmemory.VirtualMemory):
     def __init__(self):
@@ -30,17 +34,20 @@ class CompVirtualMemory(vmemory.VirtualMemory):
     #     return [(x[0], self.base + sum(self.cell_sizes[0:self.cells.index(x[1])])) for x in self.symb_table]
 
     def append_external_ref(self, name, label=None):
-        oop = self.append_int(999, label)
+        oop = self.append_int(0xAAAA, label)
         self.ext_ref_table.append((name, oop))
         return oop
 
     def append_object_instance(self):
+        self.append_int(pyutils.FRAME_TYPE_OBJECT)
+        self.append_int(2 * bits.WSIZE)
+
         oop = self.append_external_ref('Object')
         self.append_null()             # delegate
         return oop
 
     def append_symbol_instance(self, string):
-        oop = self.append_int(888)
+        oop = self.append_int(0xBBBB)
         self.symb_table.append((string, oop))
         return oop
 
@@ -60,15 +67,24 @@ class CompVirtualMemory(vmemory.VirtualMemory):
             return self.string_table[string]
         else:
             delegate = self.append_object_instance()
+
+            self.append_int(pyutils.FRAME_TYPE_BVAR_OBJECT)
+            self.append_int((3 * bits.WSIZE) + bits.string_block_size(string + "\0"))
+
             oop = self.append_external_ref('String')
             self.append_pointer_to(delegate)        # delegate
             self.append_int(len(string))
             self.append_string(string)
+
             self.string_table[string] = oop
             return oop
 
     def _append_dict_prologue(self, size):
         delegate = self.append_object_instance()
+
+        self.append_int(pyutils.FRAME_TYPE_DVAR_OBJECT)
+        self.append_int((3 * bits.WSIZE) + (size * 2 * bits.WSIZE))
+
         oop = self.append_external_ref('Dictionary')  # vt
         self.append_pointer_to(delegate)              # delegate
         self.append_int(size)                         # dict length
@@ -98,6 +114,10 @@ class CompVirtualMemory(vmemory.VirtualMemory):
 
     def append_empty_list(self):
         delegate = self.append_object_instance()
+
+        self.append_int(pyutils.FRAME_TYPE_LVAR_OBJECT)
+        self.append_int(3 * bits.WSIZE)
+
         oop = self.append_external_ref('List')         # vt
         self.append_pointer_to(delegate)               # delegate
         self.append_int(0)                             # len
@@ -108,6 +128,10 @@ class CompVirtualMemory(vmemory.VirtualMemory):
     def append_list_of_strings(self, lst):
         oops_elements = [self.append_string_instance(string) for string in lst]
         delegate = self.append_object_instance()
+
+        self.append_int(pyutils.FRAME_TYPE_LVAR_OBJECT)
+        self.append_int((3 + len(lst)) * bits.WSIZE)
+
         oop = self.append_external_ref('List')      # vt
         self.append_pointer_to(delegate)            # delegate
         self.append_int(len(lst))                   # len
