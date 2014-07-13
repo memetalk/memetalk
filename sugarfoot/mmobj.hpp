@@ -63,6 +63,7 @@ public:
 
   oop mm_compiled_class_super_name(oop cclass);
   oop mm_compiled_class_own_methods(oop cclass);
+  oop mm_compiled_class_methods(oop cclass);
   number mm_compiled_class_num_fields(oop cclass);
 
   oop mm_compiled_function_get_literal_by_index(oop cfun, int idx);
@@ -75,6 +76,7 @@ public:
   oop mm_new_class_getter(oop imodule, oop cclass, oop name, int idx);
 
   oop mm_behavior_get_dict(oop);
+  number mm_behavior_size(oop);
 
   bool mm_is_small_int(oop obj);
   number mm_untag_small_int(oop num);

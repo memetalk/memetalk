@@ -72,10 +72,10 @@ bool MMObj::mm_dictionary_has_key(oop dict, oop key) {
   assert( *(oop*) dict == _core_image->get_prime("Dictionary"));
 
   number size = mm_dictionary_size(dict);
-  // debug() << " Dict " << dict << " size " << size << " lookup:" << key << " vt: " << (oop*) *key << std::endl;
+  debug() << " Dict " << dict << " size " << size << " lookup:" << key << " vt: " << (oop*) *key << std::endl;
   for(int i = 0; i < size; i++) {
     oop mykey = mm_dictionary_entry_key(dict, i);
-    // debug() << " % key " << mykey << " vt: " << (oop*) *mykey << endl;
+    debug() << " % key " << mykey << " vt: " << (oop*) *mykey << endl;
     if (mykey == key) {
       return true;
     }
@@ -281,10 +281,17 @@ oop MMObj::mm_compiled_class_super_name(oop cclass) {
   return ((oop*)cclass)[3];
 }
 
+oop MMObj::mm_compiled_class_methods(oop cclass) {
+  assert( *(oop*) cclass == _core_image->get_prime("CompiledClass"));
+  return ((oop*)cclass)[5];
+}
+
 oop MMObj::mm_compiled_class_own_methods(oop cclass) {
   assert( *(oop*) cclass == _core_image->get_prime("CompiledClass"));
   return ((oop*)cclass)[6];
 }
+
+
 
 number MMObj::mm_compiled_class_num_fields(oop cclass) {
   assert( *(oop*) cclass == _core_image->get_prime("CompiledClass"));
@@ -380,6 +387,12 @@ oop MMObj::mm_behavior_get_dict(oop behavior) {
   //assert( *(oop*) behavior == _core_image->get_prime("Behavior")); -- this can also be an imodule
   return (oop) ((oop*)behavior)[2];
 }
+
+number MMObj::mm_behavior_size(oop behavior) {
+  assert( **(oop**) behavior == _core_image->get_prime("Behavior"));
+  return (number) ((oop*)behavior)[3];
+}
+
 
 
 bool MMObj::mm_is_small_int(oop num) {

@@ -66,10 +66,15 @@ expr :fnobj =  ['var-def' :id expr(fnobj)]       -> fnobj.emit_var_decl(id)
             | ['return-this']                    -> fnobj.emit_return_this()
             | ['send-or-local-call' :name args(fnobj):arity]         -> fnobj.emit_send_or_local_call(name, arity)
             | ['send' :e :s args(fnobj):arity] apply('expr' fnobj e) -> fnobj.emit_send(s, arity)
+            | assignment(fnobj)
             | atom(fnobj)
 
+assignment :fnobj = ['=' ['id' :v] expr(fnobj)]    -> fnobj.emit_local_assignment(v)
+                  | ['=' ['field' :f] expr(fnobj)] -> fnobj.emit_field_assignment(f)
+
 atom :fnobj = ['literal-number' :x]   -> fnobj.emit_push_num_literal(x)
-              | ['id' :name]          -> fnobj.emit_push_var(name)
+            | ['id' :name]            -> fnobj.emit_push_var(name)
+            | ['field' :name]         -> fnobj.emit_push_field(name)
 
 args :fnobj =  ['args' arglist(fnobj):arity] -> arity
             |  ['args' []] -> 0

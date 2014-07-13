@@ -439,6 +439,14 @@ class CompiledFunction(Entry):
             opname, idx = self.index_and_popop_for(name)
             self.bytecodes.append(opcode.bytecode_for(opname,idx))
 
+    def emit_field_assignment(self, field):
+        idx = self.owner.fields.index(field)
+        self.bytecodes.append(opcode.bytecode_for('pop_field', idx))
+
+    def emit_push_field(self, field):
+        idx = self.owner.fields.index(field)
+        self.bytecodes.append(opcode.bytecode_for('push_field', idx))
+
     def emit_send_or_local_call(self, name, arity):
         if name in self.local_vars:
             raise Exception('todo')

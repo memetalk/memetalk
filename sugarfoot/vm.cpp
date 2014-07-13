@@ -38,6 +38,9 @@ oop VM::new_symbol(const char* cstr) {
   std::string s = cstr;
   if (_symbols.find(s) == _symbols.end()) {
     _symbols[s] = _mmobj->mm_symbol_new(cstr);
+    debug() << "new_symbol: Creating new symbol " << cstr << " = " << _symbols[s] << endl;
+  } else {
+    debug() << "new_symbol: returning existing symbol " << cstr << " = " << _symbols[s] << endl;
   }
   return _symbols[s];
 }

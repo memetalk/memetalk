@@ -75,20 +75,17 @@ void Process::unload_fun_and_return(oop retval) {
   stack_push(retval);
 }
 
-// void Process:basic_new_and_load() {
-//   oop behavior = _rp;
-//   number payload = mmobj->mm_behavior_get_size(behavior);
+void Process::basic_new_and_load() {
+  oop klass = _rp;
+  number payload = _mmobj->mm_behavior_size(klass);
+  oop instance = (oop) calloc(sizeof(word), payload + 2); //2: vt, delegate
+  debug() << "new instance [size: " << payload << "]: " << instance << endl;
 
-//   oop instance = calloc(sizeof(word), payload);
-//   *instance = behavior; //behavior
-//   * (oop*) instance[1] = new_parent_object(behavior); //delegate
-//   _rp = instance;
-//   _dp = instance; //?
-
-//   // *(_fp-FRAME_SIZE) = instance; //rewrite rp on the stack
-//   // *(_fp-FRAME_SIZE+1) = instance; //rewrite receiver on the stack
-//   exec_fun(instance, _cp);
-// }
+  ((oop*)instance)[0] = klass;
+  ((oop*) instance)[1] = _mmobj->mm_object_new(); //new_parent_object(klass); //delegate: TODO: should be super instance
+  _rp = instance;
+  _dp = instance;
+}
 
 void Process::load_fun(oop recv, oop fun) {
   // loads frame if necessary and executes fun
@@ -107,9 +104,10 @@ void Process::load_fun(oop recv, oop fun) {
   _cp = fun;
   _mp = _mmobj->mm_function_get_module(_cp);
 
-  // if (_mmobj->mm_function_is_ctor(fun)) {
-  //   basic_new_and_load();
-//  } else
+  if (_mmobj->mm_function_is_ctor(fun)) {
+    basic_new_and_load();
+  }
+
   if (_mmobj->mm_function_is_prim(fun)) {
     oop prim_name = _mmobj->mm_function_get_prim_name(fun);
     std::string str_prim_name = _mmobj->mm_string_cstr(prim_name);
@@ -188,6 +186,7 @@ void Process::handle_send(number num_args) {
 
 void Process::dispatch(int opcode, int arg) {
     debug() << " executing " << opcode << " " << arg << endl;
+    oop val;
     switch(opcode) {
       case PUSH_LOCAL:
         debug() << "PUSH_LOCAL " << arg << " " << (oop) *(_fp + arg + 1) << endl;
@@ -204,12 +203,28 @@ void Process::dispatch(int opcode, int arg) {
       case PUSH_MODULE:
         stack_push(_mp);
         break;
+      case PUSH_FIELD:
+        debug() << "PUSH_FIELD " << arg << " " << (oop) *(_dp + arg + 2) << endl;
+        stack_push(*(_dp + arg + 2));
+        break;
       case RETURN_TOP:
         unload_fun_and_return(stack_pop());
         break;
+      case RETURN_THIS:
+        debug() << "RETURN_THIS " << _rp << endl;
+        unload_fun_and_return(_rp);
+        break;
       case POP_LOCAL:
-        debug() << "POP_LOCAL " << arg << " " << (oop) *(_fp + arg + 1) << endl;
-        *(_fp + arg + 1) = (word) stack_pop();
+        val = stack_pop();
+        debug() << "POP_LOCAL " << arg << " on " << (oop) (_fp + arg + 1) << " -- "
+                << (oop) *(_fp + arg + 1) << " = " << val << endl;
+        *(_fp + arg + 1) = (word) val;
+        break;
+      case POP_FIELD:
+        val = stack_pop();
+        debug() << "POP_FIELD " << arg << " on " << (oop) (_dp + arg + 2) << " -- "
+                << (oop) *(_dp + arg + 2) << " = " << val << endl; //2: vt, delegate
+        *(_dp + arg + 2) = (word) val;
         break;
       case SEND:
         handle_send(arg);
@@ -224,6 +239,8 @@ void Process::dispatch(int opcode, int arg) {
 
 oop Process::lookup(oop vt, oop selector) {
   // assert( *(oop*) selector == _core_image->get_prime("Symbol"));
+
+  debug() << "Lookup " << selector << " " << _mmobj->mm_symbol_cstr(selector) << endl;
 
   oop dict = _mmobj->mm_behavior_get_dict(vt);
   if (_mmobj->mm_dictionary_has_key(dict, selector)) {

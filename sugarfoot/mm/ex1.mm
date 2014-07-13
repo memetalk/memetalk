@@ -4,7 +4,10 @@
 class X
   fields: a,b;
   init new: fun(a) {
-    <primitive "x_new">
+    @a = a;
+  }
+  instance_method mya: fun() {
+    return @a;
   }
   instance_method ab: fun() {
     <primitive "x_ab">
@@ -15,7 +18,8 @@ class X
 end
 
 main: fun() {
-  return X.new(99);
+  var x =  X.new(99);
+  return x.mya();
 }
 
 .endcode

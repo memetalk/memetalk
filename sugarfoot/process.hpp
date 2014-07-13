@@ -33,6 +33,7 @@ private:
   void init();
   void dispatch(int, int);
   void handle_send(number);
+  void basic_new_and_load();
 
   VM* _vm;
   MMObj* _mmobj;

@@ -23,9 +23,11 @@ typedef oop (*prim_function_t) (Process*);
 #define PUSH_PARAM 1
 #define PUSH_LOCAL 2
 #define PUSH_LITERAL 3
+#define PUSH_FIELD 4
 #define PUSH_MODULE 7
 
 #define POP_LOCAL 21
+#define POP_FIELD 22
 
 #define RETURN_TOP 31
 #define RETURN_THIS 30
