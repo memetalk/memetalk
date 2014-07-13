@@ -531,6 +531,8 @@ class CompiledModule(Entry):
         return klass
 
     def fill(self, vmem):
+        vmem.append_label_ref(self.label())
+
         # first word on object table is a pointer to the CompiledModule
         delegate = vmem.append_object_instance()
         oop_name = vmem.append_string_instance(self.name)
