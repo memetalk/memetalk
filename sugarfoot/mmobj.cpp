@@ -46,6 +46,11 @@ oop MMObj::mm_list_new_empty() {
   return obj;
 }
 
+number MMObj::mm_list_size(oop list) {
+  assert( *(oop*) list == _core_image->get_prime("List"));
+  return (number) ((word*)list)[2];
+}
+
 oop MMObj::mm_dictionary_new(int num_entries) {
   int basic = 3; //vt, delegate, size
   int payload = num_entries * 2;
@@ -153,13 +158,13 @@ oop MMObj::mm_function_get_cfun(oop fun) {
 bool MMObj::mm_function_is_prim(oop fun) {
   assert( *(oop*) fun == _core_image->get_prime("Function"));
   oop cfun = mm_function_get_cfun(fun);
-  return (oop) ((oop*)cfun)[5];
+  return mm_compiled_function_is_prim(cfun);
 }
 
 oop MMObj::mm_function_get_prim_name(oop fun) {
   assert( *(oop*) fun == _core_image->get_prime("Function"));
   oop cfun = mm_function_get_cfun(fun);
-  return (oop) ((oop*)cfun)[6];
+  return mm_compiled_function_get_prim_name(cfun);
 }
 
 
@@ -213,7 +218,17 @@ bool MMObj::mm_function_is_ctor(oop fun) {
 
 bool MMObj::mm_compiled_function_is_ctor(oop cfun) {
   assert( *(oop*) cfun == _core_image->get_prime("CompiledFunction"));
-  return (bytecode*) ((oop*)cfun)[4];
+  return ((oop*)cfun)[4];
+}
+
+bool MMObj::mm_compiled_function_is_prim(oop cfun) {
+  assert( *(oop*) cfun == _core_image->get_prime("CompiledFunction"));
+  return ((oop*)cfun)[5];
+}
+
+oop MMObj::mm_compiled_function_get_prim_name(oop cfun) {
+  assert( *(oop*) cfun == _core_image->get_prime("CompiledFunction"));
+  return (oop) ((oop*)cfun)[6];
 }
 
 number MMObj::mm_compiled_function_access_field(oop cfun) {
@@ -263,12 +278,18 @@ bytecode* MMObj::mm_compiled_function_get_code(oop cfun) {
 
 oop MMObj::mm_compiled_class_super_name(oop cclass) {
   assert( *(oop*) cclass == _core_image->get_prime("CompiledClass"));
-  return (oop) ((word*)cclass)[4];
+  return ((oop*)cclass)[3];
 }
 
 oop MMObj::mm_compiled_class_own_methods(oop cclass) {
   assert( *(oop*) cclass == _core_image->get_prime("CompiledClass"));
-  return (oop) ((word*)cclass)[7];
+  return ((oop*)cclass)[6];
+}
+
+number MMObj::mm_compiled_class_num_fields(oop cclass) {
+  assert( *(oop*) cclass == _core_image->get_prime("CompiledClass"));
+  oop fields_list = ((oop*)cclass)[4];
+  return mm_list_size(fields_list);
 }
 
 oop MMObj::mm_cfuns_to_funs_dict(oop cfuns_dict, oop imod) {
@@ -291,23 +312,25 @@ oop MMObj::mm_class_behavior_new(oop super_class, oop funs_dict) {
   //vt: Behavior
   //delegate:
   //dict
-  oop cbehavior = (oop) malloc(sizeof(word) * 3);
+  oop cbehavior = (oop) malloc(sizeof(word) * 4);
   * (oop*) cbehavior = _core_image->get_prime("Behavior");
   * (oop*) &cbehavior[1] = * (oop*) super_class; //super_class[vt]
   * (oop*) &cbehavior[2] = funs_dict;
+  * (word*) &cbehavior[3] = (word) 256; //flag
   return cbehavior;
 }
 
 
-oop MMObj::mm_class_new(oop class_behavior, oop super_class, oop dict, oop compiled_class) {
+oop MMObj::mm_class_new(oop class_behavior, oop super_class, oop dict, oop compiled_class, number payload) {
   assert( *(oop*) dict == _core_image->get_prime("Dictionary"));
   assert( *(oop*) compiled_class == _core_image->get_prime("CompiledClass"));
 
-  oop klass = (oop) malloc(sizeof(word) * 4);
+  oop klass = (oop) malloc(sizeof(word) * 5);
   * (oop*) klass = class_behavior;
   * (oop*) &klass[1] = super_class;
   * (oop*) &klass[2] = dict;
-  * (oop*) &klass[3] = compiled_class;
+  * (word*) &klass[3] = payload;
+  * (oop*) &klass[4] = compiled_class;
   return klass;
 }
 
@@ -316,7 +339,7 @@ oop MMObj::mm_new_class_getter(oop imodule, oop cclass, oop name, int idx) {
   assert( *(oop*) cclass == _core_image->get_prime("CompiledClass"));
   assert( *(oop*) name == _core_image->get_prime("String"));
 
-  oop cfun_getter = (oop) calloc(sizeof(word), 12);
+  oop cfun_getter = (oop) calloc(sizeof(word), 16);
 
   * (oop*) cfun_getter = _core_image->get_prime("CompiledFunction");
   * (oop*) &cfun_getter[1] = mm_object_new();

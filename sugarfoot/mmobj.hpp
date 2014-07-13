@@ -18,6 +18,7 @@ public:
   oop mm_object_new();
 
   oop mm_list_new_empty();
+  number mm_list_size(oop list);
 
   oop mm_dictionary_new(int num_entries);
   number mm_dictionary_size(oop dict);
@@ -44,11 +45,9 @@ public:
   bytecode* mm_function_get_code(oop fun);
   number mm_function_get_code_size(oop fun);
   oop mm_function_get_literal_by_index(oop fun, int idx);
-
   number mm_function_get_num_locals(oop fun);
   number mm_function_get_num_params(oop fun);
   bool mm_function_is_ctor(oop fun);
-
   bool mm_function_is_getter(oop fun);
   number mm_function_access_field(oop fun);
 
@@ -59,14 +58,18 @@ public:
   bool mm_compiled_function_is_getter(oop cfun);
   number mm_compiled_function_access_field(oop cfun);
   bool mm_compiled_function_is_ctor(oop cfun);
+  bool mm_compiled_function_is_prim(oop cfun);
+  oop mm_compiled_function_get_prim_name(oop cfun);
 
   oop mm_compiled_class_super_name(oop cclass);
   oop mm_compiled_class_own_methods(oop cclass);
+  number mm_compiled_class_num_fields(oop cclass);
+
   oop mm_compiled_function_get_literal_by_index(oop cfun, int idx);
   number mm_compiled_function_get_literal_frame_size(oop cfun);
 
   oop mm_class_behavior_new(oop super_class, oop funs_dict);
-  oop mm_class_new(oop class_behavior, oop super_class, oop dict, oop compiled_class);
+  oop mm_class_new(oop class_behavior, oop super_class, oop dict, oop compiled_class, number payload);
 
   oop mm_cfuns_to_funs_dict(oop cfuns_dict, oop imod);
   oop mm_new_class_getter(oop imodule, oop cclass, oop name, int idx);

@@ -75,20 +75,20 @@ void Process::unload_fun_and_return(oop retval) {
   stack_push(retval);
 }
 
-void Process:basic_new_and_load() {
-  oop behavior = _rp;
-  number payload = mmobj->mm_behavior_get_size(behavior);
+// void Process:basic_new_and_load() {
+//   oop behavior = _rp;
+//   number payload = mmobj->mm_behavior_get_size(behavior);
 
-  oop instance = calloc(sizeof(word), payload);
-  *instance = behavior; //behavior
-  * (oop*) instance[1] = new_parent_object(behavior); //delegate
-  _rp = instance;
-  _dp = instance; //?
+//   oop instance = calloc(sizeof(word), payload);
+//   *instance = behavior; //behavior
+//   * (oop*) instance[1] = new_parent_object(behavior); //delegate
+//   _rp = instance;
+//   _dp = instance; //?
 
-  // *(_fp-FRAME_SIZE) = instance; //rewrite rp on the stack
-  // *(_fp-FRAME_SIZE+1) = instance; //rewrite receiver on the stack
-  exec_fun(instance, _cp);
-}
+//   // *(_fp-FRAME_SIZE) = instance; //rewrite rp on the stack
+//   // *(_fp-FRAME_SIZE+1) = instance; //rewrite receiver on the stack
+//   exec_fun(instance, _cp);
+// }
 
 void Process::load_fun(oop recv, oop fun) {
   // loads frame if necessary and executes fun
@@ -107,9 +107,10 @@ void Process::load_fun(oop recv, oop fun) {
   _cp = fun;
   _mp = _mmobj->mm_function_get_module(_cp);
 
-  if (_mmobj->mm_function_is_ctor(fun)) {
-    basic_new_and_load();
-  } else if (_mmobj->mm_function_is_prim(fun)) {
+  // if (_mmobj->mm_function_is_ctor(fun)) {
+  //   basic_new_and_load();
+//  } else
+  if (_mmobj->mm_function_is_prim(fun)) {
     oop prim_name = _mmobj->mm_function_get_prim_name(fun);
     std::string str_prim_name = _mmobj->mm_string_cstr(prim_name);
     execute_primitive(str_prim_name);

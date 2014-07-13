@@ -9,6 +9,7 @@ using namespace std;
 
 word CoreImage::HEADER_SIZE = 4 * WSIZE;
 
+
 const char* CoreImage::PRIMES_NAMES[] = {"Behavior",
                                         "Object_Behavior",
                                         "Object",
@@ -40,6 +41,7 @@ bool CoreImage::is_prime(const char* name) {
   return false;
 }
 
+//temporary workaround used on mmc_loader to get superclass
 bool CoreImage::has_class(const char* name) {
   return (strcmp(name, "Behavior") != 0) &&
     (strcmp(name, "Object_Behavior") != 0) &&
