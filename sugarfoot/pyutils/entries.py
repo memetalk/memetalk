@@ -484,7 +484,7 @@ class Function(Entry):
         self.cfun.set_primitive(prim_name)
 
     def label(self):
-        return fun_label(self.cfun.label(), self.cfun.name)
+        return self.cfun.name
 
     def fill(self, vmem):
         delegate = vmem.append_object_instance()
@@ -553,10 +553,10 @@ class CompiledModule(Entry):
         self.oop = oop
         return oop
 
-class Module(Entry):
+class CoreModule(Entry):
     # core's Module instance (conflated approach)
     def __init__(self, cmod):
-        super(Module, self).__init__()
+        super(CoreModule, self).__init__()
         self.cmod = cmod
         self.functions = {}
         self.classes = []
@@ -572,12 +572,14 @@ class Module(Entry):
         self.objects.append(obj)
 
     def entry_labels(self):
-        return [f.label() for f in self.functions.values()] +\
-            [c.label() for c in self.classes]  +\
-            [o.label() for o in self.objects]
+        top_objects = ['Behavior', 'Object_Behavior', 'Object']
+        res = [f.label() for f in self.functions.values()]
+        res += [c.label() for c in self.classes]
+        res += [o.label() for o in self.objects if o.label() in top_objects]
+        return res + [self.label()]
 
     def label(self):
-        return mod_label(self.cmod.name)
+        return '@core_module'
 
     def fill(self, vmem):
         oop_dict = vmem.append_sym_dict_emiting_entries(self.functions)
@@ -601,8 +603,7 @@ class Module(Entry):
 class CoreCompiledModule(CompiledModule):
     def __init__(self):
         super(CoreCompiledModule, self).__init__('core')
-        self.imod = Module(self)
-        # self.prime_labels = [] # all exported/top-level labels go here
+        self.imod = CoreModule(self)
 
     def entry_labels(self):
         return self.imod.entry_labels()

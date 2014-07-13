@@ -58,7 +58,7 @@ class Compiler(ASTBuilder):
         core['header']['entries'] = len(labels)
 
         # names :: [(string, alloc-size in bytes, self-ptr)]
-        names_list = [l + "\0" for l in labels] + [n + "\0" for n in self.vmem.external_names()]
+        names_list = set([l + "\0" for l in labels] + [n + "\0" for n in self.vmem.external_names()])
 
         core['names'] = [(name_t, bits.string_block_size(name_t)) for name_t in names_list]
 

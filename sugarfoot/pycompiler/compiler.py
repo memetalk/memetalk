@@ -15,8 +15,8 @@ class MMC(object):
     MAGIC_NUMBER = 0x420
     HEADER_SIZE = 5 * bits.WSIZE
 
-    def __init__(self, module):
-        self.module = module
+    def __init__(self, cmodule):
+        self.cmodule = cmodule
 
     def name_ptr_for(self, name, mmc):
         acc = 0
@@ -41,15 +41,15 @@ class MMC(object):
             }
 
 
-        self.module.fill(vmem)
+        self.cmodule.fill(vmem)
 
         mmc['header']['magic_number'] = self.MAGIC_NUMBER
 
         # mmc['names'] = [(name_t, bits.string_block_size(name_t)) for name_t in [name + '\0' for name in vmem.external_names()]]
 
-        labels = self.module.entry_labels()
+        labels = self.cmodule.entry_labels()
 
-        names_list = [l + "\0" for l in labels] + [n + "\0" for n in vmem.external_names()]
+        names_list = set([l + "\0" for l in labels] + [n + "\0" for n in vmem.external_names()])
         mmc['names'] = [(name_t, bits.string_block_size(name_t)) for name_t in names_list]
 
         mmc['header']['names_size'] = sum([x[1] for x in mmc['names']])
@@ -79,7 +79,7 @@ class MMC(object):
     def dump(self):
         vmem = comp_vmemory.CompVirtualMemory()
         mmc = self.create_mmc_struct(vmem)
-        with open(self.module.name + ".mmc", "w") as fp:
+        with open(self.cmodule.name + ".mmc", "w") as fp:
             # header
             fp.write(bits.pack_word(mmc['header']['magic_number']))
             fp.write(bits.pack_word(mmc['header']['ot_size']))
