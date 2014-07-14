@@ -44,6 +44,40 @@ void MMCImage::link_external_references() {
   }
 }
 
+oop MMCImage::instantiate_class(oop class_name, oop cclass, oop cclass_dict, std::map<std::string, oop>& mod_classes, oop imodule) {
+  char* cname = _mmobj->mm_string_cstr(class_name);
+  debug() << "Instantiating class " << cname << endl;
+  oop super_name = _mmobj->mm_compiled_class_super_name(cclass);
+  char* super_name_str = _mmobj->mm_string_cstr(super_name);
+  debug() << "Super " << super_name_str << endl;
+
+  oop super_class = NULL;
+  if (mod_classes.find(super_name_str) != mod_classes.end()) {
+    debug() << "Super class already instantiated" << endl;
+    super_class = mod_classes[super_name_str];
+  } else if (_mmobj->mm_dictionary_has_key(cclass_dict, super_name)) {
+    debug() << "Super class not instantiated. recursively instantiate it" << endl;
+    super_class = instantiate_class(super_name, _mmobj->mm_dictionary_get(cclass_dict, super_name), cclass_dict, mod_classes, imodule);
+  }
+  //else if (super_name in module arguments) {
+  else if (_core_image->has_class(super_name_str)) {
+    debug() << "Super class got from super module (core)" << endl;
+    super_class = _core_image->get_prime(super_name_str);
+  } else {
+    bail("Super class not found");
+  }
+
+  oop class_funs_dict = _mmobj->mm_cfuns_to_funs_dict(_mmobj->mm_compiled_class_own_methods(cclass), imodule);
+  oop class_behavior = _mmobj->mm_class_behavior_new(super_class, class_funs_dict);
+
+  oop funs_dict = _mmobj->mm_cfuns_to_funs_dict(_mmobj->mm_compiled_class_methods(cclass), imodule);
+  number num_fields = _mmobj->mm_compiled_class_num_fields(cclass);
+  oop klass = _mmobj->mm_class_new(class_behavior, super_class, funs_dict, cclass, num_fields);
+  mod_classes[cname] = klass;
+  debug() << "User class " << cname << " = " << klass << " dict: " << class_funs_dict << endl;
+  return klass;
+}
+
 
 oop MMCImage::instantiate_module(/* module arguments */) {
 
@@ -51,15 +85,16 @@ oop MMCImage::instantiate_module(/* module arguments */) {
   // debug() << "CompiledModule: " << cmod << endl;
   // debug() << "CompiledModule vt: " << (word*) *cmod << endl;
 
-  oop class_dict = _mmobj->mm_compiled_module_classes(_compiled_module);
+  oop cclass_dict = _mmobj->mm_compiled_module_classes(_compiled_module);
 
-  // debug() << "CompiledModule class_dict: " << class_dict << endl;
-  // debug() << "CompiledModule class_dict vt: " << (word*) *((word*)class_dict) << endl;
+  // debug() << "CompiledModule class_dict: " << cclass_dict << endl;
+  // debug() << "CompiledModule class_dict vt: " << (word*) *((word*)cclass_dict) << endl;
 
-  number num_classes = _mmobj->mm_dictionary_size(class_dict);
+  number num_classes = _mmobj->mm_dictionary_size(cclass_dict);
   // debug() << "CompiledModule num_classes: " << num_classes << endl;
 
   oop imodule = _mmobj->mm_module_new(num_classes, _core_image->get_module_instance());
+  debug() << "imodule " << imodule << endl;
 
   oop fun_dict = _mmobj->mm_compiled_module_functions(_compiled_module);
 
@@ -88,32 +123,19 @@ oop MMCImage::instantiate_module(/* module arguments */) {
   int imod_idx = 3; //vt, delegate, dict
 
   for (int i = 0; i < num_classes; i++) {
-    oop str_name = _mmobj->mm_dictionary_entry_key(class_dict, i);
+    oop str_name = _mmobj->mm_dictionary_entry_key(cclass_dict, i);
     char* cname = _mmobj->mm_string_cstr(str_name);
-    // debug() << "Class " << cname << endl;
-    oop cclass = _mmobj->mm_dictionary_entry_value(class_dict, i);
 
-    oop super_name = _mmobj->mm_compiled_class_super_name(cclass);
-    char* super_name_str = _mmobj->mm_string_cstr(super_name);
-    // debug() << "Super " << super_name_str << endl;
+    oop cclass = _mmobj->mm_dictionary_entry_value(cclass_dict, i);
+    oop klass;
 
-    oop super_class = NULL;
-    if (mod_classes.find(super_name_str) != mod_classes.end()) {
-      super_class = mod_classes[super_name_str];
-    } //else if (super_name in module arguments) {
-    else if (_core_image->has_class(super_name_str)) {
-      super_class = _core_image->get_prime(super_name_str);
+    if (mod_classes.find(cname) != mod_classes.end()) {
+      debug() << "Class " << cname << " already instantiated" << endl;
+      klass = mod_classes[cname];
     } else {
-      bail("Super class not found");
+      //recursively instantiate it
+      klass = instantiate_class(str_name, cclass, cclass_dict, mod_classes, imodule);
     }
-
-    oop class_funs_dict = _mmobj->mm_cfuns_to_funs_dict(_mmobj->mm_compiled_class_own_methods(cclass), imodule);
-    oop class_behavior = _mmobj->mm_class_behavior_new(super_class, class_funs_dict);
-
-    oop funs_dict = _mmobj->mm_cfuns_to_funs_dict(_mmobj->mm_compiled_class_methods(cclass), imodule);
-    number num_fields = _mmobj->mm_compiled_class_num_fields(cclass);
-    oop klass = _mmobj->mm_class_new(class_behavior, super_class, funs_dict, cclass, num_fields);
-    debug() << "User class " << cname << " = " << klass << " dict: " << class_funs_dict << endl;
 
     * (oop*) & imodule[imod_idx] = klass;
     oop klass_getter = _mmobj->mm_new_class_getter(imodule, cclass, str_name, imod_idx);

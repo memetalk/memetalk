@@ -61,11 +61,13 @@ body :fnobj = [(expr(fnobj)+):b] -> b
 
 exprs :fnobj = expr(fnobj)+
 
-expr :fnobj =  ['var-def' :id expr(fnobj)]       -> fnobj.emit_var_decl(id)
-            | ['return' expr(fnobj)]             -> fnobj.emit_return_top()
-            | ['return-this']                    -> fnobj.emit_return_this()
+expr :fnobj = ['var-def' :id expr(fnobj)]              -> fnobj.emit_var_decl(id)
+            | ['return' expr(fnobj)]                   -> fnobj.emit_return_top()
+            | ['return-this']                          -> fnobj.emit_return_this()
+            | ['super-ctor-send' :s args(fnobj):arity] -> fnobj.emit_super_ctor_send(s, arity)
             | ['send-or-local-call' :name args(fnobj):arity]         -> fnobj.emit_send_or_local_call(name, arity)
             | ['send' :e :s args(fnobj):arity] apply('expr' fnobj e) -> fnobj.emit_send(s, arity)
+            | ['pop' expr(fnobj)] -> fnobj.emit_pop()
             | assignment(fnobj)
             | atom(fnobj)
 
@@ -73,6 +75,7 @@ assignment :fnobj = ['=' ['id' :v] expr(fnobj)]    -> fnobj.emit_local_assignmen
                   | ['=' ['field' :f] expr(fnobj)] -> fnobj.emit_field_assignment(f)
 
 atom :fnobj = ['literal-number' :x]   -> fnobj.emit_push_num_literal(x)
+            | ['literal' 'this']      -> fnobj.emit_push_this()
             | ['id' :name]            -> fnobj.emit_push_var(name)
             | ['field' :name]         -> fnobj.emit_push_field(name)
 

@@ -1,25 +1,39 @@
 .preamble()
 .code
 
-class X
-  fields: a,b;
-  init new: fun(a) {
-    @a = a;
+class Point2D
+  fields: x,y;
+  init other_new: fun() {
+    @x = 300;
+    @y = 400;
   }
-  instance_method mya: fun() {
-    return @a;
+  init new: fun(x,y) {
+    @x = x;
+    @y = y;
   }
-  instance_method ab: fun() {
-    <primitive "x_ab">
+  instance_method x: fun() {
+    return @x;
   }
-  class_method c: fun(a, b) {
-    <primitive "x_c">
+  instance_method y: fun() {
+    return @y;
+  }
+end
+
+class Point3D < Point2D
+  fields: z;
+  init new: fun(x,y,z) {
+    super.new(x,y);
+    //super.other_new();
+    @z = z;
+  }
+  instance_method z: fun() {
+    return @z;
   }
 end
 
 main: fun() {
-  var x =  X.new(99);
-  return x.mya();
+  var p =  Point3D.new(99,98,97);
+  return p.z();
 }
 
 .endcode

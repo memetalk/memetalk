@@ -289,7 +289,7 @@ class CompiledFunction(Entry):
 
         bytecodes = ''.join([bits.pack32(w) for w in self.bytecodes])
         vmem.append_int(FRAME_TYPE_BYTECODE_FRAME)
-        vmem.append_int(bits.string_block_size('x' * ((len(self.bytecodes) * opcode.WORD_SIZE) + 1)))
+        vmem.append_int(bits.string_block_size(bytecodes + "\0"))
 
         vmem.label_current(self.bytecode_label())
         vmem.append_string(bytecodes)
@@ -447,6 +447,12 @@ class CompiledFunction(Entry):
         idx = self.owner.fields.index(field)
         self.bytecodes.append(opcode.bytecode_for('push_field', idx))
 
+    def emit_push_this(self):
+        self.bytecodes.append(opcode.bytecode_for('push_this', 0))
+
+    def emit_pop(self):
+        self.bytecodes.append(opcode.bytecode_for('pop', 0))
+
     def emit_send_or_local_call(self, name, arity):
         if name in self.local_vars:
             raise Exception('todo')
@@ -472,6 +478,11 @@ class CompiledFunction(Entry):
         self.bytecodes.append(opcode.bytecode_for('push_literal', idx))
         self.bytecodes.append(opcode.bytecode_for('send', arity))
 
+
+    def emit_super_ctor_send(self, selector, arity):
+        idx = self.create_and_register_symbol_literal(selector)
+        self.bytecodes.append(opcode.bytecode_for('push_literal', idx))
+        self.bytecodes.append(opcode.bytecode_for('super_ctor_send', arity))
 
 class Function(Entry):
     def __init__(self, imod, cfun):

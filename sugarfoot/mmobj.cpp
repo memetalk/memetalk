@@ -37,6 +37,10 @@ oop MMObj::mm_object_new() {
   return obj;
 }
 
+oop MMObj::mm_object_delegate(oop obj) {
+  return ((oop*) obj)[1];
+}
+
 oop MMObj::mm_list_new_empty() {
   oop obj = (oop) malloc(sizeof(word) * 3); // vt, delegate, size
 
@@ -72,10 +76,10 @@ bool MMObj::mm_dictionary_has_key(oop dict, oop key) {
   assert( *(oop*) dict == _core_image->get_prime("Dictionary"));
 
   number size = mm_dictionary_size(dict);
-  debug() << " Dict " << dict << " size " << size << " lookup:" << key << " vt: " << (oop*) *key << std::endl;
+  // debug() << " Dict " << dict << " size " << size << " lookup:" << key << " vt: " << (oop*) *key << std::endl;
   for(int i = 0; i < size; i++) {
     oop mykey = mm_dictionary_entry_key(dict, i);
-    debug() << " % key " << mykey << " vt: " << (oop*) *mykey << endl;
+    // debug() << " % key " << mykey << " vt: " << (oop*) *mykey << endl;
     if (mykey == key) {
       return true;
     }
@@ -276,6 +280,11 @@ bytecode* MMObj::mm_compiled_function_get_code(oop cfun) {
   return (bytecode*) ((oop*)cfun)[15];
 }
 
+oop MMObj::mm_compiled_class_name(oop cclass) {
+  assert( *(oop*) cclass == _core_image->get_prime("CompiledClass"));
+  return ((oop*)cclass)[2];
+}
+
 oop MMObj::mm_compiled_class_super_name(oop cclass) {
   assert( *(oop*) cclass == _core_image->get_prime("CompiledClass"));
   return ((oop*)cclass)[3];
@@ -341,6 +350,14 @@ oop MMObj::mm_class_new(oop class_behavior, oop super_class, oop dict, oop compi
   return klass;
 }
 
+oop MMObj::mm_class_name(oop klass) {
+  oop cclass = mm_class_get_compiled_class(klass);
+  return mm_compiled_class_name(cclass);
+}
+
+oop MMObj::mm_class_get_compiled_class(oop klass) {
+  return ((oop*)klass)[4];
+}
 
 oop MMObj::mm_new_class_getter(oop imodule, oop cclass, oop name, int idx) {
   assert( *(oop*) cclass == _core_image->get_prime("CompiledClass"));
@@ -390,7 +407,13 @@ oop MMObj::mm_behavior_get_dict(oop behavior) {
 
 number MMObj::mm_behavior_size(oop behavior) {
   assert( **(oop**) behavior == _core_image->get_prime("Behavior"));
-  return (number) ((oop*)behavior)[3];
+  oop num = ((oop*)behavior)[3];
+  if (mm_is_small_int(num)) {
+    debug() << "WARNING: behavior size is tagged and I will untag it" << endl;
+    return mm_untag_small_int(num);
+  } else {
+    return (number) num;
+  }
 }
 
 

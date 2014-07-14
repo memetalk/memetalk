@@ -16,6 +16,7 @@ public:
   oop mm_compiled_module_functions(oop);
 
   oop mm_object_new();
+  oop mm_object_delegate(oop);
 
   oop mm_list_new_empty();
   number mm_list_size(oop list);
@@ -61,6 +62,7 @@ public:
   bool mm_compiled_function_is_prim(oop cfun);
   oop mm_compiled_function_get_prim_name(oop cfun);
 
+  oop mm_compiled_class_name(oop cclass);
   oop mm_compiled_class_super_name(oop cclass);
   oop mm_compiled_class_own_methods(oop cclass);
   oop mm_compiled_class_methods(oop cclass);
@@ -71,6 +73,8 @@ public:
 
   oop mm_class_behavior_new(oop super_class, oop funs_dict);
   oop mm_class_new(oop class_behavior, oop super_class, oop dict, oop compiled_class, number payload);
+  oop mm_class_name(oop klass);
+  oop mm_class_get_compiled_class(oop klass);
 
   oop mm_cfuns_to_funs_dict(oop cfuns_dict, oop imod);
   oop mm_new_class_getter(oop imodule, oop cclass, oop name, int idx);

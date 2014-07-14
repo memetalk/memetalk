@@ -28,8 +28,8 @@
   object Object
     _vt: Object_Behavior;
     _delegate: null;
-    size: 0;
     dict: {};
+    size: 0;
     compiled_class: Object_CompiledClass;
   end
 

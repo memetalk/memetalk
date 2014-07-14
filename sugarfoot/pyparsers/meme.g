@@ -143,7 +143,7 @@ stmt = control_expr
 non_control_expr = expr_ret
                  | expr_non_local_ret
                  | expr_attr
-                 | expr
+                 | expr:e -> ['pop', e]
                  | expr_decl
 
 expr_ret =  spaces !(self.input.position):begin token("return") expr:e -> self.i.ast(begin,['return', e])

@@ -2,6 +2,8 @@
 #define MMC_LOADER
 
 #include "defs.hpp"
+#include <map>
+#include <string>
 
 class CoreImage;
 class VM;
@@ -15,6 +17,7 @@ public:
   oop load();
 private:
   oop instantiate_module();
+  oop instantiate_class(oop, oop, oop, std::map<std::string, oop>&, oop);
   void load_header();
   void link_external_references();
 

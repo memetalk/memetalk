@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <string>
 #include <stdlib.h>
+#include <map>
 #include "process.hpp"
 #include "defs.hpp"
 #include "vm.hpp"
@@ -13,6 +14,8 @@
 Process::Process(VM* vm)
   : _vm(vm), _mmobj(vm->mmobj()) {
 }
+
+// int frame_count = 0;
 
 oop Process::run(oop imod, oop recv, oop selector_sym) {
   init();
@@ -36,6 +39,8 @@ void Process::init() {
 void Process::push_frame(number arity, number num_locals) {
   // debug() << "++ Push frame:  " << _sp << " num locals " << num_locals << endl;
 
+  // oop curr_sp = _sp;
+
   stack_push(arity);
 
   word fp = (word) _fp;
@@ -43,17 +48,26 @@ void Process::push_frame(number arity, number num_locals) {
   for (int i = 0; i < num_locals; i++) {
     stack_push((oop)0);
   }
+
+  // debug() << "push_frame [fm:" << frame_count++ << "]  arity: " << arity << " num locals: " << num_locals
+  //         << " SP:" << curr_sp
+  //         << " fp: " << (oop) fp << " cp: " << _cp << " ip: " << _ip << " ep: " << _ep
+  //         << " rp: " << _rp << " dp: " << _dp << " mp: " << _mp << endl;
+
   stack_push(fp);
   stack_push(_cp);
   stack_push(_ip);
   stack_push(_ep);
   stack_push(_rp);
   stack_push(_dp);
+  // debug() << " push frame SP is: " << _sp << endl;
 }
 
 void Process::pop_frame() {
   number arity = *_fp;
   word fp = (word) _fp;
+
+  // debug() << "pop_frame begin SP: " << _sp << endl;
 
   _dp = stack_pop();
   _rp = stack_pop();
@@ -62,12 +76,18 @@ void Process::pop_frame() {
   _cp = stack_pop();
   _fp = stack_pop();
 
-  if (_cp) {// is this really necessary?
+  // debug() << "pop_frame [fm:" << --frame_count << " arity: " << arity
+  //         << " fp: " << _fp << " cp: " << _cp << " ip: " << _ip << " ep: " << _ep
+  //         << " rp: " << _rp << " dp: " << _dp << " mp (before): " << _mp << endl;
+
+  if (_cp) {// first frame has _cp = null
+    // debug() << "pop_frame: getting module from fun " << _cp << endl;
     _mp = _mmobj->mm_function_get_module(_cp);
+    // debug() << "got mp:" << _mp << endl;
   }
 
   _sp = (oop) fp - (arity + 1);
-  // debug() << "-- pop frame:" << arity << " " << _sp << endl;
+  // debug() << "-- pop frame SP:" <<  _sp << endl;
 }
 
 void Process::unload_fun_and_return(oop retval) {
@@ -75,20 +95,46 @@ void Process::unload_fun_and_return(oop retval) {
   stack_push(retval);
 }
 
-void Process::basic_new_and_load() {
-  oop klass = _rp;
+oop Process::alloc_instance(oop klass) {
+  if (klass == NULL) {
+    // debug() << "alloc_instance: klass is null" << endl;
+    return NULL;
+  }
+
+  // debug() << "alloc_instance for klass " << klass << endl;
+  // debug() << "alloc_instance: class name: " << _mmobj->mm_string_cstr(_mmobj->mm_class_name(klass)) << endl;
+
   number payload = _mmobj->mm_behavior_size(klass);
+  if (payload == INVALID_PAYLOAD) {
+    bail("new_delegate: Received flagged/behavior payload");
+  }
+
+  // debug() << "payload " << payload << endl;
+
   oop instance = (oop) calloc(sizeof(word), payload + 2); //2: vt, delegate
-  debug() << "new instance [size: " << payload << "]: " << instance << endl;
+  // debug() << "new instance [size: " << payload << "]: "
+  //         << _mmobj->mm_string_cstr(_mmobj->mm_class_name(klass)) << " = " << instance << endl;
+
+  oop klass_parent =  _mmobj->mm_object_delegate(klass);
 
   ((oop*)instance)[0] = klass;
-  ((oop*) instance)[1] = _mmobj->mm_object_new(); //new_parent_object(klass); //delegate: TODO: should be super instance
+  ((oop*) instance)[1] = alloc_instance(klass_parent);
+
+  // debug() << "Created recursive delegate " << instance << endl;
+  return instance;
+}
+
+void Process::basic_new_and_load() {
+  oop klass = _rp;
+  oop instance = alloc_instance(klass);
   _rp = instance;
   _dp = instance;
 }
 
-void Process::load_fun(oop recv, oop fun) {
+void Process::load_fun(oop recv, oop drecv, oop fun, bool should_allocate) {
   // loads frame if necessary and executes fun
+
+  // debug() << " load_fun rec:" << recv << " drec:" << drecv << " fun:" << fun << endl;
 
   if (_mmobj->mm_function_is_getter(fun)) {
     number idx = _mmobj->mm_function_access_field(fun);
@@ -100,11 +146,15 @@ void Process::load_fun(oop recv, oop fun) {
              _mmobj->mm_function_get_num_locals(fun));
 
   _rp = recv;
-  _dp = recv;
+  _dp = drecv;
   _cp = fun;
   _mp = _mmobj->mm_function_get_module(_cp);
 
-  if (_mmobj->mm_function_is_ctor(fun)) {
+  // debug() << "load_fun: module for fun " << fun << " is " << _mp << endl;
+
+  // debug() << "load_fun: is ctor? " << _mmobj->mm_function_is_ctor(fun) << " alloc? " << should_allocate << endl;
+
+  if (_mmobj->mm_function_is_ctor(fun) and should_allocate) {
     basic_new_and_load();
   }
 
@@ -119,14 +169,16 @@ void Process::load_fun(oop recv, oop fun) {
   }
 }
 
-oop Process::do_send(oop imod, oop recv, oop selector_sym) {
-  oop vt =  * (oop*) recv;
-  oop fun = lookup(vt, selector_sym);
+oop Process::do_send(oop imod, oop recv, oop selector) {
+  std::pair<oop, oop> res = lookup(recv, * (oop*) recv, selector);
+
+  oop drecv = res.first;
+  oop fun = res.second;
   if (!fun) {
-    bail("lookup failed"); //todo
+    bail("do_send: lookup failed"); //todo
   }
 
-  load_fun(recv, fun);
+  load_fun(recv, drecv, fun, true);
   fetch_cycle((void*) -1);
   oop val = stack_pop();
   return val;
@@ -147,28 +199,18 @@ void Process::fetch_cycle(void* stop_at_fp) {
     dispatch(opcode, arg);
     // debug() << " [end of dispatch] " << opcode << endl;
   }
-  // debug() << "fetch_cycle end\n";
- // 571         while self.fp > stop_at_fp and self.ip < len(self.code):
- // 572             pack32 = self.code[self.ip]
- // 573             op,arg = opcode.decode_op(pack32)
- // 574             handler = opcode.handler(op)
- // 575             self.ip = self.ip + 1
- // 576             print handler,arg
- // 577             globals()[handler](self,arg)
- // 578             self.print_frames()
- // 579             print " ",self.stack
 }
 
 void Process::handle_send(number num_args) {
   oop selector = stack_pop();
   oop recv = stack_pop(); //(oop) * _sp;
 
-  debug() << " SEND " << selector << " -- " << _mmobj->mm_symbol_cstr(selector) << endl;
+  // debug() << " SEND " << selector << " -- " << _mmobj->mm_symbol_cstr(selector) << endl;
 
-  oop behavior = (oop) * recv;
-
-  oop fun = lookup(behavior, selector);
-  debug() << "Lookup FOUND " << fun << endl;
+  std::pair<oop,oop> res = lookup(recv, * (oop*) recv, selector);
+  oop drecv = res.first;
+  oop fun = res.second;
+  // debug() << "Lookup FOUND " << fun << endl;
 
   if (fun == NULL) {
     bail("Selector not found");
@@ -179,13 +221,41 @@ void Process::handle_send(number num_args) {
     debug() << num_args << " != " << arity << endl;
     bail("arity and num_args differ");
   }
-  load_fun(recv, fun);
- // 760     vm.setup_exec_fun(foop, num_args, recv, False)
- // 761
+  load_fun(recv, drecv, fun, true);
+}
+
+void Process::handle_super_ctor_send(number num_args) {
+  oop selector = stack_pop();
+  // debug() << " SUPER: " << selector << " -- " << _mmobj->mm_symbol_cstr(selector) << endl;
+
+  // lookup starts at the parent of rp's class
+  oop instance = _dp;
+  oop klass = * (oop*) instance;
+  oop pklass = _mmobj->mm_object_delegate(klass);
+  oop receiver = _mmobj->mm_object_delegate(instance);
+
+  std::pair<oop, oop> res = lookup(receiver, * (oop*) pklass, selector);
+  oop drecv = res.first;
+  oop fun = res.second;
+
+  if (fun == NULL) {
+    bail("Selector not found");
+  }
+
+  debug() << "Lookup FOUND " << fun << endl;
+
+
+  number arity = _mmobj->mm_function_get_num_params(fun);
+  if (num_args != arity) {
+    debug() << num_args << " != " << arity << endl;
+    bail("arity and num_args differ");
+  }
+
+  load_fun(_rp, drecv, fun, false);
 }
 
 void Process::dispatch(int opcode, int arg) {
-    debug() << " executing " << opcode << " " << arg << endl;
+    // debug() << " executing " << opcode << " " << arg << endl;
     oop val;
     switch(opcode) {
       case PUSH_LOCAL:
@@ -207,12 +277,22 @@ void Process::dispatch(int opcode, int arg) {
         debug() << "PUSH_FIELD " << arg << " " << (oop) *(_dp + arg + 2) << endl;
         stack_push(*(_dp + arg + 2));
         break;
+      case PUSH_THIS:
+        debug() << "PUSH_THIS " << arg << " " << _rp << endl;
+        stack_push(_rp);
+        break;
       case RETURN_TOP:
-        unload_fun_and_return(stack_pop());
+        val = stack_pop();
+        debug() << "RETURN_TOP " << arg << " " << val << endl;
+        unload_fun_and_return(val);
         break;
       case RETURN_THIS:
         debug() << "RETURN_THIS " << _rp << endl;
         unload_fun_and_return(_rp);
+        break;
+      case POP:
+        val =stack_pop();
+        debug() << "POP " << arg << " = " << val << endl;
         break;
       case POP_LOCAL:
         val = stack_pop();
@@ -229,6 +309,12 @@ void Process::dispatch(int opcode, int arg) {
       case SEND:
         handle_send(arg);
         break;
+      case SUPER_CTOR_SEND:
+        handle_super_ctor_send(arg);
+        break;
+      // case SUPER_SEND:
+      //   handle_super_send(arg);
+      //   break;
       // case RETURN_THIS:
       //   break;
       default:
@@ -237,17 +323,24 @@ void Process::dispatch(int opcode, int arg) {
     }
 }
 
-oop Process::lookup(oop vt, oop selector) {
+std::pair<oop, oop> Process::lookup(oop drecv, oop vt, oop selector) {
   // assert( *(oop*) selector == _core_image->get_prime("Symbol"));
-
-  debug() << "Lookup " << selector << " " << _mmobj->mm_symbol_cstr(selector) << endl;
+  if (vt == NULL) {
+    bail("lookup FAILED!!!"); //todo: raise
+  }
 
   oop dict = _mmobj->mm_behavior_get_dict(vt);
   if (_mmobj->mm_dictionary_has_key(dict, selector)) {
-    return _mmobj->mm_dictionary_get(dict, selector);
+    oop fun = _mmobj->mm_dictionary_get(dict, selector);
+    // debug() << "Lookup of " << selector << " found in " << vt << " fun is: " << fun << endl;
+    std::pair<oop,oop> res = std::pair<oop,oop>(drecv, fun);
+    return res;
+  } else {
+    // debug() << "Lookup of " << selector << " NOT found in " << vt << ", recursively looking up..." << endl;
+    oop pklass = _mmobj->mm_object_delegate(vt);
+    oop delegate = _mmobj->mm_object_delegate(drecv);
+    return lookup(delegate, pklass, selector);
   }
-  debug() << "Lookup failed for " << _mmobj->mm_symbol_cstr(selector) << endl;
-  return NULL;
 }
 
 oop Process::stack_pop() {
