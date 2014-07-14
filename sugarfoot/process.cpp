@@ -191,7 +191,8 @@ void Process::fetch_cycle(void* stop_at_fp) {
     //   "ip " << _ip << std::endl;
     bytecode code = *_ip;
     if (_ip != 0) { // the bottommost frame has ip = 0
-      _ip++;
+      _ip++; //this can't be done after dispatch, where an ip for a different fun may be set
+             //(thus, doing so would skip the first instruction)
     }
     int opcode = decode_opcode(code);
     int arg = decode_args(code);
