@@ -8,6 +8,4 @@ class Process;
 
 void init_primitives(VM*);
 
-oop prim_main(Process*);
-
 #endif

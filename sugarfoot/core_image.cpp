@@ -75,12 +75,12 @@ void CoreImage::load_prime_objects_table() {
       word obj_offset = unpack_word(_data, start_index + ((i+1) * WSIZE));
       oop prime_oop = (oop) (base + obj_offset);
       _primes[prime_name] = prime_oop;
-      debug() << "found prime " << prime_name << ":" << obj_offset << " (" << _primes[prime_name] << ")" << endl;
+      debug() << "found prime " << prime_name << ":" << (oop) obj_offset << " (" << _primes[prime_name] << ")" << endl;
     } else if (is_core_instance(prime_name)) {
       word obj_offset = unpack_word(_data, start_index + ((i+1) * WSIZE));
       oop prime_oop = (oop) (base + obj_offset);
       _core_imod = prime_oop;
-      debug() << "found core instance " << prime_name << ":" << obj_offset << " (" << _core_imod << ")" << endl;
+      debug() << "found core instance " << prime_name << ":" << (oop) obj_offset << " (" << _core_imod << ")" << endl;
 
     }
   }

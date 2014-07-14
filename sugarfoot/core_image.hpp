@@ -19,6 +19,7 @@ public:
   oop get_prime(const char*);
   bool has_class(const char*);
   oop get_module_instance();
+  std::map<std::string, oop>& get_primes() { return _primes; }
 private:
   void load_header();
   void load_prime_objects_table();

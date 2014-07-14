@@ -37,7 +37,7 @@ void relocate_addresses(char* data, int data_size, int start_reloc_table) {
   for (int i = start_reloc_table; i < data_size; i += WSIZE) {
     word target = unpack_word(data,  i);
     word local_ptr = unpack_word(data,  target);
-    // debug() << target << "-" << local_ptr << endl;
+    // debug() << (oop) target << "->" << (oop) (base + local_ptr) << endl;
     // write_word(data, target, (word) (base + local_ptr));
     * (word*) &(data[target]) = (word) (base + local_ptr);
   }
@@ -52,9 +52,9 @@ void link_symbols(char* data, int es_size, int start_external_symbols, VM* vm, C
     char* name = (char*) (base + name_offset);
     word obj_offset = unpack_word(data, start_external_symbols + i + WSIZE);
     word* obj = (word*) (base + obj_offset);
-    debug() << "Symbol: " << obj_offset << " - " << (oop) *obj << " [" << name << "] " << endl;
+    debug() << "Symbol: " << (oop) obj_offset << " - " << (oop) *obj << " [" << name << "] " << endl;
     * obj = (word) vm->new_symbol(name);
-    debug() << "offset: " << obj_offset << " - obj: " << (oop) *obj
+    debug() << "offset: " << (oop) obj_offset << " - obj: " << (oop) *obj
             << " [" << name << "] -> " << " vt: " << * (oop*) *obj << " == " << core->get_prime("Symbol") << endl;
   }
 }
@@ -65,4 +65,30 @@ int decode_opcode(bytecode code) {
 
 int decode_args(bytecode code) {
   return 0xFFFFFF & code;
+}
+
+
+
+bool is_small_int(oop num) {
+#if WSIZE == 8
+  return (bool) ((word) num & 0x8000000000000000);
+#else
+  return (bool) ((word) num & 0x80000000);
+#endif
+}
+
+number untag_small_int(oop num) {
+#if WSIZE == 8
+  return ((word) num) & 0x7FFFFFFFFFFFFFFF;
+#else
+  return ((word) num) & 0x7FFFFFFF;
+#endif
+}
+
+number tag_small_int(oop num) {
+#if WSIZE == 8
+  return ((word) num) | 0x8000000000000000;
+#else
+  return ((word) num) | 0x80000000;
+#endif
 }

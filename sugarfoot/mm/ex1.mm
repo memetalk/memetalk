@@ -29,11 +29,13 @@ class Point3D < Point2D
   instance_method z: fun() {
     return @z;
   }
+
 end
 
 main: fun() {
-  var p =  Point3D.new(99,98,97);
-  return p.z();
+  // var p =  Point3D.new(99,98,97);
+  // return p.z();
+  return 1 + 2 * 3;
 }
 
 .endcode

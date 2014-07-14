@@ -4,7 +4,7 @@
 using namespace std;
 
 void bail(const string& msg) {
-  cout << msg << "\n";
+  cerr << msg << "\n";
   exit(1);
 }
 

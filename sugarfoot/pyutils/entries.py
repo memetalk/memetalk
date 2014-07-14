@@ -150,7 +150,7 @@ class Class(Entry):
         vmem.append_pointer_to(oop_dict)                                              # dict: "methods"
         vmem.append_int(len(self.cclass.fields))                                      # payload
         vmem.append_label_ref(cclass_label(self.cclass.name))                       # compiled_class
-        # vmem.append_pointer_to(self.cclass.oop)                                 # <-
+        # vmem.append_pointer_to(self.cclass.oop)                                   # <-
         self.oop = oop
         return oop
 
@@ -483,6 +483,12 @@ class CompiledFunction(Entry):
         idx = self.create_and_register_symbol_literal(selector)
         self.bytecodes.append(opcode.bytecode_for('push_literal', idx))
         self.bytecodes.append(opcode.bytecode_for('super_ctor_send', arity))
+
+
+    def emit_binary(self, selector):
+        idx = self.create_and_register_symbol_literal(selector)
+        self.bytecodes.append(opcode.bytecode_for('push_literal', idx))
+        self.bytecodes.append(opcode.bytecode_for('send', 1))
 
 class Function(Entry):
     def __init__(self, imod, cfun):

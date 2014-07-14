@@ -16,6 +16,7 @@ public:
   oop mm_compiled_module_functions(oop);
 
   oop mm_object_new();
+  oop mm_object_vt(oop);
   oop mm_object_delegate(oop);
 
   oop mm_list_new_empty();
@@ -75,15 +76,13 @@ public:
   oop mm_class_new(oop class_behavior, oop super_class, oop dict, oop compiled_class, number payload);
   oop mm_class_name(oop klass);
   oop mm_class_get_compiled_class(oop klass);
+  oop mm_class_dict(oop);
 
   oop mm_cfuns_to_funs_dict(oop cfuns_dict, oop imod);
   oop mm_new_class_getter(oop imodule, oop cclass, oop name, int idx);
 
   oop mm_behavior_get_dict(oop);
   number mm_behavior_size(oop);
-
-  bool mm_is_small_int(oop obj);
-  number mm_untag_small_int(oop num);
 
 private:
   VM* _vm;

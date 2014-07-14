@@ -15,7 +15,11 @@ public:
 
   oop run(oop, oop, oop);
 
-
+  VM* vm() { return _vm; }
+  oop dp() { return _dp; }
+  oop rp() { return _rp; }
+  oop sp() { return _sp; }
+  oop fp() { return _fp; }
 private:
   void init();
   void load_fun(oop, oop, oop, bool);
@@ -27,7 +31,7 @@ private:
   void stack_push(word);
   void stack_push(bytecode*);
   oop stack_pop();
-  void execute_primitive(std::string);
+  oop execute_primitive(std::string);
   void fetch_cycle(void*);
 
   void push_frame(number, number);

@@ -142,6 +142,7 @@ void Process::load_fun(oop recv, oop drecv, oop fun, bool should_allocate) {
     return;
   }
 
+
   push_frame(_mmobj->mm_function_get_num_params(fun),
              _mmobj->mm_function_get_num_locals(fun));
 
@@ -150,27 +151,28 @@ void Process::load_fun(oop recv, oop drecv, oop fun, bool should_allocate) {
   _cp = fun;
   _mp = _mmobj->mm_function_get_module(_cp);
 
-  // debug() << "load_fun: module for fun " << fun << " is " << _mp << endl;
-
-  // debug() << "load_fun: is ctor? " << _mmobj->mm_function_is_ctor(fun) << " alloc? " << should_allocate << endl;
+  if (_mmobj->mm_function_is_prim(fun)) {
+    oop prim_name = _mmobj->mm_function_get_prim_name(fun);
+    std::string str_prim_name = _mmobj->mm_string_cstr(prim_name);
+    oop ret = execute_primitive(str_prim_name);
+    pop_frame();
+    stack_push(ret);
+    return;
+  }
 
   if (_mmobj->mm_function_is_ctor(fun) and should_allocate) {
     basic_new_and_load();
   }
 
-  if (_mmobj->mm_function_is_prim(fun)) {
-    oop prim_name = _mmobj->mm_function_get_prim_name(fun);
-    std::string str_prim_name = _mmobj->mm_string_cstr(prim_name);
-    execute_primitive(str_prim_name);
-  } else {
-    _ip = _mmobj->mm_function_get_code(fun);
-    // debug() << "first instruction " << decode_opcode(*_ip) << endl;
-    _code_size = _mmobj->mm_function_get_code_size(fun);
-  }
+  // debug() << "load_fun: module for fun " << fun << " is " << _mp << endl;
+  // debug() << "load_fun: is ctor? " << _mmobj->mm_function_is_ctor(fun) << " alloc? " << should_allocate << endl;
+  _ip = _mmobj->mm_function_get_code(fun);
+  // debug() << "first instruction " << decode_opcode(*_ip) << endl;
+  _code_size = _mmobj->mm_function_get_code_size(fun);
 }
 
 oop Process::do_send(oop imod, oop recv, oop selector) {
-  std::pair<oop, oop> res = lookup(recv, * (oop*) recv, selector);
+  std::pair<oop, oop> res = lookup(recv, _mmobj->mm_object_vt(recv), selector);
 
   oop drecv = res.first;
   oop fun = res.second;
@@ -208,7 +210,7 @@ void Process::handle_send(number num_args) {
 
   // debug() << " SEND " << selector << " -- " << _mmobj->mm_symbol_cstr(selector) << endl;
 
-  std::pair<oop,oop> res = lookup(recv, * (oop*) recv, selector);
+  std::pair<oop,oop> res = lookup(recv, _mmobj->mm_object_vt(recv), selector);
   oop drecv = res.first;
   oop fun = res.second;
   // debug() << "Lookup FOUND " << fun << endl;
@@ -231,11 +233,11 @@ void Process::handle_super_ctor_send(number num_args) {
 
   // lookup starts at the parent of rp's class
   oop instance = _dp;
-  oop klass = * (oop*) instance;
+  oop klass = _mmobj->mm_object_vt(instance);
   oop pklass = _mmobj->mm_object_delegate(klass);
   oop receiver = _mmobj->mm_object_delegate(instance);
 
-  std::pair<oop, oop> res = lookup(receiver, * (oop*) pklass, selector);
+  std::pair<oop, oop> res = lookup(receiver, _mmobj->mm_object_vt(pklass), selector);
   oop drecv = res.first;
   oop fun = res.second;
 
@@ -308,6 +310,7 @@ void Process::dispatch(int opcode, int arg) {
         *(_dp + arg + 2) = (word) val;
         break;
       case SEND:
+        debug() << "SEND " << arg << endl;
         handle_send(arg);
         break;
       case SUPER_CTOR_SEND:
@@ -333,11 +336,11 @@ std::pair<oop, oop> Process::lookup(oop drecv, oop vt, oop selector) {
   oop dict = _mmobj->mm_behavior_get_dict(vt);
   if (_mmobj->mm_dictionary_has_key(dict, selector)) {
     oop fun = _mmobj->mm_dictionary_get(dict, selector);
-    // debug() << "Lookup of " << selector << " found in " << vt << " fun is: " << fun << endl;
+    debug() << "Lookup of " << selector << " found in " << vt << " fun is: " << fun << endl;
     std::pair<oop,oop> res = std::pair<oop,oop>(drecv, fun);
     return res;
   } else {
-    // debug() << "Lookup of " << selector << " NOT found in " << vt << ", recursively looking up..." << endl;
+    debug() << "Lookup of " << selector << " NOT found in " << vt << ", recursively looking up..." << endl;
     oop pklass = _mmobj->mm_object_delegate(vt);
     oop delegate = _mmobj->mm_object_delegate(drecv);
     return lookup(delegate, pklass, selector);
@@ -370,6 +373,8 @@ void Process::stack_push(bytecode* data) {
 }
 
 
-void Process::execute_primitive(std::string name) {
-  _vm->get_primitive(name)(this);
+oop Process::execute_primitive(std::string name) {
+  oop val = _vm->get_primitive(name)(this);
+  debug() << "primitive " << name << " returned " << val << endl;
+  return val;
 }

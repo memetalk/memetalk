@@ -57,6 +57,12 @@
   end
 
   class Number
+    instance_method +: fun(arg) {
+      <primitive "number_sum">
+    }
+    instance_method *: fun(arg) {
+      <primitive "number_mul">
+    }
   end
 
   class CompiledFunction
@@ -67,9 +73,4 @@
 
   class Context
   end
-
-  test: fun() {
-    var a = 11;
-    return 10;
-  }
 .end

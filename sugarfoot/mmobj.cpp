@@ -5,7 +5,7 @@
 #include "report.hpp"
 #include "vm.hpp"
 #include <assert.h>
-
+#include "utils.hpp"
 
 MMObj::MMObj(VM* vm, CoreImage* core)
   : _vm(vm), _core_image(core) {
@@ -37,8 +37,20 @@ oop MMObj::mm_object_new() {
   return obj;
 }
 
+oop MMObj::mm_object_vt(oop obj) {
+  if (is_small_int(obj)) {
+    return _core_image->get_prime("Number");
+  } else {
+    return * (oop*) obj;
+  }
+}
+
 oop MMObj::mm_object_delegate(oop obj) {
-  return ((oop*) obj)[1];
+  if (is_small_int(obj)) {
+    return mm_object_new(); //TODO: this should probably be a dummy static object
+  } else {
+    return ((oop*) obj)[1];
+  }
 }
 
 oop MMObj::mm_list_new_empty() {
@@ -72,14 +84,16 @@ number MMObj::mm_dictionary_size(oop dict) {
 }
 
 
+
 bool MMObj::mm_dictionary_has_key(oop dict, oop key) {
   assert( *(oop*) dict == _core_image->get_prime("Dictionary"));
 
   number size = mm_dictionary_size(dict);
-  // debug() << " Dict " << dict << " size " << size << " lookup:" << key << " vt: " << (oop*) *key << std::endl;
+  debug() << " Dict " << dict << " size " << size << " lookup: " << key << endl;
+
   for(int i = 0; i < size; i++) {
     oop mykey = mm_dictionary_entry_key(dict, i);
-    // debug() << " % key " << mykey << " vt: " << (oop*) *mykey << endl;
+    // debug() << " {vt: " << mm_object_vt(mykey) << "} =?= " << key << endl;
     if (mykey == key) {
       return true;
     }
@@ -355,9 +369,14 @@ oop MMObj::mm_class_name(oop klass) {
   return mm_compiled_class_name(cclass);
 }
 
+oop MMObj::mm_class_dict(oop klass) {
+  return ((oop*)klass)[2];
+}
+
 oop MMObj::mm_class_get_compiled_class(oop klass) {
   return ((oop*)klass)[4];
 }
+
 
 oop MMObj::mm_new_class_getter(oop imodule, oop cclass, oop name, int idx) {
   assert( *(oop*) cclass == _core_image->get_prime("CompiledClass"));
@@ -408,28 +427,10 @@ oop MMObj::mm_behavior_get_dict(oop behavior) {
 number MMObj::mm_behavior_size(oop behavior) {
   assert( **(oop**) behavior == _core_image->get_prime("Behavior"));
   oop num = ((oop*)behavior)[3];
-  if (mm_is_small_int(num)) {
+  if (is_small_int(num)) {
     debug() << "WARNING: behavior size is tagged and I will untag it" << endl;
-    return mm_untag_small_int(num);
+    return untag_small_int(num);
   } else {
     return (number) num;
   }
-}
-
-
-
-bool MMObj::mm_is_small_int(oop num) {
-#if WSIZE == 8
-  return (bool) ((word) num & 0x8000000000000000);
-#else
-  return (bool) ((word) num & 0x80000000);
-#endif
-}
-
-number MMObj::mm_untag_small_int(oop num) {
-#if WSIZE == 8
-  return ((word) num & 0x7FFFFFFFFFFFFFFF);
-#else
-  return ((word) num & 0x7FFFFFFF);
-#endif
 }

@@ -40,7 +40,7 @@ void MMCImage::link_external_references() {
     word* obj = (word*) (base + obj_offset);
     // debug() << obj_offset << " - " << *obj << " [" << name << "] -> " << _core_image->get_prime(name) << endl;
     * (word*) (base + obj_offset) = (word) _core_image->get_prime(name);
-    debug() << "External refs " << obj_offset << " - " << *obj << " [" << name << "] -> " << _core_image->get_prime(name) << endl;
+    debug() << "External refs " << obj_offset << " - " << (oop) *obj << " [" << name << "] -> " << _core_image->get_prime(name) << endl;
   }
 }
 

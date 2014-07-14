@@ -24,6 +24,8 @@ public:
 
   prim_function_t get_primitive(std::string);
 private:
+  void dump_prime_info();
+  void dictionary_dump(oop dict);
 
   CoreImage* _core_image;
   MMObj* _mmobj;

@@ -7,6 +7,7 @@
 #include "prims.hpp"
 #include "report.hpp"
 #include <assert.h>
+#include "utils.hpp"
 
 VM::VM(const char* core_img_filepath)
   : _core_image(new CoreImage(this, core_img_filepath)), _mmobj(new MMObj(this, _core_image)) {
@@ -16,8 +17,33 @@ MMObj* VM::mmobj() {
   return _mmobj;
 }
 
+void VM::dictionary_dump(oop dict) {
+  number size = _mmobj->mm_dictionary_size(dict);
+
+  debug() << "  dict vt: " << _mmobj->mm_object_vt(dict) << endl;
+  debug() << "  dict size: " << size << endl;
+  for (int i = 3; i < (3 + (size*2)); i++) {
+    debug() << "  [" << i << "]: & " << &((oop*)dict)[i];
+    debug() << endl;
+    // debug() << " vt:" << * ((oop**)dict)[i]  << endl;
+  }
+}
+
+void VM::dump_prime_info() {
+  std::map<std::string, oop> primes = _core_image->get_primes();
+  std::map<std::string, oop>::iterator it;
+  for (it = primes.begin(); it != primes.end(); it++) {
+    if (it->first == "Behavior" || it->first == "Object_Behavior") continue;
+    oop klass = it->second;
+    debug() << "PRIME " << klass << " name: " << _mmobj->mm_string_cstr(_mmobj->mm_class_name(klass)) << " vt: "
+            << _mmobj->mm_object_vt(klass) << " dict:" << _mmobj->mm_class_dict(klass) << endl;
+    dictionary_dump(_mmobj->mm_class_dict(klass));
+  }
+}
+
 int VM::start(char* filepath) {
   _core_image->load();
+  // dump_prime_info();
 
   MMCImage* mmc = new MMCImage(this, _core_image, filepath);
   oop imod = mmc->load();
@@ -26,8 +52,8 @@ int VM::start(char* filepath) {
 
   _process = new Process(this);
   oop retval = _process->run(imod, imod, new_symbol("main"));
-  if (_mmobj->mm_is_small_int(retval)) {
-    debug() << "RETVAL " << _mmobj->mm_untag_small_int(retval) << endl;
+  if (is_small_int(retval)) {
+    debug() << "RETVAL " << untag_small_int(retval) << endl;
   } else {
     debug() << "RETVAL " << retval << endl;
   }
