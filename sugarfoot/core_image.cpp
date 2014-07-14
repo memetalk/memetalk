@@ -100,6 +100,6 @@ void CoreImage::load() {
   load_prime_objects_table();
 
   word index_size = _num_entries * 2 * WSIZE;
-  link_symbols(_data, _es_size, HEADER_SIZE + _names_size + index_size + _ot_size, _vm, this);
   relocate_addresses(_data, _data_size, HEADER_SIZE + _names_size + index_size + _ot_size + _es_size);
+  link_symbols(_data, _es_size, HEADER_SIZE + _names_size + index_size + _ot_size, _vm, this);
 }
