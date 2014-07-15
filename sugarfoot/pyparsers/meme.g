@@ -164,7 +164,7 @@ control_expr = expr_if
 expr_if =  spaces !(self.input.position):begin token("if") token("(") expr:e token(")") token("{")
            stmts:xs
            token("}") token("else") token("{") stmts:ys token("}")
-          -> self.i.ast(begin,['if', e, xs, ys])
+          -> self.i.ast(begin,['if/else', e, xs, ys])
         |  spaces !(self.input.position):begin token("if") token("(") expr:e token(")") token("{")
            stmts:xs
            token("}")

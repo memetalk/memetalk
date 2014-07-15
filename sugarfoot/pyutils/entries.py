@@ -221,7 +221,7 @@ class CompiledFunction(Entry):
         self.cmod = cmod
         self.name = name
         self.literal_frame = []
-        self.bytecodes = []
+        self.bytecodes = opcode.Bytecodes()
         self.is_prim = False
         self.prim_name = ''
         self.owner = owner
@@ -287,7 +287,7 @@ class CompiledFunction(Entry):
         if len(self.bytecodes) == 0:
             return 0
 
-        bytecodes = ''.join([bits.pack32(w) for w in self.bytecodes])
+        bytecodes = ''.join([bits.pack32(w) for w in self.bytecodes.words()])
         vmem.append_int(FRAME_TYPE_BYTECODE_FRAME)
         vmem.append_int(bits.string_block_size(bytecodes + "\0"))
 
@@ -401,7 +401,7 @@ class CompiledFunction(Entry):
 
     def emit_push_num_literal(self, num):
         idx = self.create_and_register_number_literal(num)
-        self.bytecodes.append(opcode.bytecode_for("push_literal", idx))
+        self.bytecodes.append("push_literal", idx)
 
     def emit_push_var(self, name):
         # `name` may be:
@@ -412,46 +412,46 @@ class CompiledFunction(Entry):
 
         if self.has_env:
             idx = self.local_vars.index(name)
-            self.bytecodes.append(opcode.bytecode_for("push_env",idx))
+            self.bytecodes.append("push_env",idx)
         elif self.identifier_is_in_current_block(name):
             opname, idx = self.index_and_pushop_for(name)
-            self.bytecodes.append(opcode.bytecode_for(opname,idx))
+            self.bytecodes.append(opname, idx)
         elif self.identifier_is_module_scoped(name):
             idx = self.create_and_register_symbol_literal(name)
-            self.bytecodes.append(opcode.bytecode_for("push_module", 0))
-            self.bytecodes.append(opcode.bytecode_for("push_literal", idx))
-            self.bytecodes.append(opcode.bytecode_for('send', 0))
+            self.bytecodes.append("push_module", 0)
+            self.bytecodes.append("push_literal", idx)
+            self.bytecodes.append('send', 0)
         else:
             raise Exception('push_var: undeclared ' + name)
 
     def emit_return_top(self):
-        self.bytecodes.append(opcode.bytecode_for("ret_top",0))
+        self.bytecodes.append("ret_top",0)
 
     def emit_return_this(self):
-        self.bytecodes.append(opcode.bytecode_for("ret_this",0))
+        self.bytecodes.append("ret_this",0)
 
     def emit_var_decl(self, name):
         if self.has_env:
             idx = self.add_env(name)
-            self.bytecodes.append(opcode.bytecode_for("pop_env",idx))
+            self.bytecodes.append("pop_env",idx)
         else:
             self.local_vars.append(name)
             opname, idx = self.index_and_popop_for(name)
-            self.bytecodes.append(opcode.bytecode_for(opname,idx))
+            self.bytecodes.append(opname,idx)
 
     def emit_field_assignment(self, field):
         idx = self.owner.fields.index(field)
-        self.bytecodes.append(opcode.bytecode_for('pop_field', idx))
+        self.bytecodes.append('pop_field', idx)
 
     def emit_push_field(self, field):
         idx = self.owner.fields.index(field)
-        self.bytecodes.append(opcode.bytecode_for('push_field', idx))
+        self.bytecodes.append('push_field', idx)
 
     def emit_push_this(self):
-        self.bytecodes.append(opcode.bytecode_for('push_this', 0))
+        self.bytecodes.append('push_this', 0)
 
     def emit_pop(self):
-        self.bytecodes.append(opcode.bytecode_for('pop', 0))
+        self.bytecodes.append('pop', 0)
 
     def emit_send_or_local_call(self, name, arity):
         if name in self.local_vars:
@@ -460,9 +460,9 @@ class CompiledFunction(Entry):
             raise Exception('todo')
         elif name in self.cmod.functions:
             idx = self.create_and_register_symbol_literal(name)
-            self.bytecodes.append(opcode.bytecode_for('push_module', 0))
-            self.bytecodes.append(opcode.bytecode_for('push_literal', idx))
-            self.bytecodes.append(opcode.bytecode_for('send', arity))
+            self.bytecodes.append('push_module', 0)
+            self.bytecodes.append('push_literal', idx)
+            self.bytecodes.append('send', arity)
         elif name in self.cmod.params:
             raise Exception('todo')
         else:
@@ -475,20 +475,33 @@ class CompiledFunction(Entry):
 
     def emit_send(self, selector, arity):
         idx = self.create_and_register_symbol_literal(selector)
-        self.bytecodes.append(opcode.bytecode_for('push_literal', idx))
-        self.bytecodes.append(opcode.bytecode_for('send', arity))
+        self.bytecodes.append('push_literal', idx)
+        self.bytecodes.append('send', arity)
 
 
     def emit_super_ctor_send(self, selector, arity):
         idx = self.create_and_register_symbol_literal(selector)
-        self.bytecodes.append(opcode.bytecode_for('push_literal', idx))
-        self.bytecodes.append(opcode.bytecode_for('super_ctor_send', arity))
+        self.bytecodes.append('push_literal', idx)
+        self.bytecodes.append('super_ctor_send', arity)
 
 
     def emit_binary(self, selector):
         idx = self.create_and_register_symbol_literal(selector)
-        self.bytecodes.append(opcode.bytecode_for('push_literal', idx))
-        self.bytecodes.append(opcode.bytecode_for('send', 1))
+        self.bytecodes.append('push_literal', idx)
+        self.bytecodes.append('send', 1)
+
+
+    def emit_jz(self):
+        lb = self.bytecodes.new_label()
+        self.bytecodes.append('jz', lb)
+        return lb
+
+    def emit_jmp(self):
+        lb = self.bytecodes.new_label()
+        self.bytecodes.append('jmp', lb)
+        return lb
+
+
 
 class Function(Entry):
     def __init__(self, imod, cfun):

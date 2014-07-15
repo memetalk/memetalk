@@ -1,3 +1,6 @@
+import numbers
+from pdb import set_trace as br
+
 # bytecode
 #
 # word: 32 bits
@@ -45,22 +48,65 @@ opcode_mapping = {
     "super_ctor_send":  43,
     #
     # jumps
-    "jump_on_false": 50,
-    "jump": 51,
-    "jump_back": 52,
+    "jz": 50,
+    "jmp": 51,
     # ...
     "exit": 60
     }
 
-def bytecode_for(key, arg):
-    global opcode_mapping
-    for k,v in opcode_mapping.iteritems():
-        if k == key:
-            return encode(v, arg)
-    raise Exception("Opcode not found for",key)
 
 def encode(op, arg):
     return (op << 24) + arg
 
 def decode(word):
     return ((0xFF000000 & word) >> 24), (0xFFFFFF & word)
+
+
+class Label(object):
+    def __init__(self, bytecodes):
+        self.bytecodes = bytecodes
+        self.start = len(bytecodes)
+        self.pos = None
+
+    def as_current(self):
+        self.pos = len(self.bytecodes) - self.start
+
+    def __call__(self):
+        return self.pos
+
+class Bytecodes(object):
+    def __init__(self):
+        self.lst = []
+
+    def append(self, name, arg):
+        if isinstance(arg, numbers.Number):
+            self.lst.append(Bytecode(name, lambda: arg))
+        elif isinstance(arg, Label):
+            self.lst.append(Bytecode(name, arg))
+        else:
+            raise Exception("Unsupported arg type")
+
+    def words(self):
+        return [x() for x in self.lst]
+
+    def __len__(self):
+        return len(self.lst)
+
+    def __iter__(self):
+        return iter(self.lst)
+
+    def new_label(self):
+        return Label(self)
+
+
+class Bytecode(object):
+    def __init__(self, name, arg):
+        self.name = name
+        self.arg = arg
+
+    def __call__(self):
+        global opcode_mapping
+        for k,v in opcode_mapping.iteritems():
+            if k == self.name:
+                return encode(v, self.arg())
+        raise Exception("Opcode not found for",self.key)

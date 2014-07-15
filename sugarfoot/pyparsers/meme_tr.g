@@ -81,6 +81,12 @@ expr :fnobj = ['var-def' :id expr(fnobj)]              -> fnobj.emit_var_decl(id
             | ['>=' expr(fnobj) expr(fnobj)]     -> fnobj.emit_binary('>=')
             | ['==' expr(fnobj) expr(fnobj)]     -> fnobj.emit_binary('==')
             | ['!=' expr(fnobj) expr(fnobj)]     -> fnobj.emit_binary('!=')
+            | ['if' expr(fnobj)
+                !(fnobj.emit_jz()):label [expr(fnobj)*]] -> label.as_current()
+            | ['if/else' expr(fnobj)
+                !(fnobj.emit_jz()):lb1 [expr(fnobj)*]
+                 !(fnobj.emit_jmp()):lb2 !(lb1.as_current())
+                [expr(fnobj)*]]                  -> lb2.as_current()
             | assignment(fnobj)
             | atom(fnobj)
 
