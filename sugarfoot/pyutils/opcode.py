@@ -27,7 +27,7 @@ opcode_mapping = {
     "push_env": 5,
     "push_this": 6,
     "push_module": 7,
-    "push_ntf": 8,
+    "push_bin": 8,
     # pop
     "pop_param": 20,
     "pop_local": 21,

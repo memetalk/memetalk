@@ -95,6 +95,13 @@ assignment :fnobj = ['=' ['id' :v] expr(fnobj)]    -> fnobj.emit_local_assignmen
 
 atom :fnobj = ['literal-number' :x]   -> fnobj.emit_push_num_literal(x)
             | ['literal' 'this']      -> fnobj.emit_push_this()
+            | ['literal-string' :x]   -> fnobj.emit_push_str_literal(x)
+            | ['literal-symbol' :x]   -> fnobj.emit_push_sym_literal(x)
+            | ['literal' 'null']      -> fnobj.emit_push_null()
+            | ['literal' 'true']      -> fnobj.emit_push_true()
+            | ['literal' 'false']     -> fnobj.emit_push_false()
+            | ['literal' 'module']    -> fnobj.emit_push_module()
+            | ['literal' 'context']   -> fnobj.emit_push_context()
             | ['id' :name]            -> fnobj.emit_push_var(name)
             | ['field' :name]         -> fnobj.emit_push_field(name)
 

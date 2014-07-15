@@ -258,6 +258,8 @@ class CompiledFunction(Entry):
                 pass
             elif lit['tag'] == 'symbol':
                 lit['oop'] = vmem.append_symbol_instance(lit['value'])
+            elif lit['tag'] == 'string':
+                lit['oop'] = vmem.append_string_instance(lit['value'])
             else:
                 raise Exception('Todo')
 
@@ -276,6 +278,8 @@ class CompiledFunction(Entry):
             if lit['tag'] == 'number':
                 vmem.append_int(bits.tag(lit['value']))
             elif lit['tag'] == 'symbol':
+                vmem.append_pointer_to(lit['oop'])
+            elif lit['tag'] == 'string':
                 vmem.append_pointer_to(lit['oop'])
             else:
                 raise Exception('Todo')
@@ -383,6 +387,10 @@ class CompiledFunction(Entry):
         entry = {"tag": "symbol", "value": string}
         return self.index_for_literal(entry)
 
+    def create_and_register_string_literal(self, string):
+        entry = {"tag": "string", "value": string}
+        return self.index_for_literal(entry)
+
     def index_and_popop_for(self, name):
         if name in self.params:
             return 'pop_param', self.params.index(name)
@@ -398,10 +406,6 @@ class CompiledFunction(Entry):
             return 'push_local', self.local_vars.index(name)
         if name in self.cmod.classes:
             raise Exception('todo')
-
-    def emit_push_num_literal(self, num):
-        idx = self.create_and_register_number_literal(num)
-        self.bytecodes.append("push_literal", idx)
 
     def emit_push_var(self, name):
         # `name` may be:
@@ -442,13 +446,6 @@ class CompiledFunction(Entry):
     def emit_field_assignment(self, field):
         idx = self.owner.fields.index(field)
         self.bytecodes.append('pop_field', idx)
-
-    def emit_push_field(self, field):
-        idx = self.owner.fields.index(field)
-        self.bytecodes.append('push_field', idx)
-
-    def emit_push_this(self):
-        self.bytecodes.append('push_this', 0)
 
     def emit_pop(self):
         self.bytecodes.append('pop', 0)
@@ -501,6 +498,39 @@ class CompiledFunction(Entry):
         self.bytecodes.append('jmp', lb)
         return lb
 
+    def emit_push_num_literal(self, num):
+        idx = self.create_and_register_number_literal(num)
+        self.bytecodes.append("push_literal", idx)
+
+    def emit_push_this(self):
+        self.bytecodes.append('push_this', 0)
+
+    def emit_push_str_literal(self, string):
+        idx = self.create_and_register_string_literal(string)
+        self.bytecodes.append('push_literal', idx)
+
+    def emit_push_sym_literal(self, sym):
+        idx = self.create_and_register_symbol_literal(sym)
+        self.bytecodes.append('push_literal', idx)
+
+    def emit_push_null(self):
+        self.bytecodes.append('push_bin', 0)
+
+    def emit_push_true(self):
+        self.bytecodes.append('push_bin', 1)
+
+    def emit_push_false(self):
+        self.bytecodes.append('push_bin', 0)
+
+    def emit_push_module(self):
+        self.bytecodes.append('push_module', 0)
+
+    def emit_push_context(self):
+        self.bytecodes.append('push_context', 0)
+
+    def emit_push_field(self, field):
+        idx = self.owner.fields.index(field)
+        self.bytecodes.append('push_field', idx)
 
 
 class Function(Entry):

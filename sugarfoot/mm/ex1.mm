@@ -2,12 +2,14 @@
 .code
 
 main: fun() {
-  if (0) {
-    return 64;
-  } else {
-    return 128;
-  }
-  return 512;
+  return 10;
+  return this;
+  return "oi";
+  return :sym;
+  return null;
+  return true;
+  return false;
+  return thisModule;
 }
 
 .endcode
