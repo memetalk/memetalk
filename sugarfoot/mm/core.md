@@ -60,8 +60,14 @@
     instance_method +: fun(arg) {
       <primitive "number_sum">
     }
+    instance_method -: fun(arg) {
+      <primitive "number_sub">
+    }
     instance_method *: fun(arg) {
       <primitive "number_mul">
+    }
+    instance_method <: fun(arg) {
+      <primitive "number_lt">
     }
   end
 

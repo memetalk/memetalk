@@ -142,6 +142,14 @@ void MMObj::mm_module_set_dictionary(oop imodule, oop imod_dict) {
   ((word**) imodule)[2] = imod_dict;
 }
 
+bool MMObj::mm_is_string(oop obj) {
+  if (is_small_int(obj)) {
+    return false;
+  }
+  return *(oop*) obj == _core_image->get_prime("String");
+}
+
+
 char* MMObj::mm_string_cstr(oop str) {
   assert( *(oop*) str == _core_image->get_prime("String"));
   //0: vt

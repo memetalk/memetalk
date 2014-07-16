@@ -1,6 +1,6 @@
 from . import bits
 from . import opcode
-from . import FRAME_TYPE_OBJECT, FRAME_TYPE_LITERAL_FRAME, FRAME_TYPE_BYTECODE_FRAME
+from . import FRAME_TYPE_OBJECT, FRAME_TYPE_LITERAL_FRAME, FRAME_TYPE_BYTECODE_FRAME, FRAME_TYPE_EXCEPTIONS_FRAME
 
 from . import behavior_label, cclass_label, class_label, cfun_label, fun_label, cmod_label, mod_label
 from pdb import set_trace as br
@@ -228,6 +228,7 @@ class CompiledFunction(Entry):
         self.is_ctor = ctor
         self.has_env = False
         self.local_vars = []
+        self.exceptions_frame = []
 
     def body_processor(self):
         return self
@@ -247,6 +248,9 @@ class CompiledFunction(Entry):
 
     def bytecode_label(self):
         return self.label() + '_bytecodes'
+
+    def exceptions_frame_label(self):
+        return self.label() + '_exceptions'
 
     def fill_literal_frame(self, vmem):
         if len(self.literal_frame) == 0:
@@ -292,12 +296,41 @@ class CompiledFunction(Entry):
             return 0
 
         bytecodes = ''.join([bits.pack32(w) for w in self.bytecodes.words()])
+
         vmem.append_int(FRAME_TYPE_BYTECODE_FRAME)
         vmem.append_int(bits.string_block_size(bytecodes + "\0"))
 
         vmem.label_current(self.bytecode_label())
         vmem.append_string(bytecodes)
         return len(self.bytecodes) * opcode.WORD_SIZE
+
+    def fill_exceptions_frame(self, vmem):
+        if len(self.exceptions_frame) == 0:
+            return 0
+
+        type_oops = []
+        for entry in self.exceptions_frame:
+            if entry['type'] is None:
+                type_oops.append(None)
+            else:
+                type_oops.append(vmem.append_string_instance(entry['type']))
+
+        vmem.append_int(FRAME_TYPE_EXCEPTIONS_FRAME)
+        vmem.append_int(len(self.exceptions_frame) * 5 * bits.WSIZE)
+
+        vmem.label_current(self.exceptions_frame_label())
+
+        for idx, entry in enumerate(self.exceptions_frame):
+            vmem.append_int(entry['start'])
+            vmem.append_int(entry['catch'])
+            vmem.append_int(entry['end'])
+            vmem.append_int(entry['local_id'])
+            if type_oops[idx] is None:
+                vmem.append_null()
+            else:
+                vmem.append_pointer_to(type_oops[idx])
+
+        return len(self.exceptions_frame)
 
     def fill(self, vmem):
         # vt: CompiledFunction
@@ -327,9 +360,10 @@ class CompiledFunction(Entry):
 
         lit_frame_size = self.fill_literal_frame(vmem)
         bytecode_size = self.fill_bytecodes(vmem)
+        exceptions_tb_size = self.fill_exceptions_frame(vmem)
 
         vmem.append_int(FRAME_TYPE_OBJECT)
-        vmem.append_int(16 * bits.WSIZE)
+        vmem.append_int(18 * bits.WSIZE)
 
         oop = vmem.append_external_ref('CompiledFunction', self.label()) # CompiledFunction vt
         vmem.append_pointer_to(oop_delegate)
@@ -362,11 +396,36 @@ class CompiledFunction(Entry):
         else:
             vmem.append_null()
 
+        vmem.append_int(exceptions_tb_size)
+        if exceptions_tb_size > 0:
+            vmem.append_label_ref(self.exceptions_frame_label())
+        else:
+            vmem.append_null()
+
         self.oop = oop
         return oop
 
     def set_parameters(self, params):
         self.params = params
+
+    #############
+
+    def add_local(self, name):
+        if name in self.local_vars:
+            raise Exception('redeclaration of ' + name)
+        self.local_vars.append(name)
+
+    def add_exception_entry(self, label_begin_try, label_begin_catch, label_out, catch_type, idx):
+        self.exceptions_frame.append({
+            'start': label_begin_try(),
+            'catch': label_begin_catch()-1,
+            'end': label_out(),
+            'type': catch_type,
+            'local_id': idx})
+
+
+    def current_label(self):
+        return self.bytecodes.new_label(current=True)
 
     def identifier_is_in_current_block(self, name):
         return name in self.local_vars or name in self.params
@@ -439,7 +498,7 @@ class CompiledFunction(Entry):
             idx = self.add_env(name)
             self.bytecodes.append("pop_env",idx)
         else:
-            self.local_vars.append(name)
+            self.add_local(name)
             opname, idx = self.index_and_popop_for(name)
             self.bytecodes.append(opname,idx)
 
@@ -532,6 +591,10 @@ class CompiledFunction(Entry):
         idx = self.owner.fields.index(field)
         self.bytecodes.append('push_field', idx)
 
+    def emit_try_catch(self, label_begin_try, label_begin_catch, label_out, catch_type, catch_name):
+        self.add_local(catch_name)
+        idx = self.local_vars.index(catch_name)
+        self.add_exception_entry(label_begin_try, label_begin_catch, label_out, catch_type, idx)
 
 class Function(Entry):
     def __init__(self, imod, cfun):

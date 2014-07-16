@@ -33,6 +33,7 @@ public:
 
   void mm_module_set_dictionary(oop imodule, oop imod_dict);
 
+  bool mm_is_string(oop);
   char* mm_string_cstr(oop);
 
   oop mm_symbol_new(const char* str);

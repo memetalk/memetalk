@@ -37,7 +37,7 @@ opcode_mapping = {
     # ret
     "ret_this":  30,
     "ret_top":  31,
-    "ret_ntf":  32,
+    "ret_bin":  32,
     "ret_param":  33,
     "ret_local":  34,
     "ret_field":  35,
@@ -63,10 +63,10 @@ def decode(word):
 
 
 class Label(object):
-    def __init__(self, bytecodes):
+    def __init__(self, bytecodes, pos=None):
         self.bytecodes = bytecodes
         self.start = len(bytecodes)
-        self.pos = None
+        self.pos = pos
 
     def as_current(self):
         self.pos = len(self.bytecodes) - self.start
@@ -95,8 +95,11 @@ class Bytecodes(object):
     def __iter__(self):
         return iter(self.lst)
 
-    def new_label(self):
-        return Label(self)
+    def new_label(self, current=False):
+        if current:
+            return Label(self, len(self))
+        else:
+            return Label(self)
 
 
 class Bytecode(object):

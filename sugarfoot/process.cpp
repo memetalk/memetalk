@@ -316,6 +316,13 @@ void Process::dispatch(int opcode, int arg) {
       case SUPER_CTOR_SEND:
         handle_super_ctor_send(arg);
         break;
+      case JZ:
+        val = stack_pop();
+        debug() << "JZ " << arg << " " << val << endl;
+        if (!val) {
+          _ip += (arg -1); //_ip already suffered a ++ in dispatch
+        }
+        break;
       // case SUPER_SEND:
       //   handle_super_send(arg);
       //   break;

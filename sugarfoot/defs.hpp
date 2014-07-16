@@ -39,3 +39,5 @@ typedef oop (*prim_function_t) (Process*);
 #define SEND 40
 #define SUPER_SEND 42
 #define SUPER_CTOR_SEND 43
+
+#define JZ 50

@@ -20,6 +20,7 @@ public:
   oop rp() { return _rp; }
   oop sp() { return _sp; }
   oop fp() { return _fp; }
+  MMObj* mmobj() { return _mmobj; }
 private:
   void init();
   void load_fun(oop, oop, oop, bool);

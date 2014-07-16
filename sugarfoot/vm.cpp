@@ -53,7 +53,7 @@ int VM::start(char* filepath) {
   _process = new Process(this);
   oop retval = _process->run(imod, imod, new_symbol("main"));
   if (is_small_int(retval)) {
-    debug() << "RETVAL " << untag_small_int(retval) << endl;
+    debug() << "RETVAL " <<  untag_small_int(retval) << endl;
   } else {
     debug() << "RETVAL " << retval << endl;
   }

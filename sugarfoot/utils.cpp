@@ -78,10 +78,19 @@ bool is_small_int(oop num) {
 }
 
 number untag_small_int(oop num) {
+  word w = (word) num;
 #if WSIZE == 8
-  return ((word) num) & 0x7FFFFFFFFFFFFFFF;
+  if (w & 0x4000000000000000) { //Negative
+    return (w & 0x7FFFFFFFFFFFFFFF) | 0x8000000000000000;
+  } else {
+    return w & 0x7FFFFFFFFFFFFFFF;
+  }
 #else
-  return ((word) num) & 0x7FFFFFFF;
+  if (num & 0x40000000) { //Negative
+    return (w & 0x7FFFFFFF) | 0x80000000;
+  } else {
+    return (w & 0x7FFFFFFF;
+  }
 #endif
 }
 

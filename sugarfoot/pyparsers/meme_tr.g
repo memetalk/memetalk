@@ -71,24 +71,35 @@ expr :fnobj = ['var-def' :id expr(fnobj)]              -> fnobj.emit_var_decl(id
             | ['pop' expr(fnobj)]                -> fnobj.emit_pop()
             | ['not' expr(fnobj)]                -> fnobj.emit_unary('~')
             | ['negative' expr(fnobj)]           -> fnobj.emit_unary('!')
-            | ['and' expr(fnobj) expr(fnobj)]    -> fnobj.emit_binary('and')
-            | ['+' expr(fnobj) expr(fnobj)]      -> fnobj.emit_binary('+')
-            | ['-' expr(fnobj) expr(fnobj)]      -> fnobj.emit_binary('-')
-            | ['*' expr(fnobj) expr(fnobj)]      -> fnobj.emit_binary('*')
-            | ['<' expr(fnobj) expr(fnobj)]      -> fnobj.emit_binary('<')
-            | ['<=' expr(fnobj) expr(fnobj)]     -> fnobj.emit_binary('<=')
-            | ['>' expr(fnobj) expr(fnobj)]      -> fnobj.emit_binary('>')
-            | ['>=' expr(fnobj) expr(fnobj)]     -> fnobj.emit_binary('>=')
-            | ['==' expr(fnobj) expr(fnobj)]     -> fnobj.emit_binary('==')
-            | ['!=' expr(fnobj) expr(fnobj)]     -> fnobj.emit_binary('!=')
+            | ['and' :e expr(fnobj) apply('expr' fnobj e)]    -> fnobj.emit_binary('and')
+            | ['+'  :e expr(fnobj) apply('expr' fnobj e)]      -> fnobj.emit_binary('+')
+            | ['-'  :e expr(fnobj) apply('expr' fnobj e)]      -> fnobj.emit_binary('-')
+            | ['*'  :e expr(fnobj) apply('expr' fnobj e)]      -> fnobj.emit_binary('*')
+            | ['<'  :e expr(fnobj) apply('expr' fnobj e)]      -> fnobj.emit_binary('<')
+            | ['<=' :e expr(fnobj) apply('expr' fnobj e)]     -> fnobj.emit_binary('<=')
+            | ['>'  :e expr(fnobj) apply('expr' fnobj e)]      -> fnobj.emit_binary('>')
+            | ['>=' :e expr(fnobj) apply('expr' fnobj e)]     -> fnobj.emit_binary('>=')
+            | ['==' :e expr(fnobj) apply('expr' fnobj e)]     -> fnobj.emit_binary('==')
+            | ['!=' :e expr(fnobj) apply('expr' fnobj e)]     -> fnobj.emit_binary('!=')
             | ['if' expr(fnobj)
                 !(fnobj.emit_jz()):label [expr(fnobj)*]] -> label.as_current()
             | ['if/else' expr(fnobj)
                 !(fnobj.emit_jz()):lb1 [expr(fnobj)*]
                  !(fnobj.emit_jmp()):lb2 !(lb1.as_current())
                 [expr(fnobj)*]]                  -> lb2.as_current()
+            | ['try'
+                !(fnobj.current_label()):label_begin_try
+                  [expr(fnobj)*]
+                !(fnobj.current_label()):label_begin_catch
+                  catch_decl:cp  [expr(fnobj)*]]
+                !(fnobj.current_label()):label_out
+              -> fnobj.emit_try_catch(label_begin_try, label_begin_catch, label_out, cp[0], cp[1])
             | assignment(fnobj)
             | atom(fnobj)
+
+catch_decl = ['catch' ['id' :type] :id]  -> (type, id)
+           | ['catch' :id]               -> (None, id)
+
 
 assignment :fnobj = ['=' ['id' :v] expr(fnobj)]    -> fnobj.emit_local_assignment(v)
                   | ['=' ['field' :f] expr(fnobj)] -> fnobj.emit_field_assignment(f)
@@ -105,7 +116,7 @@ atom :fnobj = ['literal-number' :x]   -> fnobj.emit_push_num_literal(x)
             | ['id' :name]            -> fnobj.emit_push_var(name)
             | ['field' :name]         -> fnobj.emit_push_field(name)
 
-args :fnobj =  ['args' arglist(fnobj):arity] -> arity
-            |  ['args' []] -> 0
+args :fnobj =  ['args' []] -> 0
+            |  ['args' arglist(fnobj):arity] -> arity
 
 arglist :fnobj = [expr(fnobj)+]:x -> len(x)

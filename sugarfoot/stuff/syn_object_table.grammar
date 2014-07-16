@@ -23,6 +23,7 @@
                     <fixedvalue value="0xAAAA"/>
                 </fixedvalues>
             </number>
+            <structref name="exceptions_frame" id="924" repeatmin="0" repeatmax="-1" structure="id:920"/>
         </structure>
         <structure name="object_frame" id="733" encoding="ISO_8859-1:1987" endian="little" signed="no">
             <number name="frame_type" mustmatch="yes" id="748" fillcolor="B4BEF8" type="integer" length="8">
@@ -116,6 +117,23 @@
                     <structref name="OP_JZ" id="817" repeatmin="0" structure="id:816"/>
                     <structref name="OP_JMP" id="819" repeatmin="0" structure="id:818"/>
                     <structref name="OP_PUSH_BIN" id="874" repeatmin="0" structure="id:868"/>
+                </structure>
+            </structure>
+        </structure>
+        <structure name="exceptions_frame" id="920" encoding="ISO_8859-1:1987" endian="little" signed="no">
+            <number name="frame_type" mustmatch="yes" id="922" type="integer" length="8">
+                <fixedvalues>
+                    <fixedvalue value="906"/>
+                </fixedvalues>
+            </number>
+            <number name="frame_size" id="923" type="integer" length="8"/>
+            <structure name="frame" id="940" length="frame_size">
+                <structure name="entry" id="925" length="0" repeatmin="0" repeatmax="-1">
+                    <number name="start" id="927" type="integer" length="8"/>
+                    <number name="catch" id="928" type="integer" length="8"/>
+                    <number name="end" id="929" type="integer" length="8"/>
+                    <number name="local_id" id="930" type="integer" length="8"/>
+                    <number name="type_name" id="931" type="integer" length="8" display="hex"/>
                 </structure>
             </structure>
         </structure>
