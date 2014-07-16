@@ -7,9 +7,9 @@
 
 using namespace std;
 
-char* read_file(const char* filepath, int* file_size) {
+char* read_file(const std::string& filepath, int* file_size) {
   fstream file;
-  file.open (filepath, fstream::in | fstream::binary);
+  file.open (filepath.c_str(), fstream::in | fstream::binary);
 
   if (!file.is_open()) {
     bail(string("file not found: ") + filepath);

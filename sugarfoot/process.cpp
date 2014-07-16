@@ -138,7 +138,9 @@ void Process::load_fun(oop recv, oop drecv, oop fun, bool should_allocate) {
 
   if (_mmobj->mm_function_is_getter(fun)) {
     number idx = _mmobj->mm_function_access_field(fun);
-    stack_push(((oop*)recv)[idx]);
+    oop val = ((oop*)recv)[idx];
+    debug() << "GETTER: returning " << val << endl;
+    stack_push(val);
     return;
   }
 

@@ -11,8 +11,8 @@ MMObj::MMObj(VM* vm, CoreImage* core)
   : _vm(vm), _core_image(core) {
 }
 
-oop MMObj::mm_module_new(int num_classes, oop delegate) {
-  oop imodule = (oop) malloc(sizeof(word) * (3 + num_classes)); //3: vt, delegate, dict
+oop MMObj::mm_module_new(int num_params, int num_classes, oop delegate) {
+  oop imodule = (oop) malloc(sizeof(word) * (3 + num_classes + num_params)); //3: vt, delegate, dict
 
   ((word**) imodule)[0] = imodule; //imodule[vt] = imodule
   ((word**) imodule)[1] = delegate; // imodule[delegate]
@@ -21,13 +21,24 @@ oop MMObj::mm_module_new(int num_classes, oop delegate) {
 
 oop MMObj::mm_compiled_module_classes(oop cmod) {
   assert( *(oop*) cmod == _core_image->get_prime("CompiledModule"));
-  return (oop) ((word*)cmod)[6];
+  return (oop) ((word*)cmod)[7];
 }
 
 oop MMObj::mm_compiled_module_functions(oop cmod) {
   assert( *(oop*) cmod == _core_image->get_prime("CompiledModule"));
+  return (oop) ((word*)cmod)[6];
+}
+
+oop MMObj::mm_compiled_module_params(oop cmod) {
+  assert( *(oop*) cmod == _core_image->get_prime("CompiledModule"));
+  return (oop) ((word*)cmod)[4];
+}
+
+oop MMObj::mm_compiled_module_default_params(oop cmod) {
+  assert( *(oop*) cmod == _core_image->get_prime("CompiledModule"));
   return (oop) ((word*)cmod)[5];
 }
+
 
 oop MMObj::mm_object_new() {
   oop obj = (oop) malloc(sizeof(word) * 2); // vt, delegate
@@ -66,6 +77,31 @@ number MMObj::mm_list_size(oop list) {
   assert( *(oop*) list == _core_image->get_prime("List"));
   return (number) ((word*)list)[2];
 }
+
+oop MMObj::mm_list_entry(oop list, number idx) {
+  assert( *(oop*) list == _core_image->get_prime("List"));
+  number size = mm_list_size(list);
+  for(int i = 0; i < size; i++) {
+    if (i == idx) {
+      return ((oop*)list)[idx+3];
+    }
+  }
+  bail("list entry not found");
+  return NULL;
+}
+
+number MMObj::mm_list_index_of(oop list, oop elem) {
+  assert( *(oop*) list == _core_image->get_prime("List"));
+  number size = mm_list_size(list);
+  for(int i = 0; i < size; i++) {
+    oop e = ((oop*)list)[i+3];
+    if (e == elem) {
+      return i;
+    }
+  }
+  return -1;
+}
+
 
 oop MMObj::mm_dictionary_new(int num_entries) {
   int basic = 3; //vt, delegate, size
@@ -141,6 +177,11 @@ void MMObj::mm_module_set_dictionary(oop imodule, oop imod_dict) {
   assert( *(oop*) imod_dict == _core_image->get_prime("Dictionary"));
   ((word**) imodule)[2] = imod_dict;
 }
+
+void MMObj::mm_module_set_module_argument(oop imodule, oop arg, number idx) {
+  ((oop*)imodule)[idx+3] = arg; //3: vt, delegate, dict
+}
+
 
 bool MMObj::mm_is_string(oop obj) {
   if (is_small_int(obj)) {
@@ -386,11 +427,11 @@ oop MMObj::mm_class_get_compiled_class(oop klass) {
 }
 
 
-oop MMObj::mm_new_class_getter(oop imodule, oop cclass, oop name, int idx) {
-  assert( *(oop*) cclass == _core_image->get_prime("CompiledClass"));
+oop MMObj::mm_new_slot_getter(oop imodule, oop owner, oop name, int idx) {
+  // assert( *(oop*) cclass == _core_image->get_prime("CompiledClass"));
   assert( *(oop*) name == _core_image->get_prime("String"));
 
-  oop cfun_getter = (oop) calloc(sizeof(word), 16);
+  oop cfun_getter = (oop) calloc(sizeof(word), 17);
 
   * (oop*) cfun_getter = _core_image->get_prime("CompiledFunction");
   * (oop*) &cfun_getter[1] = mm_object_new();
@@ -398,7 +439,7 @@ oop MMObj::mm_new_class_getter(oop imodule, oop cclass, oop name, int idx) {
   * (oop*) &cfun_getter[3] = mm_list_new_empty();
   * (word*) &cfun_getter[7] = 1;
   * (word*) &cfun_getter[8] = idx;
-  * (oop*) &cfun_getter[9] = cclass;
+  * (oop*) &cfun_getter[9] = owner;
 
   return mm_function_from_cfunction(cfun_getter, imodule);
 }

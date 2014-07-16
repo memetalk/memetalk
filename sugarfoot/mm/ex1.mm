@@ -1,24 +1,10 @@
-.preamble()
+.preamble(ex2)
+   ex2: meme:ex2;
 .code
-
-class Exception
-  class_method throw: fun() {
-    <primitive "exception_throw">
-  }
-end
-
-print: fun(x) {
-  <primitive "print">
-}
-
 
 
 main: fun() {
-  try {
-    Exception.throw();
-  } catch(Exception e) {
-    print("oi");
-  }
+  ex2.foo("bar!!");
 }
 
 .endcode

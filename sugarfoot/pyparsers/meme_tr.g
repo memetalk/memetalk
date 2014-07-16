@@ -1,6 +1,20 @@
-start = ['module' :license :meta :pre code_sec]
+start = ['module' :license :meta
+         !(self.i.new_module()):modobj
+         preamble(modobj) code_sec(modobj)]
 
-code_sec = ['.code' !(self.i.new_module()):modobj [definition(modobj)*]]
+preamble :modobj = ['.preamble'
+                    :params
+                    !(modobj.set_params(params))
+                    [module_default_param(modobj)*] [module_alias(modobj)*]]
+
+
+module_default_param :modobj = ['param' :lhs ['library' :ns :name]]
+                               -> modobj.add_default_param(lhs, ns, name)
+
+module_alias :modobj = ['alias' :libname :alias] -> self.i.l_module_alias(libname, alias)
+
+
+code_sec :modobj = ['.code' [definition(modobj)*]]
 
 definition :modobj =  function_definition(modobj)
                    |  class_definition(modobj)

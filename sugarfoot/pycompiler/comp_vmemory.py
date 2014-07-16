@@ -86,6 +86,14 @@ class CompVirtualMemory(vmemory.VirtualMemory):
             self.string_table[string] = oop
             return oop
 
+    def append_string_dict(self, pydict):
+        pairs_oop = []
+        for key, val in pydict.iteritems():
+            key_oop = self.append_string_instance(key)
+            val_oop = self.append_string_instance(val)
+            pairs_oop.append((key_oop, val_oop))
+        return self.append_dict_with_pairs(pairs_oop)
+
     def _append_dict_prologue(self, size):
         delegate = self.append_object_instance()
 

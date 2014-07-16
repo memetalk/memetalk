@@ -40,15 +40,7 @@ module_params = params
 
 preamble_entry = id:name token(":") module_spec:s token(";") -> ["param", name, s]
 
-module_spec = library_identifier:lid params:a -> ["library", lid, a]
-            | uri:uri params:a -> ["uri", uri, a]
-
-uri = spaces (letterOrDigit|'/'|'.'|':')+:rest -> ''.join(rest)
-
-library_identifier = id:ns token("/") id:mname token("/") version:v -> [ns, mname, v]
-
-version = version:a "." digit+:b -> ''.join(a)+"."+''.join(b)
-        | digit+:x -> ''.join(x)
+module_spec = id:ns token(":") id:mname -> ["library", ns, mname]
 
 module_alias = spaces token("[") idlist:lst token("]") token("<=") id:x token(";") -> ["alias", x, lst]
 

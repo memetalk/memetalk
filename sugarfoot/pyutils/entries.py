@@ -637,6 +637,7 @@ class CompiledModule(Entry):
         super(CompiledModule, self).__init__()
         self.name = name
         self.params = []
+        self.default_params = {}
         self.functions = {}
         self.classes = {}
 
@@ -651,6 +652,13 @@ class CompiledModule(Entry):
 
     # def classes_and_functions_names(self):
     #     return self.functions.keys() + self.classes.keys()
+
+    def set_params(self, params):
+        self.params = params
+
+    def add_default_param(self, lhs, ns, name):
+        # TODO: support everything else
+        self.default_params[name] = name # {"lhs": lhs, "ns": ns, "name": name}
 
     def new_function(self, name):
         fn = CompiledFunction(self, self, name)
@@ -669,7 +677,8 @@ class CompiledModule(Entry):
         delegate = vmem.append_object_instance()
         oop_name = vmem.append_string_instance(self.name)
         oop_license = vmem.append_string_instance("")
-        oop_params = vmem.append_list_of_strings([])
+        oop_params = vmem.append_list_of_strings(self.params)
+        oop_default_params = vmem.append_string_dict(self.default_params)
         oop_functions = vmem.append_dict_emiting_entries(self.functions)
         oop_classes = vmem.append_dict_emiting_entries(self.classes)
 
@@ -681,6 +690,7 @@ class CompiledModule(Entry):
         vmem.append_pointer_to(oop_name)
         vmem.append_pointer_to(oop_license)
         vmem.append_pointer_to(oop_params)
+        vmem.append_pointer_to(oop_default_params)
         vmem.append_pointer_to(oop_functions)
         vmem.append_pointer_to(oop_classes)
         vmem.append_null()                        # parent_module
@@ -728,8 +738,11 @@ class CoreModule(Entry):
         vmem.append_null()                                      # delegate
         vmem.append_pointer_to(oop_dict)                        # dict
         vmem.append_label_ref(self.cmod.label())                # compiled_module
-        # for klass in self.compiler.top_level_classes:
-        #     vmem.append_label_ref(klass.label)
+        # TODO:
+        # -make space for module parameters
+        # -then, add classes
+        # for klass in self.classes:
+        #     vmem.append_label_ref(klass.label())
         self.oop = oop
         return oop
 

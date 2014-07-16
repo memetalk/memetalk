@@ -10,10 +10,12 @@ class MMObj {
 public:
   MMObj(VM*, CoreImage*);
 
-  oop mm_module_new(int num_classes, oop delegate);
+  oop mm_module_new(int num_params, int num_classes, oop delegate);
 
   oop mm_compiled_module_classes(oop);
   oop mm_compiled_module_functions(oop);
+  oop mm_compiled_module_params(oop);
+  oop mm_compiled_module_default_params(oop);
 
   oop mm_object_new();
   oop mm_object_vt(oop);
@@ -21,6 +23,7 @@ public:
 
   oop mm_list_new_empty();
   number mm_list_size(oop list);
+  number mm_list_index_of(oop list, oop elem);
 
   oop mm_dictionary_new(int num_entries);
   number mm_dictionary_size(oop dict);
@@ -32,9 +35,11 @@ public:
 
 
   void mm_module_set_dictionary(oop imodule, oop imod_dict);
+  void mm_module_set_module_argument(oop imodule, oop arg, number idx);
 
   bool mm_is_string(oop);
   char* mm_string_cstr(oop);
+  oop mm_list_entry(oop list, number idx);
 
   oop mm_symbol_new(const char* str);
   char* mm_symbol_cstr(oop);
@@ -80,7 +85,7 @@ public:
   oop mm_class_dict(oop);
 
   oop mm_cfuns_to_funs_dict(oop cfuns_dict, oop imod);
-  oop mm_new_class_getter(oop imodule, oop cclass, oop name, int idx);
+  oop mm_new_slot_getter(oop imodule, oop owner, oop name, int idx);
 
   oop mm_behavior_get_dict(oop);
   number mm_behavior_size(oop);

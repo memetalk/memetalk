@@ -11,7 +11,7 @@ using namespace std;
 word MMCImage::HEADER_SIZE = 6 * WSIZE;
 word MMCImage::MAGIC_NUMBER = 0x420;
 
-MMCImage::MMCImage(VM* vm, CoreImage* core_image, const char* filepath)
+MMCImage::MMCImage(VM* vm, CoreImage* core_image, const std::string& filepath)
   : _vm(vm), _mmobj(vm->mmobj()), _core_image(core_image), _filepath(filepath) {
 }
 
@@ -81,7 +81,46 @@ oop MMCImage::instantiate_class(oop class_name, oop cclass, oop cclass_dict, std
 }
 
 
-oop MMCImage::instantiate_module(/* module arguments */) {
+void MMCImage::assign_module_arguments(oop imodule, oop module_arguments_list) {
+  //if cmodule->params size != module_arguments_list size: arity error
+  //TODO
+
+}
+
+void MMCImage::load_default_dependencies_and_assign_module_arguments(oop imodule) {
+  //for each p in _cmod->default_params:
+  //   imod = load it
+  //   idx = index(p.name, cmod->params)
+  //   imod[idx] = imod
+  oop params_list = _mmobj->mm_compiled_module_params(_compiled_module);
+  oop default_params_dict = _mmobj->mm_compiled_module_default_params(_compiled_module);
+  number dict_size = _mmobj->mm_dictionary_size(default_params_dict);
+  for (int i = 0; i < dict_size; i++) {
+    oop lhs_name = _mmobj->mm_dictionary_entry_key(default_params_dict, i);
+    oop mod_name = _mmobj->mm_dictionary_entry_value(default_params_dict, i);
+    oop imd = _vm->instantiate_module(_mmobj->mm_string_cstr(mod_name), NULL);
+    number midx = _mmobj->mm_list_index_of(params_list, lhs_name);
+    if (midx == -1) {
+      bail("Could not bind unknown module parameter");
+    }
+    _mmobj->mm_module_set_module_argument(imodule, imd, midx);
+  }
+}
+
+void  MMCImage::create_param_getters(oop imodule, oop imod_dict, oop params_list) {
+  number num_params = _mmobj->mm_list_size(params_list);
+
+  for (int i = 0; i < num_params; i++) {
+    oop name = _mmobj->mm_list_entry(params_list, i);
+    char* str = _mmobj->mm_string_cstr(name);
+    debug() << "Creating getter for param " << str << " " << i << endl;
+    oop getter = _mmobj->mm_new_slot_getter(imodule, _compiled_module, name, i + 3); //imod: vt, delegate, dict
+    _mmobj->mm_dictionary_set(imod_dict, i, _vm->new_symbol(str), getter);
+  }
+}
+
+
+oop MMCImage::instantiate_module(oop module_arguments_list) {
 
   // word* cmod = (word*) _compiled_module;
   // debug() << "CompiledModule: " << cmod << endl;
@@ -95,8 +134,14 @@ oop MMCImage::instantiate_module(/* module arguments */) {
   number num_classes = _mmobj->mm_dictionary_size(cclass_dict);
   // debug() << "CompiledModule num_classes: " << num_classes << endl;
 
-  oop imodule = _mmobj->mm_module_new(num_classes, _core_image->get_module_instance());
-  debug() << "imodule " << imodule << endl;
+  oop params = _mmobj->mm_compiled_module_params(_compiled_module);
+  number num_params = _mmobj->mm_list_size(params);
+
+  oop imodule = _mmobj->mm_module_new(num_params, num_classes,
+                                      _core_image->get_module_instance());
+
+  debug() << "imodule " << imodule << " params:" << num_params
+          << " classes:" << num_classes << " (size: " << (num_params + num_classes + 3) << ")" << endl;
 
   oop fun_dict = _mmobj->mm_compiled_module_functions(_compiled_module);
 
@@ -104,9 +149,18 @@ oop MMCImage::instantiate_module(/* module arguments */) {
 
   // debug() << "CompiledModule num_functions: " << num_funs << endl;
 
-  oop imod_dict = _mmobj->mm_dictionary_new(num_funs + num_classes); // num_classes -> getters
-  int imod_dict_idx = 0;
+  oop imod_dict = _mmobj->mm_dictionary_new(num_params + num_funs + num_classes); // num_classes -> getters
   _mmobj->mm_module_set_dictionary(imodule, imod_dict);
+
+  if (module_arguments_list) {
+    assign_module_arguments(imodule, module_arguments_list);
+  } else {
+    load_default_dependencies_and_assign_module_arguments(imodule);
+  }
+
+  create_param_getters(imodule, imod_dict, params);
+
+  int imod_dict_idx = num_params;
 
   // //for each CompiledFunction:
   // // mod[dict] += Function
@@ -122,7 +176,7 @@ oop MMCImage::instantiate_module(/* module arguments */) {
 
   std::map<std::string, oop> mod_classes; //store each Class created here, so we do parent look up more easily
 
-  int imod_idx = 3; //vt, delegate, dict
+  int imod_idx = num_params + 3; //imod: vt, delegate, dict
 
   for (int i = 0; i < num_classes; i++) {
     oop str_name = _mmobj->mm_dictionary_entry_key(cclass_dict, i);
@@ -140,7 +194,7 @@ oop MMCImage::instantiate_module(/* module arguments */) {
     }
 
     * (oop*) & imodule[imod_idx] = klass;
-    oop klass_getter = _mmobj->mm_new_class_getter(imodule, cclass, str_name, imod_idx);
+    oop klass_getter = _mmobj->mm_new_slot_getter(imodule, cclass, str_name, imod_idx);
 
     imod_idx++;
 
@@ -173,5 +227,5 @@ oop MMCImage::load() {
   link_symbols(_data, _es_size, HEADER_SIZE + _names_size + _ot_size + _er_size, _vm, _core_image);
   link_exception_types();
   _compiled_module = (oop) * (word*)(& _data[HEADER_SIZE + _names_size]);
-  return instantiate_module();
+  return _compiled_module;
 }

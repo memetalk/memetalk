@@ -23,6 +23,9 @@ public:
   void register_primitive(std::string, prim_function_t);
 
   prim_function_t get_primitive(std::string);
+
+  oop instantiate_module(char* name, oop module_args_list);
+
 private:
   void dump_prime_info();
   void dictionary_dump(oop dict);
