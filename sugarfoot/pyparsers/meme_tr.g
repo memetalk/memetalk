@@ -56,15 +56,13 @@ obj_function :obj = constructor(obj)
                   | function_definition(obj)
 
 
-body :fnobj = [(expr(fnobj)+):b] -> b
+body :fnobj = [(expr(fnobj)+) ['end-body']] -> fnobj.emit_return_this()
             | [['primitive' ['literal-string' :name]]:ast (:ignore)*]   -> fnobj.set_primitive(name)
 
 exprs :fnobj = expr(fnobj)+
 
 expr :fnobj = ['var-def' :id expr(fnobj)]              -> fnobj.emit_var_decl(id)
             | ['return' expr(fnobj)]                   -> fnobj.emit_return_top()
-            | ['return-this']                          -> fnobj.emit_return_this()
-            | ['return-null']                          -> fnobj.emit_null()
             | ['super-ctor-send' :s args(fnobj):arity] -> fnobj.emit_super_ctor_send(s, arity)
             | ['send-or-local-call' :name args(fnobj):arity]         -> fnobj.emit_send_or_local_call(name, arity)
             | ['send' :e :s args(fnobj):arity] apply('expr' fnobj e) -> fnobj.emit_send(s, arity)
