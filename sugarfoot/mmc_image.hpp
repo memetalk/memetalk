@@ -20,6 +20,7 @@ private:
   oop instantiate_class(oop, oop, oop, std::map<std::string, oop>&, oop);
   void load_header();
   void link_external_references();
+  void link_exception_types();
 
   VM* _vm;
   MMObj* _mmobj;
@@ -32,6 +33,7 @@ private:
   //header
   word _ot_size;
   word _es_size;
+  word _et_size;
   word _er_size;
   word _names_size;
 

@@ -1,15 +1,24 @@
 .preamble()
 .code
 
+class Exception
+  class_method throw: fun() {
+    <primitive "exception_throw">
+  }
+end
+
+print: fun(x) {
+  <primitive "print">
+}
+
+
+
 main: fun() {
-  return 10;
-  return this;
-  return "oi";
-  return :sym;
-  return null;
-  return true;
-  return false;
-  return thisModule;
+  try {
+    Exception.throw();
+  } catch(Exception e) {
+    print("oi");
+  }
 }
 
 .endcode

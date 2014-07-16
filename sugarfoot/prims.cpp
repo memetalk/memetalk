@@ -65,10 +65,16 @@ static oop prim_number_lt(Process* proc) {
   return (oop) res;
 }
 
+static oop prim_exception_throw(Process* proc) {
+  return 0;
+}
+
 void init_primitives(VM* vm) {
   vm->register_primitive("print", prim_print);
   vm->register_primitive("number_sum", prim_number_sum);
   vm->register_primitive("number_sub", prim_number_sub);
   vm->register_primitive("number_mul", prim_number_mul);
   vm->register_primitive("number_lt", prim_number_lt);
+
+  vm->register_primitive("exception_throw", prim_exception_throw);
 }

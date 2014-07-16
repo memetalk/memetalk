@@ -10,18 +10,22 @@ class CompVirtualMemory(vmemory.VirtualMemory):
         self.ext_ref_table = []
         self.symb_table = []
         self.string_table = {}
+        self.exception_types = []
+
+    def _physical_address(self, cell):
+        return self.base + sum(self.cell_sizes[0:self.cells.index(cell)])
 
     def object_table(self):
         return reduce(lambda x,y: x+y, [e() for e in self.cells])
 
     def external_references(self):
-        return [(x[0], self.base + sum(self.cell_sizes[0:self.cells.index(x[1])])) for x in self.ext_ref_table]
+        return [(x[0], self._physical_address(x[1])) for x in self.ext_ref_table]
 
     def external_names(self):
         return sorted(set([x[0] for x in self.ext_ref_table] + [x[0] for x in self.symb_table]))
 
     def reloc_table(self):
-        return [self.base + sum(self.cell_sizes[0:idx]) for idx,entry in enumerate(self.cells) if type(entry) == vmemory.PointerCell]
+        return [self._physical_address(entry) for entry in self.cells if type(entry) == vmemory.PointerCell]
 
     def symbols_references(self):
         sr = []
@@ -30,8 +34,11 @@ class CompVirtualMemory(vmemory.VirtualMemory):
                  sr.append((text, self.base + sum(self.cell_sizes[0:self.cells.index(referer)])))
         return sr
 
-    # def symbols_references(self):
-    #     return [(x[0], self.base + sum(self.cell_sizes[0:self.cells.index(x[1])])) for x in self.symb_table]
+    def exception_table_types(self):
+        return [self._physical_address(x) for x in self.exception_types]
+
+    def add_exception_type(self, type_oop):
+        self.exception_types.append(type_oop)
 
     def append_external_ref(self, name, label=None):
         oop = self.append_int(0xAAAA, label)

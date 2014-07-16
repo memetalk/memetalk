@@ -13,7 +13,6 @@ from . import comp_vmemory
 
 class MMC(object):
     MAGIC_NUMBER = 0x420
-    HEADER_SIZE = 5 * bits.WSIZE
 
     def __init__(self, cmodule):
         self.cmodule = cmodule
@@ -32,15 +31,18 @@ class MMC(object):
                 'ot_size': None,
                 'er_size': None,
                 'es_size': None,
+                'et_size': None,
                 'names_size': None},
                'names': [],
                'object_table': [],
                'external_references': [],
                'external_symbols': [],
+               'exception_types': [],
                'reloc_table': []
             }
 
 
+        self.HEADER_SIZE = len(mmc['header']) * bits.WSIZE
         self.cmodule.fill(vmem)
 
         mmc['header']['magic_number'] = self.MAGIC_NUMBER
@@ -72,6 +74,11 @@ class MMC(object):
 
         mmc['header']['es_size'] = len(mmc['external_symbols']) * bits.WSIZE
 
+        for etype_addr in vmem.exception_table_types():
+            mmc['exception_types'].append(etype_addr)
+
+        mmc['header']['et_size'] = len(mmc['exception_types']) * bits.WSIZE
+
         mmc['reloc_table'] = vmem.reloc_table()
 
         return mmc
@@ -85,6 +92,7 @@ class MMC(object):
             fp.write(bits.pack_word(mmc['header']['ot_size']))
             fp.write(bits.pack_word(mmc['header']['er_size']))
             fp.write(bits.pack_word(mmc['header']['es_size']))
+            fp.write(bits.pack_word(mmc['header']['et_size']))
             fp.write(bits.pack_word(mmc['header']['names_size']))
 
             # names
@@ -103,6 +111,11 @@ class MMC(object):
             # external symbols
             for v in mmc['external_symbols']:
                 fp.write(bits.pack_word(v))
+
+            # exception types
+            for v in mmc['exception_types']:
+                fp.write(bits.pack_word(v))
+
 
             # reloc table
             for word in mmc['reloc_table']:

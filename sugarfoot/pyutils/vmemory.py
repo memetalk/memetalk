@@ -88,12 +88,14 @@ class VirtualMemory(object):
     def __init__(self):
         self.cells = []
         self.cell_sizes = []
-        self.index = {}
+        self.index = {} # label -> memory pos
         self.base = 0
+        self.cell_index = {} # label -> cells index
 
     def _append_cell(self, cell, label):
         if label is not None:
             self.label_current(label)
+            self.cell_index[label] = len(self.cells)
         self.cells.append(cell)
         self.cell_sizes.append(len(cell))
 
@@ -102,6 +104,10 @@ class VirtualMemory(object):
 
     def label_current(self, label):
         self.index[label] = sum(self.cell_sizes)
+        self.cell_index[label] = len(self.cells)
+
+    def get_pointer_to(self, label):
+        return self.cells[self.cell_index[label]]
 
     def append_int(self, num, label=None):
         cell = IntCell(self, num)

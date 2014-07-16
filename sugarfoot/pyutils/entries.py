@@ -328,7 +328,8 @@ class CompiledFunction(Entry):
             if type_oops[idx] is None:
                 vmem.append_null()
             else:
-                vmem.append_pointer_to(type_oops[idx])
+                type_oop = vmem.append_pointer_to(type_oops[idx])
+                vmem.add_exception_type(type_oop)
 
         return len(self.exceptions_frame)
 
@@ -418,7 +419,7 @@ class CompiledFunction(Entry):
     def add_exception_entry(self, label_begin_try, label_begin_catch, label_out, catch_type, idx):
         self.exceptions_frame.append({
             'start': label_begin_try(),
-            'catch': label_begin_catch()-1,
+            'catch': label_begin_catch(),
             'end': label_out(),
             'type': catch_type,
             'local_id': idx})
