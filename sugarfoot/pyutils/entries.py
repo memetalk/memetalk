@@ -309,14 +309,13 @@ class CompiledFunction(Entry):
             return 0
 
         vmem.append_int(FRAME_TYPE_EXCEPTIONS_FRAME)
-        vmem.append_int(len(self.exceptions_frame) * 5 * bits.WSIZE)
+        vmem.append_int(len(self.exceptions_frame) * 4 * bits.WSIZE)
 
         vmem.label_current(self.exceptions_frame_label())
 
         for idx, entry in enumerate(self.exceptions_frame):
             vmem.append_int(entry['start'])
             vmem.append_int(entry['catch'])
-            vmem.append_int(entry['end'])
             vmem.append_int(entry['local_pos'])
             vmem.append_int(entry['type_pos'])
 
@@ -409,7 +408,6 @@ class CompiledFunction(Entry):
         self.exceptions_frame.append({
             'start': label_begin_try(),
             'catch': label_begin_catch(),
-            'end': 3333, # TODO: remove me
             'type_pos': catch_type_idx,
             'local_pos': var_idx})
 

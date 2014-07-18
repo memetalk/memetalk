@@ -2,8 +2,18 @@
 .code
 
 class Exception
-  class_method throw: fun(x) {
+  fields: message;
+  init new: fun(message) {
+    @message = message;
+  }
+  instance_method message: fun() {
+    return @message;
+  }
+  instance_method throw: fun() {
     <primitive "exception_throw">
+  }
+  class_method throw: fun(msg) {
+    Exception.new(msg).throw;
   }
 end
 

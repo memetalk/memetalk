@@ -438,7 +438,7 @@ void Process::unwind_with_exception(oop e) {
 
   word try_block =  *(word*) frame_begin;
   word catch_block = *(word*) (frame_begin + 1);
-  word type_pos = *(word*) (frame_begin + 4);
+  word type_pos = *(word*) (frame_begin + 3);
   oop type_oop = _mmobj->mm_module_entry(_mp, type_pos);
 
   number instr = _ip - code;

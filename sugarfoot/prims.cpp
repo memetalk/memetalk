@@ -73,11 +73,10 @@ static int prim_number_lt(Process* proc) {
 }
 
 static int prim_exception_throw(Process* proc) {
-  oop arg = *((oop*) proc->fp() - 1);
-  oop ex = proc->mmobj()->mm_new(proc->rp(), proc->mmobj()->mm_object_new(), 1); // Exception < Object
-  ((oop*)ex)[2] = arg;
-
-  proc->stack_push(ex);
+  oop self =  proc->dp();
+  // oop ex = proc->mmobj()->mm_new(proc->rp(), proc->mmobj()->mm_object_new(), 1); // Exception < Object
+  // ((oop*)ex)[2] = arg;
+  proc->stack_push(self);
   return PRIM_RAISED;
 }
 
