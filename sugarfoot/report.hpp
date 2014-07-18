@@ -8,6 +8,7 @@
 using std::endl;
 
 void bail(const std::string& msg);
+void done();
 std::ostream& debug();
 
 #endif

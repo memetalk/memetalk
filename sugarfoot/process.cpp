@@ -28,6 +28,7 @@ void Process::init() {
 
   _sp = _stack; //stack
   _fp = _stack; //frame
+  _bp = NULL; //base
   _ip = NULL; //instruction
   _mp = NULL; //module
   _cp = NULL; //context
@@ -60,6 +61,8 @@ void Process::push_frame(number arity, number num_locals) {
   stack_push(_ep);
   stack_push(_rp);
   stack_push(_dp);
+  stack_push(_bp);
+  _bp = _sp;
   // debug() << " push frame SP is: " << _sp << endl;
 }
 
@@ -69,6 +72,7 @@ void Process::pop_frame() {
 
   // debug() << "pop_frame begin SP: " << _sp << endl;
 
+  _bp = stack_pop();
   _dp = stack_pop();
   _rp = stack_pop();
   _ep = stack_pop();
@@ -156,9 +160,17 @@ void Process::load_fun(oop recv, oop drecv, oop fun, bool should_allocate) {
   if (_mmobj->mm_function_is_prim(fun)) {
     oop prim_name = _mmobj->mm_function_get_prim_name(fun);
     std::string str_prim_name = _mmobj->mm_string_cstr(prim_name);
-    oop ret = execute_primitive(str_prim_name);
-    pop_frame();
-    stack_push(ret);
+    int ret = execute_primitive(str_prim_name);
+    if (ret == 0) {
+      oop value = stack_pop(); //shit
+      pop_frame();
+      stack_push(value);
+    } else if (ret == PRIM_RAISED) {
+      oop exception_oop = stack_pop(); //shit
+      debug() << "prim returned RAISED " << exception_oop << endl;
+      pop_frame();
+      unwind_with_exception(exception_oop);
+    }
     return;
   }
 
@@ -318,6 +330,10 @@ void Process::dispatch(int opcode, int arg) {
       case SUPER_CTOR_SEND:
         handle_super_ctor_send(arg);
         break;
+      case JMP:
+        debug() << "JMP " << arg << " " << endl;
+        _ip += (arg); //_ip already suffered a ++ in dispatch
+        break;
       case JZ:
         val = stack_pop();
         debug() << "JZ " << arg << " " << val << endl;
@@ -382,8 +398,59 @@ void Process::stack_push(bytecode* data) {
 }
 
 
-oop Process::execute_primitive(std::string name) {
-  oop val = _vm->get_primitive(name)(this);
+int Process::execute_primitive(std::string name) {
+  int val = _vm->get_primitive(name)(this);
   debug() << "primitive " << name << " returned " << val << endl;
   return val;
+}
+
+
+oop Process::cp_index(int idx) {
+  if (idx == 0) {
+    return _cp;
+  } else {
+    oop bp = _bp;
+    for (int i = 0; i < idx-1; i++) {
+      bp = * (oop*) bp;
+    }
+    return * (oop*) (bp - 5);
+  }
+}
+
+void Process::unwind_with_exception(oop e) {
+  debug() << "** unwind_with_exception " << _cp << endl;
+  if (_cp == NULL) {
+    debug() << "Terminated with exception " << e << endl;
+    done();
+  }
+
+  bytecode* code = _mmobj->mm_function_get_code(_cp);
+
+  number exception_frames_count = _mmobj->mm_function_exception_frames_count(_cp);
+  if (exception_frames_count == 0) {
+    pop_frame();
+    unwind_with_exception(e);
+    return;
+  }
+
+  oop exception_frames = _mmobj->mm_function_exception_frames(_cp);
+  oop frame_begin = exception_frames + (5 * (exception_frames_count-1));
+
+  word try_block =  *(word*) frame_begin;
+  word catch_block = *(word*) (frame_begin + 1);
+  word type_pos = *(word*) (frame_begin + 4);
+  oop type_oop = _mmobj->mm_module_entry(_mp, type_pos);
+
+  number instr = _ip - code;
+
+  debug() << "RAISE " << instr << " " << try_block << " " << catch_block << " " << type_pos
+          << " " << _mmobj->is_subtype(_mmobj->mm_object_vt(e), type_oop) << endl;
+  if (instr >= try_block && instr < catch_block && _mmobj->is_subtype(_mmobj->mm_object_vt(e), type_oop)) {
+    debug() << "CAUGHT " << endl;
+    _ip = code + catch_block;
+    return;
+  }
+
+  pop_frame();
+  unwind_with_exception(e);
 }

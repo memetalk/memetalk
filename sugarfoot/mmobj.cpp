@@ -182,6 +182,11 @@ void MMObj::mm_module_set_module_argument(oop imodule, oop arg, number idx) {
   ((oop*)imodule)[idx+3] = arg; //3: vt, delegate, dict
 }
 
+oop MMObj::mm_module_entry(oop imodule, number idx) {
+  return ((oop*)imodule)[idx+3]; //3: vt, delegate, dict
+}
+
+
 
 bool MMObj::mm_is_string(oop obj) {
   if (is_small_int(obj)) {
@@ -283,6 +288,18 @@ bool MMObj::mm_function_is_ctor(oop fun) {
   return mm_compiled_function_is_ctor(cfun);
 }
 
+number MMObj::mm_function_exception_frames_count(oop fun) {
+  assert( *(oop*) fun == _core_image->get_prime("Function"));
+  oop cfun = mm_function_get_cfun(fun);
+  return mm_compiled_function_exception_frames_count(cfun);
+}
+
+oop MMObj::mm_function_exception_frames(oop fun) {
+  assert( *(oop*) fun == _core_image->get_prime("Function"));
+  oop cfun = mm_function_get_cfun(fun);
+  return mm_compiled_function_exception_frames(cfun);
+}
+
 bool MMObj::mm_compiled_function_is_ctor(oop cfun) {
   assert( *(oop*) cfun == _core_image->get_prime("CompiledFunction"));
   return ((oop*)cfun)[4];
@@ -342,6 +359,17 @@ bytecode* MMObj::mm_compiled_function_get_code(oop cfun) {
   assert( *(oop*) cfun == _core_image->get_prime("CompiledFunction"));
   return (bytecode*) ((oop*)cfun)[15];
 }
+
+number MMObj::mm_compiled_function_exception_frames_count(oop cfun) {
+  assert( *(oop*) cfun == _core_image->get_prime("CompiledFunction"));
+  return (number) ((oop*)cfun)[16];
+}
+
+oop MMObj::mm_compiled_function_exception_frames(oop cfun) {
+  assert( *(oop*) cfun == _core_image->get_prime("CompiledFunction"));
+  return ((oop*)cfun)[17];
+}
+
 
 oop MMObj::mm_compiled_class_name(oop cclass) {
   assert( *(oop*) cclass == _core_image->get_prime("CompiledClass"));
@@ -482,4 +510,25 @@ number MMObj::mm_behavior_size(oop behavior) {
   } else {
     return (number) num;
   }
+}
+
+bool MMObj::is_subtype(oop sub_type, oop super_type) {
+  debug() << "subtype? SUB " << sub_type << " " << super_type << endl;
+  if (sub_type == NULL) {
+    return false;
+  }
+  if (sub_type == super_type) {
+    return true;
+  } else {
+    return is_subtype(mm_object_delegate(sub_type), super_type);
+  }
+}
+
+
+oop MMObj::mm_new(oop vt, oop delegate, number payload) {
+  oop obj = (oop) malloc(sizeof(word) * (2 + payload)); // vt, delegate
+
+  ((word**) obj)[0] = vt;
+  ((word**) obj)[1] = delegate;
+  return obj;
 }

@@ -20,7 +20,6 @@ private:
   oop instantiate_class(oop, oop, oop, std::map<std::string, oop>&, oop);
   void load_header();
   void link_external_references();
-  void link_exception_types();
 
   void assign_module_arguments(oop imodule, oop module_arguments_list);
   void load_default_dependencies_and_assign_module_arguments(oop imodule);
@@ -37,7 +36,6 @@ private:
   //header
   word _ot_size;
   word _es_size;
-  word _et_size;
   word _er_size;
   word _names_size;
 

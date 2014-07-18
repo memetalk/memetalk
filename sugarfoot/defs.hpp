@@ -14,11 +14,13 @@ typedef word* oop;
 typedef int bytecode;
 
 class Process;
-typedef oop (*prim_function_t) (Process*);
+typedef int (*prim_function_t) (Process*);
 
 #define DEFAULT_STACK_SIZE sizeof(word) * 1024 * 10
 
 #define INVALID_PAYLOAD 256
+
+#define PRIM_RAISED 1
 
 // bytecodes
 
@@ -41,3 +43,4 @@ typedef oop (*prim_function_t) (Process*);
 #define SUPER_CTOR_SEND 43
 
 #define JZ 50
+#define JMP 51

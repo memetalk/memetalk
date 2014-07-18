@@ -8,7 +8,7 @@
 
 using namespace std;
 
-word MMCImage::HEADER_SIZE = 6 * WSIZE;
+word MMCImage::HEADER_SIZE = 5 * WSIZE;
 word MMCImage::MAGIC_NUMBER = 0x420;
 
 MMCImage::MMCImage(VM* vm, CoreImage* core_image, const std::string& filepath)
@@ -20,14 +20,12 @@ void MMCImage::load_header() {
   _ot_size = unpack_word(_data,  1 * WSIZE);
   _er_size = unpack_word(_data, 2 * WSIZE);
   _es_size = unpack_word(_data, 3 * WSIZE);
-  _et_size = unpack_word(_data, 4 * WSIZE);
-  _names_size = unpack_word(_data,  5 * WSIZE);
+  _names_size = unpack_word(_data,  4 * WSIZE);
 
   debug() << "Header:magic: " << magic_number << " =?= " << MMCImage::MAGIC_NUMBER << endl;
   debug() << "Header:ot_size: " << _ot_size << endl;
   debug() << "Header:er_size: " << _er_size << endl;
   debug() << "Header:es_size: " << _es_size << endl;
-  debug() << "Header:et_size: " << _et_size << endl;
   debug() << "Header:names_size: " << _names_size << endl;
 }
 
@@ -203,29 +201,13 @@ oop MMCImage::instantiate_module(oop module_arguments_list) {
   return imodule;
 }
 
-void MMCImage::link_exception_types() {
-  const char* base = _data;
-  int start_exception_types_refs = HEADER_SIZE + _names_size + _ot_size + _er_size + _es_size;
-
-  for (int i = 0; i < _et_size; i += WSIZE) {
-    word str_oop_offset = unpack_word(_data, start_exception_types_refs + i);
-    debug() << "TYPE EXC data: " << str_oop_offset << endl;
-    oop* str_oop_ptr = (oop*) (base + str_oop_offset);
-    char* type_name = _mmobj->mm_string_cstr(*str_oop_ptr);
-    debug() << "TYPE EXC: " << type_name << endl;
-    //TODO:
-       //this is either: a module parameter or a module class
-       //we will write in *str_oop_ptr = <imodule index/offset/slot corresponding for the ex class>
-  }
-}
 
 oop MMCImage::load() {
   _data = read_file(_filepath, &_data_size);
   load_header();
-  relocate_addresses(_data, _data_size, HEADER_SIZE + _names_size + _ot_size + _er_size + _es_size + _et_size);
+  relocate_addresses(_data, _data_size, HEADER_SIZE + _names_size + _ot_size + _er_size + _es_size);
   link_external_references();
   link_symbols(_data, _es_size, HEADER_SIZE + _names_size + _ot_size + _er_size, _vm, _core_image);
-  link_exception_types();
   _compiled_module = (oop) * (word*)(& _data[HEADER_SIZE + _names_size]);
   return _compiled_module;
 }

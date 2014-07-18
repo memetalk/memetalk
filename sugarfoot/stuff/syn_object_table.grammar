@@ -1,265 +1,265 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ufwb version="1.8">
-    <grammar name="object table" start="id:728" author="thiago silva">
+    <grammar name="object table" start="id:1608" author="thiago silva">
         <description>Grammar for my file format</description>
-        <structure name="object_table" id="728" length="0" encoding="ISO_8859-1:1987" endian="little" signed="no" fillcolor="D8C5FF">
-            <number name="compiled_module_addr" id="729" type="integer" length="8" display="hex"/>
-            <structref name="frame" id="731" structure="id:730"/>
+        <structure name="object_table" id="1608" length="0" encoding="ISO_8859-1:1987" endian="little" signed="no" fillcolor="D8C5FF">
+            <number name="compiled_module_addr" id="1609" type="integer" length="8" display="hex"/>
+            <structref name="frame" id="1611" structure="id:1610"/>
         </structure>
-        <structure name="frame" id="730" repeatmin="0" repeatmax="-1" encoding="ISO_8859-1:1987" endian="big" signed="no" order="variable">
-            <structref name="object_frame" id="734" repeatmin="0" repeatmax="-1" structure="id:733"/>
-            <structref name="literal_frame" id="736" repeatmin="0" repeatmax="-1" structure="id:735"/>
-            <structref name="bytecode_frame" id="738" repeatmin="0" repeatmax="-1" structure="id:737"/>
-            <structref name="string_object_frame" id="740" repeatmin="0" repeatmax="-1" structure="id:739"/>
-            <structref name="list_object_frame" id="742" repeatmin="0" repeatmax="-1" structure="id:741"/>
-            <structref name="dict_object_frame" id="744" repeatmin="0" repeatmax="-1" structure="id:743"/>
-            <number name="external_symbol" mustmatch="yes" id="745" repeatmin="0" repeatmax="-1" type="integer" length="8" endian="dynamic" display="hex">
+        <structure name="frame" id="1610" repeatmin="0" repeatmax="-1" encoding="ISO_8859-1:1987" endian="big" signed="no" order="variable">
+            <structref name="object_frame" id="1614" repeatmin="0" repeatmax="-1" structure="id:1613"/>
+            <structref name="literal_frame" id="1616" repeatmin="0" repeatmax="-1" structure="id:1615"/>
+            <structref name="bytecode_frame" id="1618" repeatmin="0" repeatmax="-1" structure="id:1617"/>
+            <structref name="string_object_frame" id="1620" repeatmin="0" repeatmax="-1" structure="id:1619"/>
+            <structref name="list_object_frame" id="1622" repeatmin="0" repeatmax="-1" structure="id:1621"/>
+            <structref name="dict_object_frame" id="1624" repeatmin="0" repeatmax="-1" structure="id:1623"/>
+            <number name="external_symbol" mustmatch="yes" id="1625" repeatmin="0" repeatmax="-1" type="integer" length="8" endian="dynamic" display="hex">
                 <fixedvalues>
                     <fixedvalue value="0xBBBB"/>
                 </fixedvalues>
             </number>
-            <number name="external_reference" mustmatch="yes" id="746" repeatmin="0" repeatmax="-1" type="integer" length="8" endian="dynamic" display="hex">
+            <number name="external_reference" mustmatch="yes" id="1626" repeatmin="0" repeatmax="-1" type="integer" length="8" endian="dynamic" display="hex">
                 <fixedvalues>
                     <fixedvalue value="0xAAAA"/>
                 </fixedvalues>
             </number>
-            <structref name="exceptions_frame" id="924" repeatmin="0" repeatmax="-1" structure="id:920"/>
+            <structref name="exceptions_frame" id="1628" repeatmin="0" repeatmax="-1" structure="id:1627"/>
         </structure>
-        <structure name="object_frame" id="733" encoding="ISO_8859-1:1987" endian="little" signed="no">
-            <number name="frame_type" mustmatch="yes" id="748" fillcolor="B4BEF8" type="integer" length="8">
+        <structure name="object_frame" id="1613" encoding="ISO_8859-1:1987" endian="little" signed="no">
+            <number name="frame_type" mustmatch="yes" id="1630" fillcolor="B4BEF8" type="integer" length="8">
                 <fixedvalues>
                     <fixedvalue value="900"/>
                 </fixedvalues>
             </number>
-            <number name="frame_size" id="749" fillcolor="FFF214" type="integer" length="8"/>
-            <structure name="oop_basic" id="750" length="frame_size">
-                <number name="vt" id="751" type="integer" length="8" display="hex"/>
+            <number name="frame_size" id="1631" fillcolor="FFF214" type="integer" length="8"/>
+            <structure name="oop_basic" id="1632" length="frame_size">
+                <number name="vt" id="1633" type="integer" length="8" display="hex"/>
             </structure>
         </structure>
-        <structure name="string_object_frame" id="739" length="0" encoding="ISO_8859-1:1987" endian="little" signed="no">
-            <number name="frame_type" mustmatch="yes" id="754" type="integer" length="8">
+        <structure name="string_object_frame" id="1619" length="0" encoding="ISO_8859-1:1987" endian="little" signed="no">
+            <number name="frame_type" mustmatch="yes" id="1636" type="integer" length="8">
                 <fixedvalues>
                     <fixedvalue value="901"/>
                 </fixedvalues>
             </number>
-            <number name="frame_size" id="755" type="integer" length="8"/>
-            <structure name="oop_string_or_sym" id="756" length="frame_size">
-                <number name="vt" id="757" type="integer" length="8" display="hex"/>
-                <number name="delegate" id="758" type="integer" length="8" display="hex"/>
-                <number name="strlen" id="759" type="integer" length="8"/>
-                <string name="data" id="760" type="zero-terminated"/>
+            <number name="frame_size" id="1637" type="integer" length="8"/>
+            <structure name="oop_string_or_sym" id="1638" length="frame_size">
+                <number name="vt" id="1639" type="integer" length="8" display="hex"/>
+                <number name="delegate" id="1640" type="integer" length="8" display="hex"/>
+                <number name="strlen" id="1641" type="integer" length="8"/>
+                <string name="data" id="1642" type="zero-terminated"/>
             </structure>
         </structure>
-        <structure name="list_object_frame" id="741" encoding="ISO_8859-1:1987" endian="little" signed="no">
-            <number name="frame_type" mustmatch="yes" id="763" type="integer" length="8">
+        <structure name="list_object_frame" id="1621" encoding="ISO_8859-1:1987" endian="little" signed="no">
+            <number name="frame_type" mustmatch="yes" id="1645" type="integer" length="8">
                 <fixedvalues>
                     <fixedvalue value="902"/>
                 </fixedvalues>
             </number>
-            <number name="frame_size" id="764" type="integer" length="8"/>
-            <structure name="oop_list" id="765" length="frame_size">
-                <number name="vt" id="766" type="integer" length="8" display="hex"/>
-                <number name="delegate" id="767" type="integer" length="8" display="hex"/>
-                <number name="len" id="768" type="integer" length="8"/>
-                <number name="oop" id="769" repeatmin="0" repeatmax="-1" type="integer" length="8" display="hex"/>
+            <number name="frame_size" id="1646" type="integer" length="8"/>
+            <structure name="oop_list" id="1647" length="frame_size">
+                <number name="vt" id="1648" type="integer" length="8" display="hex"/>
+                <number name="delegate" id="1649" type="integer" length="8" display="hex"/>
+                <number name="len" id="1650" type="integer" length="8"/>
+                <number name="oop" id="1651" repeatmin="0" repeatmax="-1" type="integer" length="8" display="hex"/>
             </structure>
         </structure>
-        <structure name="dict_object_frame" id="743" encoding="ISO_8859-1:1987" endian="little" signed="no">
-            <number name="frame_type" mustmatch="yes" id="772" type="integer" length="8">
+        <structure name="dict_object_frame" id="1623" encoding="ISO_8859-1:1987" endian="little" signed="no">
+            <number name="frame_type" mustmatch="yes" id="1654" type="integer" length="8">
                 <fixedvalues>
                     <fixedvalue value="903"/>
                 </fixedvalues>
             </number>
-            <number name="frame_size" id="773" type="integer" length="8"/>
-            <structure name="oop_dict" id="774" length="frame_size">
-                <number name="vt" id="775" type="integer" length="8" display="hex"/>
-                <number name="delegate" id="776" type="integer" length="8" display="hex"/>
-                <number name="len" id="777" type="integer" length="8"/>
-                <number name="oop" id="778" repeatmin="0" repeatmax="-1" type="integer" length="8" display="hex"/>
+            <number name="frame_size" id="1655" type="integer" length="8"/>
+            <structure name="oop_dict" id="1656" length="frame_size">
+                <number name="vt" id="1657" type="integer" length="8" display="hex"/>
+                <number name="delegate" id="1658" type="integer" length="8" display="hex"/>
+                <number name="len" id="1659" type="integer" length="8"/>
+                <number name="oop" id="1660" repeatmin="0" repeatmax="-1" type="integer" length="8" display="hex"/>
             </structure>
         </structure>
-        <structure name="literal_frame" id="735" encoding="ISO_8859-1:1987" endian="little" signed="no">
-            <number name="frame_type" mustmatch="yes" id="781" type="integer" length="8">
+        <structure name="literal_frame" id="1615" encoding="ISO_8859-1:1987" endian="little" signed="no">
+            <number name="frame_type" mustmatch="yes" id="1663" type="integer" length="8">
                 <fixedvalues>
                     <fixedvalue value="904"/>
                 </fixedvalues>
             </number>
-            <number name="frame_size" id="782" type="integer" length="8"/>
-            <number name="oop" id="783" repeatmax="frame_size / 8" type="integer" length="8" display="hex"/>
+            <number name="frame_size" id="1664" type="integer" length="8"/>
+            <number name="oop" id="1665" repeatmax="frame_size / 8" type="integer" length="8" display="hex"/>
         </structure>
-        <structure name="bytecode_frame" id="737" encoding="ISO_8859-1:1987" endian="little" signed="no">
-            <number name="frame_type" mustmatch="yes" id="785" type="integer" length="8">
+        <structure name="bytecode_frame" id="1617" encoding="ISO_8859-1:1987" endian="little" signed="no">
+            <number name="frame_type" mustmatch="yes" id="1667" type="integer" length="8">
                 <fixedvalues>
                     <fixedvalue value="905"/>
                 </fixedvalues>
             </number>
-            <number name="frame_size" id="786" type="integer" length="8"/>
-            <structure name="body" id="787" length="frame_size">
-                <structure name="codes" id="788" length="0" repeatmax="-1" order="variable">
-                    <structref name="OP_PUSH_LITERAL" id="790" repeatmin="0" structure="id:789"/>
-                    <structref name="OP_POP_LOCAL" id="792" repeatmin="0" structure="id:791"/>
-                    <structref name="OP_RETURN_TOP" id="794" repeatmin="0" structure="id:793"/>
-                    <structref name="OP_RETURN_THIS" id="796" repeatmin="0" structure="id:795"/>
-                    <structref name="OP_PUSH_MODULE" id="798" repeatmin="0" structure="id:797"/>
-                    <structref name="OP_SEND" id="800" repeatmin="0" structure="id:799"/>
-                    <structref name="OP_SUPER_CTOR_SEND" id="802" repeatmin="0" structure="id:801"/>
-                    <structref name="OP_PUSH_LOCAL" id="804" repeatmin="0" structure="id:803"/>
-                    <structref name="OP_PUSH_FIELD" id="806" repeatmin="0" structure="id:805"/>
-                    <structref name="OP_POP_FIELD" id="808" repeatmin="0" structure="id:807"/>
-                    <number name="padding" mustmatch="yes" id="809" repeatmin="0" type="integer" length="4">
+            <number name="frame_size" id="1668" type="integer" length="8"/>
+            <structure name="body" id="1669" length="frame_size">
+                <structure name="codes" id="1670" length="0" repeatmax="-1" order="variable">
+                    <structref name="OP_PUSH_LITERAL" id="1672" repeatmin="0" structure="id:1671"/>
+                    <structref name="OP_POP_LOCAL" id="1674" repeatmin="0" structure="id:1673"/>
+                    <structref name="OP_RETURN_TOP" id="1676" repeatmin="0" structure="id:1675"/>
+                    <structref name="OP_RETURN_THIS" id="1678" repeatmin="0" structure="id:1677"/>
+                    <structref name="OP_PUSH_MODULE" id="1680" repeatmin="0" structure="id:1679"/>
+                    <structref name="OP_SEND" id="1682" repeatmin="0" structure="id:1681"/>
+                    <structref name="OP_SUPER_CTOR_SEND" id="1684" repeatmin="0" structure="id:1683"/>
+                    <structref name="OP_PUSH_LOCAL" id="1686" repeatmin="0" structure="id:1685"/>
+                    <structref name="OP_PUSH_FIELD" id="1688" repeatmin="0" structure="id:1687"/>
+                    <structref name="OP_POP_FIELD" id="1690" repeatmin="0" structure="id:1689"/>
+                    <number name="padding" mustmatch="yes" id="1691" repeatmin="0" type="integer" length="4">
                         <fixedvalues>
                             <fixedvalue value="0"/>
                         </fixedvalues>
                     </number>
-                    <structref name="OP_PUSH_PARAM" id="811" repeatmin="0" structure="id:810"/>
-                    <structref name="OP_POP" id="813" repeatmin="0" structure="id:812"/>
-                    <structref name="OP_PUSH_THIS" id="815" repeatmin="0" structure="id:814"/>
-                    <structref name="OP_JZ" id="817" repeatmin="0" structure="id:816"/>
-                    <structref name="OP_JMP" id="819" repeatmin="0" structure="id:818"/>
-                    <structref name="OP_PUSH_BIN" id="874" repeatmin="0" structure="id:868"/>
+                    <structref name="OP_PUSH_PARAM" id="1693" repeatmin="0" structure="id:1692"/>
+                    <structref name="OP_POP" id="1695" repeatmin="0" structure="id:1694"/>
+                    <structref name="OP_PUSH_THIS" id="1697" repeatmin="0" structure="id:1696"/>
+                    <structref name="OP_JZ" id="1699" repeatmin="0" structure="id:1698"/>
+                    <structref name="OP_JMP" id="1701" repeatmin="0" structure="id:1700"/>
+                    <structref name="OP_PUSH_BIN" id="1703" repeatmin="0" structure="id:1702"/>
                 </structure>
             </structure>
         </structure>
-        <structure name="exceptions_frame" id="920" encoding="ISO_8859-1:1987" endian="little" signed="no">
-            <number name="frame_type" mustmatch="yes" id="922" type="integer" length="8">
+        <structure name="exceptions_frame" id="1627" encoding="ISO_8859-1:1987" endian="little" signed="no">
+            <number name="frame_type" mustmatch="yes" id="1707" type="integer" length="8">
                 <fixedvalues>
                     <fixedvalue value="906"/>
                 </fixedvalues>
             </number>
-            <number name="frame_size" id="923" type="integer" length="8"/>
-            <structure name="frame" id="940" length="frame_size">
-                <structure name="entry" id="925" length="0" repeatmin="0" repeatmax="-1">
-                    <number name="start" id="927" type="integer" length="8"/>
-                    <number name="catch" id="928" type="integer" length="8"/>
-                    <number name="end" id="929" type="integer" length="8"/>
-                    <number name="local_id" id="930" type="integer" length="8"/>
-                    <number name="type_name" id="931" type="integer" length="8" display="hex"/>
+            <number name="frame_size" id="1708" type="integer" length="8"/>
+            <structure name="frame" id="1709" length="frame_size">
+                <structure name="entry" id="1710" length="0" repeatmin="0" repeatmax="-1">
+                    <number name="start" id="1711" type="integer" length="8"/>
+                    <number name="catch" id="1712" type="integer" length="8"/>
+                    <number name="end" id="1713" type="integer" length="8"/>
+                    <number name="local_pos" id="1714" type="integer" length="8"/>
+                    <number name="type_pos" id="1715" type="integer" length="8"/>
                 </structure>
             </structure>
         </structure>
-        <structure name="OP_PUSH_LITERAL" id="789" encoding="ISO_8859-1:1987" endian="big" signed="no">
-            <number name="args" id="823" type="integer" length="3" endian="little"/>
-            <number name="opcode" mustmatch="yes" id="824" type="integer" length="1">
+        <structure name="OP_PUSH_LITERAL" id="1671" encoding="ISO_8859-1:1987" endian="big" signed="no">
+            <number name="args" id="1719" type="integer" length="3" endian="little"/>
+            <number name="opcode" mustmatch="yes" id="1720" type="integer" length="1">
                 <fixedvalues>
                     <fixedvalue value="3"/>
                 </fixedvalues>
             </number>
         </structure>
-        <structure name="OP_POP_LOCAL" id="791" encoding="ISO_8859-1:1987" endian="big" signed="no">
-            <number name="args" id="826" type="integer" length="3" endian="little"/>
-            <number name="opcode" mustmatch="yes" id="827" type="integer" length="1">
+        <structure name="OP_POP_LOCAL" id="1673" encoding="ISO_8859-1:1987" endian="big" signed="no">
+            <number name="args" id="1722" type="integer" length="3" endian="little"/>
+            <number name="opcode" mustmatch="yes" id="1723" type="integer" length="1">
                 <fixedvalues>
                     <fixedvalue value="21"/>
                 </fixedvalues>
             </number>
         </structure>
-        <structure name="OP_RETURN_TOP" id="793" encoding="ISO_8859-1:1987" endian="big" signed="no">
-            <number name="args" id="829" type="integer" length="3" endian="little"/>
-            <number name="opcode" mustmatch="yes" id="830" type="integer" length="1">
+        <structure name="OP_RETURN_TOP" id="1675" encoding="ISO_8859-1:1987" endian="big" signed="no">
+            <number name="args" id="1725" type="integer" length="3" endian="little"/>
+            <number name="opcode" mustmatch="yes" id="1726" type="integer" length="1">
                 <fixedvalues>
                     <fixedvalue value="31"/>
                 </fixedvalues>
             </number>
         </structure>
-        <structure name="OP_RETURN_THIS" id="795" encoding="ISO_8859-1:1987" endian="big" signed="no">
-            <number name="args" id="832" type="integer" length="3" endian="little"/>
-            <number name="opcode" mustmatch="yes" id="833" type="integer" length="1">
+        <structure name="OP_RETURN_THIS" id="1677" encoding="ISO_8859-1:1987" endian="big" signed="no">
+            <number name="args" id="1728" type="integer" length="3" endian="little"/>
+            <number name="opcode" mustmatch="yes" id="1729" type="integer" length="1">
                 <fixedvalues>
                     <fixedvalue value="30"/>
                 </fixedvalues>
             </number>
         </structure>
-        <structure name="OP_PUSH_MODULE" id="797" encoding="ISO_8859-1:1987" endian="big" signed="no">
-            <number name="args" id="835" type="integer" length="3" endian="little"/>
-            <number name="opcode" mustmatch="yes" id="836" type="integer" length="1">
+        <structure name="OP_PUSH_MODULE" id="1679" encoding="ISO_8859-1:1987" endian="big" signed="no">
+            <number name="args" id="1731" type="integer" length="3" endian="little"/>
+            <number name="opcode" mustmatch="yes" id="1732" type="integer" length="1">
                 <fixedvalues>
                     <fixedvalue value="7"/>
                 </fixedvalues>
             </number>
         </structure>
-        <structure name="OP_SEND" id="799" encoding="ISO_8859-1:1987" endian="big" signed="no">
-            <number name="args" id="838" type="integer" length="3" endian="little"/>
-            <number name="opcode" mustmatch="yes" id="839" type="integer" length="1">
+        <structure name="OP_SEND" id="1681" encoding="ISO_8859-1:1987" endian="big" signed="no">
+            <number name="args" id="1734" type="integer" length="3" endian="little"/>
+            <number name="opcode" mustmatch="yes" id="1735" type="integer" length="1">
                 <fixedvalues>
                     <fixedvalue value="40"/>
                 </fixedvalues>
             </number>
         </structure>
-        <structure name="OP_SUPER_CTOR_SEND" id="801" encoding="ISO_8859-1:1987" endian="big" signed="no">
-            <number name="args" id="841" type="integer" length="3" endian="little"/>
-            <number name="opcode" mustmatch="yes" id="842" type="integer" length="1">
+        <structure name="OP_SUPER_CTOR_SEND" id="1683" encoding="ISO_8859-1:1987" endian="big" signed="no">
+            <number name="args" id="1737" type="integer" length="3" endian="little"/>
+            <number name="opcode" mustmatch="yes" id="1738" type="integer" length="1">
                 <fixedvalues>
                     <fixedvalue value="43"/>
                 </fixedvalues>
             </number>
         </structure>
-        <structure name="OP_PUSH_LOCAL" id="803" encoding="ISO_8859-1:1987" endian="big" signed="no">
-            <number name="args" id="844" type="integer" length="3" endian="little"/>
-            <number name="opcode" mustmatch="yes" id="845" type="integer" length="1">
+        <structure name="OP_PUSH_LOCAL" id="1685" encoding="ISO_8859-1:1987" endian="big" signed="no">
+            <number name="args" id="1740" type="integer" length="3" endian="little"/>
+            <number name="opcode" mustmatch="yes" id="1741" type="integer" length="1">
                 <fixedvalues>
                     <fixedvalue value="2"/>
                 </fixedvalues>
             </number>
         </structure>
-        <structure name="OP_PUSH_FIELD" id="805" encoding="ISO_8859-1:1987" endian="big" signed="no">
-            <number name="args" id="847" type="integer" length="3" endian="little"/>
-            <number name="opcode" mustmatch="yes" id="848" type="integer" length="1">
+        <structure name="OP_PUSH_FIELD" id="1687" encoding="ISO_8859-1:1987" endian="big" signed="no">
+            <number name="args" id="1743" type="integer" length="3" endian="little"/>
+            <number name="opcode" mustmatch="yes" id="1744" type="integer" length="1">
                 <fixedvalues>
                     <fixedvalue value="4"/>
                 </fixedvalues>
             </number>
         </structure>
-        <structure name="OP_POP_FIELD" id="807" encoding="ISO_8859-1:1987" endian="big" signed="no">
-            <number name="args" id="850" type="integer" length="3" endian="little"/>
-            <number name="opcode" mustmatch="yes" id="851" type="integer" length="1">
+        <structure name="OP_POP_FIELD" id="1689" encoding="ISO_8859-1:1987" endian="big" signed="no">
+            <number name="args" id="1746" type="integer" length="3" endian="little"/>
+            <number name="opcode" mustmatch="yes" id="1747" type="integer" length="1">
                 <fixedvalues>
                     <fixedvalue value="22"/>
                 </fixedvalues>
             </number>
         </structure>
-        <structure name="OP_PUSH_PARAM" id="810" encoding="ISO_8859-1:1987" endian="big" signed="no">
-            <number name="args" id="853" type="integer" length="3" endian="little"/>
-            <number name="opcode" mustmatch="yes" id="854" type="integer" length="1">
+        <structure name="OP_PUSH_PARAM" id="1692" encoding="ISO_8859-1:1987" endian="big" signed="no">
+            <number name="args" id="1749" type="integer" length="3" endian="little"/>
+            <number name="opcode" mustmatch="yes" id="1750" type="integer" length="1">
                 <fixedvalues>
                     <fixedvalue value="1"/>
                 </fixedvalues>
             </number>
         </structure>
-        <structure name="OP_POP" id="812" encoding="ISO_8859-1:1987" endian="big" signed="no">
-            <number name="args" id="856" type="integer" length="3" endian="little"/>
-            <number name="opcode" mustmatch="yes" id="857" type="integer" length="1">
+        <structure name="OP_POP" id="1694" encoding="ISO_8859-1:1987" endian="big" signed="no">
+            <number name="args" id="1752" type="integer" length="3" endian="little"/>
+            <number name="opcode" mustmatch="yes" id="1753" type="integer" length="1">
                 <fixedvalues>
                     <fixedvalue value="24"/>
                 </fixedvalues>
             </number>
         </structure>
-        <structure name="OP_PUSH_THIS" id="814" encoding="ISO_8859-1:1987" endian="big" signed="no">
-            <number name="args" id="859" type="integer" length="3" endian="little"/>
-            <number name="opcode" mustmatch="yes" id="860" type="integer" length="1">
+        <structure name="OP_PUSH_THIS" id="1696" encoding="ISO_8859-1:1987" endian="big" signed="no">
+            <number name="args" id="1755" type="integer" length="3" endian="little"/>
+            <number name="opcode" mustmatch="yes" id="1756" type="integer" length="1">
                 <fixedvalues>
                     <fixedvalue value="6"/>
                 </fixedvalues>
             </number>
         </structure>
-        <structure name="OP_JZ" id="816" encoding="ISO_8859-1:1987" endian="big" signed="no">
-            <number name="args" id="862" type="integer" length="3" endian="little"/>
-            <number name="opcode" mustmatch="yes" id="863" type="integer" length="1">
+        <structure name="OP_JZ" id="1698" encoding="ISO_8859-1:1987" endian="big" signed="no">
+            <number name="args" id="1758" type="integer" length="3" endian="little"/>
+            <number name="opcode" mustmatch="yes" id="1759" type="integer" length="1">
                 <fixedvalues>
                     <fixedvalue value="50"/>
                 </fixedvalues>
             </number>
         </structure>
-        <structure name="OP_JMP" id="818" encoding="ISO_8859-1:1987" endian="big" signed="no">
-            <number name="args" id="865" type="integer" length="3" endian="little"/>
-            <number name="opcode" mustmatch="yes" id="866" type="integer" length="1">
+        <structure name="OP_JMP" id="1700" encoding="ISO_8859-1:1987" endian="big" signed="no">
+            <number name="args" id="1761" type="integer" length="3" endian="little"/>
+            <number name="opcode" mustmatch="yes" id="1762" type="integer" length="1">
                 <fixedvalues>
                     <fixedvalue value="51"/>
                 </fixedvalues>
             </number>
         </structure>
-        <structure name="OP_PUSH_BIN" id="868" encoding="ISO_8859-1:1987" endian="big" signed="no">
-            <number name="args" id="870" type="integer" length="3" endian="little"/>
-            <number name="opcode" mustmatch="yes" id="871" type="integer" length="1">
+        <structure name="OP_PUSH_BIN" id="1702" encoding="ISO_8859-1:1987" endian="big" signed="no">
+            <number name="args" id="1764" type="integer" length="3" endian="little"/>
+            <number name="opcode" mustmatch="yes" id="1765" type="integer" length="1">
                 <fixedvalues>
                     <fixedvalue value="8"/>
                 </fixedvalues>

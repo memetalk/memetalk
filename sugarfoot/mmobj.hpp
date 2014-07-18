@@ -17,6 +17,8 @@ public:
   oop mm_compiled_module_params(oop);
   oop mm_compiled_module_default_params(oop);
 
+  oop mm_new(oop vt, oop delegate, number payload);
+
   oop mm_object_new();
   oop mm_object_vt(oop);
   oop mm_object_delegate(oop);
@@ -36,6 +38,7 @@ public:
 
   void mm_module_set_dictionary(oop imodule, oop imod_dict);
   void mm_module_set_module_argument(oop imodule, oop arg, number idx);
+  oop mm_module_entry(oop imodule, number idx);
 
   bool mm_is_string(oop);
   char* mm_string_cstr(oop);
@@ -59,6 +62,9 @@ public:
   bool mm_function_is_getter(oop fun);
   number mm_function_access_field(oop fun);
 
+  number mm_function_exception_frames_count(oop fun);
+  oop mm_function_exception_frames(oop fun);
+
   bytecode* mm_compiled_function_get_code(oop cfun);
   number mm_compiled_function_get_code_size(oop cfun);
   number mm_compiled_function_get_num_locals(oop cfun);
@@ -78,6 +84,9 @@ public:
   oop mm_compiled_function_get_literal_by_index(oop cfun, int idx);
   number mm_compiled_function_get_literal_frame_size(oop cfun);
 
+  number mm_compiled_function_exception_frames_count(oop cfun);
+  oop mm_compiled_function_exception_frames(oop cfun);
+
   oop mm_class_behavior_new(oop super_class, oop funs_dict);
   oop mm_class_new(oop class_behavior, oop super_class, oop dict, oop compiled_class, number payload);
   oop mm_class_name(oop klass);
@@ -90,6 +99,7 @@ public:
   oop mm_behavior_get_dict(oop);
   number mm_behavior_size(oop);
 
+  bool is_subtype(oop, oop);
 private:
   VM* _vm;
   CoreImage* _core_image;

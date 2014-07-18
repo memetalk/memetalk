@@ -20,7 +20,18 @@ public:
   oop rp() { return _rp; }
   oop sp() { return _sp; }
   oop fp() { return _fp; }
+  oop cp() { return _cp; }
   MMObj* mmobj() { return _mmobj; }
+
+  oop cp_index(int);
+
+
+  void stack_push(oop);
+  void stack_push(word);
+  void stack_push(bytecode*);
+
+  void unwind_with_exception(oop);
+
 private:
   void init();
   void load_fun(oop, oop, oop, bool);
@@ -28,11 +39,8 @@ private:
 
   void unload_fun_and_return(oop retval);
 
-  void stack_push(oop);
-  void stack_push(word);
-  void stack_push(bytecode*);
   oop stack_pop();
-  oop execute_primitive(std::string);
+  int execute_primitive(std::string);
   void fetch_cycle(void*);
 
   void push_frame(number, number);
@@ -53,6 +61,7 @@ private:
   oop _rp;
   oop _dp;
   oop _ep;
+  oop _bp;
 
   word* _fp;
   word* _sp;

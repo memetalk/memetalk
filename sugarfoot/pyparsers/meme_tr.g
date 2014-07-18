@@ -102,10 +102,12 @@ expr :fnobj = ['var-def' :id expr(fnobj)]              -> fnobj.emit_var_decl(id
             | ['try'
                 !(fnobj.current_label()):label_begin_try
                   [expr(fnobj)*]
+                !(fnobj.emit_catch_jump()):end_pos
                 !(fnobj.current_label()):label_begin_catch
-                  catch_decl:cp  [expr(fnobj)*]]
-                !(fnobj.current_label()):label_out
-              -> fnobj.emit_try_catch(label_begin_try, label_begin_catch, label_out, cp[0], cp[1])
+                  catch_decl:cp
+                !(fnobj.add_local(cp[1]))
+                  [expr(fnobj)*]]
+              -> fnobj.emit_try_catch(label_begin_try, label_begin_catch, end_pos, cp[0], cp[1])
             | assignment(fnobj)
             | atom(fnobj)
 

@@ -5,6 +5,10 @@ using namespace std;
 
 void bail(const string& msg) {
   cerr << msg << "\n";
+  done();
+}
+
+void done() {
   exit(1);
 }
 

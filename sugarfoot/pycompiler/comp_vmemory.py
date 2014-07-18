@@ -10,7 +10,6 @@ class CompVirtualMemory(vmemory.VirtualMemory):
         self.ext_ref_table = []
         self.symb_table = []
         self.string_table = {}
-        self.exception_types = []
 
     def _physical_address(self, cell):
         return self.base + sum(self.cell_sizes[0:self.cells.index(cell)])
@@ -33,12 +32,6 @@ class CompVirtualMemory(vmemory.VirtualMemory):
              for referer in [x for x in self.cells if type(x) == vmemory.PointerCell and x.target_cell == ptr]:
                  sr.append((text, self.base + sum(self.cell_sizes[0:self.cells.index(referer)])))
         return sr
-
-    def exception_table_types(self):
-        return [self._physical_address(x) for x in self.exception_types]
-
-    def add_exception_type(self, type_oop):
-        self.exception_types.append(type_oop)
 
     def append_external_ref(self, name, label=None):
         oop = self.append_int(0xAAAA, label)
@@ -88,7 +81,7 @@ class CompVirtualMemory(vmemory.VirtualMemory):
 
     def append_string_dict(self, pydict):
         pairs_oop = []
-        for key, val in pydict.iteritems():
+        for key, val in iter(sorted(pydict.items())):
             key_oop = self.append_string_instance(key)
             val_oop = self.append_string_instance(val)
             pairs_oop.append((key_oop, val_oop))
@@ -115,7 +108,7 @@ class CompVirtualMemory(vmemory.VirtualMemory):
 
     def append_dict_emiting_entries(self, entries_pydict):
         pairs_oop = []
-        for key, entry, in entries_pydict.iteritems():
+        for key, entry, in iter(sorted(entries_pydict.items())):
             key_oop = self.append_string_instance(key)
             val_oop = entry.fill(self)
             pairs_oop.append((key_oop, val_oop))

@@ -7,19 +7,22 @@
 #include "utils.hpp"
 #include "mmobj.hpp"
 
-static oop prim_print(Process* proc) {
+static int prim_print(Process* proc) {
   oop obj = *((oop*) proc->fp() - 1);
-  if (proc->mmobj()->mm_is_string(obj)) {
+  if (obj == NULL) {
+    debug() << "* PRINT: NULL" << endl;
+  } else if (proc->mmobj()->mm_is_string(obj)) {
     debug() << "* PRINT: " << proc->mmobj()->mm_string_cstr(obj) << endl;
   } else if (is_small_int(obj)) {
     debug() << "* PRINT: " << untag_small_int(obj) << endl;
   } else {
     debug() << "* PRINT: <#" << obj << ">" << endl;
   }
-  return NULL;
+  proc->stack_push((oop)0);
+  return 0;
 }
 
-static oop prim_number_sum(Process* proc) {
+static int prim_number_sum(Process* proc) {
   oop self =  proc->dp();
   oop other = *((oop*) proc->fp() - 1);
 
@@ -27,10 +30,11 @@ static oop prim_number_sum(Process* proc) {
   assert(is_small_int(other));
 
   oop res =  (oop) (untag_small_int(self) + untag_small_int(other));
-  return (oop) tag_small_int(res); //TODO: check for overflow
+  proc->stack_push((oop) tag_small_int(res)); //TODO: check for overflow
+  return 0;
 }
 
-static oop prim_number_sub(Process* proc) {
+static int prim_number_sub(Process* proc) {
   oop self =  proc->dp();
   oop other = *((oop*) proc->fp() - 1);
 
@@ -39,10 +43,11 @@ static oop prim_number_sub(Process* proc) {
 
   oop res =  (oop) (untag_small_int(self) - untag_small_int(other));
   debug() << " SUB " << untag_small_int(self) << " - " << untag_small_int(other) << " = " << res << endl;
-  return (oop) tag_small_int(res); //TODO: check for overflow
+  proc->stack_push((oop) tag_small_int(res));
+  return 0;
 }
 
-static oop prim_number_mul(Process* proc) {
+static int prim_number_mul(Process* proc) {
   oop self =  proc->dp();
   oop other = *((oop*) proc->fp() - 1);
 
@@ -50,10 +55,11 @@ static oop prim_number_mul(Process* proc) {
   assert(is_small_int(other));
 
   oop res =  (oop) (untag_small_int(self) * untag_small_int(other));
-  return (oop) tag_small_int(res); //TODO: check for overflow
+  proc->stack_push((oop) tag_small_int(res));  //TODO: check for overflow
+  return 0;
 }
 
-static oop prim_number_lt(Process* proc) {
+static int prim_number_lt(Process* proc) {
   oop self =  proc->dp();
   oop other = *((oop*) proc->fp() - 1);
 
@@ -62,11 +68,17 @@ static oop prim_number_lt(Process* proc) {
 
   oop res =  (oop) (untag_small_int(self) < untag_small_int(other));
   debug() << " PRIM< " << untag_small_int(self) << " < " << untag_small_int(other) << " = " << (untag_small_int(self) < untag_small_int(other)) << endl;
-  return (oop) res;
+  proc->stack_push((oop)res);
+  return 0;
 }
 
-static oop prim_exception_throw(Process* proc) {
-  return 0;
+static int prim_exception_throw(Process* proc) {
+  oop arg = *((oop*) proc->fp() - 1);
+  oop ex = proc->mmobj()->mm_new(proc->rp(), proc->mmobj()->mm_object_new(), 1); // Exception < Object
+  ((oop*)ex)[2] = arg;
+
+  proc->stack_push(ex);
+  return PRIM_RAISED;
 }
 
 void init_primitives(VM* vm) {
