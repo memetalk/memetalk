@@ -1,6 +1,10 @@
 from . import bits
 from . import opcode
-from . import FRAME_TYPE_OBJECT, FRAME_TYPE_LITERAL_FRAME, FRAME_TYPE_BYTECODE_FRAME, FRAME_TYPE_EXCEPTIONS_FRAME
+from . import (OrderedDict,
+               FRAME_TYPE_OBJECT,
+               FRAME_TYPE_LITERAL_FRAME,
+               FRAME_TYPE_BYTECODE_FRAME,
+               FRAME_TYPE_EXCEPTIONS_FRAME)
 
 from . import behavior_label, cclass_label, class_label, cfun_label, fun_label, cmod_label, mod_label
 from pdb import set_trace as br
@@ -97,7 +101,7 @@ class Behavior(Entry):
         self.name = name
         self.parent_name = parent_name
         self.parent_label = behavior_label(parent_name)
-        # self.dictionary = dictionary
+        self.dictionary = {}
         if parent_name != 'Object':
             raise Exception('TODO')
 
@@ -105,7 +109,7 @@ class Behavior(Entry):
         return behavior_label(self.name)
 
     def fill(self, vmem):
-        oop_dict = vmem.append_empty_dict()
+        oop_dict = vmem.append_sym_dict_emiting_entries(self.dictionary)
 
         vmem.append_int(FRAME_TYPE_OBJECT)
         vmem.append_int(4 * bits.WSIZE)
@@ -130,10 +134,16 @@ class Class(Entry):
     def label(self):
         return class_label(self.cclass.name)
 
-    def new_instance_method(self, name):
-        cfun = self.cclass.new_instance_method(name)
+    def new_instance_method(self, name, params):
+        cfun = self.cclass.new_instance_method(name, params)
         fun = Function(self.imod, cfun)
         self.dictionary[name] = fun
+        return fun
+
+    def new_ctor(self, name, params):
+        cfun = self.cclass.new_ctor(name, params)
+        fun = Function(self.imod, cfun)
+        self.behavior.dictionary[name] = fun
         return fun
 
     def fill(self, vmem):
@@ -169,18 +179,18 @@ class CompiledClass(Entry):
     def label(self):
         return cclass_label(self.name) #cmod.label() + '_' + self.name + "_CompiledClass"
 
-    def new_ctor(self, name):
-        fn = CompiledFunction(self.cmod, self, name, ctor=True)
+    def new_ctor(self, name, params):
+        fn = CompiledFunction(self.cmod, self, name, params, ctor=True)
         self.class_methods[name] = fn
         return fn
 
-    def new_instance_method(self, name):
-        fn = CompiledFunction(self.cmod, self, name)
+    def new_instance_method(self, name, params):
+        fn = CompiledFunction(self.cmod, self, name, params)
         self.instance_methods[name] = fn
         return fn
 
-    def new_class_method(self, name):
-        fn = CompiledFunction(self.cmod, self, name)
+    def new_class_method(self, name, params):
+        fn = CompiledFunction(self.cmod, self, name, params)
         self.class_methods[name] = fn
         return fn
 
@@ -215,20 +225,68 @@ class CompiledClass(Entry):
         self.oop = oop
         return oop
 
+
+class VariableStorage(object):
+    def __init__(self):
+        self.variables = OrderedDict()
+
+    def add_names(self, cfun, params):
+        for name in params:
+            self.add(cfun, name)
+
+    def add(self, cfun, name):
+        if cfun not in self.variables:
+            self.variables[cfun] = []
+        if name in self.variables[cfun]:
+            raise Exception('redeclaration of ' + name)
+        self.variables[cfun].append(name)
+        return self.index(name)
+
+    def index(self, name):
+        try:
+            return self.names().index(name)
+        except KeyError:
+            raise Exception("Undeclared " + name)
+
+    def __len__(self):
+        return len(self.names())
+
+    def names(self):
+        return reduce(lambda x,y: x + y, self.variables.values(), [])
+
 class CompiledFunction(Entry):
-    def __init__(self, cmod, owner, name, ctor=False):
+    def __init__(self, cmod, owner, name, params, ctor=False, env_storage=None, is_top_level=True, outer_cfun=None):
         super(CompiledFunction, self).__init__()
         self.cmod = cmod
+
         self.name = name
-        self.literal_frame = []
-        self.bytecodes = opcode.Bytecodes()
+        self.params = params
+        self.is_ctor = ctor
         self.is_prim = False
         self.prim_name = ''
         self.owner = owner
-        self.is_ctor = ctor
-        self.has_env = False
-        self.local_vars = []
+        self.is_top_level = is_top_level
+        self.outer_cfun = outer_cfun
+
+        if env_storage:
+            self.has_env = True
+            self.var_declarations = env_storage
+            self.var_declarations.add_names(self, self.params)
+        else:
+            self.has_env = False
+            self.var_declarations = VariableStorage()
+
+        self.literal_frame = []
+        self.bytecodes = opcode.Bytecodes()
         self.exceptions_frame = []
+
+        self.accessor_flag = 0
+        self.accessor_field = 0
+
+    def set_getter(self, idx):
+        self.accessor_flag = 1 # normal=0/getter=1/setter=2
+        self.accessor_field = idx
+
 
     def body_processor(self):
         return self
@@ -264,6 +322,8 @@ class CompiledFunction(Entry):
                 lit['oop'] = vmem.append_symbol_instance(lit['value'])
             elif lit['tag'] == 'string':
                 lit['oop'] = vmem.append_string_instance(lit['value'])
+            elif lit['tag'] == 'cfun':
+                lit['oop'] = lit['value'].fill(vmem)
             else:
                 raise Exception('Todo')
 
@@ -284,6 +344,8 @@ class CompiledFunction(Entry):
             elif lit['tag'] == 'symbol':
                 vmem.append_pointer_to(lit['oop'])
             elif lit['tag'] == 'string':
+                vmem.append_pointer_to(lit['oop'])
+            elif lit['tag'] == 'cfun':
                 vmem.append_pointer_to(lit['oop'])
             else:
                 raise Exception('Todo')
@@ -322,26 +384,6 @@ class CompiledFunction(Entry):
         return len(self.exceptions_frame)
 
     def fill(self, vmem):
-        # vt: CompiledFunction
-        # delegate
-        # name
-        # params
-        # is_ctor
-        # is_prim
-        # prim_name
-        # flags: normal, setter, getter
-        # getter/setter field index
-        # owner
-        # num_locals / env_size
-        # literal frame size
-        # literal_frame ptr
-        # bytecode size
-        # bytecode ptr
-
-        # todo:
-        #   uses env / env size
-        #   num_locals
-
         oop_delegate = vmem.append_object_instance()
         oop_name = vmem.append_string_instance(self.name)
         oop_params = vmem.append_list_of_strings(self.params)
@@ -352,7 +394,7 @@ class CompiledFunction(Entry):
         exception_frames = self.fill_exceptions_frame(vmem)
 
         vmem.append_int(FRAME_TYPE_OBJECT)
-        vmem.append_int(18 * bits.WSIZE)
+        vmem.append_int(21 * bits.WSIZE)
 
         oop = vmem.append_external_ref('CompiledFunction', self.label()) # CompiledFunction vt
         vmem.append_pointer_to(oop_delegate)
@@ -362,16 +404,21 @@ class CompiledFunction(Entry):
         vmem.append_int(int(self.is_prim))
         vmem.append_pointer_to(oop_prim_name)
 
-        vmem.append_int(0) # normal=0/getter=1/setter=2
-        vmem.append_int(0) # getter/setter field index
+        vmem.append_int(self.accessor_flag) # normal=0/getter=1/setter=2
+        vmem.append_int(self.accessor_field) # getter/setter field index
 
         vmem.append_label_ref(self.owner.label())
 
         vmem.append_int(len(self.params))
-        if self.has_env:
-            raise Exception('Todo')
+        vmem.append_int(self.has_env)
+        vmem.append_int(self.is_top_level)
+        if self.outer_cfun is None:
+            vmem.append_null()
         else:
-            vmem.append_int(len(self.local_vars))
+            vmem.append_label_ref(self.outer_cfun.label())
+
+        # local size or env size
+        vmem.append_int(len(self.var_declarations))
 
         vmem.append_int(lit_frame_size)
         if lit_frame_size > 0:
@@ -394,15 +441,13 @@ class CompiledFunction(Entry):
         self.oop = oop
         return oop
 
-    def set_parameters(self, params):
-        self.params = params
-
     #############
 
-    def add_local(self, name):
-        if name in self.local_vars:
-            raise Exception('redeclaration of ' + name)
-        self.local_vars.append(name)
+    def new_closure(self, params):
+        self.has_env = True
+        return CompiledFunction(self.cmod, self.owner, 'anonymous', params,
+                                env_storage=self.var_declarations,
+                                is_top_level=False, outer_cfun=self)
 
     def add_exception_entry(self, label_begin_try, label_begin_catch, catch_type_idx, var_idx):
         self.exceptions_frame.append({
@@ -415,11 +460,16 @@ class CompiledFunction(Entry):
     def current_label(self):
         return self.bytecodes.new_label(current=True)
 
-    def identifier_is_in_current_block(self, name):
-        return name in self.local_vars or name in self.params
+    def identifier_is_param(self, name):
+        return name in self.params
+
+    def identifier_is_decl(self, name):
+        return name in self.var_declarations.names()
 
     def identifier_is_module_scoped(self, name):
-        return name in self.cmod.classes or name in self.cmod.functions or name in self.cmod.params
+        # this wont work if the class or function wasn;t compiled yet
+        return name in self.cmod.classes or\
+            name in self.cmod.functions or name in self.cmod.params
 
     def index_for_literal(self, entry):
         if entry not in self.literal_frame:
@@ -430,6 +480,9 @@ class CompiledFunction(Entry):
         if name in self.cmod.params:
             return self.cmod.params.index(name)
         else:
+            # TODO: classes.keys() is not reliable
+            # -if a new class appears latter, this pos may change
+            # -references to classes that werent compiled yet wont be found
             return len(self.cmod.params) + self.cmod.classes.keys().index(name)
 
     def create_and_register_number_literal(self, num):
@@ -444,35 +497,21 @@ class CompiledFunction(Entry):
         entry = {"tag": "string", "value": string}
         return self.index_for_literal(entry)
 
-    def index_and_popop_for(self, name):
-        if name in self.params:
-            return 'pop_param', self.params.index(name)
-        if name in self.local_vars:
-            return 'pop_local', self.local_vars.index(name)
-        else:
-            raise Exception('todo')
+    def create_and_register_closure_literal(self, cfun):
+        entry = {"tag": "cfun", "value": cfun}
+        return self.index_for_literal(entry)
 
-    def index_and_pushop_for(self, name):
-        if name in self.params:
-            return 'push_param', self.params.index(name)
-        if name in self.local_vars:
-            return 'push_local', self.local_vars.index(name)
-        # if name in self.cmod.classes:
-        raise Exception('todo')
 
     def emit_push_var(self, name):
-        # `name` may be:
-        #   -a local variable (env or stack allocated)      -> push_local / push_env
-        #   -a function parameter (env or stack allocated)  -> push_param / push_env
-        #   -a module parameter                             -> push_module, push_literal, send
-        #   -a module entry (function or class)             -> push_module, push_literal, send
-
         if self.has_env:
-            idx = self.local_vars.index(name)
+            idx = self.var_declarations.index(name)
             self.bytecodes.append("push_env",idx)
-        elif self.identifier_is_in_current_block(name):
-            opname, idx = self.index_and_pushop_for(name)
-            self.bytecodes.append(opname, idx)
+        elif self.identifier_is_param(name):
+            idx = self.params.index(name)
+            self.bytecodes.append("push_param", idx)
+        elif self.identifier_is_decl(name):
+            idx = self.var_declarations.index(name)
+            self.bytecodes.append("push_local", idx)
         elif self.identifier_is_module_scoped(name):
             idx = self.create_and_register_symbol_literal(name)
             self.bytecodes.append("push_module", 0)
@@ -482,17 +521,17 @@ class CompiledFunction(Entry):
             raise Exception('push_var: undeclared ' + name)
 
     def emit_local_assignment(self, name):
-        # `name` may be:
-        #   -a local variable (env or stack allocated)      -> push_local / push_env
-        #   -a function parameter (env or stack allocated)  -> push_param / push_env
-
         if self.has_env:
-            raise Exception('TODO')
-            # idx = self.add_env(name)
-            # self.bytecodes.append("pop_env",idx)
+            idx = self.var_declarations.index(name)
+            self.bytecodes.append("pop_env",idx)
+        elif self.identifier_is_param(name):
+            idx = self.params.index(name)
+            self.bytecodes.append("pop_param", idx)
+        elif self.identifier_is_decl(name):
+            idx = self.var_declarations.index(name)
+            self.bytecodes.append("pop_local", idx)
         else:
-            opname, idx = self.index_and_popop_for(name)
-            self.bytecodes.append(opname,idx)
+            raise Exception('local_assignment: undeclared ' + name)
 
     def emit_return_top(self):
         self.bytecodes.append("ret_top",0)
@@ -501,13 +540,12 @@ class CompiledFunction(Entry):
         self.bytecodes.append("ret_this",0)
 
     def emit_var_decl(self, name):
+        self.var_declarations.add(self, name)
+        idx = self.var_declarations.index(name)
         if self.has_env:
-            idx = self.add_env(name)
             self.bytecodes.append("pop_env",idx)
         else:
-            self.add_local(name)
-            opname, idx = self.index_and_popop_for(name)
-            self.bytecodes.append(opname,idx)
+            self.bytecodes.append("pop_local", idx)
 
     def emit_field_assignment(self, field):
         idx = self.owner.fields.index(field)
@@ -517,30 +555,31 @@ class CompiledFunction(Entry):
         self.bytecodes.append('pop', 0)
 
     def emit_send_or_local_call(self, name, arity):
-        if name in self.local_vars:
-            raise Exception('todo')
-        elif name in self.params:
-            raise Exception('todo')
-        elif name in self.cmod.functions:
+        if self.identifier_is_module_scoped(name):
+            # for now, assume it is thisModule.name()
             idx = self.create_and_register_symbol_literal(name)
             self.bytecodes.append('push_module', 0)
             self.bytecodes.append('push_literal', idx)
             self.bytecodes.append('send', arity)
-        elif name in self.cmod.params:
-            raise Exception('todo')
+        elif self.has_env:
+            idx = self.var_declarations.index(name)
+            self.bytecodes.append("push_env", idx)
+            self.bytecodes.append("call", arity)
+        elif self.identifier_is_param(name):
+            idx = self.var_declarations.index(name)
+            self.bytecodes.append("push_param", idx)
+            self.bytecodes.append("call", arity)
+        elif self.identifier_is_decl(name):
+            idx = self.var_declarations.index(name)
+            self.bytecodes.append("push_local", idx)
+            self.bytecodes.append("call", arity)
         else:
-            raise Exception('todo')
-        # if name in module.params ...
-        # if name in module entries
-        # if name in self.params ...
-        # if name in self.local vars ...
-        # if name in self.env ...
+            raise Exception('send_or_cal: unexpected error')
 
     def emit_send(self, selector, arity):
         idx = self.create_and_register_symbol_literal(selector)
         self.bytecodes.append('push_literal', idx)
         self.bytecodes.append('send', arity)
-
 
     def emit_super_ctor_send(self, selector, arity):
         idx = self.create_and_register_symbol_literal(selector)
@@ -594,6 +633,15 @@ class CompiledFunction(Entry):
     def emit_push_context(self):
         self.bytecodes.append('push_context', 0)
 
+    def emit_push_closure(self, fn):
+        idx_cfun = self.create_and_register_closure_literal(fn)
+        idx_selector = self.create_and_register_symbol_literal("new_context")
+        self.bytecodes.append("push_ep", 0)
+        self.bytecodes.append('push_literal', idx_cfun)
+        self.bytecodes.append('push_literal', idx_selector)
+        self.bytecodes.append('send', 1)
+
+
     def emit_push_field(self, field):
         idx = self.owner.fields.index(field)
         self.bytecodes.append('push_field', idx)
@@ -603,14 +651,14 @@ class CompiledFunction(Entry):
         # hack
         return len(self.bytecodes) - 1
 
-    def emit_try_catch(self, label_begin_try, label_begin_catch, jmp_pos, catch_type, catch_name):
+    def emit_try_catch(self, lb_begin_try, lb_begin_catch, jmp_pos, catch_type, catch_name):
         # hack
         blen = len(self.bytecodes)
         self.bytecodes.lst[jmp_pos].arg = lambda: blen - jmp_pos
 
         var_idx = self.local_vars.index(catch_name)
         ex_type_idx = self.index_for_top_level(catch_type)
-        self.add_exception_entry(label_begin_try, label_begin_catch, ex_type_idx, var_idx)
+        self.add_exception_entry(lb_begin_try, lb_begin_catch, ex_type_idx, var_idx)
 
 class Function(Entry):
     def __init__(self, imod, cfun):
@@ -620,9 +668,6 @@ class Function(Entry):
 
     def body_processor(self):
         return self.cfun
-
-    def set_parameters(self, params):
-        self.cfun.set_parameters(params)
 
     def uses_env(self, val):
         self.cfun.uses_env(val)
@@ -675,8 +720,8 @@ class CompiledModule(Entry):
         # TODO: support everything else
         self.default_params[name] = name # {"lhs": lhs, "ns": ns, "name": name}
 
-    def new_function(self, name):
-        fn = CompiledFunction(self, self, name)
+    def new_function(self, name, params):
+        fn = CompiledFunction(self, self, name, params)
         self.functions[name] = fn
         return fn
 
@@ -698,7 +743,7 @@ class CompiledModule(Entry):
         oop_classes = vmem.append_dict_emiting_entries(self.classes)
 
         vmem.append_int(FRAME_TYPE_OBJECT)
-        vmem.append_int(8 * bits.WSIZE)
+        vmem.append_int(9 * bits.WSIZE)
 
         oop = vmem.append_external_ref('CompiledModule', self.label()) # vt: CompiledModule
         vmem.append_pointer_to(delegate)
@@ -740,24 +785,50 @@ class CoreModule(Entry):
     def label(self):
         return '@core_module'
 
-    def fill(self, vmem):
-        oop_dict = vmem.append_sym_dict_emiting_entries(self.functions)
 
-        obj_oops = [o.fill(vmem) for o in self.objects]
-        class_oops = [c.fill(vmem) for c in self.classes]
+    def create_getter(self, name, idx, vmem):
+        cfun = CompiledFunction(self.cmod, self.cmod, 'get_' + name, [])
+        cfun.set_getter(idx)
+        cfun.fill(vmem)
+        return Function(self, cfun)
+
+    def emit_dict(self, vmem):
+        d = dict(self.functions.items())
+
+        idx = 4 # start after vt, delegate, dict, compiled_module
+
+        for obj in self.objects:
+            obj.fill(vmem)
+            d[obj.label()] = self.create_getter(obj.label(), idx, vmem)
+            idx += 1
+
+        for klass in self.classes:
+            klass.fill(vmem)
+            d[klass.label()] = self.create_getter(klass.label(), idx, vmem)
+            idx +=1
+
+        return vmem.append_sym_dict_emiting_entries(d)
+
+    def fill(self, vmem):
+        oop_dict = self.emit_dict(vmem)
+
+        # obj_oops = [o.fill(vmem) for o in self.objects]
+        # class_oops = [c.fill(vmem) for c in self.classes]
 
         vmem.append_int(FRAME_TYPE_OBJECT)
-        vmem.append_int(4 * bits.WSIZE)
+        vmem.append_int((4 + len(self.objects) + len(self.classes)) * bits.WSIZE)
 
         oop = vmem.append_label_ref(self.label(), self.label()) # vt
         vmem.append_null()                                      # delegate
         vmem.append_pointer_to(oop_dict)                        # dict
         vmem.append_label_ref(self.cmod.label())                # compiled_module
-        # TODO:
-        # -make space for module parameters
-        # -then, add classes
-        # for klass in self.classes:
-        #     vmem.append_label_ref(klass.label())
+
+        for obj in self.objects:
+            vmem.append_label_ref(obj.label())
+
+        for klass in self.classes:
+            vmem.append_label_ref(klass.label())
+
         self.oop = oop
         return oop
 
@@ -770,8 +841,8 @@ class CoreCompiledModule(CompiledModule):
     def entry_labels(self):
         return self.imod.entry_labels()
 
-    def new_function(self, name):
-        cfun = super(CoreCompiledModule, self).new_function(name)
+    def new_function(self, name, params):
+        cfun = super(CoreCompiledModule, self).new_function(name, params)
         fn = Function(self.imod, cfun)
         self.imod.append_function(name, fn)
         return fn

@@ -20,8 +20,7 @@ definition :modobj =  function_definition(modobj)
                    |  class_definition(modobj)
                    |  object_definition(modobj)
 
-function_definition :modobj = ['fun' :name  !(modobj.new_function(name)):fnobj
-                                params:p  !(fnobj.set_parameters(p))
+function_definition :modobj = ['fun' :name params:p  !(modobj.new_function(name, p)):fnobj
                                 :uses_env !(fnobj.uses_env(uses_env))
                                 ['body' body(fnobj.body_processor())]]
 
@@ -32,23 +31,21 @@ class_definition :modobj =  ['class' [:name :parent]
                               [instance_method(klass)*]
                               [class_method(klass)*]]
 
-constructor :klass = ['ctor' :name !(klass.new_ctor(name)):fnobj
-                        params:p !(fnobj.set_parameters(p))
+constructor :klass = ['ctor' :name params:p !(klass.new_ctor(name, p)):fnobj
                         :uses_env !(fnobj.uses_env(uses_env))
                         ['body' body(fnobj.body_processor())]]
 
 constructors :klass = ['ctors' [constructor(klass)*]]
                      | ['ctors' []]
 
-instance_method :klass = ['fun' :name  !(klass.new_instance_method(name)):fnobj
-                                params:p !(fnobj.set_parameters(p))
+instance_method :klass = ['fun' :name params:p !(klass.new_instance_method(name, p)):fnobj
                                 :uses_env !(fnobj.uses_env(uses_env))
                                 ['body' body(fnobj.body_processor())]]
 
-class_method :klass = ['fun' :name  !(klass.new_class_method(name)):fnobj
-                                params:p !(fnobj.set_parameters(p))
-                                :uses_env !(fnobj.uses_env(uses_env))
-                                ['body' body(fnobj.body_processor())]]
+class_method :klass = ['fun' :name params:p  !(klass.new_class_method(name, p)):fnobj
+                       !(fnobj.set_parameters(p))
+                       :uses_env !(fnobj.uses_env(uses_env))
+                       ['body' body(fnobj.body_processor())]]
 
 params = ['params' []]  -> []
        | ['params' :xs] -> xs
@@ -108,6 +105,9 @@ expr :fnobj = ['var-def' :id expr(fnobj)]              -> fnobj.emit_var_decl(id
                 !(fnobj.add_local(cp[1]))
                   [expr(fnobj)*]]
               -> fnobj.emit_try_catch(label_begin_try, label_begin_catch, end_pos, cp[0], cp[1])
+            | ['fun-literal'  ['params' :p]
+               !(fnobj.new_closure(p)):fn
+               ['body' [expr(fn)*] !(fn.emit_return_top())]] -> fnobj.emit_push_closure(fn)
             | assignment(fnobj)
             | atom(fnobj)
 

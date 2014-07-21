@@ -1,3 +1,38 @@
+class OrderedDict(dict):
+    def __init__(self):
+        self.lst = []
+
+    def __getitem__(self, key):
+        p = [x for x in self.lst if x[0] == key]
+        if len(p) == 0:
+            raise KeyError(key)
+        return p[0][1]
+
+    def __setitem__(self, key, val):
+        p = [x for x in self.lst if x[0] == key]
+        if len(p) == 0:
+            self.lst.append((key, val))
+        else:
+            p[0][1] = val
+
+    def items(self):
+        return self.lst
+
+    def __iter__(self, *args):
+        return iter(self.keys())
+
+    def __contains__(self, key):
+        return key in self.keys()
+
+    def iteritems(self):
+        return iter(self.items())
+
+    def keys(self):
+        return [x[0] for x in self.lst]
+
+    def values(self):
+        return [x[1] for x in self.lst]
+
 class Flag(object):
     def __init__(self):
         self.x = None

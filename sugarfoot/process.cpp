@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <string>
 #include <stdlib.h>
+#include <assert.h>
 #include <map>
 #include "process.hpp"
 #include "defs.hpp"
@@ -113,7 +114,7 @@ oop Process::alloc_instance(oop klass) {
     bail("new_delegate: Received flagged/behavior payload");
   }
 
-  // debug() << "payload " << payload << endl;
+  debug() << "alloc_instance: payload " << payload << endl;
 
   oop instance = (oop) calloc(sizeof(word), payload + 2); //2: vt, delegate
   // debug() << "new instance [size: " << payload << "]: "
@@ -124,21 +125,36 @@ oop Process::alloc_instance(oop klass) {
   ((oop*)instance)[0] = klass;
   ((oop*) instance)[1] = alloc_instance(klass_parent);
 
-  // debug() << "Created recursive delegate " << instance << endl;
+  debug() << "Created recursive delegate " << instance << endl;
   return instance;
 }
 
 void Process::basic_new_and_load() {
   oop klass = _rp;
   oop instance = alloc_instance(klass);
+  debug() << "basic_new: " << instance << endl;
   _rp = instance;
   _dp = instance;
 }
 
-void Process::load_fun(oop recv, oop drecv, oop fun, bool should_allocate) {
-  // loads frame if necessary and executes fun
+void Process::setup_ep(oop fun) {
+  number params = _mmobj->mm_function_get_num_params(fun);
+  number size = _mmobj->mm_function_get_num_locals_or_env(fun);
+  _ep = (oop) calloc(sizeof(oop), size + 2); //+2: space for rp, dp
+  debug() << "Allocated env " << _ep << " - " << size << " [" << params << "]" << endl;
 
-  // debug() << " load_fun rec:" << recv << " drec:" << drecv << " fun:" << fun << endl;
+  ((oop*)_ep)[0] = _rp;
+  ((oop*)_ep)[1] = _dp;
+
+  for(int i = 0; i < params; i++) {
+    debug() << "ep[" << i+2 << "] = " << ((oop*)_sp)[-i] << endl;
+    ((oop*)_ep)[i+2] = ((oop*)_sp)[-i];
+  }
+}
+
+
+void Process::load_fun(oop recv, oop drecv, oop fun, bool should_allocate) {
+  assert(_mmobj->mm_is_function(fun) || _mmobj->mm_is_context(fun));
 
   if (_mmobj->mm_function_is_getter(fun)) {
     number idx = _mmobj->mm_function_access_field(fun);
@@ -150,12 +166,28 @@ void Process::load_fun(oop recv, oop drecv, oop fun, bool should_allocate) {
 
 
   push_frame(_mmobj->mm_function_get_num_params(fun),
-             _mmobj->mm_function_get_num_locals(fun));
+             _mmobj->mm_function_get_num_locals_or_env(fun));
 
-  _rp = recv;
-  _dp = drecv;
+  if (_mmobj->mm_is_context(fun)) {
+    _rp = ((oop*)_ep)[0];
+    _dp = ((oop*)_ep)[1];
+    _ep = _mmobj->mm_context_get_env(fun);
+  } else {
+    _rp = recv;
+    _dp = drecv;
+    if (_mmobj->mm_function_uses_env(fun)) {
+      setup_ep(fun);
+    } else {
+      _ep = NULL;
+    }
+  }
+
   _cp = fun;
   _mp = _mmobj->mm_function_get_module(_cp);
+
+  if (_mmobj->mm_function_is_ctor(fun) and should_allocate) {
+    basic_new_and_load();
+  }
 
   if (_mmobj->mm_function_is_prim(fun)) {
     oop prim_name = _mmobj->mm_function_get_prim_name(fun);
@@ -174,9 +206,6 @@ void Process::load_fun(oop recv, oop drecv, oop fun, bool should_allocate) {
     return;
   }
 
-  if (_mmobj->mm_function_is_ctor(fun) and should_allocate) {
-    basic_new_and_load();
-  }
 
   // debug() << "load_fun: module for fun " << fun << " is " << _mp << endl;
   // debug() << "load_fun: is ctor? " << _mmobj->mm_function_is_ctor(fun) << " alloc? " << should_allocate << endl;
@@ -271,6 +300,16 @@ void Process::handle_super_ctor_send(number num_args) {
   load_fun(_rp, drecv, fun, false);
 }
 
+void Process::handle_call(number num_args) {
+  oop fun = stack_pop();
+  number arity = _mmobj->mm_function_get_num_params(fun);
+  if (num_args != arity) {
+    bail("arity and num_args differ");
+  }
+  load_fun(NULL, NULL, fun, false);
+
+}
+
 void Process::dispatch(int opcode, int arg) {
     // debug() << " executing " << opcode << " " << arg << endl;
     oop val;
@@ -288,6 +327,7 @@ void Process::dispatch(int opcode, int arg) {
         stack_push(_mmobj->mm_function_get_literal_by_index(_cp, arg));
         break;
       case PUSH_MODULE:
+        debug() << "PUSH_MODULE " << arg << " " << _mp << endl;
         stack_push(_mp);
         break;
       case PUSH_FIELD:
@@ -297,6 +337,14 @@ void Process::dispatch(int opcode, int arg) {
       case PUSH_THIS:
         debug() << "PUSH_THIS " << arg << " " << _rp << endl;
         stack_push(_rp);
+        break;
+      case PUSH_ENV:
+        debug() << "PUSH_ENV " << arg << " -- " << _ep << " " << (oop*)_ep[arg+2] << endl;//+2: skip dp,rp
+        stack_push(((oop*)_ep)[arg+2]);
+        break;
+      case PUSH_EP:
+        debug() << "PUSH_EP " << arg << " -- " << _ep << endl;
+        stack_push(_ep);
         break;
       case RETURN_TOP:
         val = stack_pop();
@@ -323,12 +371,23 @@ void Process::dispatch(int opcode, int arg) {
                 << (oop) *(_dp + arg + 2) << " = " << val << endl; //2: vt, delegate
         *(_dp + arg + 2) = (word) val;
         break;
+      case POP_ENV:
+        val = stack_pop();
+        debug() << "POP_ENV " << arg << " " << _ep
+                << " on " << (oop) (_ep + arg + 2) << " -- "
+                << (oop) *(_ep + arg + 2) << " = " << val << endl; //+2: rp, dp
+        *(_ep + arg + 2) = (word) val;
+        break;
       case SEND:
         debug() << "SEND " << arg << endl;
         handle_send(arg);
         break;
       case SUPER_CTOR_SEND:
         handle_super_ctor_send(arg);
+        break;
+      case CALL:
+        debug() << "CALL " << arg << endl;
+        handle_call(arg);
         break;
       case JMP:
         debug() << "JMP " << arg << " " << endl;
@@ -358,7 +417,11 @@ std::pair<oop, oop> Process::lookup(oop drecv, oop vt, oop selector) {
     bail("lookup FAILED!!!"); //todo: raise
   }
 
+  debug() << "lookup on vt" << vt << " whose vt is " << *(oop*) vt << endl;
+
   oop dict = _mmobj->mm_behavior_get_dict(vt);
+  debug() << "Getting key from dict " << dict << " vt: " << * (oop*) dict << endl;
+
   if (_mmobj->mm_dictionary_has_key(dict, selector)) {
     oop fun = _mmobj->mm_dictionary_get(dict, selector);
     debug() << "Lookup of " << selector << " found in " << vt << " fun is: " << fun << endl;

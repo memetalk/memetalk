@@ -46,9 +46,12 @@ private:
   void push_frame(number, number);
   void pop_frame();
 
+  void setup_ep(oop);
+
   void dispatch(int, int);
   void handle_send(number);
   void handle_super_ctor_send(number);
+  void handle_call(number);
   void basic_new_and_load();
   oop alloc_instance(oop klass);
   std::pair<oop,oop> lookup(oop, oop, oop);

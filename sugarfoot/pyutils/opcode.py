@@ -25,9 +25,13 @@ opcode_mapping = {
     "push_literal": 3,
     "push_field": 4,
     "push_env": 5,
+
     "push_this": 6,
     "push_module": 7,
-    "push_bin": 8,
+
+    "push_bin": 8, # true/false/null: 0 or 1
+    "push_ep": 9,
+
     # pop
     "pop_param": 20,
     "pop_local": 21,

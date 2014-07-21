@@ -47,6 +47,11 @@ public:
   oop mm_symbol_new(const char* str);
   char* mm_symbol_cstr(oop);
 
+  bool mm_is_function(oop);
+  bool mm_is_context(oop);
+
+  oop mm_context_get_env(oop);
+
   oop mm_function_from_cfunction(oop cfun, oop imod);
   bool mm_function_is_prim(oop fun);
 
@@ -56,10 +61,11 @@ public:
   bytecode* mm_function_get_code(oop fun);
   number mm_function_get_code_size(oop fun);
   oop mm_function_get_literal_by_index(oop fun, int idx);
-  number mm_function_get_num_locals(oop fun);
+  number mm_function_get_num_locals_or_env(oop fun);
   number mm_function_get_num_params(oop fun);
   bool mm_function_is_ctor(oop fun);
   bool mm_function_is_getter(oop fun);
+  bool mm_function_uses_env(oop fun);
   number mm_function_access_field(oop fun);
 
   number mm_function_exception_frames_count(oop fun);
@@ -67,13 +73,16 @@ public:
 
   bytecode* mm_compiled_function_get_code(oop cfun);
   number mm_compiled_function_get_code_size(oop cfun);
-  number mm_compiled_function_get_num_locals(oop cfun);
+  number mm_compiled_function_get_num_locals_or_env(oop cfun);
   number mm_compiled_function_get_num_params(oop cfun);
   bool mm_compiled_function_is_getter(oop cfun);
   number mm_compiled_function_access_field(oop cfun);
   bool mm_compiled_function_is_ctor(oop cfun);
   bool mm_compiled_function_is_prim(oop cfun);
   oop mm_compiled_function_get_prim_name(oop cfun);
+  bool mm_compiled_function_uses_env(oop cfun);
+  bool mm_compiled_function_is_top_level(oop cfun);
+  oop mm_compiled_function_outer_cfun(oop cfun);
 
   oop mm_compiled_class_name(oop cclass);
   oop mm_compiled_class_super_name(oop cclass);

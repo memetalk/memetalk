@@ -117,7 +117,7 @@ class Compiler(ASTBuilder):
 
     def do_parse(self, parser):
         try:
-            parser.uses_literal = pyutils.Flag() # pymeta uses eval() which disables assignment. This works around it
+            parser.has_fun_literal = pyutils.Flag() # pymeta uses eval() which disables assignment. This works around it
             return parser.apply("start")
         except Exception as err:
             if hasattr(err,'formatError'):

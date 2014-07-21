@@ -95,7 +95,6 @@ class VirtualMemory(object):
     def _append_cell(self, cell, label):
         if label is not None:
             self.label_current(label)
-            self.cell_index[label] = len(self.cells)
         self.cells.append(cell)
         self.cell_sizes.append(len(cell))
 

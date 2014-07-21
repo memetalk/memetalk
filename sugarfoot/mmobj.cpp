@@ -205,8 +205,29 @@ char* MMObj::mm_string_cstr(oop str) {
   return (char*) &(str[3]);
 }
 
+bool MMObj::mm_is_function(oop obj) {
+  return *(oop*) obj == _core_image->get_prime("Function");
+}
+
+bool MMObj::mm_is_context(oop obj) {
+  return *(oop*) obj == _core_image->get_prime("Context");
+}
+
+oop MMObj::mm_context_get_env(oop ctx) {
+  assert( *(oop*) ctx == _core_image->get_prime("Context"));
+  return ((oop*)ctx)[4];
+}
+
+
+bool MMObj::mm_function_uses_env(oop fun) {
+  assert( *(oop*) fun == _core_image->get_prime("Function") ||
+          *(oop*) fun == _core_image->get_prime("Context"));
+  oop cfun = mm_function_get_cfun(fun);
+  return mm_compiled_function_uses_env(cfun);
+}
+
 oop MMObj::mm_function_from_cfunction(oop cfun, oop imod) {
-  assert( *(oop*) cfun == _core_image->get_prime("CompiledFunction"));
+  assert(*(oop*) cfun == _core_image->get_prime("CompiledFunction"));
 
   oop fun = (oop) malloc(sizeof(word) * 4); //vt, delegate, cfun, module
 
@@ -218,84 +239,98 @@ oop MMObj::mm_function_from_cfunction(oop cfun, oop imod) {
 }
 
 oop MMObj::mm_function_get_module(oop fun) {
-  assert( *(oop*) fun == _core_image->get_prime("Function"));
+  assert( *(oop*) fun == _core_image->get_prime("Function") ||
+          *(oop*) fun == _core_image->get_prime("Context"));
   return (oop) ((oop*)fun)[3];
 }
 
 oop MMObj::mm_function_get_cfun(oop fun) {
-  assert( *(oop*) fun == _core_image->get_prime("Function"));
+  assert( *(oop*) fun == _core_image->get_prime("Function") ||
+          *(oop*) fun == _core_image->get_prime("Context"));
   return (oop) ((oop*)fun)[2];
 }
 
 bool MMObj::mm_function_is_prim(oop fun) {
-  assert( *(oop*) fun == _core_image->get_prime("Function"));
+  assert( *(oop*) fun == _core_image->get_prime("Function") ||
+          *(oop*) fun == _core_image->get_prime("Context"));
   oop cfun = mm_function_get_cfun(fun);
   return mm_compiled_function_is_prim(cfun);
 }
 
 oop MMObj::mm_function_get_prim_name(oop fun) {
-  assert( *(oop*) fun == _core_image->get_prime("Function"));
+  assert( *(oop*) fun == _core_image->get_prime("Function") ||
+          *(oop*) fun == _core_image->get_prime("Context"));
   oop cfun = mm_function_get_cfun(fun);
   return mm_compiled_function_get_prim_name(cfun);
 }
 
 
 bytecode* MMObj::mm_function_get_code(oop fun) {
-  assert( *(oop*) fun == _core_image->get_prime("Function"));
+  assert( *(oop*) fun == _core_image->get_prime("Function") ||
+          *(oop*) fun == _core_image->get_prime("Context"));
   oop cfun = mm_function_get_cfun(fun);
   return mm_compiled_function_get_code(cfun);
 }
 
 number MMObj::mm_function_get_code_size(oop fun) {
-  assert( *(oop*) fun == _core_image->get_prime("Function"));
+  assert( *(oop*) fun == _core_image->get_prime("Function") ||
+          *(oop*) fun == _core_image->get_prime("Context"));
   oop cfun = mm_function_get_cfun(fun);
   return mm_compiled_function_get_code_size(cfun);
 }
 
 oop MMObj::mm_function_get_literal_by_index(oop fun, int idx) {
-  assert( *(oop*) fun == _core_image->get_prime("Function"));
+  assert( *(oop*) fun == _core_image->get_prime("Function") ||
+          *(oop*) fun == _core_image->get_prime("Context"));
   oop cfun = mm_function_get_cfun(fun);
   return mm_compiled_function_get_literal_by_index(cfun, idx);
 }
 
 number MMObj::mm_function_get_num_params(oop fun) {
-  assert( *(oop*) fun == _core_image->get_prime("Function"));
+  assert( *(oop*) fun == _core_image->get_prime("Function") ||
+          *(oop*) fun == _core_image->get_prime("Context"));
   oop cfun = mm_function_get_cfun(fun);
   return mm_compiled_function_get_num_params(cfun);
 }
 
-number MMObj::mm_function_get_num_locals(oop fun) {
-  assert( *(oop*) fun == _core_image->get_prime("Function"));
+number MMObj::mm_function_get_num_locals_or_env(oop fun) {
+  assert( *(oop*) fun == _core_image->get_prime("Function") ||
+          *(oop*) fun == _core_image->get_prime("Context"));
   oop cfun = mm_function_get_cfun(fun);
-  return mm_compiled_function_get_num_locals(cfun);
+  return mm_compiled_function_get_num_locals_or_env(cfun);
 }
 
 bool MMObj::mm_function_is_getter(oop fun) {
-  assert( *(oop*) fun == _core_image->get_prime("Function"));
+  assert( *(oop*) fun == _core_image->get_prime("Function") ||
+          *(oop*) fun == _core_image->get_prime("Context"));
   oop cfun = mm_function_get_cfun(fun);
   return mm_compiled_function_is_getter(cfun);
 }
 
 number MMObj::mm_function_access_field(oop fun) {
-  assert( *(oop*) fun == _core_image->get_prime("Function"));
+  assert( *(oop*) fun == _core_image->get_prime("Function") ||
+          *(oop*) fun == _core_image->get_prime("Context"));
   oop cfun = mm_function_get_cfun(fun);
   return mm_compiled_function_access_field(cfun);
 }
 
 bool MMObj::mm_function_is_ctor(oop fun) {
-  assert( *(oop*) fun == _core_image->get_prime("Function"));
+  assert( *(oop*) fun == _core_image->get_prime("Function") ||
+          *(oop*) fun == _core_image->get_prime("Context"));
   oop cfun = mm_function_get_cfun(fun);
   return mm_compiled_function_is_ctor(cfun);
 }
 
 number MMObj::mm_function_exception_frames_count(oop fun) {
-  assert( *(oop*) fun == _core_image->get_prime("Function"));
+  assert( *(oop*) fun == _core_image->get_prime("Function") ||
+          *(oop*) fun == _core_image->get_prime("Context"));
   oop cfun = mm_function_get_cfun(fun);
   return mm_compiled_function_exception_frames_count(cfun);
 }
 
 oop MMObj::mm_function_exception_frames(oop fun) {
-  assert( *(oop*) fun == _core_image->get_prime("Function"));
+  assert( *(oop*) fun == _core_image->get_prime("Function") ||
+          *(oop*) fun == _core_image->get_prime("Context"));
   oop cfun = mm_function_get_cfun(fun);
   return mm_compiled_function_exception_frames(cfun);
 }
@@ -315,15 +350,14 @@ oop MMObj::mm_compiled_function_get_prim_name(oop cfun) {
   return (oop) ((oop*)cfun)[6];
 }
 
-number MMObj::mm_compiled_function_access_field(oop cfun) {
-  assert( *(oop*) cfun == _core_image->get_prime("CompiledFunction"));
-  return (number) ((oop*)cfun)[8];
-}
-
-
 bool MMObj::mm_compiled_function_is_getter(oop cfun) {
   assert( *(oop*) cfun == _core_image->get_prime("CompiledFunction"));
   return ((number) ((oop*)cfun)[7]) == 1;
+}
+
+number MMObj::mm_compiled_function_access_field(oop cfun) {
+  assert( *(oop*) cfun == _core_image->get_prime("CompiledFunction"));
+  return (number) ((oop*)cfun)[8];
 }
 
 number MMObj::mm_compiled_function_get_num_params(oop cfun) {
@@ -331,41 +365,56 @@ number MMObj::mm_compiled_function_get_num_params(oop cfun) {
   return (number) ((oop*)cfun)[10];
 }
 
-number MMObj::mm_compiled_function_get_num_locals(oop cfun) {
+bool MMObj::mm_compiled_function_uses_env(oop cfun) {
   assert( *(oop*) cfun == _core_image->get_prime("CompiledFunction"));
-  return (number) ((oop*)cfun)[11];
+  return (bool) ((oop*)cfun)[11];
+}
+
+bool MMObj::mm_compiled_function_is_top_level(oop cfun) {
+  assert( *(oop*) cfun == _core_image->get_prime("CompiledFunction"));
+  return (bool) ((oop*)cfun)[12];
+}
+
+oop MMObj::mm_compiled_function_outer_cfun(oop cfun) {
+  assert( *(oop*) cfun == _core_image->get_prime("CompiledFunction"));
+  return ((oop*)cfun)[13];
+}
+
+number MMObj::mm_compiled_function_get_num_locals_or_env(oop cfun) {
+  assert( *(oop*) cfun == _core_image->get_prime("CompiledFunction"));
+  return (number) ((oop*)cfun)[14];
 }
 
 number MMObj::mm_compiled_function_get_literal_frame_size(oop cfun) {
   assert( *(oop*) cfun == _core_image->get_prime("CompiledFunction"));
-  return (number) ((oop*)cfun)[12];
+  return (number) ((oop*)cfun)[15];
 }
 
 oop MMObj::mm_compiled_function_get_literal_by_index(oop cfun, int idx) {
   assert( *(oop*) cfun == _core_image->get_prime("CompiledFunction"));
-  oop* literal_frame =  ((oop**)cfun)[13];
+  oop* literal_frame =  ((oop**)cfun)[16];
   assert( (idx * WSIZE) < mm_compiled_function_get_literal_frame_size(cfun));
   return (oop) literal_frame[idx];
 }
 
 number MMObj::mm_compiled_function_get_code_size(oop cfun) {
   assert( *(oop*) cfun == _core_image->get_prime("CompiledFunction"));
-  return (number) ((oop*)cfun)[14];
+  return (number) ((oop*)cfun)[17];
 }
 
 bytecode* MMObj::mm_compiled_function_get_code(oop cfun) {
   assert( *(oop*) cfun == _core_image->get_prime("CompiledFunction"));
-  return (bytecode*) ((oop*)cfun)[15];
+  return (bytecode*) ((oop*)cfun)[18];
 }
 
 number MMObj::mm_compiled_function_exception_frames_count(oop cfun) {
   assert( *(oop*) cfun == _core_image->get_prime("CompiledFunction"));
-  return (number) ((oop*)cfun)[16];
+  return (number) ((oop*)cfun)[19];
 }
 
 oop MMObj::mm_compiled_function_exception_frames(oop cfun) {
   assert( *(oop*) cfun == _core_image->get_prime("CompiledFunction"));
-  return ((oop*)cfun)[17];
+  return ((oop*)cfun)[20];
 }
 
 

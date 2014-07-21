@@ -28,17 +28,23 @@ typedef int (*prim_function_t) (Process*);
 #define PUSH_LOCAL 2
 #define PUSH_LITERAL 3
 #define PUSH_FIELD 4
+#define PUSH_ENV 5
+
 #define PUSH_THIS 6
 #define PUSH_MODULE 7
 
+#define PUSH_EP 9
+
 #define POP_LOCAL 21
 #define POP_FIELD 22
+#define POP_ENV 23
 #define POP 24
 
 #define RETURN_TOP 31
 #define RETURN_THIS 30
 
 #define SEND 40
+#define CALL 41
 #define SUPER_SEND 42
 #define SUPER_CTOR_SEND 43
 
