@@ -300,6 +300,13 @@ number MMObj::mm_function_get_num_locals_or_env(oop fun) {
   return mm_compiled_function_get_num_locals_or_env(cfun);
 }
 
+number MMObj::mm_function_get_env_offset(oop fun) {
+  assert( *(oop*) fun == _core_image->get_prime("Function") ||
+          *(oop*) fun == _core_image->get_prime("Context"));
+  oop cfun = mm_function_get_cfun(fun);
+  return mm_compiled_function_get_env_offset(cfun);
+}
+
 bool MMObj::mm_function_is_getter(oop fun) {
   assert( *(oop*) fun == _core_image->get_prime("Function") ||
           *(oop*) fun == _core_image->get_prime("Context"));
@@ -385,36 +392,41 @@ number MMObj::mm_compiled_function_get_num_locals_or_env(oop cfun) {
   return (number) ((oop*)cfun)[14];
 }
 
-number MMObj::mm_compiled_function_get_literal_frame_size(oop cfun) {
+number MMObj::mm_compiled_function_get_env_offset(oop cfun) {
   assert( *(oop*) cfun == _core_image->get_prime("CompiledFunction"));
   return (number) ((oop*)cfun)[15];
 }
 
+number MMObj::mm_compiled_function_get_literal_frame_size(oop cfun) {
+  assert( *(oop*) cfun == _core_image->get_prime("CompiledFunction"));
+  return (number) ((oop*)cfun)[16];
+}
+
 oop MMObj::mm_compiled_function_get_literal_by_index(oop cfun, int idx) {
   assert( *(oop*) cfun == _core_image->get_prime("CompiledFunction"));
-  oop* literal_frame =  ((oop**)cfun)[16];
+  oop* literal_frame =  ((oop**)cfun)[17];
   assert( (idx * WSIZE) < mm_compiled_function_get_literal_frame_size(cfun));
   return (oop) literal_frame[idx];
 }
 
 number MMObj::mm_compiled_function_get_code_size(oop cfun) {
   assert( *(oop*) cfun == _core_image->get_prime("CompiledFunction"));
-  return (number) ((oop*)cfun)[17];
+  return (number) ((oop*)cfun)[18];
 }
 
 bytecode* MMObj::mm_compiled_function_get_code(oop cfun) {
   assert( *(oop*) cfun == _core_image->get_prime("CompiledFunction"));
-  return (bytecode*) ((oop*)cfun)[18];
+  return (bytecode*) ((oop*)cfun)[19];
 }
 
 number MMObj::mm_compiled_function_exception_frames_count(oop cfun) {
   assert( *(oop*) cfun == _core_image->get_prime("CompiledFunction"));
-  return (number) ((oop*)cfun)[19];
+  return (number) ((oop*)cfun)[20];
 }
 
 oop MMObj::mm_compiled_function_exception_frames(oop cfun) {
   assert( *(oop*) cfun == _core_image->get_prime("CompiledFunction"));
-  return ((oop*)cfun)[20];
+  return ((oop*)cfun)[21];
 }
 
 

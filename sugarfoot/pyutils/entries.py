@@ -243,13 +243,24 @@ class VariableStorage(object):
         return self.index(name)
 
     def index(self, name):
-        try:
-            return self.names().index(name)
-        except KeyError:
+        if name not in self.names():
             raise Exception("Undeclared " + name)
 
-    def __len__(self):
+        return lambda: self.names().index(name)
+
+    def total(self):
         return len(self.names())
+
+    def env_offset(self, cfun):
+        if len(self.variables) == 0:
+            return 0
+
+        offset = 0
+        for cf, varlist in self.variables.items():
+            if cf == cfun:
+                return offset
+            offset += len(varlist)
+        raise Exception('Unexpected error')
 
     def names(self):
         return reduce(lambda x,y: x + y, self.variables.values(), [])
@@ -271,10 +282,10 @@ class CompiledFunction(Entry):
         if env_storage:
             self.has_env = True
             self.var_declarations = env_storage
-            self.var_declarations.add_names(self, self.params)
         else:
             self.has_env = False
             self.var_declarations = VariableStorage()
+        self.var_declarations.add_names(self, params)
 
         self.literal_frame = []
         self.bytecodes = opcode.Bytecodes()
@@ -394,7 +405,7 @@ class CompiledFunction(Entry):
         exception_frames = self.fill_exceptions_frame(vmem)
 
         vmem.append_int(FRAME_TYPE_OBJECT)
-        vmem.append_int(21 * bits.WSIZE)
+        vmem.append_int(22 * bits.WSIZE)
 
         oop = vmem.append_external_ref('CompiledFunction', self.label()) # CompiledFunction vt
         vmem.append_pointer_to(oop_delegate)
@@ -409,16 +420,20 @@ class CompiledFunction(Entry):
 
         vmem.append_label_ref(self.owner.label())
 
-        vmem.append_int(len(self.params))
+        vmem.append_int(len(self.params))  # 10
+
         vmem.append_int(self.has_env)
         vmem.append_int(self.is_top_level)
+
         if self.outer_cfun is None:
             vmem.append_null()
         else:
             vmem.append_label_ref(self.outer_cfun.label())
 
         # local size or env size
-        vmem.append_int(len(self.var_declarations))
+        vmem.append_int(self.var_declarations.total())
+        # env offset
+        vmem.append_int(self.var_declarations.env_offset(self))
 
         vmem.append_int(lit_frame_size)
         if lit_frame_size > 0:
@@ -432,7 +447,7 @@ class CompiledFunction(Entry):
         else:
             vmem.append_null()
 
-        vmem.append_int(exception_frames)
+        vmem.append_int(exception_frames) # 20
         if exception_frames > 0:
             vmem.append_label_ref(self.exceptions_frame_label())
         else:

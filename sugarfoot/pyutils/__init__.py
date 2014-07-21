@@ -33,6 +33,9 @@ class OrderedDict(dict):
     def values(self):
         return [x[1] for x in self.lst]
 
+    def __len__(self):
+        return len(self.lst)
+
 class Flag(object):
     def __init__(self):
         self.x = None

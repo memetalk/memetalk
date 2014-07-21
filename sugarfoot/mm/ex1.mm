@@ -1,15 +1,19 @@
 .preamble()
 .code
 
-print: fun(x) {
+print: fun(arg) {
   <primitive "print">
 }
 
 
+g: fun(k) {
+  return k(2);
+}
+
 main: fun() {
   var y = 10;
-  var x = fun() { y };
-  return x();
+  var x = fun(q) { y + q };
+  return g(x);
 }
 
 .endcode

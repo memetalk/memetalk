@@ -85,7 +85,7 @@ class Bytecodes(object):
     def append(self, name, arg):
         if isinstance(arg, numbers.Number):
             self.lst.append(Bytecode(name, lambda: arg))
-        elif isinstance(arg, Label):
+        elif callable(arg):
             self.lst.append(Bytecode(name, arg))
         else:
             raise Exception("Unsupported arg type")

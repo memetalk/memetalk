@@ -141,17 +141,23 @@ void Process::setup_ep(oop fun) {
   number params = _mmobj->mm_function_get_num_params(fun);
   number size = _mmobj->mm_function_get_num_locals_or_env(fun);
   _ep = (oop) calloc(sizeof(oop), size + 2); //+2: space for rp, dp
-  debug() << "Allocated env " << _ep << " - " << size << " [" << params << "]" << endl;
+  debug() << "Allocated ep: " << _ep << " - " << " size: " << size
+          << " params: " << params << endl;
 
   ((oop*)_ep)[0] = _rp;
   ((oop*)_ep)[1] = _dp;
 
-  for(int i = 0; i < params; i++) {
-    debug() << "ep[" << i+2 << "] = " << ((oop*)_sp)[-i] << endl;
-    ((oop*)_ep)[i+2] = ((oop*)_sp)[-i];
-  }
+  copy_params_to_env(params, _mmobj->mm_function_get_env_offset(fun));
 }
 
+void Process::copy_params_to_env(number params, number env_offset) {
+  debug() << "Process::copy_params_to_env " << params << " " << env_offset << endl;
+
+  for (int i = 0; i < params; i++) {
+    debug() << "ep[" << i+2+env_offset << "] = " << * (oop*)(_fp - (i+1)) << endl;
+    ((oop*)_ep)[i+2+env_offset] = * (oop*)(_fp - (i+1));
+  }
+}
 
 void Process::load_fun(oop recv, oop drecv, oop fun, bool should_allocate) {
   assert(_mmobj->mm_is_function(fun) || _mmobj->mm_is_context(fun));
@@ -169,17 +175,19 @@ void Process::load_fun(oop recv, oop drecv, oop fun, bool should_allocate) {
              _mmobj->mm_function_get_num_locals_or_env(fun));
 
   if (_mmobj->mm_is_context(fun)) {
+    _ep = _mmobj->mm_context_get_env(fun);
     _rp = ((oop*)_ep)[0];
     _dp = ((oop*)_ep)[1];
-    _ep = _mmobj->mm_context_get_env(fun);
+    copy_params_to_env(_mmobj->mm_function_get_num_params(fun),
+                       _mmobj->mm_function_get_env_offset(fun));
   } else {
-    _rp = recv;
-    _dp = drecv;
     if (_mmobj->mm_function_uses_env(fun)) {
       setup_ep(fun);
     } else {
       _ep = NULL;
     }
+    _rp = recv;
+    _dp = drecv;
   }
 
   _cp = fun;
@@ -251,12 +259,12 @@ void Process::handle_send(number num_args) {
   oop selector = stack_pop();
   oop recv = stack_pop(); //(oop) * _sp;
 
-  // debug() << " SEND " << selector << " -- " << _mmobj->mm_symbol_cstr(selector) << endl;
+  debug() << " SEND " << selector << " -- " << _mmobj->mm_symbol_cstr(selector) << endl;
 
   std::pair<oop,oop> res = lookup(recv, _mmobj->mm_object_vt(recv), selector);
   oop drecv = res.first;
   oop fun = res.second;
-  // debug() << "Lookup FOUND " << fun << endl;
+  debug() << "Lookup FOUND " << fun << endl;
 
   if (fun == NULL) {
     bail("Selector not found");
@@ -373,8 +381,7 @@ void Process::dispatch(int opcode, int arg) {
         break;
       case POP_ENV:
         val = stack_pop();
-        debug() << "POP_ENV " << arg << " " << _ep
-                << " on " << (oop) (_ep + arg + 2) << " -- "
+        debug() << "POP_ENV " << arg << " ep: " << _ep << " "
                 << (oop) *(_ep + arg + 2) << " = " << val << endl; //+2: rp, dp
         *(_ep + arg + 2) = (word) val;
         break;

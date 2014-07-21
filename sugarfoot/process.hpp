@@ -47,6 +47,7 @@ private:
   void pop_frame();
 
   void setup_ep(oop);
+  void copy_params_to_env(number, number);
 
   void dispatch(int, int);
   void handle_send(number);
