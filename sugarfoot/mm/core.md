@@ -38,6 +38,12 @@
             fields, methods, own_methods;
   end
 
+  class CompiledFunction
+  instance_method new_context: fun(ep) {
+    return Context.new(this, ep, thisModule);
+  }
+  end
+
   class CompiledModule
     instance_method instantiate: fun(args) {
       <primitive "compiled_module_instantiate">
@@ -83,11 +89,4 @@
     @env = env;
   }
   end
-
-  class CompiledFunction
-  instance_method new_context: fun(ep) {
-    return Context.new(this, ep, thisModule);
-  }
-  end
-
 .end

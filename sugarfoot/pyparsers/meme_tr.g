@@ -14,7 +14,11 @@ module_default_param :modobj = ['param' :lhs ['library' :ns :name]]
 module_alias :modobj = ['alias' :libname :alias] -> self.i.l_module_alias(libname, alias)
 
 
-code_sec :modobj = ['.code' [definition(modobj)*]]
+code_sec :modobj = ['.code' ~~[load_top_level_name(modobj)*] [definition(modobj)*]]
+
+load_top_level_name :modobj = ['class' [:name :ignore] (:ignore)*] -> modobj.add_top_level_name(name)
+                            | ['object' :name (:ignore)*] -> modobj.add_top_level_name(name)
+                            | ['fun' :name (:ignore)*] -> modobj.add_top_level_name(name)
 
 definition :modobj =  function_definition(modobj)
                    |  class_definition(modobj)

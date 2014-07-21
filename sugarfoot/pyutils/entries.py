@@ -483,8 +483,7 @@ class CompiledFunction(Entry):
 
     def identifier_is_module_scoped(self, name):
         # this wont work if the class or function wasn;t compiled yet
-        return name in self.cmod.classes or\
-            name in self.cmod.functions or name in self.cmod.params
+        return name in self.cmod.top_level_names
 
     def index_for_literal(self, entry):
         if entry not in self.literal_frame:
@@ -716,20 +715,21 @@ class CompiledModule(Entry):
         self.functions = {}
         self.classes = {}
 
+        # eager loading of all top level names
+        self.top_level_names = []
+
+    def add_top_level_name(self, name):
+        self.top_level_names.append(name)
+
     def entry_labels(self):
         return self.functions.keys() + self.classes.keys()
 
     def label(self):
         return cmod_label(self.name)
 
-    # def num_top_level_entries(self):
-    #     return len(self.functions) + len(self.classes)
-
-    # def classes_and_functions_names(self):
-    #     return self.functions.keys() + self.classes.keys()
-
     def set_params(self, params):
         self.params = params
+        self.top_level_names += params
 
     def add_default_param(self, lhs, ns, name):
         # TODO: support everything else
