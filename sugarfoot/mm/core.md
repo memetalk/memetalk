@@ -32,9 +32,13 @@
   object Object
     _vt: Object_Behavior;
     _delegate: null;
-    dict: {};
     size: 0;
     compiled_class: Object_CompiledClass;
+    functions {
+       !: fun() {
+         <primitive "object_not">
+       }
+    }
   end
 
   class CompiledClass
@@ -52,6 +56,12 @@
     instance_method instantiate: fun(args) {
       <primitive "compiled_module_instantiate">
     }
+  end
+
+  class Null
+  end
+
+  class Boolean
   end
 
   class String
@@ -108,4 +118,21 @@
     @module = module;
   }
   end
+
+class Exception
+  fields: message;
+  init new: fun(message) {
+    @message = message;
+  }
+  instance_method message: fun() {
+    return @message;
+  }
+  instance_method throw: fun() {
+    <primitive "exception_throw">
+  }
+  class_method throw: fun(msg) {
+    Exception.new(msg).throw;
+  }
+end
+
 .end

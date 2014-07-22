@@ -22,6 +22,10 @@ typedef int (*prim_function_t) (Process*);
 
 #define PRIM_RAISED 1
 
+#define MM_TRUE (oop) 1
+#define MM_FALSE (oop) 2
+#define MM_NULL (oop) 0
+
 // bytecodes
 
 #define PUSH_PARAM 1
@@ -32,7 +36,7 @@ typedef int (*prim_function_t) (Process*);
 
 #define PUSH_THIS 6
 #define PUSH_MODULE 7
-
+#define PUSH_BIN 8
 #define PUSH_EP 9
 
 #define POP_LOCAL 21

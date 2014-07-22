@@ -51,14 +51,20 @@ oop MMObj::mm_object_new() {
 oop MMObj::mm_object_vt(oop obj) {
   if (is_small_int(obj)) {
     return _core_image->get_prime("Number");
+  } else if (obj == MM_TRUE) {
+    return _core_image->get_prime("Boolean");
+  } else if (obj == MM_FALSE) {
+    return _core_image->get_prime("Boolean");
+  } else if (obj == MM_NULL) {
+    return _core_image->get_prime("Null");
   } else {
     return * (oop*) obj;
   }
 }
 
 oop MMObj::mm_object_delegate(oop obj) {
-  if (is_small_int(obj)) {
-    return mm_object_new(); //TODO: this should probably be a dummy static object
+  if (is_small_int(obj) || (obj == MM_TRUE) || (obj == MM_FALSE) || (obj == MM_NULL)) {
+    return obj; //mm_object_new(); //TODO: this should probably be a dummy static object
   } else {
     return ((oop*) obj)[1];
   }

@@ -20,13 +20,26 @@ class Entry(object):
     #     return self.oop
 
 class Object(Entry):
-    def __init__(self, name):
+    def __init__(self, name, imod):
         super(Object, self).__init__()
         self.name = name
         self.slots = []
+        self.imod = imod
 
     def label(self):
         return self.name
+
+    def new_function(self, name, params):
+        d = [s for s in self.slots if s['type'] == 'dict']
+        if len(d) == 0:
+            dslot = {"type":"dict", name: "dict", 'value':{}}
+            self.slots.insert(2,dslot)
+        else:
+            dslot = d[0]
+
+        fn = CompiledFunction(self, self, name, params)
+        dslot['value'][name] = fn
+        return fn
 
     def add_slot_literal_array(self, name, value):
         if len(value) > 0:
@@ -68,7 +81,12 @@ class Object(Entry):
                 refs_to_literals[idx] = vmem.append_empty_list()
             elif slot['type'] == 'empty_dict':
                 refs_to_literals[idx] = vmem.append_empty_dict()
-
+            elif slot['type'] == 'dict':
+                fun_dict = {}
+                for name, cfun in slot['value'].items():
+                    cfun.fill(vmem)
+                    fun_dict[name] = Function(self.imod, cfun)
+                refs_to_literals[idx] = vmem.append_sym_dict_emiting_entries(fun_dict)
         # emit our object
 
         vmem.append_int(FRAME_TYPE_OBJECT)
@@ -86,6 +104,8 @@ class Object(Entry):
             elif slot['type'] == 'empty_list':
                 vmem.append_pointer_to(refs_to_literals[idx])
             elif slot['type'] == 'empty_dict':
+                vmem.append_pointer_to(refs_to_literals[idx])
+            elif slot['type'] == 'dict':
                 vmem.append_pointer_to(refs_to_literals[idx])
             elif slot['type'] == 'int':
                 vmem.append_tagged_int(slot['value'])
@@ -491,6 +511,9 @@ class CompiledFunction(Entry):
         # this wont work if the class or function wasn;t compiled yet
         return name in self.cmod.top_level_names
 
+    def identifier_is_prime(self, name):
+        return name in ['Object', 'String', 'List', 'Exception']
+
     def index_for_literal(self, entry):
         if entry not in self.literal_frame:
             self.literal_frame.append(entry)
@@ -532,7 +555,7 @@ class CompiledFunction(Entry):
         elif self.identifier_is_decl(name):
             idx = self.var_declarations.index(name)
             self.bytecodes.append("push_local", idx)
-        elif self.identifier_is_module_scoped(name):
+        elif self.identifier_is_module_scoped(name) or self.identifier_is_prime(name):
             idx = self.create_and_register_symbol_literal(name)
             self.bytecodes.append("push_module", 0)
             self.bytecodes.append("push_literal", idx)
@@ -611,6 +634,10 @@ class CompiledFunction(Entry):
         self.bytecodes.append('push_literal', idx)
         self.bytecodes.append('send', 1)
 
+    def emit_unary(self, selector):
+        idx = self.create_and_register_symbol_literal(selector)
+        self.bytecodes.append('push_literal', idx)
+        self.bytecodes.append('send', 0)
 
     def emit_jz(self):
         lb = self.bytecodes.new_label()
@@ -644,7 +671,7 @@ class CompiledFunction(Entry):
         self.bytecodes.append('push_bin', 1)
 
     def emit_push_false(self):
-        self.bytecodes.append('push_bin', 0)
+        self.bytecodes.append('push_bin', 2)
 
     def emit_push_module(self):
         self.bytecodes.append('push_module', 0)
@@ -898,7 +925,7 @@ class CoreCompiledModule(CompiledModule):
         return klass
 
     def new_object(self, name):
-        obj = Object(name)
+        obj = Object(name, self.imod)
         self.imod.append_object(obj)
         return obj
 

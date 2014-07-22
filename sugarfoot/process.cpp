@@ -375,6 +375,10 @@ void Process::dispatch(int opcode, int arg) {
         debug() << "PUSH_EP " << arg << " -- " << _ep << endl;
         stack_push(_ep);
         break;
+      case PUSH_BIN:
+        debug() << "PUSH_BIN " << arg << endl;
+        stack_push(arg);
+        break;
       case RETURN_TOP:
         val = stack_pop();
         debug() << "RETURN_TOP " << arg << " " << val << endl;
@@ -445,7 +449,7 @@ std::pair<oop, oop> Process::lookup(oop drecv, oop vt, oop selector) {
     bail("lookup FAILED!!!"); //todo: raise
   }
 
-  debug() << "lookup selector on vt: " << vt << " whose vt is " << *(oop*) vt << endl;
+  debug() << "lookup selector on vt: " << vt << " whose vt is " << _mmobj->mm_object_vt(*(oop*)vt) << endl;
 
   oop dict = _mmobj->mm_behavior_get_dict(vt);
   debug() << "Getting key from dict " << dict << " vt: " << * (oop*) dict << endl;

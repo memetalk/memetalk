@@ -29,7 +29,7 @@ opcode_mapping = {
     "push_this": 6,
     "push_module": 7,
 
-    "push_bin": 8, # true/false/null: 0 or 1
+    "push_bin": 8, # true:1/false:2/null: 0
     "push_ep": 9,
 
     # pop

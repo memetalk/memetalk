@@ -174,6 +174,16 @@ static int prim_list_each(Process* proc) {
   return 0;
 }
 
+static int prim_object_not(Process* proc) {
+  oop self =  proc->dp();
+  if ((self == MM_FALSE) || (self == MM_NULL)) {
+    proc->stack_push(MM_TRUE);
+  } else {
+    proc->stack_push(MM_FALSE);
+  }
+  return 0;
+}
+
 void init_primitives(VM* vm) {
   vm->register_primitive("print", prim_print);
   vm->register_primitive("number_sum", prim_number_sum);
@@ -182,6 +192,8 @@ void init_primitives(VM* vm) {
   vm->register_primitive("number_lt", prim_number_lt);
 
   vm->register_primitive("exception_throw", prim_exception_throw);
+
+  vm->register_primitive("object_not", prim_object_not);
 
   vm->register_primitive("list_new", prim_list_new);
   vm->register_primitive("list_append", prim_list_append);
