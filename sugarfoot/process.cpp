@@ -233,14 +233,27 @@ oop Process::do_send(oop imod, oop recv, oop selector) {
   }
 
   load_fun(recv, drecv, fun, true);
-  fetch_cycle((void*) -1);
+  fetch_cycle(0);
   oop val = stack_pop();
+  return val;
+}
+
+oop Process::do_call(oop fun) {
+  assert(_mmobj->mm_is_context(fun)); //since we pass NULL to load_fun
+
+  debug() << "-- begin call" << endl;
+  oop stop_at_fp = _fp;
+  load_fun(NULL, NULL, fun, false);
+  fetch_cycle(stop_at_fp);
+  oop val = stack_pop();
+  debug() << "-- end call: " << val << endl;
   return val;
 }
 
 void Process::fetch_cycle(void* stop_at_fp) {
   bytecode* start_ip = _ip;
-  while (_ip) { // /*_fp > stop_at_fp &&*/ ((_ip - start_ip) * sizeof(bytecode))  < _code_size) {
+  debug() << "begin fetch_cycle" << _fp <<  " " <<  stop_at_fp << " " << _ip << endl;
+  while ((_fp > stop_at_fp) && _ip) { // && ((_ip - start_ip) * sizeof(bytecode))  < _code_size) {
     // debug() << "fp " << _fp << " stop " <<  stop_at_fp << " ip-start " <<  (_ip - start_ip)  << " codesize " <<  _code_size <<
     //   "ip " << _ip << std::endl;
     bytecode code = *_ip;
@@ -254,6 +267,7 @@ void Process::fetch_cycle(void* stop_at_fp) {
     dispatch(opcode, arg);
     // debug() << " [end of dispatch] " << opcode << endl;
   }
+  debug() << "end fetch_cycle" << endl;
 }
 
 void Process::handle_send(number num_args) {

@@ -157,6 +157,23 @@ static int prim_list_index(Process* proc) {
   return 0;
 }
 
+static int prim_list_each(Process* proc) {
+  oop self =  proc->dp();
+  oop fun = *((oop*) proc->fp() - 1);
+
+  number size = proc->mmobj()->mm_list_size(self);
+
+  for (int i = 0; i < size; i++) {
+    oop next = proc->mmobj()->mm_list_entry(self, i);
+    debug() << "list each[" << i << "] = " << next << endl;
+    proc->stack_push(next);
+    oop val = proc->do_call(fun);
+    debug() << "list each[" << i << "] = " << val << endl;
+  }
+  proc->stack_push(self);
+  return 0;
+}
+
 void init_primitives(VM* vm) {
   vm->register_primitive("print", prim_print);
   vm->register_primitive("number_sum", prim_number_sum);
@@ -170,4 +187,5 @@ void init_primitives(VM* vm) {
   vm->register_primitive("list_append", prim_list_append);
   vm->register_primitive("list_prepend", prim_list_prepend);
   vm->register_primitive("list_index", prim_list_index);
+  vm->register_primitive("list_each", prim_list_each);
 }

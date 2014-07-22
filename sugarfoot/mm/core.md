@@ -73,6 +73,9 @@
   instance_method index: fun(idx) {
     <primitive "list_index">
   }
+  instance_method each: fun(fn) {
+    <primitive "list_each">
+  }
   class_method new: fun() {
     <primitive "list_new">
   }
