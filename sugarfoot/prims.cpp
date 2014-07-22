@@ -168,7 +168,7 @@ static int prim_list_each(Process* proc) {
     debug() << "list each[" << i << "] = " << next << endl;
     proc->stack_push(next);
     oop val = proc->do_call(fun);
-    debug() << "list each[" << i << "] = " << val << endl;
+    debug() << "list each[" << i << "] fun returned " << val << endl;
   }
   proc->stack_push(self);
   return 0;

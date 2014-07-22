@@ -655,10 +655,11 @@ class CompiledFunction(Entry):
     def emit_push_closure(self, fn):
         idx_cfun = self.create_and_register_closure_literal(fn)
         idx_selector = self.create_and_register_symbol_literal("new_context")
+        self.bytecodes.append("push_module", 0)
         self.bytecodes.append("push_ep", 0)
         self.bytecodes.append('push_literal', idx_cfun)
         self.bytecodes.append('push_literal', idx_selector)
-        self.bytecodes.append('send', 1)
+        self.bytecodes.append('send', 2)
 
 
     def emit_push_field(self, field):

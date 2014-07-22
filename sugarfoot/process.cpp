@@ -46,6 +46,8 @@ void Process::push_frame(number arity, number num_locals) {
   stack_push(arity);
 
   word fp = (word) _fp;
+  debug() << "push_frame: fp: " << _fp << endl;
+
   _fp = _sp;
   for (int i = 0; i < num_locals; i++) {
     stack_push((oop)0);
@@ -81,6 +83,8 @@ void Process::pop_frame() {
   _cp = stack_pop();
   _fp = stack_pop();
 
+  debug() << "pop_frame: fp: " << _fp << endl;
+
   // debug() << "pop_frame [fm:" << --frame_count << " arity: " << arity
   //         << " fp: " << _fp << " cp: " << _cp << " ip: " << _ip << " ep: " << _ep
   //         << " rp: " << _rp << " dp: " << _dp << " mp (before): " << _mp << endl;
@@ -88,7 +92,9 @@ void Process::pop_frame() {
   if (_cp) {// first frame has _cp = null
     // debug() << "pop_frame: getting module from fun " << _cp << endl;
     _mp = _mmobj->mm_function_get_module(_cp);
-    // debug() << "got mp:" << _mp << endl;
+    debug() << "MP for fun unloaded:" << _mp << endl;
+  } else {
+    debug() << "++ MP for fun unloaded is null!" << endl;
   }
 
   _sp = (oop) fp - (arity + 1);
@@ -193,6 +199,7 @@ void Process::load_fun(oop recv, oop drecv, oop fun, bool should_allocate) {
 
   _cp = fun;
   _mp = _mmobj->mm_function_get_module(_cp);
+  debug() << "MP for fun load: " << _mp << endl;
 
   if (_mmobj->mm_function_is_ctor(fun) and should_allocate) {
     basic_new_and_load();
@@ -204,8 +211,7 @@ void Process::load_fun(oop recv, oop drecv, oop fun, bool should_allocate) {
     int ret = execute_primitive(str_prim_name);
     if (ret == 0) {
       oop value = stack_pop(); //shit
-      pop_frame();
-      stack_push(value);
+      unload_fun_and_return(value);
     } else if (ret == PRIM_RAISED) {
       oop exception_oop = stack_pop(); //shit
       debug() << "prim returned RAISED " << exception_oop << endl;
@@ -241,17 +247,16 @@ oop Process::do_send(oop imod, oop recv, oop selector) {
 oop Process::do_call(oop fun) {
   assert(_mmobj->mm_is_context(fun)); //since we pass NULL to load_fun
 
-  debug() << "-- begin call" << endl;
+  debug() << "-- begin call, sp: " << _sp << ", fp: " << _fp << endl;
   oop stop_at_fp = _fp;
   load_fun(NULL, NULL, fun, false);
   fetch_cycle(stop_at_fp);
   oop val = stack_pop();
-  debug() << "-- end call: " << val << endl;
+  debug() << "-- end call: " << val << " sp: " << _sp << ", fp: " << _fp << endl;
   return val;
 }
 
 void Process::fetch_cycle(void* stop_at_fp) {
-  bytecode* start_ip = _ip;
   debug() << "begin fetch_cycle" << _fp <<  " " <<  stop_at_fp << " " << _ip << endl;
   while ((_fp > stop_at_fp) && _ip) { // && ((_ip - start_ip) * sizeof(bytecode))  < _code_size) {
     // debug() << "fp " << _fp << " stop " <<  stop_at_fp << " ip-start " <<  (_ip - start_ip)  << " codesize " <<  _code_size <<

@@ -43,8 +43,8 @@
   end
 
   class CompiledFunction
-  instance_method new_context: fun(ep) {
-    return Context.new(this, ep, thisModule);
+  instance_method new_context: fun(ep, module) {
+    return Context.new(this, ep, module);
   }
   end
 
@@ -101,11 +101,11 @@
   end
 
   class Context
-  fields: compiled_function, module, env;
+  fields: compiled_function, env, module;
   init new: fun(cfun, env, module) {
     @compiled_function = cfun;
-    @module = module;
     @env = env;
+    @module = module;
   }
   end
 .end

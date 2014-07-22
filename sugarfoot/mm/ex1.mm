@@ -8,7 +8,7 @@ print: fun(arg) {
 
 main: fun() {
  var x = [4,5,6];
-  x.each(fun(z) { z + 1 });
+  x.each(fun(z) { print(z + 1) });
   return 1;
 }
 
