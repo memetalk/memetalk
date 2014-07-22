@@ -8,11 +8,15 @@
   object Behavior
     _vt: Behavior; //self-referencing
     _delegate: null;
+    dict: {};
+//    size: 0;
   end
 
   object Object_Behavior
     _vt: Behavior;
     _delegate: null;
+    dict: {};
+//    size: 0;
   end
 
   object Object_CompiledClass
@@ -60,6 +64,18 @@
   end
 
   class List
+  instance_method append: fun(x) {
+    <primitive "list_append">
+  }
+  instance_method prepend: fun(x) {
+    <primitive "list_prepend">
+  }
+  instance_method index: fun(idx) {
+    <primitive "list_index">
+  }
+  class_method new: fun() {
+    <primitive "list_new">
+  }
   end
 
   class Number

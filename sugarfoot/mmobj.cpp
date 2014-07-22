@@ -81,20 +81,48 @@ number MMObj::mm_list_size(oop list) {
 oop MMObj::mm_list_entry(oop list, number idx) {
   assert( *(oop*) list == _core_image->get_prime("List"));
   number size = mm_list_size(list);
+  if (size == 0) {
+    bail("list is empty");
+  }
+
+  oop begin = * (oop*) (list + 3);
   for(int i = 0; i < size; i++) {
     if (i == idx) {
-      return ((oop*)list)[idx+3];
+      return * (oop*) (begin + idx);
     }
   }
   bail("list entry not found");
   return NULL;
 }
 
+oop MMObj::mm_list_frame(oop list) {
+  assert( *(oop*) list == _core_image->get_prime("List"));
+  assert(mm_list_size(list) > 0);
+
+  return ((oop*)list)[3];
+}
+
+void MMObj::mm_list_set_size(oop list, number size) {
+  assert( *(oop*) list == _core_image->get_prime("List"));
+  ((word*)list)[2] = size;
+}
+
+void MMObj::mm_list_set_frame(oop list, oop begin) {
+  assert( *(oop*) list == _core_image->get_prime("List"));
+  ((oop*)list)[3] = begin;
+}
+
 number MMObj::mm_list_index_of(oop list, oop elem) {
   assert( *(oop*) list == _core_image->get_prime("List"));
   number size = mm_list_size(list);
+
+  if (size == 0) {
+    return -1;
+  }
+
+  oop element = list + 3;
   for(int i = 0; i < size; i++) {
-    oop e = ((oop*)list)[i+3];
+    oop e = ((oop*)element)[i];
     if (e == elem) {
       return i;
     }
@@ -585,9 +613,9 @@ bool MMObj::is_subtype(oop sub_type, oop super_type) {
 
 
 oop MMObj::mm_new(oop vt, oop delegate, number payload) {
-  oop obj = (oop) malloc(sizeof(word) * (2 + payload)); // vt, delegate
+  oop obj = (oop) calloc(sizeof(word), (2 + payload)); // vt, delegate
 
-  ((word**) obj)[0] = vt;
-  ((word**) obj)[1] = delegate;
+  ((oop*) obj)[0] = vt;
+  ((oop*) obj)[1] = delegate;
   return obj;
 }

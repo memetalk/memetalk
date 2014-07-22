@@ -24,6 +24,7 @@
                 </fixedvalues>
             </number>
             <structref name="exceptions_frame" id="243" repeatmin="0" repeatmax="-1" structure="id:242"/>
+            <structref name="elements_frame" id="467" repeatmin="0" repeatmax="-1" structure="id:461"/>
         </structure>
         <structure name="object_frame" id="228" encoding="ISO_8859-1:1987" endian="little" signed="no">
             <number name="frame_type" mustmatch="yes" id="245" fillcolor="B4BEF8" type="integer" length="8">
@@ -61,7 +62,7 @@
                 <number name="vt" id="263" type="integer" length="8" display="hex"/>
                 <number name="delegate" id="264" type="integer" length="8" display="hex"/>
                 <number name="len" id="265" type="integer" length="8"/>
-                <number name="oop" id="266" repeatmin="0" repeatmax="-1" type="integer" length="8" display="hex"/>
+                <number name="oop" id="266" type="integer" length="8" display="hex"/>
             </structure>
         </structure>
         <structure name="dict_object_frame" id="238" encoding="ISO_8859-1:1987" endian="little" signed="no">
@@ -139,6 +140,15 @@
                     <number name="type_pos" id="335" type="integer" length="8"/>
                 </structure>
             </structure>
+        </structure>
+        <structure name="elements_frame" id="461" encoding="ISO_8859-1:1987" endian="big" signed="no">
+            <number name="frame_type" mustmatch="yes" id="463" type="integer" length="8" endian="little">
+                <fixedvalues>
+                    <fixedvalue value="907"/>
+                </fixedvalues>
+            </number>
+            <number name="frame_size" id="464" type="integer" length="8" endian="little"/>
+            <number name="oop" id="465" repeatmax="frame_size / 8" type="integer" length="8" endian="little" display="hex"/>
         </structure>
         <structure name="OP_PUSH_LITERAL" id="286" encoding="ISO_8859-1:1987" endian="big" signed="no">
             <number name="args" id="339" type="integer" length="3" endian="little"/>

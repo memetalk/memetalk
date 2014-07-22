@@ -164,7 +164,8 @@ void Process::load_fun(oop recv, oop drecv, oop fun, bool should_allocate) {
 
   if (_mmobj->mm_function_is_getter(fun)) {
     number idx = _mmobj->mm_function_access_field(fun);
-    oop val = ((oop*)recv)[idx];
+    debug() << "GETTER: idx " << idx << " on " << recv << endl;
+    oop val = ((oop*)drecv)[idx];
     debug() << "GETTER: returning " << val << endl;
     stack_push(val);
     return;
@@ -259,7 +260,8 @@ void Process::handle_send(number num_args) {
   oop selector = stack_pop();
   oop recv = stack_pop(); //(oop) * _sp;
 
-  debug() << " SEND " << selector << " -- " << _mmobj->mm_symbol_cstr(selector) << endl;
+  debug() << " SEND " << selector << " name: " << _mmobj->mm_symbol_cstr(selector)
+          << " " << "recv: " << recv << endl;
 
   std::pair<oop,oop> res = lookup(recv, _mmobj->mm_object_vt(recv), selector);
   oop drecv = res.first;
@@ -424,14 +426,15 @@ std::pair<oop, oop> Process::lookup(oop drecv, oop vt, oop selector) {
     bail("lookup FAILED!!!"); //todo: raise
   }
 
-  debug() << "lookup on vt" << vt << " whose vt is " << *(oop*) vt << endl;
+  debug() << "lookup selector on vt: " << vt << " whose vt is " << *(oop*) vt << endl;
 
   oop dict = _mmobj->mm_behavior_get_dict(vt);
   debug() << "Getting key from dict " << dict << " vt: " << * (oop*) dict << endl;
 
   if (_mmobj->mm_dictionary_has_key(dict, selector)) {
     oop fun = _mmobj->mm_dictionary_get(dict, selector);
-    debug() << "Lookup of " << selector << " found in " << vt << " fun is: " << fun << endl;
+    debug() << "Lookup of " << selector << " found in " << vt
+            << " fun: " << fun << " drecv: " << drecv << endl;
     std::pair<oop,oop> res = std::pair<oop,oop>(drecv, fun);
     return res;
   } else {

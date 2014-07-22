@@ -26,6 +26,8 @@ public:
 
   oop instantiate_module(char* name, oop module_args_list);
 
+  oop get_prime(const char* name);
+
 private:
   void dump_prime_info();
   void dictionary_dump(oop dict);

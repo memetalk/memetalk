@@ -123,7 +123,7 @@ class CompVirtualMemory(vmemory.VirtualMemory):
     def append_empty_list(self):
         delegate = self.append_object_instance()
 
-        self.append_int(pyutils.FRAME_TYPE_LVAR_OBJECT)
+        self.append_int(pyutils.FRAME_TYPE_LIST_OBJECT)
         self.append_int(3 * bits.WSIZE)
 
         oop = self.append_external_ref('List')         # vt
@@ -137,12 +137,22 @@ class CompVirtualMemory(vmemory.VirtualMemory):
         oops_elements = [self.append_string_instance(string) for string in lst]
         delegate = self.append_object_instance()
 
-        self.append_int(pyutils.FRAME_TYPE_LVAR_OBJECT)
-        self.append_int((3 + len(lst)) * bits.WSIZE)
+        if len(lst) > 0:
+            self.append_int(pyutils.FRAME_TYPE_ELEMENTS)
+            self.append_int(len(lst) * bits.WSIZE)
+            oops = []
+            for oop_element in oops_elements:         # .. elements
+                oops.append(self.append_pointer_to(oop_element))
+            frame_size = 4 * bits.WSIZE
+        else:
+            frame_size = 3 * bits.WSIZE
+
+        self.append_int(pyutils.FRAME_TYPE_LIST_OBJECT)
+        self.append_int(frame_size)
 
         oop = self.append_external_ref('List')      # vt
-        self.append_pointer_to(delegate)            # delegate
-        self.append_int(len(lst))                   # len
-        for oop_element in oops_elements:           # .. elements
-            self.append_pointer_to(oop_element)
+        self.append_pointer_to(delegate)          # delegate
+        self.append_int(len(lst))                 # len
+        if len(lst) > 0:
+            self.append_pointer_to(oops[0])
         return oop

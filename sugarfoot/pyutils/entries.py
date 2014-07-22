@@ -140,6 +140,12 @@ class Class(Entry):
         self.dictionary[name] = fun
         return fun
 
+    def new_class_method(self, name, params):
+        cfun = self.cclass.new_class_method(name, params)
+        fun = Function(self.imod, cfun)
+        self.behavior.dictionary[name] = fun
+        return fun
+
     def new_ctor(self, name, params):
         cfun = self.cclass.new_ctor(name, params)
         fun = Function(self.imod, cfun)
@@ -570,7 +576,6 @@ class CompiledFunction(Entry):
 
     def emit_send_or_local_call(self, name, arity):
         if self.identifier_is_module_scoped(name):
-            # for now, assume it is thisModule.name()
             idx = self.create_and_register_symbol_literal(name)
             self.bytecodes.append('push_module', 0)
             self.bytecodes.append('push_literal', idx)
@@ -673,6 +678,29 @@ class CompiledFunction(Entry):
         var_idx = self.local_vars.index(catch_name)
         ex_type_idx = self.index_for_top_level(catch_type)
         self.add_exception_entry(lb_begin_try, lb_begin_catch, ex_type_idx, var_idx)
+
+
+    def emit_push_list(self, length):
+        idx_length = self.create_and_register_number_literal(length)
+        idx_selector = self.create_and_register_symbol_literal("new")
+        idx_append = self.create_and_register_symbol_literal("prepend")
+        idx_klass = self.create_and_register_symbol_literal("List")
+
+        self.bytecodes.append("push_module", 0)
+        self.bytecodes.append('push_literal', idx_klass)
+        self.bytecodes.append('send', 0)
+
+        self.bytecodes.append('push_literal', idx_selector)
+        self.bytecodes.append('send', 0)
+
+        for i in range(0, length):
+            self.bytecodes.append('push_literal', idx_append)
+            self.bytecodes.append('send', 1)
+
+    def emit_push_index(self):
+        idx_selector = self.create_and_register_symbol_literal("index")
+        self.bytecodes.append('push_literal', idx_selector)
+        self.bytecodes.append('send', 1)
 
 class Function(Entry):
     def __init__(self, imod, cfun):

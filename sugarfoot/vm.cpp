@@ -87,3 +87,7 @@ oop VM::instantiate_module(char* name, oop module_args_list) {
   mmc->load();
   return mmc->instantiate_module(module_args_list);
 }
+
+oop VM::get_prime(const char* name) {
+  return _core_image->get_prime(name);
+}

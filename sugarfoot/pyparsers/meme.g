@@ -249,7 +249,7 @@ expr_list = expr:x (token(",") expr)*:xs -> [x]+xs
 literal = lit_number
         | lit_string
         | lit_symbol
-        | spaces !(self.input.position):begin token("[") expr_list:e token("]")    -> self.i.ast(begin, ['literal-array']+e)
+        | spaces !(self.input.position):begin token("[") expr_list:e token("]")    -> self.i.ast(begin, ['literal-array']+[e])
         | spaces !(self.input.position):begin token("{") pair_list:e token("}")    -> self.i.ast(begin, ['literal-dict']+e)
         | spaces !(self.input.position):begin token("thisModule")-> self.i.ast(begin, ['literal', 'module'])
         | spaces !(self.input.position):begin token("thisContext")-> self.i.ast(begin,['literal', 'context'])

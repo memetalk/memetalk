@@ -47,7 +47,6 @@ instance_method :klass = ['fun' :name params:p !(klass.new_instance_method(name,
                                 ['body' body(fnobj.body_processor())]]
 
 class_method :klass = ['fun' :name params:p  !(klass.new_class_method(name, p)):fnobj
-                       !(fnobj.set_parameters(p))
                        :uses_env !(fnobj.uses_env(uses_env))
                        ['body' body(fnobj.body_processor())]]
 
@@ -62,8 +61,8 @@ obj_slot :obj = ['slot' obj_slot_value(obj)]
 
 obj_slot_value :obj  =  :name ['literal-number' :x]       -> obj.add_slot_literal_num(name,x)
                      |  :name ['literal-string' :x]       -> obj.add_slot_literal_string(name,x)
-                     |  :name ['literal' 'null']          -> obj.add_slot_literal_null(name)
-                     |  :name ['literal-array' (:any)*:x] -> obj.add_slot_literal_array(name, x)
+                     |  :name ['literal' 'null']            -> obj.add_slot_literal_null(name)
+                     |  :name ['literal-array' [(:any)*]:x] -> obj.add_slot_literal_array(name, x)
                      |  :name ['literal-dict' (:any)*:x]  -> obj.add_slot_literal_dict(name, x)
                      |  :name :x                          -> obj.add_slot_ref(name, x)
 
@@ -74,7 +73,7 @@ obj_function :obj = constructor(obj)
 body :fnobj = [(expr(fnobj)+) ['end-body']] -> fnobj.emit_return_this()
             | [['primitive' ['literal-string' :name]]:ast (:ignore)*]   -> fnobj.set_primitive(name)
 
-exprs :fnobj = expr(fnobj)+
+exprs :fnobj = [expr(fnobj)*]
 
 expr :fnobj = ['var-def' :id expr(fnobj)]              -> fnobj.emit_var_decl(id)
             | ['return' expr(fnobj)]                   -> fnobj.emit_return_top()
@@ -112,6 +111,8 @@ expr :fnobj = ['var-def' :id expr(fnobj)]              -> fnobj.emit_var_decl(id
             | ['fun-literal'  ['params' :p]
                !(fnobj.new_closure(p)):fn
                ['body' [expr(fn)*] !(fn.emit_return_top())]] -> fnobj.emit_push_closure(fn)
+            | ['literal-array'  :e apply('exprs' fnobj e)] -> fnobj.emit_push_list(len(e))
+            | ['index' :e expr(fnobj) apply('expr' fnobj e)]    -> fnobj.emit_push_index()
             | assignment(fnobj)
             | atom(fnobj)
 

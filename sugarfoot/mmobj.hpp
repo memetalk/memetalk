@@ -44,6 +44,10 @@ public:
   char* mm_string_cstr(oop);
   oop mm_list_entry(oop list, number idx);
 
+  oop mm_list_frame(oop);
+  void mm_list_set_size(oop, number);
+  void mm_list_set_frame(oop, oop);
+
   oop mm_symbol_new(const char* str);
   char* mm_symbol_cstr(oop);
 
