@@ -48,11 +48,10 @@ class MMC(object):
 
         # mmc['names'] = [(name_t, bits.string_block_size(name_t)) for name_t in [name + '\0' for name in vmem.external_names()]]
 
-        labels = self.cmodule.entry_labels()
+        # labels = self.cmodule.entry_labels()
+        names_list = set([n + "\0" for n in vmem.external_names()])
 
-        names_list = set([l + "\0" for l in labels] + [n + "\0" for n in vmem.external_names()])
         mmc['names'] = [(name_t, bits.string_block_size(name_t)) for name_t in names_list]
-
         mmc['header']['names_size'] = sum([x[1] for x in mmc['names']])
 
         base = self.HEADER_SIZE + mmc['header']['names_size']

@@ -413,6 +413,13 @@ class CompiledFunction(Entry):
         if len(self.exceptions_frame) == 0:
             return 0
 
+        type_oops = []
+        for entry in self.exceptions_frame:
+            if entry['type'] is None:
+                type_oops.append(None)
+            else:
+                type_oops.append(vmem.append_string_instance(entry['type']))
+
         vmem.append_int(FRAME_TYPE_EXCEPTIONS_FRAME)
         vmem.append_int(len(self.exceptions_frame) * 4 * bits.WSIZE)
 
@@ -421,8 +428,11 @@ class CompiledFunction(Entry):
         for idx, entry in enumerate(self.exceptions_frame):
             vmem.append_int(entry['start'])
             vmem.append_int(entry['catch'])
-            vmem.append_int(entry['local_pos'])
-            vmem.append_int(entry['type_pos'])
+            vmem.append_int(entry['local_pos']()) # lifted from VariableStorage
+            if type_oops[idx] is None:
+                vmem.append_null()
+            else:
+                vmem.append_pointer_to(type_oops[idx])
 
         return len(self.exceptions_frame)
 
@@ -496,11 +506,11 @@ class CompiledFunction(Entry):
                                 env_storage=self.var_declarations,
                                 is_top_level=False, outer_cfun=self)
 
-    def add_exception_entry(self, label_begin_try, label_begin_catch, catch_type_idx, var_idx):
+    def add_exception_entry(self, label_begin_try, label_begin_catch, catch_type, var_idx):
         self.exceptions_frame.append({
             'start': label_begin_try(),
             'catch': label_begin_catch(),
-            'type_pos': catch_type_idx,
+            'type': catch_type,
             'local_pos': var_idx})
 
 
@@ -709,9 +719,8 @@ class CompiledFunction(Entry):
         blen = len(self.bytecodes)
         self.bytecodes.lst[jmp_pos].arg = lambda: blen - jmp_pos
 
-        var_idx = self.local_vars.index(catch_name)
-        ex_type_idx = self.index_for_top_level(catch_type)
-        self.add_exception_entry(lb_begin_try, lb_begin_catch, ex_type_idx, var_idx)
+        var_idx = self.var_declarations.index(catch_name)
+        self.add_exception_entry(lb_begin_try, lb_begin_catch, catch_type, var_idx)
 
 
     def emit_push_list(self, length):

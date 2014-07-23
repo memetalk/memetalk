@@ -24,8 +24,9 @@ const char* CoreImage::PRIMES_NAMES[] = {"Behavior",
                                         "Function",
                                          "Context",
                                          "Boolean",
+                                         "Exception",
                                          "Null"};
-int CoreImage::TOTAL_PRIMES = 15;
+int CoreImage::TOTAL_PRIMES = 16;
 
 
 CoreImage::CoreImage(VM* vm, const char* filepath)

@@ -23,9 +23,6 @@ public:
   oop cp() { return _cp; }
   MMObj* mmobj() { return _mmobj; }
 
-  oop cp_index(int);
-
-
   void stack_push(oop);
   void stack_push(word);
   void stack_push(bytecode*);

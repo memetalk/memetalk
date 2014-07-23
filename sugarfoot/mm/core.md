@@ -174,6 +174,9 @@ class Exception
   instance_method throw: fun() {
     <primitive "exception_throw">
   }
+  instance_method toString: fun() {
+    return @message;
+  }
   class_method throw: fun(msg) {
     Exception.new(msg).throw;
   }

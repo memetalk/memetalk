@@ -106,7 +106,7 @@ expr :fnobj = ['var-def' :id expr(fnobj)]              -> fnobj.emit_var_decl(id
                 !(fnobj.emit_catch_jump()):end_pos
                 !(fnobj.current_label()):label_begin_catch
                   catch_decl:cp
-                !(fnobj.add_local(cp[1]))
+                !(fnobj.var_declarations.add(self, cp[1]))
                   [expr(fnobj)*]]
               -> fnobj.emit_try_catch(label_begin_try, label_begin_catch, end_pos, cp[0], cp[1])
             | ['fun-literal'  ['params' :p]

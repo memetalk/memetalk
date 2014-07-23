@@ -506,22 +506,12 @@ int Process::execute_primitive(std::string name) {
 }
 
 
-oop Process::cp_index(int idx) {
-  if (idx == 0) {
-    return _cp;
-  } else {
-    oop bp = _bp;
-    for (int i = 0; i < idx-1; i++) {
-      bp = * (oop*) bp;
-    }
-    return * (oop*) (bp - 5);
-  }
-}
-
 void Process::unwind_with_exception(oop e) {
   debug() << "** unwind_with_exception " << _cp << endl;
   if (_cp == NULL) {
-    debug() << "Terminated with exception " << e << endl;
+    oop str = do_send(e, _vm->new_symbol("toString"));
+    std::cerr << "Terminated with exception: \""
+              << _mmobj->mm_string_cstr(str) << "\"" << endl;
     done();
   }
 
@@ -552,7 +542,7 @@ void Process::unwind_with_exception(oop e) {
 
   number instr = _ip - code;
 
-  debug() << "RAISE " << instr << " " << try_block << " " << catch_block << " " << type_pos
+  debug() << "RAISE " << instr << " " << try_block << " " << catch_block << " " << type_oop
           << " " << _mmobj->is_subtype(_mmobj->mm_object_vt(e), type_oop) << endl;
   if (instr >= try_block && instr < catch_block &&
       (type_oop == MM_NULL || _mmobj->is_subtype(_mmobj->mm_object_vt(e), type_oop))) {
