@@ -89,7 +89,7 @@ void CoreImage::load_prime_objects_table() {
 }
 
 oop CoreImage::get_prime(const char* name) {
-  return _primes[name];
+  return _primes.at(name);
 }
 
 oop CoreImage::get_module_instance() {
