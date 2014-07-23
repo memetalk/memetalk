@@ -86,7 +86,7 @@ oop MMCImage::instantiate_class(oop class_name, oop cclass, oop cclass_dict, std
 void MMCImage::assign_module_arguments(oop imodule, oop module_arguments_list) {
   //if cmodule->params size != module_arguments_list size: arity error
   //TODO
-
+  bail("TODO");
 }
 
 void MMCImage::load_default_dependencies_and_assign_module_arguments(oop imodule) {

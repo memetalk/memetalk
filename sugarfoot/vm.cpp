@@ -69,6 +69,11 @@ oop VM::new_symbol(const char* cstr) {
   return _symbols[s];
 }
 
+oop VM::new_symbol(oop str) {
+  assert(_mmobj->mm_object_vt(str) == _core_image->get_prime("String"));
+  return new_symbol(_mmobj->mm_string_cstr(str));
+}
+
 void VM::register_primitive(std::string name, prim_function_t fun) {
   _primitives[name] = fun;
 }

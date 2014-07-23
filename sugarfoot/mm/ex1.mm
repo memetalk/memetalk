@@ -9,7 +9,7 @@ print: fun(arg) {
 main: fun() {
   try {
     Exception.throw("assertion failed");
-  } catch(e) {
+  } catch(Exception e) {
     print("oi");
   }
   return 1;

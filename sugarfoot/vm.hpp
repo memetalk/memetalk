@@ -19,6 +19,7 @@ public:
 
   int start(char* filepath);
   oop new_symbol(const char*);
+  oop new_symbol(oop);
 
   void register_primitive(std::string, prim_function_t);
 

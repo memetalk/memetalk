@@ -539,8 +539,16 @@ void Process::unwind_with_exception(oop e) {
 
   word try_block =  *(word*) frame_begin;
   word catch_block = *(word*) (frame_begin + 1);
-  word type_pos = *(word*) (frame_begin + 3);
-  oop type_oop = _mmobj->mm_module_entry(_mp, type_pos);
+  oop str_type_oop = *(oop*) (frame_begin + 3);
+
+  oop type_oop;
+  if (str_type_oop == MM_NULL) {
+    type_oop  = MM_NULL;
+  } else {
+    debug() << "fetching exception type for name: " << str_type_oop << endl;
+    type_oop = do_send(_mp, _vm->new_symbol(str_type_oop));
+    debug() << "fetching exception type got " << type_oop << endl;;
+  }
 
   number instr = _ip - code;
 
