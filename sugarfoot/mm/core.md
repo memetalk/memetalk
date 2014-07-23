@@ -178,7 +178,7 @@ class Exception
     return @message;
   }
   class_method throw: fun(msg) {
-    Exception.new(msg).throw;
+    this.new(msg).throw;
   }
 end
 

@@ -54,7 +54,7 @@ oop MMCImage::instantiate_class(oop class_name, oop cclass, oop cclass_dict, std
   oop super_class = NULL;
   if (mod_classes.find(super_name_str) != mod_classes.end()) {
     debug() << "Super class already instantiated" << endl;
-    super_class = mod_classes[super_name_str];
+    super_class = mod_classes.at(super_name_str);
   } else if (_mmobj->mm_dictionary_has_key(cclass_dict, super_name)) {
     debug() << "Super class not instantiated. recursively instantiate it" << endl;
     super_class = instantiate_class(super_name, _mmobj->mm_dictionary_get(cclass_dict, super_name), cclass_dict, mod_classes, imodule);
@@ -189,7 +189,7 @@ oop MMCImage::instantiate_module(oop module_arguments_list) {
 
     if (mod_classes.find(cname) != mod_classes.end()) {
       debug() << "Class " << cname << " already instantiated" << endl;
-      klass = mod_classes[cname];
+      klass = mod_classes.at(cname);
     } else {
       //recursively instantiate it
       klass = instantiate_class(str_name, cclass, cclass_dict, mod_classes, imodule);

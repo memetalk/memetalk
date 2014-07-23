@@ -95,7 +95,7 @@ static int prim_number_to_string(Process* proc) {
 }
 
 static int prim_exception_throw(Process* proc) {
-  oop self =  proc->dp();
+  oop self =  proc->rp();
   proc->stack_push(self);
   return PRIM_RAISED;
 }

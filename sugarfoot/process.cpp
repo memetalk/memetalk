@@ -123,8 +123,8 @@ oop Process::alloc_instance(oop klass) {
   debug() << "alloc_instance: payload " << payload << endl;
 
   oop instance = (oop) calloc(sizeof(word), payload + 2); //2: vt, delegate
-  // debug() << "new instance [size: " << payload << "]: "
-  //         << _mmobj->mm_string_cstr(_mmobj->mm_class_name(klass)) << " = " << instance << endl;
+  debug() << "new instance [size: " << payload << "]: "
+          << _mmobj->mm_string_cstr(_mmobj->mm_class_name(klass)) << " = " << instance << endl;
 
   oop klass_parent =  _mmobj->mm_object_delegate(klass);
 
@@ -135,12 +135,34 @@ oop Process::alloc_instance(oop klass) {
   return instance;
 }
 
+oop Process::ctor_rdp_for(oop rp, oop cp) {
+  if (!rp) {
+    bail("no rdp for ctor!");
+  }
+  oop vt = _mmobj->mm_object_vt(rp);
+  oop cclass = _mmobj->mm_class_get_compiled_class(vt);
+
+  oop other_cclass = _mmobj->mm_function_get_owner(cp);
+
+  debug() << "rdp_for_ctor cclass: " << cclass << ", other cclass: " << other_cclass << endl;
+
+  if (cclass == other_cclass) {
+    return rp;
+  } else {
+    return ctor_rdp_for(_mmobj->mm_object_delegate(rp), cp);
+  }
+}
+
 void Process::basic_new_and_load() {
   oop klass = _rp;
   oop instance = alloc_instance(klass);
   debug() << "basic_new: " << instance << endl;
   _rp = instance;
-  _dp = instance;
+  _dp = ctor_rdp_for(_rp, _cp);
+  if (_ep) {
+    ((oop*)_ep)[0] = _rp;
+    ((oop*)_ep)[1] = _dp;
+  }
 }
 
 void Process::setup_ep(oop fun) {

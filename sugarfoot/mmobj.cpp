@@ -367,6 +367,13 @@ number MMObj::mm_function_access_field(oop fun) {
   return mm_compiled_function_access_field(cfun);
 }
 
+oop MMObj::mm_function_get_owner(oop fun) {
+  assert( *(oop*) fun == _core_image->get_prime("Function") ||
+          *(oop*) fun == _core_image->get_prime("Context"));
+  oop cfun = mm_function_get_cfun(fun);
+  return mm_compiled_function_get_owner(cfun);
+}
+
 bool MMObj::mm_function_is_ctor(oop fun) {
   assert( *(oop*) fun == _core_image->get_prime("Function") ||
           *(oop*) fun == _core_image->get_prime("Context"));
@@ -411,6 +418,11 @@ bool MMObj::mm_compiled_function_is_getter(oop cfun) {
 number MMObj::mm_compiled_function_access_field(oop cfun) {
   assert( *(oop*) cfun == _core_image->get_prime("CompiledFunction"));
   return (number) ((oop*)cfun)[8];
+}
+
+oop MMObj::mm_compiled_function_get_owner(oop cfun) {
+  assert( *(oop*) cfun == _core_image->get_prime("CompiledFunction"));
+  return ((oop*)cfun)[9];
 }
 
 number MMObj::mm_compiled_function_get_num_params(oop cfun) {

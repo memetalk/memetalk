@@ -45,6 +45,8 @@ private:
   void push_frame(number, number);
   void pop_frame();
 
+  oop ctor_rdp_for(oop rp, oop cp);
+
   void setup_ep(oop);
   void copy_params_to_env(number, number);
 
