@@ -546,7 +546,8 @@ void Process::unwind_with_exception(oop e) {
 
   debug() << "RAISE " << instr << " " << try_block << " " << catch_block << " " << type_pos
           << " " << _mmobj->is_subtype(_mmobj->mm_object_vt(e), type_oop) << endl;
-  if (instr >= try_block && instr < catch_block && _mmobj->is_subtype(_mmobj->mm_object_vt(e), type_oop)) {
+  if (instr >= try_block && instr < catch_block &&
+      (type_oop == MM_NULL || _mmobj->is_subtype(_mmobj->mm_object_vt(e), type_oop))) {
     debug() << "CAUGHT " << endl;
     _ip = code + catch_block;
     return;

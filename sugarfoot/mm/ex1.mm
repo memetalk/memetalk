@@ -7,8 +7,12 @@ print: fun(arg) {
 
 
 main: fun() {
-  print("x" + "yy");
-  return 0;
+  try {
+    Exception.throw("assertion failed");
+  } catch(e) {
+    print("oi");
+  }
+  return 1;
 }
 
 .endcode
