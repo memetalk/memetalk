@@ -140,6 +140,7 @@ oop MMCImage::instantiate_module(oop module_arguments_list) {
   number num_params = _mmobj->mm_list_size(params);
 
   oop imodule = _mmobj->mm_module_new(num_params, num_classes,
+                                      _compiled_module,
                                       _core_image->get_module_instance());
 
   debug() << "imodule " << imodule << " params:" << num_params
@@ -178,7 +179,7 @@ oop MMCImage::instantiate_module(oop module_arguments_list) {
 
   std::map<std::string, oop> mod_classes; //store each Class created here, so we do parent look up more easily
 
-  int imod_idx = num_params + 3; //imod: vt, delegate, dict
+  int imod_idx = num_params + 4; //imod: vt, delegate, dict, cmod
 
   for (int i = 0; i < num_classes; i++) {
     oop str_name = _mmobj->mm_dictionary_entry_key(cclass_dict, i);

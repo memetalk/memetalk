@@ -777,13 +777,18 @@ class Function(Entry):
         return oop
 
 
+def create_module_to_string(cmod):
+    cfun = CompiledFunction(cmod, cmod, 'toString', [])
+    cfun.set_primitive('module_to_string')
+    return cfun
+
 class CompiledModule(Entry):
     def __init__(self, name):
         super(CompiledModule, self).__init__()
         self.name = name
         self.params = []
         self.default_params = {}
-        self.functions = {}
+        self.functions = {'toString': create_module_to_string(self)}
         self.classes = {}
 
         # eager loading of all top level names

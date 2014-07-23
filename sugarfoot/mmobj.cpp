@@ -11,12 +11,19 @@ MMObj::MMObj(VM* vm, CoreImage* core)
   : _vm(vm), _core_image(core) {
 }
 
-oop MMObj::mm_module_new(int num_params, int num_classes, oop delegate) {
-  oop imodule = (oop) malloc(sizeof(word) * (3 + num_classes + num_params)); //3: vt, delegate, dict
+oop MMObj::mm_module_new(int num_params, int num_classes, oop cmod, oop delegate) {
+  oop imodule = (oop) malloc(sizeof(word) * (4 + num_classes + num_params)); //3: vt, delegate, dict, cmod
 
   ((word**) imodule)[0] = imodule; //imodule[vt] = imodule
   ((word**) imodule)[1] = delegate; // imodule[delegate]
+  //imod[dict]
+  ((word**) imodule)[3] = cmod; // imodule[cmod]
   return imodule;
+}
+
+oop MMObj::mm_compiled_module_name(oop cmod) {
+  assert( *(oop*) cmod == _core_image->get_prime("CompiledModule"));
+  return (oop) ((word*)cmod)[2];
 }
 
 oop MMObj::mm_compiled_module_classes(oop cmod) {
@@ -213,13 +220,16 @@ void MMObj::mm_module_set_dictionary(oop imodule, oop imod_dict) {
 }
 
 void MMObj::mm_module_set_module_argument(oop imodule, oop arg, number idx) {
-  ((oop*)imodule)[idx+3] = arg; //3: vt, delegate, dict
+  ((oop*)imodule)[idx+4] = arg; //3: vt, delegate, dict, cmod
 }
 
 oop MMObj::mm_module_entry(oop imodule, number idx) {
-  return ((oop*)imodule)[idx+3]; //3: vt, delegate, dict
+  return ((oop*)imodule)[idx+4]; //4: vt, delegate, dict, cmod
 }
 
+oop MMObj::mm_module_get_cmod(oop imodule) {
+  return ((oop*)imodule)[3]; //3: vt, delegate, dict
+}
 
 
 bool MMObj::mm_is_string(oop obj) {
