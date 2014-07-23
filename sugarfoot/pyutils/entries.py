@@ -321,6 +321,8 @@ class CompiledFunction(Entry):
         self.accessor_flag = 0
         self.accessor_field = 0
 
+        self._label = None
+
     def set_getter(self, idx):
         self.accessor_flag = 1 # normal=0/getter=1/setter=2
         self.accessor_field = idx
@@ -337,7 +339,10 @@ class CompiledFunction(Entry):
         self.is_prim = True
 
     def label(self):
-        return self.owner.label() + '_' + self.name + "_CompiledFunction"
+        if self._label is None:
+            self._label = cfun_label(self.owner.label(),
+                                    self.name, isinstance(self.owner, CompiledClass))
+        return self._label
 
     def literal_frame_label(self):
         return self.label() + '_literal_frame'
@@ -747,7 +752,7 @@ class Function(Entry):
         self.cfun.set_primitive(prim_name)
 
     def label(self):
-        return self.cfun.name
+        return fun_label(self.cfun.label())
 
     def fill(self, vmem):
         delegate = vmem.append_object_instance()

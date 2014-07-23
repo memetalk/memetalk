@@ -102,6 +102,8 @@ class VirtualMemory(object):
         self.base = base
 
     def label_current(self, label):
+        if label in self.index:
+            raise Exception('Duplicated label ' + label)
         self.index[label] = sum(self.cell_sizes)
         self.cell_index[label] = len(self.cells)
 

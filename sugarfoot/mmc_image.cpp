@@ -74,7 +74,11 @@ oop MMCImage::instantiate_class(oop class_name, oop cclass, oop cclass_dict, std
   number num_fields = _mmobj->mm_compiled_class_num_fields(cclass);
   oop klass = _mmobj->mm_class_new(class_behavior, super_class, funs_dict, cclass, num_fields);
   mod_classes[cname] = klass;
-  debug() << "User class " << cname << " = " << klass << " dict: " << class_funs_dict << endl;
+  debug() << "User class " << cname << " = "
+          << klass << " behavior: " << class_behavior
+          << " dict: " << funs_dict
+          << " own_dict: " << class_funs_dict
+          << endl;
   return klass;
 }
 

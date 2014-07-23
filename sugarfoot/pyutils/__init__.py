@@ -66,11 +66,19 @@ def cclass_label(name):
 def class_label(name):
     return name # + SEP + "Class"
 
-def cfun_label(owner_name, name):
-    return owner_name + SEP + name + SEP + 'CompiledFunction'
+_cfun_id = 0
+def cfun_label(owner_label, name, is_method):
+    global _cfun_id
+    if is_method:
+        # create unique label, so we can have an instance method with
+        # the same name as a class method.
+        _cfun_id += 1
+        return str(_cfun_id) + "_" + owner_label + SEP + name + SEP + 'CompiledFunction'
+    else:
+        return owner_label + SEP + name + SEP + 'CompiledFunction'
 
-def fun_label(cfun_label, name):
-    return cfun_label + SEP + name + SEP + "Function"
+def fun_label(cfun_label):
+    return cfun_label + SEP + "Function"
 
 def cmod_label(name):
     return name + SEP + "CompiledModule"
