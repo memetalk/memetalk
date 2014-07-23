@@ -230,6 +230,18 @@ bool MMObj::mm_is_string(oop obj) {
 }
 
 
+oop MMObj::mm_string_new(const char* str) {
+  number payload = sizeof(oop) + strlen(str) + 1; //size, <str ...>, \0
+
+  oop oop_str = mm_new(_core_image->get_prime("String"),
+                       mm_object_new(), //assuming String < Object
+                       payload); //this is going to alloc more than we need as it
+                                 //is payload * sizeof(oop)
+  ((oop*)oop_str)[2] = (oop) strlen(str);
+  strcpy((char*)(oop_str + 3), str);
+  return oop_str;
+}
+
 char* MMObj::mm_string_cstr(oop str) {
   assert( *(oop*) str == _core_image->get_prime("String"));
   //0: vt
@@ -544,6 +556,7 @@ oop MMObj::mm_class_dict(oop klass) {
 }
 
 oop MMObj::mm_class_get_compiled_class(oop klass) {
+  assert( *(oop*) klass != _core_image->get_prime("Behavior"));
   return ((oop*)klass)[4];
 }
 

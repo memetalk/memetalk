@@ -1,5 +1,6 @@
 #include "report.hpp"
 #include <iostream>
+#include <stdlib.h>
 
 using namespace std;
 
@@ -12,6 +13,13 @@ void done() {
   exit(1);
 }
 
+static std::ostream null_stream(0);
+
+
 ostream& debug() {
-  return cout;
+  if (getenv("DEBUG")) {
+    return cerr;
+  } else {
+    return null_stream;
+  }
 }

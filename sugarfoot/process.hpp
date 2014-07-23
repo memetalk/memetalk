@@ -13,7 +13,7 @@ class Process {
 public:
   Process(VM*);
 
-  oop run(oop, oop, oop);
+  oop run(oop, oop);
 
   VM* vm() { return _vm; }
   oop dp() { return _dp; }
@@ -32,7 +32,7 @@ public:
 
   void unwind_with_exception(oop);
 
-  oop do_send(oop, oop, oop);
+  oop do_send(oop, oop);
   oop do_call(oop);
 
 private:

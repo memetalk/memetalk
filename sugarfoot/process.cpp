@@ -18,9 +18,9 @@ Process::Process(VM* vm)
 
 // int frame_count = 0;
 
-oop Process::run(oop imod, oop recv, oop selector_sym) {
+oop Process::run(oop recv, oop selector_sym) {
   init();
-  return do_send(imod, recv, selector_sym);
+  return do_send(recv, selector_sym);
 }
 
 void Process::init() {
@@ -229,7 +229,9 @@ void Process::load_fun(oop recv, oop drecv, oop fun, bool should_allocate) {
   _code_size = _mmobj->mm_function_get_code_size(fun);
 }
 
-oop Process::do_send(oop imod, oop recv, oop selector) {
+oop Process::do_send(oop recv, oop selector) {
+  debug() << "-- begin do_send, recv: " << recv << ", selector: " << selector << endl;
+
   std::pair<oop, oop> res = lookup(recv, _mmobj->mm_object_vt(recv), selector);
 
   oop drecv = res.first;
@@ -237,10 +239,12 @@ oop Process::do_send(oop imod, oop recv, oop selector) {
   if (!fun) {
     bail("do_send: lookup failed"); //todo
   }
+  oop stop_at_fp = _fp;
 
   load_fun(recv, drecv, fun, true);
-  fetch_cycle(0);
+  fetch_cycle(stop_at_fp);
   oop val = stack_pop();
+  debug() << "-- end do_send, val: " << val << endl;
   return val;
 }
 
@@ -257,7 +261,8 @@ oop Process::do_call(oop fun) {
 }
 
 void Process::fetch_cycle(void* stop_at_fp) {
-  debug() << "begin fetch_cycle" << _fp <<  " " <<  stop_at_fp << " " << _ip << endl;
+  debug() << "begin fetch_cycle fp:" << _fp <<  " stop_fp:" <<  stop_at_fp
+          << " ip: " << _ip << endl;
   while ((_fp > stop_at_fp) && _ip) { // && ((_ip - start_ip) * sizeof(bytecode))  < _code_size) {
     // debug() << "fp " << _fp << " stop " <<  stop_at_fp << " ip-start " <<  (_ip - start_ip)  << " codesize " <<  _code_size <<
     //   "ip " << _ip << std::endl;
@@ -428,7 +433,7 @@ void Process::dispatch(int opcode, int arg) {
       case JZ:
         val = stack_pop();
         debug() << "JZ " << arg << " " << val << endl;
-        if (!val) {
+        if ((val == MM_FALSE) || (val == MM_NULL)) {
           _ip += (arg -1); //_ip already suffered a ++ in dispatch
         }
         break;

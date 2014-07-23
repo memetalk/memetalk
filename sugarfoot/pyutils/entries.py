@@ -286,7 +286,8 @@ class VariableStorage(object):
             if cf == cfun:
                 return offset
             offset += len(varlist)
-        raise Exception('Unexpected error')
+        return offset
+        # raise Exception('Unexpected error')
 
     def names(self):
         return reduce(lambda x,y: x + y, self.variables.values(), [])

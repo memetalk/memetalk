@@ -6,20 +6,32 @@
 #include <assert.h>
 #include "utils.hpp"
 #include "mmobj.hpp"
-#include <string.h>
+#include <string>
+#include <iostream>
+#include <sstream>
 
 static int prim_print(Process* proc) {
   oop obj = *((oop*) proc->fp() - 1);
-  if (obj == NULL) {
-    debug() << "* PRINT: NULL" << endl;
-  } else if (proc->mmobj()->mm_is_string(obj)) {
-    debug() << "* PRINT: " << proc->mmobj()->mm_string_cstr(obj) << endl;
-  } else if (is_small_int(obj)) {
-    debug() << "* PRINT: " << untag_small_int(obj) << endl;
-  } else {
-    debug() << "* PRINT: <#" << obj << ">" << endl;
-  }
+
+  debug() << "---- prim_print" << endl;
+  oop oop_str = proc->do_send(obj, proc->vm()->new_symbol("toString"));
+  debug() << "---- do_send done " << oop_str << endl;
+  std::cout << proc->mmobj()->mm_string_cstr(oop_str) << endl;
   proc->stack_push((oop)0);
+  return 0;
+}
+
+static int prim_string_append(Process* proc) {
+  oop self =  proc->dp();
+  oop other = *((oop*) proc->fp() - 1);
+
+  char* str_1 = proc->mmobj()->mm_string_cstr(self);
+  char* str_2 = proc->mmobj()->mm_string_cstr(other);
+
+  std::stringstream s;
+  s << str_1 << str_2;
+  oop oop_str = proc->mmobj()->mm_string_new(s.str().c_str());
+  proc->stack_push(oop_str);
   return 0;
 }
 
@@ -73,10 +85,17 @@ static int prim_number_lt(Process* proc) {
   return 0;
 }
 
+static int prim_number_to_string(Process* proc) {
+  oop self =  proc->dp();
+  std::stringstream s;
+  s << untag_small_int(self);
+  oop oop_str = proc->mmobj()->mm_string_new(s.str().c_str());
+  proc->stack_push(oop_str);
+  return 0;
+}
+
 static int prim_exception_throw(Process* proc) {
   oop self =  proc->dp();
-  // oop ex = proc->mmobj()->mm_new(proc->rp(), proc->mmobj()->mm_object_new(), 1); // Exception < Object
-  // ((oop*)ex)[2] = arg;
   proc->stack_push(self);
   return PRIM_RAISED;
 }
@@ -174,6 +193,22 @@ static int prim_list_each(Process* proc) {
   return 0;
 }
 
+static int prim_equal(Process* proc) {
+  oop self =  proc->rp();
+  oop other = *((oop*) proc->fp() - 1);
+  debug() << self << " == " << other << "?" << (self == other ? MM_TRUE : MM_FALSE) << endl;
+  proc->stack_push(self == other ? MM_TRUE : MM_FALSE);
+  return 0;
+}
+
+// static int prim_id(Process* proc) {
+//   oop self =  proc->rp();
+//   std::stringstream s;
+//   s << self;
+//   proc->stack_push(proc->mmobj()->mm_string_new(s.str().c_str()));
+//   return 0;
+// }
+
 static int prim_object_not(Process* proc) {
   oop self =  proc->dp();
   if ((self == MM_FALSE) || (self == MM_NULL)) {
@@ -184,20 +219,57 @@ static int prim_object_not(Process* proc) {
   return 0;
 }
 
+static int prim_behavior_to_string(Process* proc) {
+  oop klass =  proc->rp();
+
+  oop cclass = proc->mmobj()->mm_class_get_compiled_class(klass);
+  oop class_name = proc->mmobj()->mm_compiled_class_name(cclass);
+  char* str_class_name = proc->mmobj()->mm_string_cstr(class_name);
+  std::stringstream s;
+  s << "#<" << str_class_name << " class>";
+  oop oop_str = proc->mmobj()->mm_string_new(s.str().c_str());
+  proc->stack_push(oop_str);
+  return 0;
+}
+
+static int prim_object_to_string(Process* proc) {
+  oop self =  proc->rp();
+
+  oop klass = proc->mmobj()->mm_object_vt(self);
+  oop cclass = proc->mmobj()->mm_class_get_compiled_class(klass);
+  oop class_name = proc->mmobj()->mm_compiled_class_name(cclass);
+  char* str_class_name = proc->mmobj()->mm_string_cstr(class_name);
+  std::stringstream s;
+  s << "#<" << str_class_name << " instance: " << self << ">";
+  oop oop_str = proc->mmobj()->mm_string_new(s.str().c_str());
+  proc->stack_push(oop_str);
+  return 0;
+}
+
 void init_primitives(VM* vm) {
   vm->register_primitive("print", prim_print);
+
+  vm->register_primitive("behavior_to_string", prim_behavior_to_string);
+
   vm->register_primitive("number_sum", prim_number_sum);
   vm->register_primitive("number_sub", prim_number_sub);
   vm->register_primitive("number_mul", prim_number_mul);
   vm->register_primitive("number_lt", prim_number_lt);
+  vm->register_primitive("number_to_string", prim_number_to_string);
 
   vm->register_primitive("exception_throw", prim_exception_throw);
 
+  vm->register_primitive("equal", prim_equal);
+  // vm->register_primitive("id", prim_id);
+
   vm->register_primitive("object_not", prim_object_not);
+  vm->register_primitive("object_to_string", prim_object_to_string);
 
   vm->register_primitive("list_new", prim_list_new);
   vm->register_primitive("list_append", prim_list_append);
   vm->register_primitive("list_prepend", prim_list_prepend);
   vm->register_primitive("list_index", prim_list_index);
   vm->register_primitive("list_each", prim_list_each);
+
+  vm->register_primitive("string_append", prim_string_append);
 }

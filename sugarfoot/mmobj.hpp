@@ -41,6 +41,7 @@ public:
   oop mm_module_entry(oop imodule, number idx);
 
   bool mm_is_string(oop);
+  oop mm_string_new(const char*);
   char* mm_string_cstr(oop);
   oop mm_list_entry(oop list, number idx);
 

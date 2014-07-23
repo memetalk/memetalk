@@ -15,8 +15,18 @@
   object Object_Behavior
     _vt: Behavior;
     _delegate: null;
-    dict: {};
-//    size: 0;
+    size: 0;
+    functions {
+       // id: fun() {
+       //   <primitive "id">
+       // }
+       toString: fun() {
+         <primitive "behavior_to_string">
+       }
+       ==: fun(other) {
+         <primitive "equal">
+       }
+    }
   end
 
   object Object_CompiledClass
@@ -35,8 +45,17 @@
     size: 0;
     compiled_class: Object_CompiledClass;
     functions {
+       // id: fun() {
+       //   <primitive "id">
+       // }
+       toString: fun() {
+         <primitive "object_to_string">
+       }
        !: fun() {
          <primitive "object_not">
+       }
+       ==: fun(other) {
+         <primitive "equal">
        }
     }
   end
@@ -47,30 +66,49 @@
   end
 
   class CompiledFunction
-  instance_method new_context: fun(ep, module) {
-    return Context.new(this, ep, module);
-  }
-  end
-
-  class CompiledModule
-    instance_method instantiate: fun(args) {
-      <primitive "compiled_module_instantiate">
+    instance_method new_context: fun(ep, module) {
+      return Context.new(this, ep, module);
     }
   end
 
+  class CompiledModule
+  end
+
   class Null
+  instance_method toString: fun() {
+    return "null";
+  }
   end
 
   class Boolean
+  instance_method toString: fun() {
+    if (this == true) {
+      return "true";
+    } else {
+      return "false";
+    }
+  }
   end
 
   class String
+  instance_method toString: fun() {
+    return this;
+  }
+  instance_method +: fun(other) {
+    <primitive "string_append">
+  }
   end
 
   class Symbol
+  instance_method toString: fun() {
+    <primitive "symbol_to_string">
+  }
   end
 
   class Dictionary
+  instance_method toString: fun() {
+    <primitive "dictionary_to_string">
+  }
   end
 
   class List
@@ -85,6 +123,9 @@
   }
   instance_method each: fun(fn) {
     <primitive "list_each">
+  }
+  instance_method toString: fun() {
+    <primitive "list_to_string">
   }
   class_method new: fun() {
     <primitive "list_new">
@@ -103,6 +144,9 @@
     }
     instance_method <: fun(arg) {
       <primitive "number_lt">
+    }
+    instance_method toString: fun() {
+      <primitive "number_to_string">
     }
   end
 
