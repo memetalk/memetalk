@@ -98,7 +98,7 @@ oop CoreImage::get_module_instance() {
 }
 
 void CoreImage::load() {
-  _data = read_file(_filepath, &_data_size);
+  _data = read_mmc_file(_filepath, &_data_size);
   load_header();
   load_prime_objects_table();
 

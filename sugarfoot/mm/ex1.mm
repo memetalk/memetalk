@@ -21,19 +21,12 @@ end
 //   }
 // }
 
+test_import: fun(filepath) {
+  <primitive "test_import">
+}
 
 main: fun() {
-  // try {
-  //   assert(false, "oi");
-  // } catch(Z e) {
-  //   print("zaz");
-  // }
-  try {
-    return ZZ.throw("oi");
-  } catch(KK e) {
-    print("zaz");
-  }
-  return 1;
+  return test_import("/Users/jester/src/memetalk/sugarfoot/ex2");
 }
 
 .endcode

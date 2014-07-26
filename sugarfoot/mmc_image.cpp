@@ -11,8 +11,8 @@ using namespace std;
 word MMCImage::HEADER_SIZE = 5 * WSIZE;
 word MMCImage::MAGIC_NUMBER = 0x420;
 
-MMCImage::MMCImage(VM* vm, CoreImage* core_image, const std::string& filepath)
-  : _vm(vm), _mmobj(vm->mmobj()), _core_image(core_image), _filepath(filepath) {
+MMCImage::MMCImage(VM* vm, CoreImage* core_image, const std::string& name_or_path)
+  : _vm(vm), _mmobj(vm->mmobj()), _core_image(core_image), _name_or_path(name_or_path) {
 }
 
 void MMCImage::load_header() {
@@ -100,7 +100,7 @@ void MMCImage::load_default_dependencies_and_assign_module_arguments(oop imodule
   for (int i = 0; i < dict_size; i++) {
     oop lhs_name = _mmobj->mm_dictionary_entry_key(default_params_dict, i);
     oop mod_name = _mmobj->mm_dictionary_entry_value(default_params_dict, i);
-    oop imd = _vm->instantiate_module(_mmobj->mm_string_cstr(mod_name), NULL);
+    oop imd = _vm->instantiate_module(_mmobj->mm_string_cstr(mod_name), MM_NULL);
     number midx = _mmobj->mm_list_index_of(params_list, lhs_name);
     if (midx == -1) {
       bail("Could not bind unknown module parameter");
@@ -208,7 +208,7 @@ oop MMCImage::instantiate_module(oop module_arguments_list) {
 
 
 oop MMCImage::load() {
-  _data = read_file(_filepath, &_data_size);
+  _data = read_mmc_file(_name_or_path, &_data_size);
   load_header();
   relocate_addresses(_data, _data_size, HEADER_SIZE + _names_size + _ot_size + _er_size + _es_size);
   link_external_references();

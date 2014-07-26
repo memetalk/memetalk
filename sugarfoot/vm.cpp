@@ -45,9 +45,7 @@ int VM::start(char* filepath) {
   _core_image->load();
   // dump_prime_info();
 
-  MMCImage* mmc = new MMCImage(this, _core_image, filepath);
-  mmc->load();
-  oop imod = mmc->instantiate_module(NULL);
+  oop imod = instantiate_module(filepath, MM_NULL);
 
   init_primitives(this);
 
@@ -83,9 +81,8 @@ prim_function_t VM::get_primitive(std::string name) {
   return _primitives[name];
 }
 
-oop VM::instantiate_module(char* name, oop module_args_list) {
-  std::string filepath = std::string(name) + ".mmc";
-  MMCImage* mmc = new MMCImage(this, _core_image, filepath);
+oop VM::instantiate_module(char* name_or_path, oop module_args_list) {
+  MMCImage* mmc = new MMCImage(this, _core_image, name_or_path);
   mmc->load();
   return mmc->instantiate_module(module_args_list);
 }

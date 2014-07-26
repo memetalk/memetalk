@@ -29,7 +29,7 @@ private:
   MMObj* _mmobj;
   CoreImage* _core_image;
 
-  std::string _filepath;
+  std::string _name_or_path;
   int _data_size;
   char* _data;
 

@@ -7,14 +7,7 @@
 
 using namespace std;
 
-char* read_file(const std::string& filepath, int* file_size) {
-  fstream file;
-  file.open (filepath.c_str(), fstream::in | fstream::binary);
-
-  if (!file.is_open()) {
-    bail(string("file not found: ") + filepath);
-  }
-
+static char* read_file(fstream& file, int* file_size) {
   string contents(static_cast<stringstream const&>(stringstream() << file.rdbuf()).str());
   *file_size = file.tellg();
 
@@ -25,6 +18,32 @@ char* read_file(const std::string& filepath, int* file_size) {
   char* ret = (char*) malloc(sizeof(char) * *file_size);
   return (char*) memcpy(ret, str, sizeof(char) * *file_size);
 }
+
+char* read_mmc_file(const std::string& name_or_path, int* file_size) {
+  fstream file;
+
+  std::string filepath = name_or_path;
+
+  if (filepath.substr(filepath.find_last_of(".") + 1) != "img" &&
+      filepath.substr(filepath.find_last_of(".") + 1) != "mmc") {
+    filepath = filepath + ".mmc";
+  }
+
+  file.open(filepath.c_str(), fstream::in | fstream::binary);
+  if (!file.good()) {
+    char* mmpath = getenv("MEME_PATH");
+    std::string base = mmpath == NULL ? "" : mmpath;
+    debug() << "failed to open " << name_or_path <<
+      " trying " << (base + filepath) << endl;
+    file.open((base + filepath).c_str(), fstream::in | fstream::binary);
+  }
+
+  if (!file.is_open()) {
+    bail(string("file not found: ") + filepath);
+  }
+  return read_file(file, file_size);
+}
+
 
 word unpack_word(const char* data, int offset) {
   // assert((offset+WSIZE-1) < _data_size);

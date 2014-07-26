@@ -260,6 +260,16 @@ static int prim_module_to_string(Process* proc) {
   return 0;
 }
 
+static int prim_test_import(Process* proc) {
+  oop filepath = *((oop*) proc->fp() - 1);
+  char* str_filepath = proc->mmobj()->mm_string_cstr(filepath);
+  debug () << str_filepath << endl;
+  int size;
+  read_mmc_file(str_filepath, &size);
+  proc->stack_push(MM_NULL);
+  return 0;
+}
+
 void init_primitives(VM* vm) {
   vm->register_primitive("print", prim_print);
 
@@ -288,4 +298,6 @@ void init_primitives(VM* vm) {
   vm->register_primitive("list_each", prim_list_each);
 
   vm->register_primitive("string_append", prim_string_append);
+
+  vm->register_primitive("test_import", prim_test_import);
 }
