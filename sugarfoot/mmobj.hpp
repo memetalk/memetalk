@@ -46,6 +46,7 @@ public:
   void mm_module_set_dictionary(oop imodule, oop imod_dict);
   void mm_module_set_module_argument(oop imodule, oop arg, number idx);
   oop mm_module_entry(oop imodule, number idx);
+  oop mm_module_dictionary(oop imodule);
   oop mm_module_get_cmod(oop imodule);
 
   bool mm_is_string(oop);

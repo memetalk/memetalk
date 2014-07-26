@@ -232,6 +232,10 @@ void MMObj::mm_module_set_dictionary(oop imodule, oop imod_dict) {
   ((word**) imodule)[2] = imod_dict;
 }
 
+oop MMObj::mm_module_dictionary(oop imodule) {
+  return ((oop*) imodule)[2];
+}
+
 void MMObj::mm_module_set_module_argument(oop imodule, oop arg, number idx) {
   ((oop*)imodule)[idx+4] = arg; //3: vt, delegate, dict, cmod
 }

@@ -80,6 +80,7 @@ expr :fnobj = ['var-def' :id expr(fnobj)]              -> fnobj.emit_var_decl(id
             | ['super-ctor-send' :s args(fnobj):arity] -> fnobj.emit_super_ctor_send(s, arity)
             | ['send-or-local-call' :name args(fnobj):arity]         -> fnobj.emit_send_or_local_call(name, arity)
             | ['send' :e :s args(fnobj):arity] apply('expr' fnobj e) -> fnobj.emit_send(s, arity)
+            | ['call' :e args(fnobj):arity apply('expr' fnobj e)]  -> fnobj.emit_call(arity)
             | ['pop' expr(fnobj)]                -> fnobj.emit_pop()
             | ['not' expr(fnobj)]                -> fnobj.emit_unary('!')
             | ['negative' expr(fnobj)]           -> fnobj.emit_unary('-')

@@ -1,28 +1,31 @@
 .preamble()
 .code
 
-class X
-class_method print: fun(arg) {
+print: fun(arg) {
   <primitive "print">
 }
-end
 
-// assert: fun(x,desc) {
-//   if (!x) {
-//     if (desc) {
-//       Z.throw("assertion failed: '" + desc + "'");
-//     } else {
-//       Z.throw("assertion failed");
-//     }
-//   }
-// }
+assert: fun(x,desc) {
+  if (!x) {
+    if (desc) {
+      Exception.throw("assertion failed: '" + desc + "'");
+    } else {
+      Exception.throw("assertion failed");
+    }
+  }
+}
 
 test_import: fun(filepath, args) {
   <primitive "test_import">
 }
 
+get_module_function: fun(mod, name) {
+  <primitive "test_get_module_function">
+}
+
 main: fun() {
-  var m2 = test_import("/Users/jester/src/memetalk/sugarfoot/ex2", [X]);
+  var print = get_module_function(thisModule, :print);
+  var m2 = test_import("/Users/jester/src/memetalk/sugarfoot/ex2", [print]);
   m2.foo(99);
 }
 

@@ -1,8 +1,8 @@
-.preamble(X)
+.preamble(print)
 .code
 
 
 foo: fun(x) {
-  X.print(x);
+  print()(x);
 }
 .endcode

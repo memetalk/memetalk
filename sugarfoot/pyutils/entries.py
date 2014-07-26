@@ -632,7 +632,10 @@ class CompiledFunction(Entry):
             self.bytecodes.append("push_local", idx)
             self.bytecodes.append("call", arity)
         else:
-            raise Exception('send_or_cal: unexpected error')
+            raise Exception('Undeclared ' + name)
+
+    def emit_call(self, arity):
+        self.bytecodes.append('call', arity)
 
     def emit_send(self, selector, arity):
         idx = self.create_and_register_symbol_literal(selector)

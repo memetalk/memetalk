@@ -262,6 +262,15 @@ static int prim_object_to_string(Process* proc) {
   return 0;
 }
 
+static int prim_symbol_to_string(Process* proc) {
+  oop self =  proc->rp();
+  char* str = proc->mmobj()->mm_symbol_cstr(self);
+  debug() << "prim_symbol_to_string: " << self << " str: " << str << endl;
+  oop oop_str = proc->mmobj()->mm_string_new(str);
+  proc->stack_push(oop_str);
+  return 0;
+}
+
 static int prim_module_to_string(Process* proc) {
   oop self =  proc->rp();
 
@@ -282,12 +291,27 @@ static int prim_test_import(Process* proc) {
 
   char* str_filepath = proc->mmobj()->mm_string_cstr(filepath);
   debug () << str_filepath << endl;
-  int size;
   MMCImage* mmc = new MMCImage(proc->vm(), proc->vm()->core(), str_filepath);
   mmc->load();
   proc->stack_push(mmc->instantiate_module(args));
   return 0;
 }
+
+static int prim_test_get_module_function(Process* proc) {
+  oop name = *((oop*) proc->fp() - 1);
+  oop imod = *((oop*) proc->fp() - 2);
+
+  // char* str = proc->mmobj()->mm_symbol_cstr(name);
+  // debug() << "XX: " << name << " str: " << str << endl;
+
+  oop dict = proc->mmobj()->mm_module_dictionary(imod);
+  oop fun = proc->mmobj()->mm_dictionary_get(dict, name);
+  debug() << "prim_test_get_module_function: " << imod << " "
+          << name << " " << dict << " " << fun << endl;
+  proc->stack_push(fun);
+  return 0;
+}
+
 
 void init_primitives(VM* vm) {
   vm->register_primitive("print", prim_print);
@@ -309,6 +333,8 @@ void init_primitives(VM* vm) {
   vm->register_primitive("object_to_string", prim_object_to_string);
   vm->register_primitive("list_to_string", prim_list_to_string);
 
+  vm->register_primitive("symbol_to_string", prim_symbol_to_string);
+
   vm->register_primitive("module_to_string", prim_module_to_string);
 
   vm->register_primitive("list_new", prim_list_new);
@@ -320,4 +346,5 @@ void init_primitives(VM* vm) {
   vm->register_primitive("string_append", prim_string_append);
 
   vm->register_primitive("test_import", prim_test_import);
+  vm->register_primitive("test_get_module_function", prim_test_get_module_function);
 }
