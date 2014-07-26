@@ -6,6 +6,7 @@
 #include <assert.h>
 #include "utils.hpp"
 #include "mmobj.hpp"
+#include "mmc_image.hpp"
 #include <string>
 #include <iostream>
 #include <sstream>
@@ -193,6 +194,21 @@ static int prim_list_each(Process* proc) {
   return 0;
 }
 
+static int prim_list_to_string(Process* proc) {
+  oop self =  proc->rp();
+  std::stringstream s;
+  s << "[";
+  for (int i = 0; i < proc->mmobj()->mm_list_size(self); i++) {
+    oop tostr = proc->do_send(proc->mmobj()->mm_list_entry(self, i),
+                              proc->vm()->new_symbol("toString"));
+    s << proc->mmobj()->mm_string_cstr(tostr) << ",";
+  }
+  s << "]";
+  oop oop_str = proc->mmobj()->mm_string_new(s.str().c_str());
+  proc->stack_push(oop_str);
+  return 0;
+}
+
 static int prim_equal(Process* proc) {
   oop self =  proc->rp();
   oop other = *((oop*) proc->fp() - 1);
@@ -261,12 +277,15 @@ static int prim_module_to_string(Process* proc) {
 }
 
 static int prim_test_import(Process* proc) {
-  oop filepath = *((oop*) proc->fp() - 1);
+  oop args = *((oop*) proc->fp() - 1);
+  oop filepath = *((oop*) proc->fp() - 2);
+
   char* str_filepath = proc->mmobj()->mm_string_cstr(filepath);
   debug () << str_filepath << endl;
   int size;
-  read_mmc_file(str_filepath, &size);
-  proc->stack_push(MM_NULL);
+  MMCImage* mmc = new MMCImage(proc->vm(), proc->vm()->core(), str_filepath);
+  mmc->load();
+  proc->stack_push(mmc->instantiate_module(args));
   return 0;
 }
 
@@ -288,6 +307,7 @@ void init_primitives(VM* vm) {
 
   vm->register_primitive("object_not", prim_object_not);
   vm->register_primitive("object_to_string", prim_object_to_string);
+  vm->register_primitive("list_to_string", prim_list_to_string);
 
   vm->register_primitive("module_to_string", prim_module_to_string);
 

@@ -1,14 +1,10 @@
 .preamble()
 .code
 
-print: fun(arg) {
+class X
+class_method print: fun(arg) {
   <primitive "print">
 }
-
-class ZZ < Exception
-end
-
-class KK < ZZ
 end
 
 // assert: fun(x,desc) {
@@ -21,12 +17,13 @@ end
 //   }
 // }
 
-test_import: fun(filepath) {
+test_import: fun(filepath, args) {
   <primitive "test_import">
 }
 
 main: fun() {
-  return test_import("/Users/jester/src/memetalk/sugarfoot/ex2");
+  var m2 = test_import("/Users/jester/src/memetalk/sugarfoot/ex2", [X]);
+  m2.foo(99);
 }
 
 .endcode

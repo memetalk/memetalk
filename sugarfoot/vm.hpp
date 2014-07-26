@@ -29,6 +29,8 @@ public:
 
   oop get_prime(const char* name);
 
+  CoreImage* core() { return _core_image; };
+
 private:
   void dump_prime_info();
   void dictionary_dump(oop dict);

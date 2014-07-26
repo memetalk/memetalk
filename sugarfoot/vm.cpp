@@ -77,6 +77,7 @@ void VM::register_primitive(std::string name, prim_function_t fun) {
 }
 
 prim_function_t VM::get_primitive(std::string name) {
+  debug() << "VM::get_primitive " << name << endl;
   assert(_primitives.find(name) != _primitives.end());
   return _primitives[name];
 }

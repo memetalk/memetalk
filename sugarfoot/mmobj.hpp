@@ -27,6 +27,12 @@ public:
   oop mm_list_new_empty();
   number mm_list_size(oop list);
   number mm_list_index_of(oop list, oop elem);
+  oop mm_list_entry(oop list, number idx);
+  oop mm_list_frame(oop);
+  void mm_list_set_size(oop, number);
+  void mm_list_set_frame(oop, oop);
+
+  // oop mm_list_new(number size, oop*);
 
   oop mm_dictionary_new(int num_entries);
   number mm_dictionary_size(oop dict);
@@ -45,11 +51,7 @@ public:
   bool mm_is_string(oop);
   oop mm_string_new(const char*);
   char* mm_string_cstr(oop);
-  oop mm_list_entry(oop list, number idx);
 
-  oop mm_list_frame(oop);
-  void mm_list_set_size(oop, number);
-  void mm_list_set_frame(oop, oop);
 
   oop mm_symbol_new(const char* str);
   char* mm_symbol_cstr(oop);

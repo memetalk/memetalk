@@ -5,6 +5,7 @@
 #include "core_image.hpp"
 #include "mmobj.hpp"
 #include "vm.hpp"
+#include <assert.h>
 
 using namespace std;
 
@@ -83,10 +84,14 @@ oop MMCImage::instantiate_class(oop class_name, oop cclass, oop cclass_dict, std
 }
 
 
-void MMCImage::assign_module_arguments(oop imodule, oop module_arguments_list) {
-  //if cmodule->params size != module_arguments_list size: arity error
-  //TODO
-  bail("TODO");
+void MMCImage::assign_module_arguments(oop imodule, oop mod_arguments_list) {
+  oop cmod_params_list =   _mmobj->mm_compiled_module_params(_compiled_module);
+  assert(_mmobj->mm_list_size(cmod_params_list) >= _mmobj->mm_list_size(mod_arguments_list));
+  for (int i = 0; i < _mmobj->mm_list_size(mod_arguments_list); i++) {
+    oop entry = _mmobj->mm_list_entry(mod_arguments_list, i);
+    debug() << "MMCImage::assign_module_arguments " << i << " " << entry << endl;
+    _mmobj->mm_module_set_module_argument(imodule, entry,i);
+  }
 }
 
 void MMCImage::load_default_dependencies_and_assign_module_arguments(oop imodule) {
@@ -116,7 +121,7 @@ void  MMCImage::create_param_getters(oop imodule, oop imod_dict, oop params_list
     oop name = _mmobj->mm_list_entry(params_list, i);
     char* str = _mmobj->mm_string_cstr(name);
     debug() << "Creating getter for param " << str << " " << i << endl;
-    oop getter = _mmobj->mm_new_slot_getter(imodule, _compiled_module, name, i + 3); //imod: vt, delegate, dict
+    oop getter = _mmobj->mm_new_slot_getter(imodule, _compiled_module, name, i + 4); //imod: vt, delegate, dict, cmod
     _mmobj->mm_dictionary_set(imod_dict, i, _vm->new_symbol(str), getter);
   }
 }
@@ -155,7 +160,7 @@ oop MMCImage::instantiate_module(oop module_arguments_list) {
   oop imod_dict = _mmobj->mm_dictionary_new(num_params + num_funs + num_classes); // num_classes -> getters
   _mmobj->mm_module_set_dictionary(imodule, imod_dict);
 
-  if (module_arguments_list) {
+  if (module_arguments_list != MM_NULL) {
     assign_module_arguments(imodule, module_arguments_list);
   } else {
     load_default_dependencies_and_assign_module_arguments(imodule);

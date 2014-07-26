@@ -143,6 +143,19 @@ number MMObj::mm_list_index_of(oop list, oop elem) {
   return -1;
 }
 
+// oop MMObj::mm_list_new(number size, oop* first_element) {
+//   oop obj = (oop) malloc(sizeof(word) * (3+size)); // vt, delegate, size
+
+//   ((word**) obj)[0] = _core_image->get_prime("List");
+//   ((word**) obj)[1] = mm_object_new();
+//   ((word**) obj)[2] = size;
+//   for (int i = 0; i < size; i++) {
+//     ((oop*)obj)[2+i] = *first_element;
+//     first_element++;
+//   }
+//   return obj;
+// }
+
 
 oop MMObj::mm_dictionary_new(int num_entries) {
   int basic = 3; //vt, delegate, size

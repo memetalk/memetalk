@@ -1,11 +1,8 @@
-.preamble()
+.preamble(X)
 .code
 
-print: fun(x) {
-  <primitive "print">
-}
 
 foo: fun(x) {
-  print(x);
+  X.print(x);
 }
 .endcode

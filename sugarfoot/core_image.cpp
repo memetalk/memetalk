@@ -90,6 +90,7 @@ void CoreImage::load_prime_objects_table() {
 }
 
 oop CoreImage::get_prime(const char* name) {
+  // debug() << "getting prime [" << name << "]" << endl;
   return _primes.at(name);
 }
 
