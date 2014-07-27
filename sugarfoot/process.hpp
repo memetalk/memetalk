@@ -29,11 +29,13 @@ public:
 
   void unwind_with_exception(oop);
 
-  oop do_send(oop, oop);
   oop do_call(oop);
 
+  oop do_send_0(oop, oop);
+  // oop do_send(oop, oop, oop);
 private:
   void init();
+
   void load_fun(oop, oop, oop, bool);
 
   void unload_fun_and_return(oop retval);

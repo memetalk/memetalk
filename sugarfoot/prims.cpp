@@ -15,8 +15,8 @@ static int prim_print(Process* proc) {
   oop obj = *((oop*) proc->fp() - 1);
 
   debug() << "---- prim_print" << endl;
-  oop oop_str = proc->do_send(obj, proc->vm()->new_symbol("toString"));
-  debug() << "---- do_send done " << oop_str << endl;
+  oop oop_str = proc->do_send_0(obj, proc->vm()->new_symbol("toString"));
+  debug() << "---- prim_print do_send_0 done " << oop_str << endl;
   std::cout << proc->mmobj()->mm_string_cstr(oop_str) << endl;
   proc->stack_push((oop)0);
   return 0;
@@ -199,7 +199,7 @@ static int prim_list_to_string(Process* proc) {
   std::stringstream s;
   s << "[";
   for (int i = 0; i < proc->mmobj()->mm_list_size(self); i++) {
-    oop tostr = proc->do_send(proc->mmobj()->mm_list_entry(self, i),
+    oop tostr = proc->do_send_0(proc->mmobj()->mm_list_entry(self, i),
                               proc->vm()->new_symbol("toString"));
     s << proc->mmobj()->mm_string_cstr(tostr) << ",";
   }

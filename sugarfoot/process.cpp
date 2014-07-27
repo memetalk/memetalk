@@ -20,7 +20,7 @@ Process::Process(VM* vm)
 
 oop Process::run(oop recv, oop selector_sym) {
   init();
-  return do_send(recv, selector_sym);
+  return do_send_0(recv, selector_sym);
 }
 
 void Process::init() {
@@ -251,22 +251,28 @@ void Process::load_fun(oop recv, oop drecv, oop fun, bool should_allocate) {
   _code_size = _mmobj->mm_function_get_code_size(fun);
 }
 
-oop Process::do_send(oop recv, oop selector) {
-  debug() << "-- begin do_send, recv: " << recv << ", selector: " << selector << endl;
+oop Process::do_send_0(oop recv, oop selector) {
+  debug() << "-- begin do_send_0, recv: " << recv << ", selector: " << selector << endl;
 
   std::pair<oop, oop> res = lookup(recv, _mmobj->mm_object_vt(recv), selector);
 
   oop drecv = res.first;
   oop fun = res.second;
   if (!fun) {
-    bail("do_send: lookup failed"); //todo
+    bail("do_send_0: lookup failed"); //todo
   }
-  oop stop_at_fp = _fp;
 
+  number arity = _mmobj->mm_function_get_num_params(fun);
+  if (arity != 0) {
+    debug() << 0 << " != " << arity << endl;
+    bail("arity and num_args differ");
+  }
+
+  oop stop_at_fp = _fp;
   load_fun(recv, drecv, fun, true);
   fetch_cycle(stop_at_fp);
   oop val = stack_pop();
-  debug() << "-- end do_send, val: " << val << endl;
+  debug() << "-- end do_send_0, val: " << val << endl;
   return val;
 }
 
@@ -531,7 +537,7 @@ int Process::execute_primitive(std::string name) {
 void Process::unwind_with_exception(oop e) {
   debug() << "** unwind_with_exception " << _cp << endl;
   if (_cp == NULL) {
-    oop str = do_send(e, _vm->new_symbol("toString"));
+    oop str = do_send_0(e, _vm->new_symbol("toString"));
     std::cerr << "Terminated with exception: \""
               << _mmobj->mm_string_cstr(str) << "\"" << endl;
     done();
@@ -558,7 +564,7 @@ void Process::unwind_with_exception(oop e) {
     type_oop  = MM_NULL;
   } else {
     debug() << "fetching exception type for name: " << str_type_oop << endl;
-    type_oop = do_send(_mp, _vm->new_symbol(str_type_oop));
+    type_oop = do_send_0(_mp, _vm->new_symbol(str_type_oop));
     debug() << "fetching exception type got " << type_oop << endl;;
   }
 

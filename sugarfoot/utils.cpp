@@ -73,8 +73,8 @@ void link_symbols(char* data, int es_size, int start_external_symbols, VM* vm, C
     word* obj = (word*) (base + obj_offset);
     debug() << "Symbol: " << (oop) obj_offset << " - " << (oop) *obj << " [" << name << "] " << endl;
     * obj = (word) vm->new_symbol(name);
-    debug() << "offset: " << (oop) obj_offset << " - obj: " << (oop) *obj
-            << " [" << name << "] -> " << " vt: " << * (oop*) *obj << " == " << core->get_prime("Symbol") << endl;
+    // debug() << "offset: " << (oop) obj_offset << " - obj: " << (oop) *obj
+    //         << " [" << name << "] -> " << " vt: " << * (oop*) *obj << " == " << core->get_prime("Symbol") << endl;
   }
 }
 

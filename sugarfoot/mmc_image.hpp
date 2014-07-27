@@ -23,6 +23,10 @@ private:
 
   void assign_module_arguments(oop imodule, oop module_arguments_list);
   void load_default_dependencies_and_assign_module_arguments(oop imodule);
+
+  void load_aliases(oop imodule, oop aliases_dict, number num_params);
+  void create_alias_getters(oop imodule, oop imod_dict, oop aliases_dict, number num_params);
+
   void  create_param_getters(oop imodule, oop imod_dict, oop params_list);
 
   VM* _vm;

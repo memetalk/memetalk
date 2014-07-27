@@ -11,7 +11,7 @@ preamble :modobj = ['.preamble'
 module_default_param :modobj = ['param' :lhs ['library' :ns :name]]
                                -> modobj.add_default_param(lhs, ns, name)
 
-module_alias :modobj = ['alias' :libname :alias] -> self.i.l_module_alias(libname, alias)
+module_alias :modobj = ['alias' :libname :alias] -> modobj.module_alias(libname, alias)
 
 
 code_sec :modobj = ['.code' ~~[load_top_level_name(modobj)*] [definition(modobj)*]]

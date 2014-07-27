@@ -87,6 +87,14 @@ class CompVirtualMemory(vmemory.VirtualMemory):
             pairs_oop.append((key_oop, val_oop))
         return self.append_dict_with_pairs(pairs_oop)
 
+    def append_sym_to_string_dict(self, pydict):
+        pairs_oop = []
+        for key, val in iter(sorted(pydict.items())):
+            key_oop = self.append_string_instance(key)
+            val_oop = self.append_symbol_instance(val)
+            pairs_oop.append((key_oop, val_oop))
+        return self.append_dict_with_pairs(pairs_oop)
+
     def _append_dict_prologue(self, size):
         delegate = self.append_object_instance()
 

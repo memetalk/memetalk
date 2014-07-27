@@ -791,11 +791,17 @@ class CompiledModule(Entry):
         self.name = name
         self.params = []
         self.default_params = {}
+        self.aliases = {}
         self.functions = {'toString': create_module_to_string(self)}
         self.classes = {}
 
         # eager loading of all top level names
         self.top_level_names = []
+
+    def module_alias(self, libname, aliases):
+        for alias in aliases:
+            self.aliases[alias] = libname
+            self.add_top_level_name(alias)
 
     def add_top_level_name(self, name):
         self.top_level_names.append(name)
@@ -833,11 +839,12 @@ class CompiledModule(Entry):
         oop_license = vmem.append_string_instance("")
         oop_params = vmem.append_list_of_strings(self.params)
         oop_default_params = vmem.append_string_dict(self.default_params)
+        oop_aliases = vmem.append_string_dict(self.aliases)
         oop_functions = vmem.append_dict_emiting_entries(self.functions)
         oop_classes = vmem.append_dict_emiting_entries(self.classes)
 
         vmem.append_int(FRAME_TYPE_OBJECT)
-        vmem.append_int(9 * bits.WSIZE)
+        vmem.append_int(10 * bits.WSIZE)
 
         oop = vmem.append_external_ref('CompiledModule', self.label()) # vt: CompiledModule
         vmem.append_pointer_to(delegate)
@@ -845,6 +852,7 @@ class CompiledModule(Entry):
         vmem.append_pointer_to(oop_license)
         vmem.append_pointer_to(oop_params)
         vmem.append_pointer_to(oop_default_params)
+        vmem.append_pointer_to(oop_aliases)
         vmem.append_pointer_to(oop_functions)
         vmem.append_pointer_to(oop_classes)
         vmem.append_null()                        # parent_module

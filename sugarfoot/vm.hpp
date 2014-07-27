@@ -31,6 +31,8 @@ public:
 
   CoreImage* core() { return _core_image; };
 
+  Process* process() { return _process; };
+
 private:
   void dump_prime_info();
   void dictionary_dump(oop dict);

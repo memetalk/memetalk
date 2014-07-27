@@ -10,13 +10,14 @@ class MMObj {
 public:
   MMObj(VM*, CoreImage*);
 
-  oop mm_module_new(int num_params, int num_classes, oop cmod, oop delegate);
+  oop mm_module_new(int num_fields, oop cmod, oop delegate);
 
   oop mm_compiled_module_classes(oop);
   oop mm_compiled_module_name(oop);
   oop mm_compiled_module_functions(oop);
   oop mm_compiled_module_params(oop);
   oop mm_compiled_module_default_params(oop);
+  oop mm_compiled_module_aliases(oop);
 
   oop mm_new(oop vt, oop delegate, number payload);
 
@@ -48,6 +49,7 @@ public:
   oop mm_module_entry(oop imodule, number idx);
   oop mm_module_dictionary(oop imodule);
   oop mm_module_get_cmod(oop imodule);
+  oop mm_module_get_param(oop imodule, number idx);
 
   bool mm_is_string(oop);
   oop mm_string_new(const char*);

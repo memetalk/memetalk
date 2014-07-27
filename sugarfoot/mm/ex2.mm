@@ -1,4 +1,5 @@
-.preamble(print)
+.preamble(test)
+  [print] <= test;
 .code
 
 

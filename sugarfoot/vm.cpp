@@ -42,6 +42,8 @@ void VM::dump_prime_info() {
 }
 
 int VM::start(char* filepath) {
+  _process = new Process(this);
+
   _core_image->load();
   // dump_prime_info();
 
@@ -49,9 +51,8 @@ int VM::start(char* filepath) {
 
   init_primitives(this);
 
-  _process = new Process(this);
   oop retval = _process->run(imod, new_symbol("main"));
-  oop retval_str = _process->do_send(retval, new_symbol("toString"));
+  oop retval_str = _process->do_send_0(retval, new_symbol("toString"));
   debug() << "RETVAL: " << _mmobj->mm_string_cstr(retval_str) << endl;
   return 0;
 }
