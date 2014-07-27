@@ -70,7 +70,7 @@ obj_function :obj = constructor(obj)
                   | function_definition(obj)
 
 
-body :fnobj = [(expr(fnobj)+) ['end-body']] -> fnobj.emit_return_this()
+body :fnobj = [(expr(fnobj)*) ['end-body']] -> fnobj.emit_return_this()
             | [['primitive' ['literal-string' :name]]:ast (:ignore)*]   -> fnobj.set_primitive(name)
 
 exprs :fnobj = [expr(fnobj)*]
