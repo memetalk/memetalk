@@ -54,6 +54,11 @@ oop MMCImage::instantiate_class(oop class_name, oop cclass, oop cclass_dict, std
   char* super_name_str = _mmobj->mm_string_cstr(super_name);
   debug() << "Super " << super_name_str << endl;
 
+  oop cmod_params_list =   _mmobj->mm_compiled_module_params(_compiled_module);
+  oop cmod_aliases_dict = _mmobj->mm_compiled_module_aliases(_compiled_module);
+  number num_params = _mmobj->mm_list_size(
+    _mmobj->mm_compiled_module_params(_compiled_module));
+
   oop super_class = NULL;
   if (mod_classes.find(super_name_str) != mod_classes.end()) {
     debug() << "Super class already instantiated" << endl;
@@ -61,8 +66,16 @@ oop MMCImage::instantiate_class(oop class_name, oop cclass, oop cclass_dict, std
   } else if (_mmobj->mm_dictionary_has_key(cclass_dict, super_name)) {
     debug() << "Super class not instantiated. recursively instantiate it" << endl;
     super_class = instantiate_class(super_name, _mmobj->mm_dictionary_get(cclass_dict, super_name), cclass_dict, mod_classes, imodule);
+  } else if(_mmobj->mm_dictionary_has_key(cmod_aliases_dict, super_name)) {
+    super_class = _mmobj->mm_module_get_param(
+      imodule, _mmobj->mm_dictionary_index_of(cmod_aliases_dict, super_name) + num_params);
+    debug() << "Super class is module alias: " << super_class << endl;
   }
-  //else if (super_name in module arguments) {
+  else if (_mmobj->mm_list_index_of(cmod_params_list, super_name) != -1) {
+    super_class = _mmobj->mm_module_get_param(
+      imodule, _mmobj->mm_list_index_of(cmod_params_list, super_name));
+    debug() << "Super class is module parameter: " << super_class << endl;
+  }
   else if (_core_image->has_class(super_name_str)) {
     debug() << "Super class got from super module (core)" << endl;
     super_class = _core_image->get_prime(super_name_str);

@@ -212,6 +212,18 @@ oop MMObj::mm_dictionary_get(oop dict, oop key) {
   return NULL;
 }
 
+number MMObj::mm_dictionary_index_of(oop dict, oop key) {
+  assert( *(oop*) dict == _core_image->get_prime("Dictionary"));
+
+  number size = mm_dictionary_size(dict);
+  for(int i = 0; i < size; i++) {
+    if (mm_dictionary_entry_key(dict, i) == key) {
+      return i;
+    }
+  }
+  return -1;
+}
+
 
 oop MMObj::mm_dictionary_entry_key(oop dict, int idx) {
   assert( *(oop*) dict == _core_image->get_prime("Dictionary"));

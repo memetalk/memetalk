@@ -42,7 +42,7 @@ public:
   void mm_dictionary_set(oop dict, int idx, oop key, oop value);
   bool mm_dictionary_has_key(oop dict, oop key);
   oop mm_dictionary_get(oop dict, oop key);
-
+  number mm_dictionary_index_of(oop dict, oop key);
 
   void mm_module_set_dictionary(oop imodule, oop imod_dict);
   void mm_module_set_module_argument(oop imodule, oop arg, number idx);
