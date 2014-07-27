@@ -29,18 +29,6 @@ class Object(Entry):
     def label(self):
         return self.name
 
-    def new_function(self, name, params):
-        d = [s for s in self.slots if s['type'] == 'dict']
-        if len(d) == 0:
-            dslot = {"type":"dict", name: "dict", 'value':{}}
-            self.slots.insert(2,dslot)
-        else:
-            dslot = d[0]
-
-        fn = CompiledFunction(self, self, name, params)
-        dslot['value'][name] = fn
-        return fn
-
     def add_slot_literal_array(self, name, value):
         if len(value) > 0:
             raise Exception('todo')
@@ -114,6 +102,48 @@ class Object(Entry):
         self.oop = oop
         return oop
 
+## these need to know the CompiledFunction owner (which s Object_CompiledClass)
+
+class Object_ObjectBehavior(Object):
+    def new_ctor(self, name, params):
+        owner = self.imod.object_by_name('Object_CompiledClass')
+        d = [s for s in self.slots if s['type'] == 'dict']
+        if len(d) == 0:
+            dslot = {"type":"dict", name: "dict", 'value':{}}
+            self.slots.insert(2,dslot) #dict is slot in idx==2
+        else:
+            dslot = d[0]
+
+        fn = CompiledFunction(self.imod.cmod, owner, name, params, ctor=True)
+        dslot['value'][name] = fn
+        return fn
+
+    def new_function(self, name, params):
+        owner = self.imod.object_by_name('Object_CompiledClass')
+        d = [s for s in self.slots if s['type'] == 'dict']
+        if len(d) == 0:
+            dslot = {"type":"dict", name: "dict", 'value':{}}
+            self.slots.insert(2,dslot) #dict is slot in idx==2
+        else:
+            dslot = d[0]
+
+        fn = CompiledFunction(self.imod.cmod, owner, name, params)
+        dslot['value'][name] = fn
+        return fn
+
+class Object_Object(Object):
+    def new_function(self, name, params):
+        owner = self.imod.object_by_name('Object_CompiledClass')
+        d = [s for s in self.slots if s['type'] == 'dict']
+        if len(d) == 0:
+            dslot = {"type":"dict", name: "dict", 'value':{}}
+            self.slots.insert(2,dslot) #dict is slot in idx==2
+        else:
+            dslot = d[0]
+
+        fn = CompiledFunction(self.imod.cmod, self, name, params)
+        dslot['value'][name] = fn
+        return fn
 
 class Behavior(Entry):
     def __init__(self, name, parent_name): #, dictionary):
@@ -868,6 +898,9 @@ class CoreModule(Entry):
         self.classes = []
         self.objects = []
 
+    def object_by_name(self, name):
+        return [obj for obj in self.objects if obj.name == name][0]
+
     def append_class(self, klass):
         self.classes.append(klass)
 
@@ -956,7 +989,12 @@ class CoreCompiledModule(CompiledModule):
         return klass
 
     def new_object(self, name):
-        obj = Object(name, self.imod)
+        if name == 'Object_Behavior':
+            obj = Object_ObjectBehavior(name, self.imod)
+        elif name == 'Object':
+            obj = Object_Object(name, self.imod)
+        else:
+            obj = Object(name, self.imod)
         self.imod.append_object(obj)
         return obj
 

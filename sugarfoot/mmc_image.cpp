@@ -92,6 +92,8 @@ oop MMCImage::instantiate_class(oop class_name, oop cclass, oop cclass_dict, std
   mod_classes[cname] = klass;
   debug() << "User class " << cname << " = "
           << klass << " behavior: " << class_behavior
+          << " super_class: " << super_class
+          << " compiled_class: " << cclass
           << " dict: " << funs_dict
           << " own_dict: " << class_funs_dict
           << endl;

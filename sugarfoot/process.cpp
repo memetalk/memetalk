@@ -136,6 +136,7 @@ oop Process::alloc_instance(oop klass) {
 }
 
 oop Process::ctor_rdp_for(oop rp, oop cp) {
+  debug() << "ctor_rdp_for rp: " << rp << ", cp: " << cp << endl;
   if (!rp) {
     bail("no rdp for ctor!");
   }

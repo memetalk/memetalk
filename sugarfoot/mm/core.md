@@ -12,11 +12,24 @@
 //    size: 0;
   end
 
+  object Object_CompiledClass
+    _vt: CompiledClass; //declared below
+    _delegate: null;
+    name: "Object";
+    super_class_name: "";
+    fields: [];
+    methods: {};
+    own_methods: {};
+  end
+
   object Object_Behavior
     _vt: Behavior;
     _delegate: null;
     size: 0;
     functions {
+      init new: fun() {
+        return this;
+      }
        // id: fun() {
        //   <primitive "id">
        // }
@@ -27,16 +40,6 @@
          <primitive "equal">
        }
     }
-  end
-
-  object Object_CompiledClass
-    _vt: CompiledClass; //declared below
-    _delegate: null;
-    name: "Object";
-    super_class_name: "";
-    fields: [];
-    methods: {};
-    own_methods: {};
   end
 
   object Object
