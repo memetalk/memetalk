@@ -1,7 +1,7 @@
 # Entry points:
 #
 #   -sf-vm [default]: builds the VM
-#   -clean: deletes the VM binary
+#   -clean: deletes the VM binary and mmc files
 #
 #   -core: builds the core.img file
 #   -memetalk: build the compiler, VM and core image
