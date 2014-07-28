@@ -10,8 +10,11 @@
 #include <string>
 #include <iostream>
 #include <sstream>
+#include <boost/filesystem.hpp>
 
-static int prim_print(Process* proc) {
+namespace fs = ::boost::filesystem;
+
+static int prim_io_print(Process* proc) {
   oop obj = *((oop*) proc->fp() - 1);
 
   debug() << "---- prim_print" << endl;
@@ -274,9 +277,40 @@ static int prim_test_get_module_function(Process* proc) {
   return 0;
 }
 
+static
+void get_mm_files(const fs::path& root, std::vector<std::string>& ret) {
+  if (!fs::exists(root)) return;
+
+  if (fs::is_directory(root)) {
+    fs::directory_iterator it(root);
+    fs::directory_iterator endit;
+    while(it != endit) {
+      if (fs::is_regular_file(*it) and it->path().extension() == ".mmc")
+      {
+        ret.push_back(it->path().filename().string());
+      }
+      ++it;
+    }
+  }
+}
+
+static int prim_test_files(Process* proc) {
+  std::vector<std::string> ret;
+  get_mm_files("./tests", ret);
+
+  oop list = proc->mmobj()-> mm_list_new_empty();
+
+  for(std::vector<std::string>::iterator it = ret.begin(); it != ret.end(); it++) {
+    oop str = proc->mmobj()->mm_string_new((*it).c_str());
+    proc->mmobj()->mm_list_append(list, str);
+  }
+
+  proc->stack_push(list);
+  return 0;
+}
 
 void init_primitives(VM* vm) {
-  vm->register_primitive("print", prim_print);
+  vm->register_primitive("io_print", prim_io_print);
 
   vm->register_primitive("behavior_to_string", prim_behavior_to_string);
 
@@ -309,4 +343,5 @@ void init_primitives(VM* vm) {
 
   vm->register_primitive("test_import", prim_test_import);
   vm->register_primitive("test_get_module_function", prim_test_get_module_function);
+  vm->register_primitive("test_files", prim_test_files);
 }

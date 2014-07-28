@@ -166,15 +166,16 @@ void Process::basic_new_and_load() {
   }
 }
 
-void Process::setup_ep(oop fun) {
+void Process::setup_ep(oop fun, oop recv, oop drecv) {
   number params = _mmobj->mm_function_get_num_params(fun);
   number size = _mmobj->mm_function_get_num_locals_or_env(fun);
   _ep = (oop) calloc(sizeof(oop), size + 2); //+2: space for rp, dp
   debug() << "Allocated ep: " << _ep << " - " << " size: " << size
-          << " params: " << params << endl;
+          << " params: " << params
+          << " rp/dp: "<< recv << " " << drecv << endl;
 
-  ((oop*)_ep)[0] = _rp;
-  ((oop*)_ep)[1] = _dp;
+  ((oop*)_ep)[0] = recv;
+  ((oop*)_ep)[1] = drecv;
 
   copy_params_to_env(params, _mmobj->mm_function_get_env_offset(fun));
 }
@@ -212,12 +213,14 @@ void Process::load_fun(oop recv, oop drecv, oop fun, bool should_allocate) {
                        _mmobj->mm_function_get_env_offset(fun));
   } else {
     if (_mmobj->mm_function_uses_env(fun)) {
-      setup_ep(fun);
+      setup_ep(fun, recv, drecv);
+      _rp = NULL; //to ease debug
+      _dp = NULL;
     } else {
       _ep = NULL;
+      _rp = recv;
+      _dp = drecv;
     }
-    _rp = recv;
-    _dp = drecv;
   }
 
   _cp = fun;
@@ -399,8 +402,13 @@ void Process::dispatch(int opcode, int arg) {
         stack_push(*(_dp + arg + 2));
         break;
       case PUSH_THIS:
-        debug() << "PUSH_THIS " << arg << " " << _rp << endl;
-        stack_push(_rp);
+        if (_ep == NULL) {
+          debug() << "PUSH_THIS " << arg << " " << _rp << endl;
+          stack_push(_rp);
+        } else {
+          debug() << "PUSH_THIS [env] " << arg << " " << ((oop*)_ep)[0] << endl;
+          stack_push(((oop*)_ep)[0]);
+        }
         break;
       case PUSH_ENV:
         debug() << "PUSH_ENV " << arg << " -- " << _ep << " " << (oop*)_ep[arg+2] << endl;//+2: skip dp,rp
@@ -420,8 +428,13 @@ void Process::dispatch(int opcode, int arg) {
         unload_fun_and_return(val);
         break;
       case RETURN_THIS:
-        debug() << "RETURN_THIS " << _rp << endl;
-        unload_fun_and_return(_rp);
+        if (_ep == NULL) {
+          debug() << "RETURN_THIS " << _rp << endl;
+          unload_fun_and_return(_rp);
+        } else {
+          debug() << "RETURN_THIS [env] " << arg << " " << ((oop*)_ep)[0] << endl;
+          unload_fun_and_return(((oop*)_ep)[0]);
+        }
         break;
       case POP:
         val =stack_pop();

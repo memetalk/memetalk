@@ -49,7 +49,7 @@ private:
 
   oop ctor_rdp_for(oop rp, oop cp);
 
-  void setup_ep(oop);
+  void setup_ep(oop, oop, oop);
   void copy_params_to_env(number, number);
 
   void dispatch(int, int);

@@ -76,10 +76,10 @@ class MMC(object):
 
         return mmc
 
-    def dump(self):
+    def dump(self, filepath):
         vmem = comp_vmemory.CompVirtualMemory()
         mmc = self.create_mmc_struct(vmem)
-        with open(self.cmodule.name + ".mmc", "w") as fp:
+        with open(filepath[:-2] + "mmc", "w") as fp:
             # header
             fp.write(bits.pack_word(mmc['header']['magic_number']))
             fp.write(bits.pack_word(mmc['header']['ot_size']))
@@ -141,7 +141,7 @@ class Compiler(ASTBuilder):
         self.do_parse(self.parser)
 
         mmc = MMC(self.cmodule)
-        mmc.dump()
+        mmc.dump(filepath)
 
     def new_module(self):
         module_name =  os.path.splitext(os.path.basename(self.filepath))[0]
