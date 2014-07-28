@@ -1,7 +1,7 @@
 .license
 .endlicense
 
-.preamble()
+.preamble(test)
 
 .code
 
@@ -16,32 +16,32 @@ main: fun() {
     try {
       Exception.throw("msg1");
     } catch(Fail e) {
-      assert(false, "uncaught");
+      test.assert(false, "uncaught");
     }
   } catch(e) {
-    assert(true, "catch all 1");
+    test.assert(true, "catch all 1");
   }
 
   try {
     try {
       Fail2.throw("msg2");
     } catch(Fail e) {
-      assert(false, "uncaught");
+      test.assert(false, "uncaught");
     }
   } catch(e) {
-    assert(true, "catch all 2");
+    test.assert(true, "catch all 2");
   }
 
   try {
     Fail.throw("msg3");
   } catch(Fail e) {
-    assert(true, "Caught 1");
+    test.assert(true, "Caught 1");
   }
 
   try {
     Fail.throw("msg4");
   } catch(Exception e) {
-    assert(true, "Caught 2");
+    test.assert(true, "Caught 2");
   }
 
   try {

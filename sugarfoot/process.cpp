@@ -553,7 +553,7 @@ int Process::execute_primitive(std::string name) {
 
 
 void Process::unwind_with_exception(oop e) {
-  debug() << "** unwind_with_exception " << _cp << endl;
+  debug() << "** unwind_with_exception e: " << e << " on cp: " << _cp << endl;
   if (_cp == NULL) {
     oop str = do_send_0(e, _vm->new_symbol("toString"));
     std::cerr << "Terminated with exception: \""
@@ -588,10 +588,13 @@ void Process::unwind_with_exception(oop e) {
 
   number instr = _ip - code;
 
-  debug() << "RAISE " << instr << " " << try_block << " " << catch_block << " " << type_oop
-          << " " << _mmobj->is_subtype(_mmobj->mm_object_vt(e), type_oop) << endl;
+  debug() << "RAISE instr: " << instr << " try: " << try_block
+          << " catch: " << catch_block << " type: " << type_oop << endl;
+
+  bool is_subtype = _mmobj->is_subtype(_mmobj->mm_object_vt(e), type_oop);
+  debug() << "subtype == " << is_subtype  << endl;
   if (instr >= try_block && instr < catch_block &&
-      (type_oop == MM_NULL || _mmobj->is_subtype(_mmobj->mm_object_vt(e), type_oop))) {
+      (type_oop == MM_NULL || is_subtype)) {
     debug() << "CAUGHT " << endl;
     _ip = code + catch_block;
     return;

@@ -15,15 +15,15 @@ main: fun() {
   var a = 0;
   f(fun() {
     try {
-      Exception.throw(10);
+      Exception.throw("XX");
       test.assert(false, "Shouldn't execute here");
-    } catch(e) {
+    } catch(Exception e) {
       a = a + 1;
     }
     a = a + 1;
   });
   a = a + 1;
-  assert(a == 3, "try/catch inside closure");
+  test.assert(a == 3, "try/catch inside closure");
 }
 
 // -- module classes --

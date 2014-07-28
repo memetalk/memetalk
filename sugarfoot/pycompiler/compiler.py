@@ -123,7 +123,7 @@ class Compiler(ASTBuilder):
                 print err.formatError(''.join(parser.input.data))
             else:
                 print err, traceback.format_exc()
-            sys.exit(1)
+            raise
 
     def compile(self, filepath):
         self.filepath = filepath

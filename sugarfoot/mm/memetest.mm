@@ -9,6 +9,30 @@ print: fun(arg) {
   <primitive "io_print">
 }
 
+//outside of Exception hierarchy, so
+//the catch blocks of tests won't suppress it
+class AssertionException
+  fields: message;
+  init new: fun(message) {
+    @message = message;
+  }
+  instance_method message: fun() {
+    return @message;
+  }
+  instance_method throw: fun() {
+    <primitive "exception_throw">
+  }
+  instance_method message: fun() {
+    return @message;
+  }
+  instance_method toString: fun() {
+    return this.message.toString();
+  }
+  class_method throw: fun(msg) {
+    this.new(msg).throw;
+  }
+end
+
 class Test
 class_method test_files: fun() {
   <primitive "test_files">
@@ -21,9 +45,9 @@ class_method test_import: fun(filepath, args) {
 class_method assert: fun(x,desc) {
   if (!x) {
     if (desc) {
-      Exception.throw("assertion failed: '" + desc + "'");
+      AssertionException.throw("assertion failed: '" + desc + "'");
     } else {
-      Exception.throw("assertion failed");
+      AssertionException.throw("assertion failed");
     }
   }
 }
