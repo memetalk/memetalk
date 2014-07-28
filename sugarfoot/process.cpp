@@ -154,8 +154,8 @@ oop Process::ctor_rdp_for(oop rp, oop cp) {
   }
 }
 
-void Process::basic_new_and_load() {
-  oop klass = _rp;
+void Process::basic_new_and_load(oop recv) {
+  oop klass = recv;
   oop instance = alloc_instance(klass);
   debug() << "basic_new: " << instance << endl;
   _rp = instance;
@@ -228,7 +228,7 @@ void Process::load_fun(oop recv, oop drecv, oop fun, bool should_allocate) {
   debug() << "MP for fun load: " << _mp << endl;
 
   if (_mmobj->mm_function_is_ctor(fun) and should_allocate) {
-    basic_new_and_load();
+    basic_new_and_load(recv);
   }
 
   if (_mmobj->mm_function_is_prim(fun)) {
@@ -570,34 +570,38 @@ void Process::unwind_with_exception(oop e) {
     return;
   }
 
+  //exception frames are lexically ordered,
+  //so iterating normally we always reach the innermost frame first
   oop exception_frames = _mmobj->mm_function_exception_frames(_cp);
-  oop frame_begin = exception_frames + (5 * (exception_frames_count-1));
+  for(int i = 0; i < exception_frames_count; i++) {
+    oop frame_begin = exception_frames + (4 * i);
 
-  word try_block =  *(word*) frame_begin;
-  word catch_block = *(word*) (frame_begin + 1);
-  oop str_type_oop = *(oop*) (frame_begin + 3);
+    word try_block =  *(word*) frame_begin;
+    word catch_block = *(word*) (frame_begin + 1);
+    oop str_type_oop = *(oop*) (frame_begin + 3);
 
-  oop type_oop;
-  if (str_type_oop == MM_NULL) {
-    type_oop  = MM_NULL;
-  } else {
-    debug() << "fetching exception type for name: " << str_type_oop << endl;
-    type_oop = do_send_0(_mp, _vm->new_symbol(str_type_oop));
-    debug() << "fetching exception type got " << type_oop << endl;;
-  }
+    oop type_oop;
+    if (str_type_oop == MM_NULL) {
+      type_oop  = MM_NULL;
+    } else {
+      debug() << "fetching exception type for name: " << str_type_oop << endl;
+      type_oop = do_send_0(_mp, _vm->new_symbol(str_type_oop));
+      debug() << "fetching exception type got " << type_oop << endl;;
+    }
 
-  number instr = _ip - code;
+    number instr = _ip - code;
 
-  debug() << "RAISE instr: " << instr << " try: " << try_block
-          << " catch: " << catch_block << " type: " << type_oop << endl;
+    debug() << "RAISE instr: " << instr << " try: " << try_block
+            << " catch: " << catch_block << " type: " << type_oop << endl;
 
-  bool is_subtype = _mmobj->is_subtype(_mmobj->mm_object_vt(e), type_oop);
-  debug() << "subtype == " << is_subtype  << endl;
-  if (instr >= try_block && instr < catch_block &&
-      (type_oop == MM_NULL || is_subtype)) {
-    debug() << "CAUGHT " << endl;
-    _ip = code + catch_block;
-    return;
+    bool is_subtype = _mmobj->is_subtype(_mmobj->mm_object_vt(e), type_oop);
+    debug() << "subtype == " << is_subtype  << endl;
+    if (instr >= try_block && instr < catch_block &&
+        (type_oop == MM_NULL || is_subtype)) {
+      debug() << "CAUGHT " << endl;
+      _ip = code + catch_block;
+      return;
+    }
   }
 
   pop_frame();

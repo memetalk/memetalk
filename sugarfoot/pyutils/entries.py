@@ -776,7 +776,8 @@ class CompiledFunction(Entry):
         self.bytecodes.append('push_field', idx)
 
     def bind_catch_var(self, name):
-        self.var_declarations.add(self, name)
+        if not self.var_declarations.has(self, name):
+            self.var_declarations.add(self, name)
         self.emit_local_assignment(name)
 
     def emit_catch_jump(self):
