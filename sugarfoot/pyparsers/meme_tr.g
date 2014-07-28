@@ -77,6 +77,8 @@ exprs :fnobj = [expr(fnobj)*]
 
 expr :fnobj = ['var-def' :id expr(fnobj)]              -> fnobj.emit_var_decl(id)
             | ['return' expr(fnobj)]                   -> fnobj.emit_return_top()
+            | ['return-null']                           -> fnobj.emit_return_null()
+            | ['return-top']                           -> fnobj.emit_return_top()
             | ['super-ctor-send' :s args(fnobj):arity] -> fnobj.emit_super_ctor_send(s, arity)
             | ['send-or-local-call' :name args(fnobj):arity]         -> fnobj.emit_send_or_local_call(name, arity)
             | ['send' :e :s args(fnobj):arity] apply('expr' fnobj e) -> fnobj.emit_send(s, arity)
@@ -112,7 +114,7 @@ expr :fnobj = ['var-def' :id expr(fnobj)]              -> fnobj.emit_var_decl(id
               -> fnobj.emit_try_catch(label_begin_try, label_begin_catch, end_pos, cp[0], cp[1])
             | ['fun-literal'  ['params' :p]
                !(fnobj.new_closure(p)):fn
-               ['body' [expr(fn)*] !(fn.emit_return_top())]] -> fnobj.emit_push_closure(fn)
+               ['body' [expr(fn)*]]] -> fnobj.emit_push_closure(fn)
             | ['literal-array'  :e apply('exprs' fnobj e)] -> fnobj.emit_push_list(len(e))
             | ['index' :e expr(fnobj) apply('expr' fnobj e)]    -> fnobj.emit_push_index()
             | assignment(fnobj)

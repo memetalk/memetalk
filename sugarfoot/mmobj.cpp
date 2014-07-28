@@ -94,6 +94,19 @@ oop MMObj::mm_list_new_empty() {
   return obj;
 }
 
+oop MMObj::mm_list_new(number size) {
+  oop obj = (oop) malloc(sizeof(word) * 4); // vt, delegate, size, elements frame
+
+  oop frame = (oop) calloc(sizeof(oop), size);
+
+  ((word**) obj)[0] = _core_image->get_prime("List");
+  ((word**) obj)[1] = mm_object_new();
+  ((word*) obj)[2] = (word) size;
+  ((word**) obj)[3] = frame;
+  return obj;
+}
+
+
 number MMObj::mm_list_size(oop list) {
   assert( *(oop*) list == _core_image->get_prime("List"));
   return (number) ((word*)list)[2];
@@ -123,11 +136,6 @@ oop MMObj::mm_list_frame(oop list) {
   return ((oop*)list)[3];
 }
 
-void MMObj::mm_list_set_size(oop list, number size) {
-  assert( *(oop*) list == _core_image->get_prime("List"));
-  ((word*)list)[2] = size;
-}
-
 void MMObj::mm_list_set_frame(oop list, oop begin) {
   assert( *(oop*) list == _core_image->get_prime("List"));
   ((oop*)list)[3] = begin;
@@ -152,19 +160,61 @@ number MMObj::mm_list_index_of(oop list, oop elem) {
   return -1;
 }
 
-// oop MMObj::mm_list_new(number size, oop* first_element) {
-//   oop obj = (oop) malloc(sizeof(word) * (3+size)); // vt, delegate, size
+void MMObj::mm_list_prepend(oop list, oop element) {
+  assert( *(oop*) list == _core_image->get_prime("List"));
+  number size = mm_list_size(list);
 
-//   ((word**) obj)[0] = _core_image->get_prime("List");
-//   ((word**) obj)[1] = mm_object_new();
-//   ((word**) obj)[2] = size;
-//   for (int i = 0; i < size; i++) {
-//     ((oop*)obj)[2+i] = *first_element;
-//     first_element++;
-//   }
-//   return obj;
+  debug() << "List::prepend " << element << endl;
+
+  oop begin = (oop) malloc(sizeof(oop) * (size + 1));
+  if (size > 0) {
+    oop old_frame = mm_list_frame(list);
+    debug() << "moving mem from " << old_frame << " to " << begin << endl;
+    for (int i = 0; i < size; i++) {
+      begin[i+1] = old_frame[i];
+    }
+    free(old_frame);
+    debug() << "moving mem got " << begin << endl;
+  }
+
+  ((oop*)begin)[0] = element;
+
+  ((word*)list)[2] = size + 1;
+
+  mm_list_set_frame(list, begin);
+}
+
+void MMObj::mm_list_append(oop list, oop element) {
+  assert( *(oop*) list == _core_image->get_prime("List"));
+  number size = mm_list_size(list);
+
+  debug() << "List::append " << element << endl;
+
+  oop begin;
+  if (size == 0) {
+    begin = (oop) calloc(sizeof(oop), size + 1);
+    debug() << "alloc " << begin << " " << size + 1 << endl;
+  } else {
+    begin = mm_list_frame(list);
+    debug() << "reallocng " << begin << " " << size + 1 << endl;
+    begin = (oop) realloc(begin, sizeof(oop) * (size + 1));
+    debug() << "realloced " << begin << endl;
+  }
+
+  ((oop*)begin)[size] = element;
+
+
+  ((word*)list)[2] = size + 1;
+  mm_list_set_frame(list, begin);
+}
+
+// void MMObj::mm_list_set(oop list, oop element, number idx) {
+//   assert( *(oop*) list == _core_image->get_prime("List"));
+//   assert(idx < mm_list_size(list));
+
+//   oop begin = mm_list_frame(list);
+//   * (oop*) (begin + idx) = element;
 // }
-
 
 oop MMObj::mm_dictionary_new(int num_entries) {
   int basic = 3; //vt, delegate, size

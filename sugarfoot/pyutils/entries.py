@@ -625,6 +625,10 @@ class CompiledFunction(Entry):
     def emit_return_top(self):
         self.bytecodes.append("ret_top",0)
 
+    def emit_return_null(self):
+        self.bytecodes.append('push_bin', 0)
+        self.bytecodes.append("ret_top",0)
+
     def emit_return_this(self):
         self.bytecodes.append("ret_this",0)
 

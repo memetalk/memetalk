@@ -102,11 +102,8 @@ static int prim_exception_throw(Process* proc) {
 }
 
 static int prim_list_new(Process* proc) {
-  oop self = proc->mmobj()->mm_new(proc->vm()->get_prime("List"),
-                                   proc->mmobj()->mm_object_new(),
-                                   2); //1=len, 2=firs element
+  oop self = proc->mmobj()->mm_list_new_empty();
 
-  ((word*)self)[2] = 0;
   debug() << "List::new " << self << endl;
   proc->stack_push(self);
   return 0;
@@ -116,25 +113,8 @@ static int prim_list_append(Process* proc) {
   oop self =  proc->dp();
   oop element = *((oop*) proc->fp() - 1);
 
-  number size = proc->mmobj()->mm_list_size(self);
+  proc->mmobj()->mm_list_append(self, element);
 
-  debug() << "List::append " << size << endl;
-
-  oop begin;
-  if (size == 0) {
-    begin = (oop) calloc(sizeof(oop), size + 1);
-    debug() << "alloc " << begin << " " << size + 1 << endl;
-  } else {
-    begin = proc->mmobj()->mm_list_frame(self);
-    debug() << "reallocng " << begin << " " << size + 1 << endl;
-    begin = (oop) realloc(begin, sizeof(oop) * (size + 1));
-    debug() << "realloced " << begin << endl;
-  }
-
-  ((oop*)begin)[size] = element;
-
-  proc->mmobj()->mm_list_set_size(self, size + 1);
-  proc->mmobj()->mm_list_set_frame(self, begin);
   proc->stack_push(self);
   return 0;
 }
@@ -143,25 +123,7 @@ static int prim_list_prepend(Process* proc) {
   oop self =  proc->dp();
   oop element = *((oop*) proc->fp() - 1);
 
-  number size = proc->mmobj()->mm_list_size(self);
-
-  debug() << "List::prepend " << size << endl;
-
-  oop begin = (oop) malloc(sizeof(oop) * (size + 1));
-  if (size > 0) {
-    oop old_frame = proc->mmobj()->mm_list_frame(self);
-    debug() << "moving mem from " << old_frame << " to " << begin << endl;
-    for (int i = 0; i < size; i++) {
-      begin[i+1] = old_frame[i];
-    }
-    free(old_frame);
-    debug() << "moving mem got " << begin << endl;
-  }
-
-  ((oop*)begin)[0] = element;
-
-  proc->mmobj()->mm_list_set_size(self, size + 1);
-  proc->mmobj()->mm_list_set_frame(self, begin);
+  proc->mmobj()->mm_list_prepend(self, element);
   proc->stack_push(self);
   return 0;
 }

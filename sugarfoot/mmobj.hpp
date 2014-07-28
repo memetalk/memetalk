@@ -25,13 +25,16 @@ public:
   oop mm_object_vt(oop);
   oop mm_object_delegate(oop);
 
+  oop mm_list_new(number size);
   oop mm_list_new_empty();
   number mm_list_size(oop list);
   number mm_list_index_of(oop list, oop elem);
   oop mm_list_entry(oop list, number idx);
   oop mm_list_frame(oop);
-  void mm_list_set_size(oop, number);
   void mm_list_set_frame(oop, oop);
+  // void mm_list_set(oop list, oop element, number idx);
+  void mm_list_prepend(oop list, oop element);
+  void mm_list_append(oop list, oop element);
 
   // oop mm_list_new(number size, oop*);
 

@@ -253,7 +253,8 @@ void Process::load_fun(oop recv, oop drecv, oop fun, bool should_allocate) {
 }
 
 oop Process::do_send_0(oop recv, oop selector) {
-  debug() << "-- begin do_send_0, recv: " << recv << ", selector: " << selector << endl;
+  debug() << "-- begin do_send_0, recv: " << recv
+          << ", selector: " << _mmobj->mm_symbol_cstr(selector) << endl;
 
   std::pair<oop, oop> res = lookup(recv, _mmobj->mm_object_vt(recv), selector);
 
@@ -483,10 +484,11 @@ std::pair<oop, oop> Process::lookup(oop drecv, oop vt, oop selector) {
     bail("lookup FAILED!!!"); //todo: raise
   }
 
-  debug() << "lookup selector on vt: " << vt << " whose vt is " << _mmobj->mm_object_vt(*(oop*)vt) << endl;
+  // debug() << "lookup selector on vt: " << vt << " whose vt is " << _mmobj->mm_object_vt(*(oop*)vt) << endl;
 
   oop dict = _mmobj->mm_behavior_get_dict(vt);
-  debug() << "Getting key from dict " << dict << " vt: " << * (oop*) dict << endl;
+  debug() << "Process::lookup dict: " << dict
+          << " selector: " << _mmobj->mm_symbol_cstr(selector) << endl;
 
   if (_mmobj->mm_dictionary_has_key(dict, selector)) {
     oop fun = _mmobj->mm_dictionary_get(dict, selector);
