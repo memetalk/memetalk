@@ -25,7 +25,8 @@ sf-vm: $(CPP_FILES) $(HPP_FILES)
 
 clean:
 	rm -f sf-vm
-
+	rm mm/*.mmc
+	rm tests/*.mmc
 
 ############ Compiler Section ############
 
