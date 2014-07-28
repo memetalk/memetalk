@@ -471,7 +471,7 @@ void Process::dispatch(int opcode, int arg) {
         break;
       case JMP:
         debug() << "JMP " << arg << " " << endl;
-        _ip += (arg); //_ip already suffered a ++ in dispatch
+        _ip += (arg -1); //_ip already suffered a ++ in dispatch
         break;
       case JZ:
         val = stack_pop();
