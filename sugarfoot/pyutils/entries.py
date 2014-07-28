@@ -592,7 +592,9 @@ class CompiledFunction(Entry):
 
 
     def emit_push_var(self, name):
-        if self.has_env:
+        if self.has_env and \
+           (not self.identifier_is_module_scoped(name) and \
+            not self.identifier_is_prime(name)):
             idx = self.var_declarations.index(name)
             self.bytecodes.append("push_env",idx)
         elif self.identifier_is_param(name):
