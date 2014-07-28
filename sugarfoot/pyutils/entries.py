@@ -6,7 +6,15 @@ from . import (OrderedDict,
                FRAME_TYPE_BYTECODE_FRAME,
                FRAME_TYPE_EXCEPTIONS_FRAME)
 
-from . import behavior_label, cclass_label, class_label, cfun_label, fun_label, cmod_label, mod_label
+from . import (behavior_label,
+               cclass_label,
+               class_label,
+               cfun_label,
+               fun_label,
+               cmod_label,
+               mod_label,
+               closure_name)
+
 from pdb import set_trace as br
 
 class Entry(object):
@@ -532,7 +540,7 @@ class CompiledFunction(Entry):
 
     def new_closure(self, params):
         self.has_env = True
-        return CompiledFunction(self.cmod, self.owner, 'anonymous', params,
+        return CompiledFunction(self.cmod, self.owner, closure_name(), params,
                                 env_storage=self.var_declarations,
                                 is_top_level=False, outer_cfun=self)
 

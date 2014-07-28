@@ -66,6 +66,12 @@ def cclass_label(name):
 def class_label(name):
     return name # + SEP + "Class"
 
+_closures = 0
+def closure_name():
+    global _closures
+    _closures += 1
+    return '<anonymous ' + str(_closures) + '>'
+
 _cfun_id = 0
 def cfun_label(owner_label, name, is_method):
     global _cfun_id
