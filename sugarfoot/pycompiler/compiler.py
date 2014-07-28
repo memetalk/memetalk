@@ -148,4 +148,5 @@ class Compiler(ASTBuilder):
         self.cmodule = entries.CompiledModule(module_name)
         return self.cmodule
 
-Compiler().compile(sys.argv[1])
+for path in sys.argv[1:]:
+    Compiler().compile(path)

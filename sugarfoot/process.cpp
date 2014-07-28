@@ -239,10 +239,12 @@ void Process::load_fun(oop recv, oop drecv, oop fun, bool should_allocate) {
       oop value = stack_pop(); //shit
       unload_fun_and_return(value);
     } else if (ret == PRIM_RAISED) {
-      oop exception_oop = stack_pop(); //shit
-      debug() << "prim returned RAISED " << exception_oop << endl;
+      oop ex_oop = stack_pop(); //shit
+      debug() << "prim returned RAISED " << ex_oop << endl;
       pop_frame();
-      unwind_with_exception(exception_oop);
+      unwind_with_exception(ex_oop);
+      debug() << "unwind_with_exception: " << ex_oop << endl;
+      stack_push(ex_oop); //we rely on compiler generating a pop to bind ex_oop to the catch var
     }
     return;
   }

@@ -24,18 +24,25 @@ char* read_mmc_file(const std::string& name_or_path, int* file_size) {
 
   std::string filepath = name_or_path;
 
-  if (filepath.substr(filepath.find_last_of(".") + 1) != "img" &&
-      filepath.substr(filepath.find_last_of(".") + 1) != "mmc") {
-    filepath = filepath + ".mmc";
-  }
-
-  file.open(filepath.c_str(), fstream::in | fstream::binary);
-  if (!file.good()) {
-    char* mmpath = getenv("MEME_PATH");
-    std::string base = mmpath == NULL ? "" : mmpath;
-    debug() << "failed to open " << name_or_path <<
-      " trying " << (base + filepath) << endl;
-    file.open((base + filepath).c_str(), fstream::in | fstream::binary);
+  debug() << "read_mmc_file: " << filepath << endl;
+  if (filepath[0] == '.' || filepath[0] == '/') { //relative or absolute path
+    file.open(filepath.c_str(), fstream::in | fstream::binary);
+  } else { //filename
+    if (filepath.substr(filepath.find_last_of(".") + 1) != "img" &&
+        filepath.substr(filepath.find_last_of(".") + 1) != "mmc") {
+      filepath = filepath + ".mmc";
+    }
+    file.open(filepath.c_str(), fstream::in | fstream::binary);
+    if (!file.good()) {
+      char* mmpath = getenv("MEME_PATH");
+      std::string base = mmpath == NULL ? "" : mmpath;
+      debug() << "failed to open " << name_or_path <<
+        " trying " << (base + filepath) << endl;
+      file.open((base + filepath).c_str(), fstream::in | fstream::binary);
+      if (!file.good()) {
+        bail("Unable to open file");
+      }
+    }
   }
 
   if (!file.is_open()) {

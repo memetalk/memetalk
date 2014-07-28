@@ -53,8 +53,8 @@ int VM::start(char* filepath) {
 
   oop retval = _process->run(imod, new_symbol("main"));
   oop retval_str = _process->do_send_0(retval, new_symbol("toString"));
-  debug() << "RETVAL: " << _mmobj->mm_string_cstr(retval_str) << endl;
-  return 0;
+  debug() << "RETVAL: " << retval << " => " << _mmobj->mm_string_cstr(retval_str) << endl;
+  return * (int*) (void*) &retval;
 }
 
 oop VM::new_symbol(const char* cstr) {

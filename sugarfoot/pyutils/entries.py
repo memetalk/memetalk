@@ -615,12 +615,12 @@ class CompiledFunction(Entry):
         if self.has_env:
             idx = self.var_declarations.index(name)
             self.bytecodes.append("pop_env",idx)
-        elif self.identifier_is_param(name):
-            idx = self.params.index(name)
-            self.bytecodes.append("pop_param", idx)
         elif self.identifier_is_decl(name):
             idx = self.var_declarations.index(name)
             self.bytecodes.append("pop_local", idx)
+        elif self.identifier_is_param(name):
+            idx = self.params.index(name)
+            self.bytecodes.append("pop_param", idx)
         else:
             raise Exception('local_assignment: undeclared ' + name)
 
@@ -747,6 +747,10 @@ class CompiledFunction(Entry):
     def emit_push_field(self, field):
         idx = self.owner.fields.index(field)
         self.bytecodes.append('push_field', idx)
+
+    def bind_catch_var(self, name):
+        self.var_declarations.add(self, name)
+        self.emit_local_assignment(name)
 
     def emit_catch_jump(self):
         self.bytecodes.append("jmp", 0)

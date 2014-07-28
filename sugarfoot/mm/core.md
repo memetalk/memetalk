@@ -177,8 +177,11 @@ class Exception
   instance_method throw: fun() {
     <primitive "exception_throw">
   }
-  instance_method toString: fun() {
+  instance_method message: fun() {
     return @message;
+  }
+  instance_method toString: fun() {
+    return this.message.toString();
   }
   class_method throw: fun(msg) {
     this.new(msg).throw;
