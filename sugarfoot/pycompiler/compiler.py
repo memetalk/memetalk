@@ -123,7 +123,7 @@ class Compiler(ASTBuilder):
                 print err.formatError(''.join(parser.input.data))
             else:
                 print err, traceback.format_exc()
-            raise
+            sys.exit(1)
 
     def compile(self, filepath):
         self.filepath = filepath
@@ -133,7 +133,7 @@ class Compiler(ASTBuilder):
 
         ast = self.do_parse(self.parser)[0]
 
-        print ast
+        # print ast
 
         self.parser = MemeTr([ast])
         self.parser.i = self

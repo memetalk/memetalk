@@ -6,10 +6,10 @@ using namespace std;
 
 void bail(const string& msg) {
   cerr << msg << "\n";
-  done();
+  bail();
 }
 
-void done() {
+void bail() {
   exit(1);
 }
 

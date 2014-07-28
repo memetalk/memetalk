@@ -558,7 +558,7 @@ void Process::unwind_with_exception(oop e) {
     oop str = do_send_0(e, _vm->new_symbol("toString"));
     std::cerr << "Terminated with exception: \""
               << _mmobj->mm_string_cstr(str) << "\"" << endl;
-    done();
+    bail();
   }
 
   bytecode* code = _mmobj->mm_function_get_code(_cp);

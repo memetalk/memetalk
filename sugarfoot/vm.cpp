@@ -47,7 +47,7 @@ int VM::start(char* filepath) {
   _core_image->load();
   // dump_prime_info();
 
-  oop imod = instantiate_module(filepath, MM_NULL);
+  oop imod = instantiate_module(filepath, _mmobj->mm_list_new_empty());
 
   init_primitives(this);
 

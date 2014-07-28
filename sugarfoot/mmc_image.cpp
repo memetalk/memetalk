@@ -122,7 +122,8 @@ void MMCImage::load_default_dependencies_and_assign_module_arguments(oop imodule
   for (int i = 0; i < dict_size; i++) {
     oop lhs_name = _mmobj->mm_dictionary_entry_key(default_params_dict, i);
     oop mod_name = _mmobj->mm_dictionary_entry_value(default_params_dict, i);
-    oop imd = _vm->instantiate_module(_mmobj->mm_string_cstr(mod_name), MM_NULL);
+    oop imd = _vm->instantiate_module(_mmobj->mm_string_cstr(mod_name),
+                                      _mmobj->mm_list_new_empty());
     number midx = _mmobj->mm_list_index_of(params_list, lhs_name);
     if (midx == -1) {
       bail("Could not bind unknown module parameter to default value");
@@ -179,6 +180,20 @@ void MMCImage::create_param_getters(oop imodule, oop imod_dict, oop params_list)
 }
 
 
+void MMCImage::check_module_arity(oop module_arguments_list) {
+  oop params = _mmobj->mm_compiled_module_params(_compiled_module);
+  number num_params = _mmobj->mm_list_size(params);
+
+  oop default_params_dict = _mmobj->mm_compiled_module_default_params(_compiled_module);
+  number dict_size = _mmobj->mm_dictionary_size(default_params_dict);
+  if (num_params != (dict_size + _mmobj->mm_list_size(module_arguments_list))) {
+    debug() << "module arity differ: "
+            << num_params << " != " <<
+      _mmobj->mm_list_size(module_arguments_list) << endl;
+    bail("module arity differ");
+  }
+}
+
 oop MMCImage::instantiate_module(oop module_arguments_list) {
 
   // word* cmod = (word*) _compiled_module;
@@ -195,6 +210,9 @@ oop MMCImage::instantiate_module(oop module_arguments_list) {
 
   oop params = _mmobj->mm_compiled_module_params(_compiled_module);
   number num_params = _mmobj->mm_list_size(params);
+
+
+  check_module_arity(module_arguments_list);
 
   oop aliases_dict = _mmobj->mm_compiled_module_aliases(_compiled_module);
   number num_aliases =  _mmobj->mm_dictionary_size(aliases_dict);
@@ -216,7 +234,7 @@ oop MMCImage::instantiate_module(oop module_arguments_list) {
   oop imod_dict = _mmobj->mm_dictionary_new(num_params + num_aliases + num_funs + num_classes); // num_classes -> getters
   _mmobj->mm_module_set_dictionary(imodule, imod_dict);
 
-  if (module_arguments_list != MM_NULL) {
+  if (_mmobj->mm_list_size(module_arguments_list) > 0) {
     assign_module_arguments(imodule, module_arguments_list);
   }
 

@@ -264,8 +264,8 @@ funliteral = spaces !(self.input.position):begin token("fun") params:p token("{"
              token("}") -> self.i.ast(begin, ['fun-literal', ["params", p],
                             ['body', body]])
 
-funliteral_body = !(self.input.position):begin stmt:x stmts:xs -> self.i.ast(begin, [x] + xs + [['return-null']])
-                | !(self.input.position):begin expr_ret:e      -> self.i.ast(begin, [e])
+funliteral_body = !(self.input.position):begin stmt:x stmts:xs expr:e -> self.i.ast(begin, [x] + xs + [e] + [['return-top']])
+                | !(self.input.position):begin stmt:x stmts:xs -> self.i.ast(begin, [x] + xs + [['return-null']])
                 | !(self.input.position):begin expr:e          -> self.i.ast(begin, [e, ['return-top']])
                 |  -> self.i.sint_ast(self.input.position,[self.i.sint_ast(self.input.position,['return-null'])])
 

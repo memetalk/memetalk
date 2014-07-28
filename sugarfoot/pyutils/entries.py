@@ -291,44 +291,59 @@ class CompiledClass(Entry):
 
 
 class VariableStorage(object):
-    def __init__(self):
-        self.variables = OrderedDict()
+    # requirements:
+    #
+    #  -add: requires current scope only (to check redeclaration)
+    #  -index: requires stack of vars to lookup lexically enclosed vars
+    #          ie. sibling closures with the same var name should use different locations
+    #          for it.
+    # -size/env_offset:  requires accumulated scopes
+
+    def __init__(self, cfun, outer_cfun=None, storage=None):
+        self.outer_cfun = outer_cfun
+        self.parent_storage = storage
+        if storage:
+            self.variables = storage.variables
+        else:
+            self.variables = OrderedDict()
+        self.variables[cfun] = []
+
+    def has(self, cfun, name):
+        try:
+            self.index(cfun, name)
+            return True
+        except Exception:
+            return False
 
     def add_names(self, cfun, params):
         for name in params:
             self.add(cfun, name)
 
     def add(self, cfun, name):
-        if cfun not in self.variables:
-            self.variables[cfun] = []
         if name in self.variables[cfun]:
             raise Exception('redeclaration of ' + name)
         self.variables[cfun].append(name)
-        return self.index(name)
+        return self.index(cfun, name)
 
-    def index(self, name):
-        if name not in self.names():
-            raise Exception("Undeclared " + name)
-
-        return lambda: self.names().index(name)
+    def index(self, cfun, name):
+        if name not in self.variables[cfun]:
+            if self.parent_storage is None:
+                raise Exception("Undeclared " + name)
+            else:
+                return self.parent_storage.index(self.outer_cfun, name)
+        else:
+            return lambda: self.env_offset(cfun) + self.variables[cfun].index(name)
 
     def total(self):
-        return len(self.names())
+        return len(self._flat(self.variables.values()))
+
+    def _flat(self, lst):
+        return reduce(lambda x, y: x + y, lst, [])
 
     def env_offset(self, cfun):
-        if len(self.variables) == 0:
-            return 0
+        idx = self.variables.keys().index(cfun)
+        return len(self._flat(self.variables.values()[:idx]))
 
-        offset = 0
-        for cf, varlist in self.variables.items():
-            if cf == cfun:
-                return offset
-            offset += len(varlist)
-        return offset
-        # raise Exception('Unexpected error')
-
-    def names(self):
-        return reduce(lambda x,y: x + y, self.variables.values(), [])
 
 class CompiledFunction(Entry):
     def __init__(self, cmod, owner, name, params, ctor=False, env_storage=None, is_top_level=True, outer_cfun=None):
@@ -346,10 +361,10 @@ class CompiledFunction(Entry):
 
         if env_storage:
             self.has_env = True
-            self.var_declarations = env_storage
+            self.var_declarations = VariableStorage(self, outer_cfun, env_storage)
         else:
             self.has_env = False
-            self.var_declarations = VariableStorage()
+            self.var_declarations = VariableStorage(self)
         self.var_declarations.add_names(self, params)
 
         self.literal_frame = []
@@ -511,7 +526,11 @@ class CompiledFunction(Entry):
             vmem.append_label_ref(self.outer_cfun.label())
 
         # local size or env size
-        vmem.append_int(self.var_declarations.total())
+        if self.is_top_level:
+            vmem.append_int(self.var_declarations.total())
+        else:
+            vmem.append_int(0) # closures do not need to allocate space in ep or stack
+
         # env offset
         vmem.append_int(self.var_declarations.env_offset(self))
 
@@ -559,7 +578,7 @@ class CompiledFunction(Entry):
         return name in self.params
 
     def identifier_is_decl(self, name):
-        return name in self.var_declarations.names()
+        return self.var_declarations.has(self, name)
 
     def identifier_is_module_scoped(self, name):
         # this wont work if the class or function wasn;t compiled yet
@@ -603,13 +622,13 @@ class CompiledFunction(Entry):
         if self.has_env and \
            (not self.identifier_is_module_scoped(name) and \
             not self.identifier_is_prime(name)):
-            idx = self.var_declarations.index(name)
+            idx = self.var_declarations.index(self, name)
             self.bytecodes.append("push_env",idx)
         elif self.identifier_is_param(name):
             idx = self.params.index(name)
             self.bytecodes.append("push_param", idx)
         elif self.identifier_is_decl(name):
-            idx = self.var_declarations.index(name)
+            idx = self.var_declarations.index(self, name)
             self.bytecodes.append("push_local", idx)
         elif self.identifier_is_module_scoped(name) or self.identifier_is_prime(name):
             idx = self.create_and_register_symbol_literal(name)
@@ -621,10 +640,10 @@ class CompiledFunction(Entry):
 
     def emit_local_assignment(self, name):
         if self.has_env:
-            idx = self.var_declarations.index(name)
+            idx = self.var_declarations.index(self, name)
             self.bytecodes.append("pop_env",idx)
         elif self.identifier_is_decl(name):
-            idx = self.var_declarations.index(name)
+            idx = self.var_declarations.index(self, name)
             self.bytecodes.append("pop_local", idx)
         elif self.identifier_is_param(name):
             idx = self.params.index(name)
@@ -644,7 +663,7 @@ class CompiledFunction(Entry):
 
     def emit_var_decl(self, name):
         self.var_declarations.add(self, name)
-        idx = self.var_declarations.index(name)
+        idx = self.var_declarations.index(self, name)
         if self.has_env:
             self.bytecodes.append("pop_env",idx)
         else:
@@ -664,15 +683,15 @@ class CompiledFunction(Entry):
             self.bytecodes.append('push_literal', idx)
             self.bytecodes.append('send', arity)
         elif self.has_env:
-            idx = self.var_declarations.index(name)
+            idx = self.var_declarations.index(self, name)
             self.bytecodes.append("push_env", idx)
             self.bytecodes.append("call", arity)
         elif self.identifier_is_param(name):
-            idx = self.var_declarations.index(name)
+            idx = self.var_declarations.index(self, name)
             self.bytecodes.append("push_param", idx)
             self.bytecodes.append("call", arity)
         elif self.identifier_is_decl(name):
-            idx = self.var_declarations.index(name)
+            idx = self.var_declarations.index(self, name)
             self.bytecodes.append("push_local", idx)
             self.bytecodes.append("call", arity)
         else:
@@ -770,7 +789,7 @@ class CompiledFunction(Entry):
         blen = len(self.bytecodes)
         self.bytecodes.lst[jmp_pos].arg = lambda: blen - jmp_pos
 
-        var_idx = self.var_declarations.index(catch_name)
+        var_idx = self.var_declarations.index(self, catch_name)
         self.add_exception_entry(lb_begin_try, lb_begin_catch, catch_type, var_idx)
 
 
