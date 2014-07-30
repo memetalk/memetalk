@@ -7,6 +7,7 @@
 #include "utils.hpp"
 #include "mmobj.hpp"
 #include "mmc_image.hpp"
+#include "qt_prims.hpp"
 #include <string>
 #include <iostream>
 #include <sstream>
@@ -344,4 +345,6 @@ void init_primitives(VM* vm) {
   vm->register_primitive("test_import", prim_test_import);
   vm->register_primitive("test_get_module_function", prim_test_get_module_function);
   vm->register_primitive("test_files", prim_test_files);
+
+  qt_init_primitives(vm);
 }

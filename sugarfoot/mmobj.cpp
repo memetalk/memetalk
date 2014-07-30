@@ -700,7 +700,7 @@ oop MMObj::mm_symbol_new(const char* str) {
   * (word*) &symb[2] = strlen(str);
 
   char* target = (char*) &symb[3];
-  for (int i = 0; i <= strlen(str); i++) {
+  for (unsigned long i = 0; i <= strlen(str); i++) {
     target[i] = str[i];
   }
   return symb;

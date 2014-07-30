@@ -13,11 +13,14 @@ class Process;
 class VM {
 
 public:
-  VM(const char* core_img_filepath);
+  VM(int argc, char** argv, const char* core_img_filepath);
+
+  int& argc() { return _argc; };
+  char** argv() { return _argv; };
 
   MMObj* mmobj();
 
-  int start(char* filepath);
+  int start();
   oop new_symbol(const char*);
   oop new_symbol(oop);
 
@@ -37,6 +40,8 @@ private:
   void dump_prime_info();
   void dictionary_dump(oop dict);
 
+  int _argc;
+  char** _argv;
   CoreImage* _core_image;
   MMObj* _mmobj;
   Process* _process;

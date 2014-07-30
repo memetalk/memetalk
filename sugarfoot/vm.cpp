@@ -9,8 +9,8 @@
 #include <assert.h>
 #include "utils.hpp"
 
-VM::VM(const char* core_img_filepath)
-  : _core_image(new CoreImage(this, core_img_filepath)), _mmobj(new MMObj(this, _core_image)) {
+VM::VM(int argc, char** argv, const char* core_img_filepath)
+  : _argc(argc), _argv(argv), _core_image(new CoreImage(this, core_img_filepath)), _mmobj(new MMObj(this, _core_image)) {
 }
 
 MMObj* VM::mmobj() {
@@ -41,7 +41,13 @@ void VM::dump_prime_info() {
   }
 }
 
-int VM::start(char* filepath) {
+int VM::start() {
+  if (_argc != 2) {
+    bail("usage: sf-vm <file.mmc>");
+  }
+
+  char* filepath = _argv[1];
+
   _process = new Process(this);
 
   _core_image->load();

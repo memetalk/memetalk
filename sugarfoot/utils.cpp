@@ -70,7 +70,7 @@ void relocate_addresses(char* data, int data_size, int start_reloc_table) {
 }
 
 
-void link_symbols(char* data, int es_size, int start_external_symbols, VM* vm, CoreImage* core) {
+void link_symbols(char* data, int es_size, int start_external_symbols, VM* vm, CoreImage*) {
   const char* base = data;
 
   for (int i = 0; i < es_size; i += (2 * WSIZE)) {
