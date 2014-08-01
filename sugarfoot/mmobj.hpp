@@ -129,6 +129,9 @@ public:
   number mm_behavior_size(oop);
 
   bool is_subtype(oop, oop);
+
+  CoreImage* core() { return _core_image; };
+
 private:
   VM* _vm;
   CoreImage* _core_image;
