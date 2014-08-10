@@ -54,6 +54,15 @@ oop MMObj::mm_compiled_module_classes(oop cmod) {
   return (oop) ((word*)cmod)[8];
 }
 
+oop MMObj::mm_new_boolean(number val) {
+  return val ? MM_TRUE : MM_FALSE;
+}
+
+bool MMObj::mm_bool(oop val) {
+  assert(val == MM_TRUE || val == MM_FALSE);
+  return val == MM_TRUE;
+}
+
 oop MMObj::mm_object_new() {
   oop obj = (oop) malloc(sizeof(word) * 2); // vt, delegate
 

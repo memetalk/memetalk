@@ -25,6 +25,9 @@ public:
   oop mm_object_vt(oop);
   oop mm_object_delegate(oop);
 
+  oop mm_new_boolean(number val);
+  bool mm_bool(oop val);
+
   oop mm_list_new(number size);
   oop mm_list_new_empty();
   number mm_list_size(oop list);

@@ -120,7 +120,7 @@ number untag_small_int(oop num) {
 #endif
 }
 
-number tag_small_int(oop num) {
+number tag_small_int(number num) {
 #if WSIZE == 8
   return ((word) num) | 0x8000000000000000;
 #else

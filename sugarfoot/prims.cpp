@@ -47,7 +47,7 @@ static int prim_number_sum(Process* proc) {
   assert(is_small_int(self));
   assert(is_small_int(other));
 
-  oop res =  (oop) (untag_small_int(self) + untag_small_int(other));
+  number res = untag_small_int(self) + untag_small_int(other);
   proc->stack_push((oop) tag_small_int(res)); //TODO: check for overflow
   return 0;
 }
@@ -59,7 +59,7 @@ static int prim_number_sub(Process* proc) {
   assert(is_small_int(self));
   assert(is_small_int(other));
 
-  oop res =  (oop) (untag_small_int(self) - untag_small_int(other));
+  number res =  untag_small_int(self) - untag_small_int(other);
   debug() << " SUB " << untag_small_int(self) << " - " << untag_small_int(other) << " = " << res << endl;
   proc->stack_push((oop) tag_small_int(res));
   return 0;
@@ -72,7 +72,7 @@ static int prim_number_mul(Process* proc) {
   assert(is_small_int(self));
   assert(is_small_int(other));
 
-  oop res =  (oop) (untag_small_int(self) * untag_small_int(other));
+  number res =  untag_small_int(self) * untag_small_int(other);
   proc->stack_push((oop) tag_small_int(res));  //TODO: check for overflow
   return 0;
 }

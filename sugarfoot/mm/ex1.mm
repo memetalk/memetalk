@@ -1,29 +1,8 @@
-.preamble(io)
-  io: meme:io;
+.preamble(qt, io)
+  qt : meme:qt;
+  io : meme:io;
+  [QWidget] <= qt;
 .code
-
-class QApplication
-fields: self;
-init new: fun() {
-  <primitive "qt_qapplication_new">
-}
-instance_method exec: fun() {
-  <primitive "qt_qapplication_exec">
-}
-end
-
-class QWidget
-fields: self;
-init new: fun() {
-  <primitive "qt_qwidget_new">
-}
-instance_method show: fun() {
-  <primitive "qt_qwidget_show">
-}
-instance_method connect: fun(signal, fn) {
-  <primitive "qt_qwidget_connect">
-}
-end
 
 class QPushButton < QWidget
 init new: fun(label, parent) {
@@ -32,12 +11,11 @@ init new: fun(label, parent) {
 end
 
 main: fun() {
-  var app = QApplication.new();
-  // var w  = QWidget.new;
-  var b = QPushButton.new("hello", null);
-  b.connect("clicked", fun() { io.print("CLICKED!") });
-  b.show();
-  //w.show();
+  var app = qt.QApplication.new();
+  var w = qt.QWidget.new(null);
+  var button = QPushButton.new("oi", w);
+  button.connect("pressed", fun() { io.print("pressed") });
+  w.show();
   app.exec();
 }
 

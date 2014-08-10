@@ -18,7 +18,7 @@ int decode_args(bytecode);
 
 bool is_small_int(oop num);
 number untag_small_int(oop num);
-number tag_small_int(oop num);
+number tag_small_int(number num);
 
 
 #endif
