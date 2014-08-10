@@ -189,16 +189,16 @@ void Process::copy_params_to_env(number params, number env_offset) {
   }
 }
 
-void Process::load_fun(oop recv, oop drecv, oop fun, bool should_allocate) {
+bool Process::load_fun(oop recv, oop drecv, oop fun, bool should_allocate) {
   assert(_mmobj->mm_is_function(fun) || _mmobj->mm_is_context(fun));
 
   if (_mmobj->mm_function_is_getter(fun)) {
     number idx = _mmobj->mm_function_access_field(fun);
     debug() << "GETTER: idx " << idx << " on " << recv << endl;
     oop val = ((oop*)drecv)[idx];
-    debug() << "GETTER: returning " << val << endl;
+    debug() << "GETTER: pushing retval: " << val << endl;
     stack_push(val);
-    return;
+    return false;
   }
 
 
@@ -246,7 +246,7 @@ void Process::load_fun(oop recv, oop drecv, oop fun, bool should_allocate) {
       debug() << "unwind_with_exception: " << ex_oop << endl;
       stack_push(ex_oop); //we rely on compiler generating a pop to bind ex_oop to the catch var
     }
-    return;
+    return false;
   }
 
 
@@ -255,6 +255,7 @@ void Process::load_fun(oop recv, oop drecv, oop fun, bool should_allocate) {
   _ip = _mmobj->mm_function_get_code(fun);
   // debug() << "first instruction " << decode_opcode(*_ip) << endl;
   _code_size = _mmobj->mm_function_get_code_size(fun);
+  return true;
 }
 
 oop Process::do_send_0(oop recv, oop selector) {
@@ -276,8 +277,9 @@ oop Process::do_send_0(oop recv, oop selector) {
   }
 
   oop stop_at_fp = _fp;
-  load_fun(recv, drecv, fun, true);
-  fetch_cycle(stop_at_fp);
+  if (load_fun(recv, drecv, fun, true)) {
+    fetch_cycle(stop_at_fp);
+  }
   oop val = stack_pop();
   debug() << "-- end do_send_0, val: " << val << endl;
   return val;
@@ -288,8 +290,33 @@ oop Process::do_call(oop fun) {
 
   debug() << "-- begin call, sp: " << _sp << ", fp: " << _fp << endl;
   oop stop_at_fp = _fp;
-  load_fun(NULL, NULL, fun, false);
-  fetch_cycle(stop_at_fp);
+  if (load_fun(NULL, NULL, fun, false)) {
+    fetch_cycle(stop_at_fp);
+  }
+  oop val = stack_pop();
+  debug() << "-- end call: " << val << " sp: " << _sp << ", fp: " << _fp << endl;
+  return val;
+}
+
+oop Process::do_call(oop fun, oop args) {
+  assert(_mmobj->mm_is_context(fun)); //since we pass NULL to load_fun
+
+  number num_args = _mmobj->mm_list_size(args);
+  number arity = _mmobj->mm_function_get_num_params(fun);
+  if (num_args != arity) {
+    debug() << num_args << " != " << arity << endl;
+    bail("arity and num_args differ");
+  }
+
+  for (int i = 0; i < num_args; i++) {
+    stack_push(_mmobj->mm_list_entry(args, i));
+  }
+
+  debug() << "-- begin call, sp: " << _sp << ", fp: " << _fp << endl;
+  oop stop_at_fp = _fp;
+  if (load_fun(NULL, NULL, fun, false)) {
+    fetch_cycle(stop_at_fp);
+  }
   oop val = stack_pop();
   debug() << "-- end call: " << val << " sp: " << _sp << ", fp: " << _fp << endl;
   return val;
