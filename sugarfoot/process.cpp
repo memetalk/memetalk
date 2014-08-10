@@ -14,12 +14,12 @@
 
 Process::Process(VM* vm)
   : _vm(vm), _mmobj(vm->mmobj()) {
+  init();
 }
 
 // int frame_count = 0;
 
 oop Process::run(oop recv, oop selector_sym) {
-  init();
   return do_send_0(recv, selector_sym);
 }
 
