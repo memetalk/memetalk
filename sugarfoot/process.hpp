@@ -21,6 +21,7 @@ public:
   oop sp() { return _sp; }
   oop fp() { return _fp; }
   oop cp() { return _cp; }
+  oop mp() { return _mp; }
   MMObj* mmobj() { return _mmobj; }
 
   void stack_push(oop);
@@ -33,7 +34,8 @@ public:
   oop do_call(oop, oop);
 
   oop do_send_0(oop, oop);
-  // oop do_send(oop, oop, oop);
+
+  std::pair<oop,oop> lookup(oop, oop, oop);
 private:
   void init();
 
@@ -58,8 +60,6 @@ private:
   void handle_super_ctor_send(number);
   void handle_call(number);
   void basic_new_and_load(oop);
-  oop alloc_instance(oop klass);
-  std::pair<oop,oop> lookup(oop, oop, oop);
 
   VM* _vm;
   MMObj* _mmobj;

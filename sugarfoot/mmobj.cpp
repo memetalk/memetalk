@@ -761,3 +761,32 @@ oop MMObj::mm_new(oop vt, oop delegate, number payload) {
   ((oop*) obj)[1] = delegate;
   return obj;
 }
+
+oop MMObj::alloc_instance(oop klass) {
+  if (klass == NULL) {
+    // debug() << "alloc_instance: klass is null" << endl;
+    return NULL;
+  }
+
+  // debug() << "alloc_instance for klass " << klass << endl;
+  // debug() << "alloc_instance: class name: " << _mmobj->mm_string_cstr(_mmobj->mm_class_name(klass)) << endl;
+
+  number payload = mm_behavior_size(klass);
+  if (payload == INVALID_PAYLOAD) {
+    bail("new_delegate: Received flagged/behavior payload");
+  }
+
+  debug() << "alloc_instance: payload " << payload << endl;
+
+  oop instance = (oop) calloc(sizeof(word), payload + 2); //2: vt, delegate
+  debug() << "new instance [size: " << payload << "]: "
+          << mm_string_cstr(mm_class_name(klass)) << " = " << instance << endl;
+
+  oop klass_parent =  mm_object_delegate(klass);
+
+  ((oop*)instance)[0] = klass;
+  ((oop*) instance)[1] = alloc_instance(klass_parent);
+
+  debug() << "Created recursive delegate " << instance << endl;
+  return instance;
+}

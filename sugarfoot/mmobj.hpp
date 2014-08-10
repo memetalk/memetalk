@@ -20,6 +20,7 @@ public:
   oop mm_compiled_module_aliases(oop);
 
   oop mm_new(oop vt, oop delegate, number payload);
+  oop alloc_instance(oop klass);
 
   oop mm_object_new();
   oop mm_object_vt(oop);
