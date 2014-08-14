@@ -21,6 +21,7 @@ Q_DECLARE_METATYPE (Process*);
 #include <QMainWindow>
 #include <QMenuBar>
 #include <QStatusBar>
+#include <QPlainTextEdit>
 
 #include <QWidget>
 #include <QMetaType>
@@ -151,6 +152,20 @@ oop meme_instance(Process* proc, QListWidgetItem* obj) {
   if (meme_mapping.find(obj) == meme_mapping.end()) {
     oop qt_imod = proc->mp();
     oop qt_class = proc->do_send_0(qt_imod, proc->mmobj()->mm_string_new("QListWidgetItem"));
+    oop instance = proc->mmobj()->alloc_instance(qt_class);
+    set_qt_instance(proc->mmobj(), instance, obj);
+    meme_mapping[obj] = instance;
+    return instance;
+  } else {
+    return meme_mapping[obj];
+  }
+}
+
+static
+oop meme_instance(Process* proc, QTextCursor* obj) {
+  if (meme_mapping.find(obj) == meme_mapping.end()) {
+    oop qt_imod = proc->mp();
+    oop qt_class = proc->do_send_0(qt_imod, proc->mmobj()->mm_string_new("QTextCursor"));
     oop instance = proc->mmobj()->alloc_instance(qt_class);
     set_qt_instance(proc->mmobj(), instance, obj);
     meme_mapping[obj] = instance;
@@ -650,6 +665,7 @@ static int prim_qt_qmainwindow_status_bar(Process* proc) {
 
 
 /** QMenuBar **/
+
 static int prim_qt_qmenubar_add_menu(Process* proc) {
   oop data_self =  proc->dp();
   oop text = *((oop*) proc->fp() - 1);
@@ -660,6 +676,76 @@ static int prim_qt_qmenubar_add_menu(Process* proc) {
   proc->stack_push(proc->rp());
   return 0;
 }
+
+
+/** QPlainTextEdit **/
+
+static int prim_qt_qplaintextedit_new(Process* proc) {
+  oop data_self =  proc->dp();
+  oop oop_parent = *((oop*) proc->fp() - 1);
+
+  QWidget* parent = (QWidget*) get_qt_instance(proc->mmobj(), oop_parent);
+
+  QPlainTextEdit* qtobj = new QPlainTextEdit(parent);
+
+  set_meme_instance(qtobj, proc->rp());
+  set_qt_instance(proc->mmobj(), data_self, qtobj);
+  proc->stack_push(proc->rp());
+  return 0;
+}
+
+static int prim_qt_qplaintextedit_set_plain_text(Process* proc) {
+  oop data_self =  proc->dp();
+  oop oop_text = *((oop*) proc->fp() - 1);
+
+  QPlainTextEdit* qtobj = (QPlainTextEdit*) get_qt_instance(proc->mmobj(), data_self);
+
+  qtobj->setPlainText(proc->mmobj()->mm_string_cstr(oop_text));
+  proc->stack_push(proc->rp());
+  return 0;
+}
+
+static int prim_qt_qplaintextedit_set_tabstop_width(Process* proc) {
+  oop data_self =  proc->dp();
+  oop oop_width = *((oop*) proc->fp() - 1);
+
+  QPlainTextEdit* qtobj = (QPlainTextEdit*) get_qt_instance(proc->mmobj(), data_self);
+
+  qtobj->setTabStopWidth(untag_small_int(oop_width));
+  proc->stack_push(proc->rp());
+  return 0;
+}
+
+static int prim_qt_qplaintextedit_set_text_cursor(Process* proc) {
+  oop data_self =  proc->dp();
+  oop oop_cursor = *((oop*) proc->fp() - 1);
+
+  QTextCursor* cursor = (QTextCursor*) get_qt_instance(proc->mmobj(), oop_cursor);
+
+  QPlainTextEdit* qtobj = (QPlainTextEdit*) get_qt_instance(proc->mmobj(), data_self);
+
+  qtobj->setTextCursor(*cursor);
+  proc->stack_push(proc->rp());
+  return 0;
+}
+
+static int prim_qt_qplaintextedit_text_cursor(Process* proc) {
+  oop data_self =  proc->dp();
+
+  QPlainTextEdit* qtobj = (QPlainTextEdit*) get_qt_instance(proc->mmobj(), data_self);
+  QTextCursor* c = new QTextCursor(qtobj->textCursor());
+  proc->stack_push(meme_instance(proc, c));
+  return 0;
+}
+
+static int prim_qt_qplaintextedit_to_plain_text(Process* proc) {
+  oop data_self =  proc->dp();
+
+  QPlainTextEdit* qtobj = (QPlainTextEdit*) get_qt_instance(proc->mmobj(), data_self);
+  proc->stack_push(proc->mmobj()->mm_string_new(qtobj->toPlainText().toLocal8Bit().data()));
+  return 0;
+}
+
 
 
 ////////////
@@ -782,15 +868,13 @@ void qt_init_primitives(VM* vm) {
 
   vm->register_primitive("qt_qmenubar_add_menu", prim_qt_qmenubar_add_menu);
 
+  vm->register_primitive("qt_qplaintextedit_new", prim_qt_qplaintextedit_new);
+  vm->register_primitive("qt_qplaintextedit_set_plain_text", prim_qt_qplaintextedit_set_plain_text);
+  vm->register_primitive("qt_qplaintextedit_set_tabstop_width", prim_qt_qplaintextedit_set_tabstop_width);
+  vm->register_primitive("qt_qplaintextedit_set_text_cursor", prim_qt_qplaintextedit_set_text_cursor);
+  vm->register_primitive("qt_qplaintextedit_text_cursor", prim_qt_qplaintextedit_text_cursor);
+  vm->register_primitive("qt_qplaintextedit_to_plain_text", prim_qt_qplaintextedit_to_plain_text);
 
-  //
-
-
-  // vm->register_primitive("qt_qplaintextedit_new", prim_qt_qplaintextedit_new);
-  // vm->register_primitive("qt_qplaintextedit_set_plain_text", prim_qt_qplaintextedit_set_plain_text);
-  // vm->register_primitive("qt_qplaintextedit_set_tabstop_width", prim_qt_qplaintextedit_set_tabstop_width);
-  // vm->register_primitive("qt_qplaintextedit_set_text_cursor", prim_qt_qplaintextedit_set_text_cursor);
-  // vm->register_primitive("qt_qplaintextedit_to_plain_text", prim_qt_qplaintextedit_to_plain_text);
 
   // vm->register_primitive("qt_scintilla_editor_new", prim_qt_scintilla_editor_new);
   // vm->register_primitive("qt_scintilla_append", prim_qt_scintilla_append);
@@ -809,6 +893,11 @@ void qt_init_primitives(VM* vm) {
   // vm->register_primitive("qt_scintilla_set_text", prim_qt_scintilla_set_text);
   // vm->register_primitive("qt_scintilla_text", prim_qt_scintilla_text);
   // vm->register_primitive("qt_scintilla_undo", prim_qt_scintilla_undo);
+
+  //
+
+
+
 
   // vm->register_primitive("qt_qshortcut_new", prim_qt_qshortcut_new);
   // vm->register_primitive("qt_qshortcut_set_context", prim_qt_qshortcut_set_context);
