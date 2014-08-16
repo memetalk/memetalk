@@ -16,6 +16,9 @@ main: fun() {
   var button = QPushButton.new("oi", w);
   button.connect("pressed", fun() { io.print("pressed") });
   w.show();
+
+  var e = qt.QsciScintilla.new(null);
+  e.show();
   app.exec();
 }
 

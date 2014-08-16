@@ -13,12 +13,13 @@
 
 
 LIB_PATHS = -L/usr/local/Cellar/boost/1.54.0/lib
+INC_PATHS = -I/usr/local/Cellar/qscintilla2/2.7.1/include/Qsci
 
-CPP_FILES =  mmc_image.cpp core_image.cpp vm.cpp report.cpp utils.cpp mmobj.cpp main.cpp process.cpp prims.cpp qt_prims.cpp
+CPP_FILES =  mmc_image.cpp core_image.cpp vm.cpp report.cpp utils.cpp mmobj.cpp main.cpp process.cpp prims.cpp qt_prims.cpp qsc.cpp
 
-HPP_FILES = mmc_image.hpp core_image.hpp vm.hpp report.hpp utils.hpp defs.hpp mmobj.hpp process.hpp prims.hpp qt_prims.hpp
+HPP_FILES = mmc_image.hpp core_image.hpp vm.hpp report.hpp utils.hpp defs.hpp mmobj.hpp process.hpp prims.hpp qt_prims.hpp qsc.hpp
 
-LIBS = -lboost_system-mt -lboost_filesystem-mt
+LIBS = -lboost_system-mt -lboost_filesystem-mt -lqscintilla2
 
 QT_FLAGS = -pipe -O2 -arch x86_64 -W \
 	-DQT_NO_DEBUG -DQT_SCRIPT_LIB -DQT_GUI_LIB -DQT_CORE_LIB -DQT_SHARED \
@@ -38,7 +39,8 @@ QT_FLAGS = -pipe -O2 -arch x86_64 -W \
 	-F/usr/local/Cellar/qt/4.8.5/lib -framework QtCore -framework QtGui
 
 sf-vm: $(CPP_FILES) $(HPP_FILES)
-	g++ -Wall -g $(CPP_FILES) $(LIBS) $(LIB_PATHS) $(QT_FLAGS) -o sf-vm
+	moc qsc.hpp > qsc.moc.cpp
+	g++ -Wall -g $(CPP_FILES) $(LIBS) $(LIB_PATHS) $(INC_PATHS) $(QT_FLAGS) -o sf-vm
 
 clean:
 	rm -f sf-vm

@@ -22,6 +22,7 @@ Q_DECLARE_METATYPE (Process*);
 #include <QMenuBar>
 #include <QStatusBar>
 #include <QPlainTextEdit>
+#include "qsc.hpp"
 
 #include <QWidget>
 #include <QMetaType>
@@ -747,6 +748,207 @@ static int prim_qt_qplaintextedit_to_plain_text(Process* proc) {
 }
 
 
+/** QScintilla **/
+
+static int prim_qt_scintilla_editor_new(Process* proc) {
+  oop data_self =  proc->dp();
+  oop oop_parent = *((oop*) proc->fp() - 1);
+
+  QWidget* parent = (QWidget*) get_qt_instance(proc->mmobj(), oop_parent);
+
+  _QScintilla* qtobj = new _QScintilla(parent);
+
+  set_meme_instance(qtobj, proc->rp());
+  set_qt_instance(proc->mmobj(), data_self, qtobj);
+  proc->stack_push(proc->rp());
+  return 0;
+}
+
+static int prim_qt_scintilla_append(Process* proc) {
+  oop data_self =  proc->dp();
+  oop oop_text = *((oop*) proc->fp() - 1);
+
+  _QScintilla* qtobj = (_QScintilla*) get_qt_instance(proc->mmobj(), data_self);
+  qtobj->append(proc->mmobj()->mm_string_cstr(oop_text));
+  proc->stack_push(proc->rp());
+  return 0;
+}
+
+static int prim_qt_scintilla_copy(Process* proc) {
+  oop data_self =  proc->dp();
+
+  _QScintilla* qtobj = (_QScintilla*) get_qt_instance(proc->mmobj(), data_self);
+  qtobj->copy();
+  proc->stack_push(proc->rp());
+  return 0;
+}
+
+static int prim_qt_scintilla_cut(Process* proc) {
+  oop data_self =  proc->dp();
+
+  _QScintilla* qtobj = (_QScintilla*) get_qt_instance(proc->mmobj(), data_self);
+  qtobj->cut();
+  proc->stack_push(proc->rp());
+  return 0;
+}
+
+static int prim_qt_scintilla_get_cursor_position(Process* proc) {
+  oop data_self =  proc->dp();
+
+  _QScintilla* qtobj = (_QScintilla*) get_qt_instance(proc->mmobj(), data_self);
+  int line, index;
+  qtobj->getCursorPosition(&line, &index);
+
+  oop dict = proc->mmobj()->mm_dictionary_new(2);
+  oop oop_line = proc->mmobj()->mm_string_new("line");
+  oop oop_index = proc->mmobj()->mm_string_new("index");
+  proc->mmobj()->mm_dictionary_set(dict, 0, oop_line, tag_small_int(line));
+  proc->mmobj()->mm_dictionary_set(dict, 1, oop_index, tag_small_int(index));
+  proc->stack_push(dict);
+  return 0;
+}
+
+static int prim_qt_scintilla_get_selection(Process* proc) {
+  oop data_self =  proc->dp();
+
+  _QScintilla* qtobj = (_QScintilla*) get_qt_instance(proc->mmobj(), data_self);
+  int lineFrom, indexFrom, lineTo, indexTo;
+  qtobj->getSelection(&lineFrom, &indexFrom, &lineTo, &indexTo);
+
+  oop dict = proc->mmobj()->mm_dictionary_new(4);
+  oop oop_start_line = proc->mmobj()->mm_string_new("start_line");
+  oop oop_end_line = proc->mmobj()->mm_string_new("end_line");
+  oop oop_start_index = proc->mmobj()->mm_string_new("start_index");
+  oop oop_end_index = proc->mmobj()->mm_string_new("end_index");
+
+  proc->mmobj()->mm_dictionary_set(dict, 0, oop_start_line, tag_small_int(lineFrom));
+  proc->mmobj()->mm_dictionary_set(dict, 1, oop_end_line, tag_small_int(lineTo));
+  proc->mmobj()->mm_dictionary_set(dict, 2, oop_start_index, tag_small_int(indexFrom));
+  proc->mmobj()->mm_dictionary_set(dict, 3, oop_end_index, tag_small_int(indexTo));
+  proc->stack_push(dict);
+  return 0;
+}
+
+static int prim_qt_scintilla_insert_at(Process* proc) {
+  oop data_self =  proc->dp();
+  oop oop_index = *((oop*) proc->fp() - 1);
+  oop oop_line = *((oop*) proc->fp() - 2);
+  oop oop_text = *((oop*) proc->fp() - 3);
+
+  _QScintilla* qtobj = (_QScintilla*) get_qt_instance(proc->mmobj(), data_self);
+  qtobj->insertAt(proc->mmobj()->mm_string_cstr(oop_text),
+                  untag_small_int(oop_line), untag_small_int(oop_index));
+  proc->stack_push(proc->rp());
+  return 0;
+}
+
+static int prim_qt_scintilla_lines(Process* proc) {
+  oop data_self =  proc->dp();
+
+  _QScintilla* qtobj = (_QScintilla*) get_qt_instance(proc->mmobj(), data_self);
+  proc->stack_push(tag_small_int(qtobj->lines()));
+  return 0;
+}
+
+static int prim_qt_scintilla_paste(Process* proc) {
+  oop data_self =  proc->dp();
+
+  _QScintilla* qtobj = (_QScintilla*) get_qt_instance(proc->mmobj(), data_self);
+  qtobj->paste();
+  proc->stack_push(proc->rp());
+  return 0;
+}
+
+static int prim_qt_scintilla_paused_at_line(Process* proc) {
+  oop data_self =  proc->dp();
+  oop oop_end_col = *((oop*) proc->fp() - 1);
+  oop oop_end_line = *((oop*) proc->fp() - 2);
+  oop oop_start_col = *((oop*) proc->fp() - 3);
+  oop oop_start_line = *((oop*) proc->fp() - 4);
+
+  _QScintilla* qtobj = (_QScintilla*) get_qt_instance(proc->mmobj(), data_self);
+  qtobj->paused_at_line(untag_small_int(oop_start_line),
+                        untag_small_int(oop_start_col),
+                        untag_small_int(oop_end_line),
+                        untag_small_int(oop_end_col));
+  proc->stack_push(proc->rp());
+  return 0;
+}
+
+static int prim_qt_scintilla_redo(Process* proc) {
+  oop data_self =  proc->dp();
+
+  _QScintilla* qtobj = (_QScintilla*) get_qt_instance(proc->mmobj(), data_self);
+  qtobj->redo();
+  proc->stack_push(proc->rp());
+  return 0;
+}
+
+static int prim_qt_scintilla_saved(Process* proc) {
+  oop data_self =  proc->dp();
+
+  _QScintilla* qtobj = (_QScintilla*) get_qt_instance(proc->mmobj(), data_self);
+  qtobj->saved();
+  proc->stack_push(proc->rp());
+  return 0;
+}
+
+static int prim_qt_scintilla_selected_text(Process* proc) {
+  oop data_self =  proc->dp();
+
+  _QScintilla* qtobj = (_QScintilla*) get_qt_instance(proc->mmobj(), data_self);
+  oop text = proc->mmobj()->mm_string_new(qtobj->selectedText().toLocal8Bit().data());
+
+  proc->stack_push(text);
+  return 0;
+}
+
+static int prim_qt_scintilla_set_selection(Process* proc) {
+  oop data_self =  proc->dp();
+  oop oop_end_col = *((oop*) proc->fp() - 1);
+  oop oop_end_line = *((oop*) proc->fp() - 2);
+  oop oop_start_col = *((oop*) proc->fp() - 3);
+  oop oop_start_line = *((oop*) proc->fp() - 4);
+
+  _QScintilla* qtobj = (_QScintilla*) get_qt_instance(proc->mmobj(), data_self);
+  qtobj->setSelection(untag_small_int(oop_start_line),
+                      untag_small_int(oop_start_col),
+                      untag_small_int(oop_end_line),
+                      untag_small_int(oop_end_col));
+
+  proc->stack_push(proc->rp());
+  return 0;
+}
+
+static int prim_qt_scintilla_set_text(Process* proc) {
+  oop data_self =  proc->dp();
+  oop oop_text = *((oop*) proc->fp() - 1);
+
+  _QScintilla* qtobj = (_QScintilla*) get_qt_instance(proc->mmobj(), data_self);
+  qtobj->setText(proc->mmobj()->mm_string_cstr(oop_text));
+  proc->stack_push(proc->rp());
+  return 0;
+}
+
+static int prim_qt_scintilla_text(Process* proc) {
+  oop data_self =  proc->dp();
+
+  _QScintilla* qtobj = (_QScintilla*) get_qt_instance(proc->mmobj(), data_self);
+  oop text = proc->mmobj()->mm_string_new(qtobj->text().toLocal8Bit().data());
+
+  proc->stack_push(text);
+  return 0;
+}
+
+static int prim_qt_scintilla_undo(Process* proc) {
+  oop data_self =  proc->dp();
+
+  _QScintilla* qtobj = (_QScintilla*) get_qt_instance(proc->mmobj(), data_self);
+  qtobj->undo();
+  proc->stack_push(proc->rp());
+  return 0;
+}
+
 
 ////////////
 
@@ -876,23 +1078,23 @@ void qt_init_primitives(VM* vm) {
   vm->register_primitive("qt_qplaintextedit_to_plain_text", prim_qt_qplaintextedit_to_plain_text);
 
 
-  // vm->register_primitive("qt_scintilla_editor_new", prim_qt_scintilla_editor_new);
-  // vm->register_primitive("qt_scintilla_append", prim_qt_scintilla_append);
-  // vm->register_primitive("qt_scintilla_copy", prim_qt_scintilla_copy);
-  // vm->register_primitive("qt_scintilla_cut", prim_qt_scintilla_cut);
-  // vm->register_primitive("qt_scintilla_get_cursor_position", prim_qt_scintilla_get_cursor_position);
-  // vm->register_primitive("qt_scintilla_get_selection", prim_qt_scintilla_get_selection);
-  // vm->register_primitive("qt_scintilla_insert_at", prim_qt_scintilla_insert_at);
-  // vm->register_primitive("qt_scintilla_lines", prim_qt_scintilla_lines);
-  // vm->register_primitive("qt_scintilla_paste", prim_qt_scintilla_paste);
-  // vm->register_primitive("qt_scintilla_paused_at_line", prim_qt_scintilla_paused_at_line);
-  // vm->register_primitive("qt_scintilla_redo", prim_qt_scintilla_redo);
-  // vm->register_primitive("qt_scintilla_saved", prim_qt_scintilla_saved);
-  // vm->register_primitive("qt_scintilla_selected_text", prim_qt_scintilla_selected_text);
-  // vm->register_primitive("qt_scintilla_set_selection", prim_qt_scintilla_set_selection);
-  // vm->register_primitive("qt_scintilla_set_text", prim_qt_scintilla_set_text);
-  // vm->register_primitive("qt_scintilla_text", prim_qt_scintilla_text);
-  // vm->register_primitive("qt_scintilla_undo", prim_qt_scintilla_undo);
+  vm->register_primitive("qt_scintilla_editor_new", prim_qt_scintilla_editor_new);
+  vm->register_primitive("qt_scintilla_append", prim_qt_scintilla_append);
+  vm->register_primitive("qt_scintilla_copy", prim_qt_scintilla_copy);
+  vm->register_primitive("qt_scintilla_cut", prim_qt_scintilla_cut);
+  vm->register_primitive("qt_scintilla_get_cursor_position", prim_qt_scintilla_get_cursor_position);
+  vm->register_primitive("qt_scintilla_get_selection", prim_qt_scintilla_get_selection);
+  vm->register_primitive("qt_scintilla_insert_at", prim_qt_scintilla_insert_at);
+  vm->register_primitive("qt_scintilla_lines", prim_qt_scintilla_lines);
+  vm->register_primitive("qt_scintilla_paste", prim_qt_scintilla_paste);
+  vm->register_primitive("qt_scintilla_paused_at_line", prim_qt_scintilla_paused_at_line);
+  vm->register_primitive("qt_scintilla_redo", prim_qt_scintilla_redo);
+  vm->register_primitive("qt_scintilla_saved", prim_qt_scintilla_saved);
+  vm->register_primitive("qt_scintilla_selected_text", prim_qt_scintilla_selected_text);
+  vm->register_primitive("qt_scintilla_set_selection", prim_qt_scintilla_set_selection);
+  vm->register_primitive("qt_scintilla_set_text", prim_qt_scintilla_set_text);
+  vm->register_primitive("qt_scintilla_text", prim_qt_scintilla_text);
+  vm->register_primitive("qt_scintilla_undo", prim_qt_scintilla_undo);
 
   //
 

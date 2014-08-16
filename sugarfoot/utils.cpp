@@ -40,7 +40,7 @@ char* read_mmc_file(const std::string& name_or_path, int* file_size) {
         " trying " << (base + filepath) << endl;
       file.open((base + filepath).c_str(), fstream::in | fstream::binary);
       if (!file.good()) {
-        bail("Unable to open file");
+        bail(std::string("Unable to open file: ") + filepath);
       }
     }
   }
@@ -120,10 +120,10 @@ number untag_small_int(oop num) {
 #endif
 }
 
-number tag_small_int(number num) {
+oop tag_small_int(number num) {
 #if WSIZE == 8
-  return ((word) num) | 0x8000000000000000;
+  return (oop) (num | 0x8000000000000000);
 #else
-  return ((word) num) | 0x80000000;
+  return (oop) (num | 0x80000000);
 #endif
 }
