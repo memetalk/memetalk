@@ -23,11 +23,15 @@ Q_DECLARE_METATYPE (Process*);
 #include <QStatusBar>
 #include <QPlainTextEdit>
 #include "qsc.hpp"
+#include <QShortcut>
+#include <QTableWidget>
+#include <QUrl>
+#include <QWebElement>
+#include <QWebFrame>
 
 #include <QWidget>
 #include <QMetaType>
 #include <QPushButton>
-
 
 
 static
@@ -163,10 +167,43 @@ oop meme_instance(Process* proc, QListWidgetItem* obj) {
 }
 
 static
+void set_meme_instance(QTableWidgetItem* obj, oop instance) {
+  meme_mapping[obj] = instance;
+}
+
+static
+oop meme_instance(Process* proc, QTableWidgetItem* obj) {
+  if (meme_mapping.find(obj) == meme_mapping.end()) {
+    oop qt_imod = proc->mp();
+    oop qt_class = proc->do_send_0(qt_imod, proc->mmobj()->mm_string_new("QTableWidgetItem"));
+    oop instance = proc->mmobj()->alloc_instance(qt_class);
+    set_qt_instance(proc->mmobj(), instance, obj);
+    meme_mapping[obj] = instance;
+    return instance;
+  } else {
+    return meme_mapping[obj];
+  }
+}
+
+static
 oop meme_instance(Process* proc, QTextCursor* obj) {
   if (meme_mapping.find(obj) == meme_mapping.end()) {
     oop qt_imod = proc->mp();
     oop qt_class = proc->do_send_0(qt_imod, proc->mmobj()->mm_string_new("QTextCursor"));
+    oop instance = proc->mmobj()->alloc_instance(qt_class);
+    set_qt_instance(proc->mmobj(), instance, obj);
+    meme_mapping[obj] = instance;
+    return instance;
+  } else {
+    return meme_mapping[obj];
+  }
+}
+
+static
+oop meme_instance(Process* proc, QWebElement* obj) {
+  if (meme_mapping.find(obj) == meme_mapping.end()) {
+    oop qt_imod = proc->mp();
+    oop qt_class = proc->do_send_0(qt_imod, proc->mmobj()->mm_string_new("QWebElement"));
     oop instance = proc->mmobj()->alloc_instance(qt_class);
     set_qt_instance(proc->mmobj(), instance, obj);
     meme_mapping[obj] = instance;
@@ -389,16 +426,16 @@ static int prim_qt_qhboxlayout_new(Process* proc) {
   return 0;
 }
 
-// static int prim_qt_qhboxlayout_add_layout(Process* proc) {
-//   oop data_self =  proc->dp();
-//   oop oop_layout = *((oop*) proc->fp() - 1);
+static int prim_qt_qhboxlayout_add_layout(Process* proc) {
+  oop data_self =  proc->dp();
+  oop oop_layout = *((oop*) proc->fp() - 1);
 
-//   QLayout* layout = (QLayout*) get_qt_instance(proc->mmobj(), oop_layout);
-//   QHBoxLayout* qtobj = (QHBoxLayout*) get_qt_instance(proc->mmobj(), data_self);
-//   qtobj->addLayout(layout);
-//   proc->stack_push(proc->rp());
-//   return 0;
-// }
+  QLayout* layout = (QLayout*) get_qt_instance(proc->mmobj(), oop_layout);
+  QHBoxLayout* qtobj = (QHBoxLayout*) get_qt_instance(proc->mmobj(), data_self);
+  qtobj->addLayout(layout);
+  proc->stack_push(proc->rp());
+  return 0;
+}
 
 static int prim_qt_qhboxlayout_add_widget(Process* proc) {
   oop data_self =  proc->dp();
@@ -949,6 +986,462 @@ static int prim_qt_scintilla_undo(Process* proc) {
   return 0;
 }
 
+/** QShortcut **/
+
+static int prim_qt_qshortcut_new(Process* proc) {
+  oop data_self =  proc->dp();
+  oop oop_parent = *((oop*) proc->fp() - 1);
+
+  QWidget* parent = (QWidget*) get_qt_instance(proc->mmobj(), oop_parent);
+
+  QShortcut* qtobj = new QShortcut(parent);
+  set_meme_instance(qtobj, proc->rp());
+  set_qt_instance(proc->mmobj(), data_self, qtobj);
+  proc->stack_push(proc->rp());
+  return 0;
+}
+
+static int prim_qt_qshortcut_set_context(Process* proc) {
+  oop data_self =  proc->dp();
+  oop oop_ctx = *((oop*) proc->fp() - 1);
+
+  QShortcut* qtobj = (QShortcut*) get_qt_instance(proc->mmobj(), data_self);
+  qtobj->setContext((Qt::ShortcutContext)untag_small_int(oop_ctx));
+  proc->stack_push(proc->rp());
+  return 0;
+}
+
+/** QTableWidget **/
+
+static int prim_qt_qtablewidget_new(Process* proc) {
+  oop data_self =  proc->dp();
+  oop oop_parent = *((oop*) proc->fp() - 1);
+
+  QWidget* parent = (QWidget*) get_qt_instance(proc->mmobj(), oop_parent);
+
+  QTableWidget* qtobj = new QTableWidget(parent);
+  set_meme_instance(qtobj, proc->rp());
+  set_qt_instance(proc->mmobj(), data_self, qtobj);
+  proc->stack_push(proc->rp());
+  return 0;
+}
+
+static int prim_qt_qtablewidget_clear(Process* proc) {
+  oop data_self =  proc->dp();
+
+  QTableWidget* qtobj = (QTableWidget*) get_qt_instance(proc->mmobj(), data_self);
+  qtobj->clear();
+  proc->stack_push(proc->rp());
+  return 0;
+}
+
+static int prim_qt_qtablewidget_horizontal_header(Process* proc) {
+  oop data_self =  proc->dp();
+
+  QTableWidget* qtobj = (QTableWidget*) get_qt_instance(proc->mmobj(), data_self);
+  QHeaderView* header = qtobj->horizontalHeader();
+
+  oop instance = meme_instance(proc, header);
+
+  // oop qt_imod = proc->mp();
+  // oop qt_class = proc->do_send_0(qt_imod, proc->mmobj()->mm_string_new("QHeaderView"));
+  // oop instance = proc->mmobj()->alloc_instance(qt_class);
+
+  set_qt_instance(proc->mmobj(), instance, header);
+  set_meme_instance(header, instance);
+
+  proc->stack_push(instance);
+  return 0;
+}
+
+static int prim_qt_qtablewidget_set_column_count(Process* proc) {
+  oop data_self =  proc->dp();
+  oop oop_count = *((oop*) proc->fp() - 1);
+
+  QTableWidget* qtobj = (QTableWidget*) get_qt_instance(proc->mmobj(), data_self);
+  qtobj->setColumnCount(untag_small_int(oop_count));
+  proc->stack_push(proc->rp());
+  return 0;
+}
+
+static int prim_qt_qtablewidget_set_horizontal_header_labels(Process* proc) {
+  oop data_self =  proc->dp();
+  oop oop_labels = *((oop*) proc->fp() - 1);
+
+  QTableWidget* qtobj = (QTableWidget*) get_qt_instance(proc->mmobj(), data_self);
+  QStringList lst;
+  for (int i = 0; i < proc->mmobj()->mm_list_size(oop_labels); i++) {
+    lst << proc->mmobj()->mm_string_cstr(proc->mmobj()->mm_list_entry(oop_labels, i));
+  }
+  qtobj->setHorizontalHeaderLabels(lst);
+  proc->stack_push(proc->rp());
+  return 0;
+}
+
+static int prim_qt_qtablewidget_set_item(Process* proc) {
+  oop data_self =  proc->dp();
+  oop oop_item = *((oop*) proc->fp() - 1);
+  oop oop_col = *((oop*) proc->fp() - 2);
+  oop oop_line = *((oop*) proc->fp() - 3);
+
+  QTableWidgetItem* item = (QTableWidgetItem*) get_qt_instance(proc->mmobj(), oop_item);
+
+  QTableWidget* qtobj = (QTableWidget*) get_qt_instance(proc->mmobj(), data_self);
+  qtobj->setItem(untag_small_int(oop_line), untag_small_int(oop_col), item);
+  proc->stack_push(proc->rp());
+  return 0;
+}
+
+static int prim_qt_qtablewidget_set_row_count(Process* proc) {
+  oop data_self =  proc->dp();
+  oop oop_count = *((oop*) proc->fp() - 1);
+
+  QTableWidget* qtobj = (QTableWidget*) get_qt_instance(proc->mmobj(), data_self);
+  qtobj->setRowCount(untag_small_int(oop_count));
+  proc->stack_push(proc->rp());
+  return 0;
+}
+
+static int prim_qt_qtablewidget_set_selection_mode(Process* proc) {
+  oop data_self =  proc->dp();
+  oop oop_mode = *((oop*) proc->fp() - 1);
+
+  QTableWidget* qtobj = (QTableWidget*) get_qt_instance(proc->mmobj(), data_self);
+  qtobj->setSelectionMode((QAbstractItemView::SelectionMode) untag_small_int(oop_mode));
+  proc->stack_push(proc->rp());
+  return 0;
+}
+
+static int prim_qt_qtablewidget_set_sorting_enabled(Process* proc) {
+  oop data_self =  proc->dp();
+  oop oop_val = *((oop*) proc->fp() - 1);
+
+  QTableWidget* qtobj = (QTableWidget*) get_qt_instance(proc->mmobj(), data_self);
+  qtobj->setSortingEnabled(proc->mmobj()->mm_bool(oop_val));
+  proc->stack_push(proc->rp());
+  return 0;
+}
+
+static int prim_qt_qtablewidget_vertical_header(Process* proc) {
+  oop data_self =  proc->dp();
+
+  QTableWidget* qtobj = (QTableWidget*) get_qt_instance(proc->mmobj(), data_self);
+  QHeaderView* header = qtobj->verticalHeader();
+
+  oop instance = meme_instance(proc, header);
+  // oop qt_imod = proc->mp();
+  // oop qt_class = proc->do_send_0(qt_imod, proc->mmobj()->mm_string_new("QHeaderView"));
+  // oop instance = proc->mmobj()->alloc_instance(qt_class);
+
+  set_qt_instance(proc->mmobj(), instance, header);
+  set_meme_instance(header, instance);
+
+  proc->stack_push(instance);
+  return 0;
+}
+
+/** QTableWidgetItem **/
+
+static int prim_qt_qtablewidgetitem_new(Process* proc) {
+  oop data_self =  proc->dp();
+  oop oop_label = *((oop*) proc->fp() - 1);
+
+  QTableWidgetItem* qtobj = new QTableWidgetItem(proc->mmobj()->mm_string_cstr(oop_label));
+  set_meme_instance(qtobj, proc->rp());
+  set_qt_instance(proc->mmobj(), data_self, qtobj);
+  proc->stack_push(proc->rp());
+  return 0;
+}
+
+static int prim_qt_qtablewidgetitem_set_flags(Process* proc) {
+  oop data_self =  proc->dp();
+  oop oop_flags = *((oop*) proc->fp() - 1);
+
+  QTableWidgetItem* qtobj = (QTableWidgetItem*) get_qt_instance(proc->mmobj(), data_self);
+  qtobj->setFlags((Qt::ItemFlags)untag_small_int(oop_flags));
+}
+
+
+/** QTextCursor **/
+
+static int prim_qt_qtextcursor_drag_right(Process* proc) {
+  oop data_self =  proc->dp();
+  oop oop_len = *((oop*) proc->fp() - 1);
+
+  QTextCursor* qtobj = (QTextCursor*) get_qt_instance(proc->mmobj(), data_self);
+  bool res = qtobj->movePosition(QTextCursor::Left, QTextCursor::KeepAnchor, untag_small_int(oop_len));
+  proc->stack_push(proc->mmobj()->mm_new_boolean(res));
+  return 0;
+}
+
+static int prim_qt_qtextcursor_insert_text(Process* proc) {
+  oop data_self =  proc->dp();
+  oop oop_text = *((oop*) proc->fp() - 1);
+
+  QTextCursor* qtobj = (QTextCursor*) get_qt_instance(proc->mmobj(), data_self);
+  qtobj->insertText(proc->mmobj()->mm_string_cstr(oop_text));
+  proc->stack_push(proc->rp());
+  return 0;
+}
+
+static int prim_qt_qtextcursor_selected_text(Process* proc) {
+  oop data_self =  proc->dp();
+
+  QTextCursor* qtobj = (QTextCursor*) get_qt_instance(proc->mmobj(), data_self);
+  oop oop_text = proc->mmobj()->mm_string_new(qtobj->selectedText().toLocal8Bit().data());
+  proc->stack_push(oop_text);
+  return 0;
+}
+
+static int prim_qt_qtextcursor_selection_end(Process* proc) {
+  oop data_self =  proc->dp();
+
+  QTextCursor* qtobj = (QTextCursor*) get_qt_instance(proc->mmobj(), data_self);
+  proc->stack_push(tag_small_int(qtobj->selectionEnd()));
+  return 0;
+}
+
+static int prim_qt_qtextcursor_set_position(Process* proc) {
+  oop data_self =  proc->dp();
+  oop oop_pos = *((oop*) proc->fp() - 1);
+
+  QTextCursor* qtobj = (QTextCursor*) get_qt_instance(proc->mmobj(), data_self);
+  qtobj->setPosition(untag_small_int(oop_pos));
+  proc->stack_push(proc->rp());
+  return 0;
+}
+
+
+/** QUrl **/
+
+static int prim_qt_qurl_fragment(Process* proc) {
+  oop data_self =  proc->dp();
+
+  QUrl* qtobj = (QUrl*) get_qt_instance(proc->mmobj(), data_self);
+  proc->stack_push(proc->mmobj()->mm_string_new(qtobj->fragment().toLocal8Bit().data()));
+  return 0;
+}
+
+static int prim_qt_qurl_has_fragment(Process* proc) {
+  oop data_self =  proc->dp();
+
+  QUrl* qtobj = (QUrl*) get_qt_instance(proc->mmobj(), data_self);
+  proc->stack_push(proc->mmobj()->mm_new_boolean(qtobj->hasFragment()));
+  return 0;
+}
+
+static int prim_qt_qurl_has_query_item(Process* proc) {
+  oop data_self =  proc->dp();
+  oop oop_name = *((oop*) proc->fp() - 1);
+
+  QUrl* qtobj = (QUrl*) get_qt_instance(proc->mmobj(), data_self);
+  proc->stack_push(proc->mmobj()->mm_new_boolean(qtobj->hasQueryItem(proc->mmobj()->mm_string_cstr(oop_name))));
+  return 0;
+}
+
+static int prim_qt_qurl_path(Process* proc) {
+  oop data_self =  proc->dp();
+
+  QUrl* qtobj = (QUrl*) get_qt_instance(proc->mmobj(), data_self);
+  proc->stack_push(proc->mmobj()->mm_string_new(qtobj->path().toLocal8Bit().data()));
+  return 0;
+}
+
+static int prim_qt_qurl_query_item_value(Process* proc) {
+  oop data_self =  proc->dp();
+  oop oop_name = *((oop*) proc->fp() - 1);
+
+  QUrl* qtobj = (QUrl*) get_qt_instance(proc->mmobj(), data_self);
+  QString val = qtobj->queryItemValue(proc->mmobj()->mm_string_cstr(oop_name));
+  proc->stack_push(proc->mmobj()->mm_string_new(val.toLocal8Bit().data()));
+  return 0;
+}
+
+static int prim_qt_qurl_to_string(Process* proc) {
+  oop data_self =  proc->dp();
+
+  QUrl* qtobj = (QUrl*) get_qt_instance(proc->mmobj(), data_self);
+  QString val = qtobj->toString();
+  proc->stack_push(proc->mmobj()->mm_string_new(val.toLocal8Bit().data()));
+  return 0;
+}
+
+
+/** QVBoxLayout **/
+static int prim_qt_qvboxlayout_new(Process* proc) {
+  oop data_self =  proc->dp();
+  oop oop_parent = *((oop*) proc->fp() - 1);
+
+  QWidget* parent = (QWidget*) get_qt_instance(proc->mmobj(), oop_parent);
+
+  QVBoxLayout* qtobj = new QVBoxLayout(parent);
+
+  set_meme_instance(qtobj, proc->rp());
+  set_qt_instance(proc->mmobj(), data_self, qtobj);
+  proc->stack_push(proc->rp());
+  return 0;
+}
+
+static int prim_qt_qvboxlayout_add_layout(Process* proc) {
+  oop data_self =  proc->dp();
+  oop oop_layout = *((oop*) proc->fp() - 1);
+
+  QLayout* layout = (QLayout*) get_qt_instance(proc->mmobj(), oop_layout);
+  QVBoxLayout* qtobj = (QVBoxLayout*) get_qt_instance(proc->mmobj(), data_self);
+  qtobj->addLayout(layout);
+  proc->stack_push(proc->rp());
+  return 0;
+}
+
+static int prim_qt_qvboxlayout_add_widget(Process* proc) {
+  oop data_self =  proc->dp();
+  oop oop_widget = *((oop*) proc->fp() - 1);
+
+  QWidget* widget = (QWidget*) get_qt_instance(proc->mmobj(), oop_widget);
+  QVBoxLayout* qtobj = (QVBoxLayout*) get_qt_instance(proc->mmobj(), data_self);
+  qtobj->addWidget(widget);
+  proc->stack_push(proc->rp());
+  return 0;
+}
+
+/** QWebElement **/
+
+static int prim_qt_qwebelement_append_inside(Process* proc) {
+  oop data_self =  proc->dp();
+  oop oop_str_or_webel = *((oop*) proc->fp() - 1);
+
+  QWebElement* qtobj = (QWebElement*) get_qt_instance(proc->mmobj(), data_self);
+
+  if (proc->mmobj()->mm_is_string(oop_str_or_webel)) {
+    qtobj->appendInside(proc->mmobj()->mm_string_cstr(oop_str_or_webel));
+  } else {
+    QWebElement* el = (QWebElement*) get_qt_instance(proc->mmobj(), oop_str_or_webel);
+    qtobj->appendInside(*el);
+  }
+  proc->stack_push(proc->rp());
+  return 0;
+}
+
+static int prim_qt_qwebelement_append_outside(Process* proc) {
+  oop data_self =  proc->dp();
+  oop oop_str_or_webel = *((oop*) proc->fp() - 1);
+
+  QWebElement* qtobj = (QWebElement*) get_qt_instance(proc->mmobj(), data_self);
+
+  if (proc->mmobj()->mm_is_string(oop_str_or_webel)) {
+    qtobj->appendOutside(proc->mmobj()->mm_string_cstr(oop_str_or_webel));
+  } else {
+    QWebElement* el = (QWebElement*) get_qt_instance(proc->mmobj(), oop_str_or_webel);
+    qtobj->appendOutside(*el);
+  }
+  proc->stack_push(proc->rp());
+  return 0;
+}
+
+static int prim_qt_qwebelement_clone(Process* proc) {
+  oop data_self =  proc->dp();
+
+  QWebElement* qtobj = (QWebElement*) get_qt_instance(proc->mmobj(), data_self);
+  QWebElement* el = new QWebElement(qtobj->clone());
+
+  oop instance = meme_instance(proc, el);
+  proc->stack_push(instance);
+  return 0;
+}
+
+static int prim_qt_qwebelement_find_first(Process* proc) {
+  oop data_self =  proc->dp();
+  oop oop_str = *((oop*) proc->fp() - 1);
+
+  QWebElement* qtobj = (QWebElement*) get_qt_instance(proc->mmobj(), data_self);
+  QWebElement* el = new QWebElement(qtobj->findFirst(proc->mmobj()->mm_string_cstr(oop_str)));
+
+  oop instance = meme_instance(proc, el);
+  proc->stack_push(instance);
+  return 0;
+}
+
+static int prim_qt_qwebelement_set_attribute(Process* proc) {
+  oop data_self =  proc->dp();
+  oop oop_val = *((oop*) proc->fp() - 1);
+  oop oop_name = *((oop*) proc->fp() - 2);
+
+  QWebElement* qtobj = (QWebElement*) get_qt_instance(proc->mmobj(), data_self);
+  qtobj->setAttribute(proc->mmobj()->mm_string_cstr(oop_name), proc->mmobj()->mm_string_cstr(oop_val));
+  proc->stack_push(proc->rp());
+  return 0;
+}
+
+static int prim_qt_qwebelement_set_inner_xml(Process* proc) {
+  oop data_self =  proc->dp();
+  oop oop_xml = *((oop*) proc->fp() - 1);
+
+  QWebElement* qtobj = (QWebElement*) get_qt_instance(proc->mmobj(), data_self);
+  qtobj->setInnerXml(proc->mmobj()->mm_string_cstr(oop_xml));
+  proc->stack_push(proc->rp());
+  return 0;
+}
+
+static int prim_qt_qwebelement_set_plain_text(Process* proc) {
+  oop data_self =  proc->dp();
+  oop oop_text = *((oop*) proc->fp() - 1);
+
+  QWebElement* qtobj = (QWebElement*) get_qt_instance(proc->mmobj(), data_self);
+  qtobj->setPlainText(proc->mmobj()->mm_string_cstr(oop_text));
+  proc->stack_push(proc->rp());
+  return 0;
+}
+
+static int prim_qt_qwebelement_set_style_property(Process* proc) {
+  oop data_self =  proc->dp();
+  oop oop_val = *((oop*) proc->fp() - 1);
+  oop oop_name = *((oop*) proc->fp() - 2);
+
+  QWebElement* qtobj = (QWebElement*) get_qt_instance(proc->mmobj(), data_self);
+  qtobj->setStyleProperty(proc->mmobj()->mm_string_cstr(oop_name), proc->mmobj()->mm_string_cstr(oop_val));
+  proc->stack_push(proc->rp());
+  return 0;
+}
+
+static int prim_qt_qwebelement_take_from_document(Process* proc) {
+  oop data_self =  proc->dp();
+
+  QWebElement* qtobj = (QWebElement*) get_qt_instance(proc->mmobj(), data_self);
+  oop instance = meme_instance(proc, &(qtobj->takeFromDocument()));
+  proc->stack_push(instance);
+  return 0;
+}
+
+static int prim_qt_qwebelement_to_outer_xml(Process* proc) {
+  oop data_self =  proc->dp();
+
+  QWebElement* qtobj = (QWebElement*) get_qt_instance(proc->mmobj(), data_self);
+  proc->stack_push(proc->mmobj()->mm_string_new(qtobj->toOuterXml().toLocal8Bit().data()));
+  return 0;
+}
+
+/** QWebFrame **/
+
+static int prim_qt_qwebframe_document_element(Process* proc) {
+  oop data_self =  proc->dp();
+
+  QWebFrame* qtobj = (QWebFrame*) get_qt_instance(proc->mmobj(), data_self);
+  QWebElement* el = new QWebElement(qtobj->documentElement());
+  proc->stack_push(meme_instance(proc, el));
+  return 0;
+}
+
+static int prim_qt_qwebframe_scroll_to_anchor(Process* proc) {
+  oop data_self =  proc->dp();
+  oop oop_anchor = *((oop*) proc->fp() - 1);
+
+  QWebFrame* qtobj = (QWebFrame*) get_qt_instance(proc->mmobj(), data_self);
+  qtobj->scrollToAnchor(proc->mmobj()->mm_string_cstr(oop_anchor));
+  proc->stack_push(proc->rp());
+  return 0;
+}
+
+
 
 ////////////
 
@@ -956,7 +1449,6 @@ static int prim_qt_scintilla_undo(Process* proc) {
 static int prim_qwidget_new(Process* proc) {
   oop data_self =  proc->dp();
   QWidget* qtobj = new QWidget;
-  // debug() << "QT: qwidget_new rp: " << proc->rp() << " dp: " << data_self << " widget: " << w << endl;
   set_meme_instance(qtobj, proc->rp());
   set_qt_instance(proc->mmobj(), data_self, qtobj);
   proc->stack_push(proc->rp());
@@ -1038,7 +1530,7 @@ void qt_init_primitives(VM* vm) {
   vm->register_primitive("qt_qeventloop_exit", prim_qt_qeventloop_exit);
 
   vm->register_primitive("qt_qhboxlayout_new", prim_qt_qhboxlayout_new);
-  // vm->register_primitive("qt_qhboxlayout_add_layout", prim_qt_qhboxlayout_add_layout);
+  vm->register_primitive("qt_qhboxlayout_add_layout", prim_qt_qhboxlayout_add_layout);
   vm->register_primitive("qt_qhboxlayout_add_widget", prim_qt_qhboxlayout_add_widget);
   vm->register_primitive("qt_qhboxlayout_set_contents_margins", prim_qt_qhboxlayout_set_contents_margins);
 
@@ -1096,58 +1588,53 @@ void qt_init_primitives(VM* vm) {
   vm->register_primitive("qt_scintilla_text", prim_qt_scintilla_text);
   vm->register_primitive("qt_scintilla_undo", prim_qt_scintilla_undo);
 
-  //
+  vm->register_primitive("qt_qshortcut_new", prim_qt_qshortcut_new);
+  vm->register_primitive("qt_qshortcut_set_context", prim_qt_qshortcut_set_context);
 
+  vm->register_primitive("qt_qtablewidget_new", prim_qt_qtablewidget_new);
+  vm->register_primitive("qt_qtablewidget_clear", prim_qt_qtablewidget_clear);
+  vm->register_primitive("qt_qtablewidget_horizontal_header", prim_qt_qtablewidget_horizontal_header);
+  vm->register_primitive("qt_qtablewidget_set_column_count", prim_qt_qtablewidget_set_column_count);
+  vm->register_primitive("qt_qtablewidget_set_horizontal_header_labels", prim_qt_qtablewidget_set_horizontal_header_labels);
+  vm->register_primitive("qt_qtablewidget_set_item", prim_qt_qtablewidget_set_item);
+  vm->register_primitive("qt_qtablewidget_set_row_count", prim_qt_qtablewidget_set_row_count);
+  vm->register_primitive("qt_qtablewidget_set_selection_mode", prim_qt_qtablewidget_set_selection_mode);
+  vm->register_primitive("qt_qtablewidget_set_sorting_enabled", prim_qt_qtablewidget_set_sorting_enabled);
+  vm->register_primitive("qt_qtablewidget_vertical_header", prim_qt_qtablewidget_vertical_header);
 
+  vm->register_primitive("qt_qtablewidgetitem_new", prim_qt_qtablewidgetitem_new);
+  vm->register_primitive("qt_qtablewidgetitem_set_flags", prim_qt_qtablewidgetitem_set_flags);
 
+  vm->register_primitive("qt_qtextcursor_drag_right", prim_qt_qtextcursor_drag_right);
+  vm->register_primitive("qt_qtextcursor_insert_text", prim_qt_qtextcursor_insert_text);
+  vm->register_primitive("qt_qtextcursor_selected_text", prim_qt_qtextcursor_selected_text);
+  vm->register_primitive("qt_qtextcursor_selection_end", prim_qt_qtextcursor_selection_end);
+  vm->register_primitive("qt_qtextcursor_set_position", prim_qt_qtextcursor_set_position);
 
-  // vm->register_primitive("qt_qshortcut_new", prim_qt_qshortcut_new);
-  // vm->register_primitive("qt_qshortcut_set_context", prim_qt_qshortcut_set_context);
+  vm->register_primitive("qt_qurl_fragment", prim_qt_qurl_fragment);
+  vm->register_primitive("qt_qurl_has_fragment", prim_qt_qurl_has_fragment);
+  vm->register_primitive("qt_qurl_has_query_item", prim_qt_qurl_has_query_item);
+  vm->register_primitive("qt_qurl_path", prim_qt_qurl_path);
+  vm->register_primitive("qt_qurl_query_item_value", prim_qt_qurl_query_item_value);
+  vm->register_primitive("qt_qurl_to_string", prim_qt_qurl_to_string);
 
-  // vm->register_primitive("qt_qtablewidget_new", prim_qt_qtablewidget_new);
-  // vm->register_primitive("qt_qtablewidget_clear", prim_qt_qtablewidget_clear);
-  // vm->register_primitive("qt_qtablewidget_horizontal_header", prim_qt_qtablewidget_horizontal_header);
-  // vm->register_primitive("qt_qtablewidget_set_column_count", prim_qt_qtablewidget_set_column_count);
-  // vm->register_primitive("qt_qtablewidget_set_horizontal_header_labels", prim_qt_qtablewidget_set_horizontal_header_labels);
-  // vm->register_primitive("qt_qtablewidget_set_item", prim_qt_qtablewidget_set_item);
-  // vm->register_primitive("qt_qtablewidget_set_row_count", prim_qt_qtablewidget_set_row_count);
-  // vm->register_primitive("qt_qtablewidget_set_selection_mode", prim_qt_qtablewidget_set_selection_mode);
-  // vm->register_primitive("qt_qtablewidget_set_sorting_enabled", prim_qt_qtablewidget_set_sorting_enabled);
-  // vm->register_primitive("qt_qtablewidget_vertical_header", prim_qt_qtablewidget_vertical_header);
-  // vm->register_primitive("qt_qtablewidgetitem_new", prim_qt_qtablewidgetitem_new);
-  // vm->register_primitive("qt_qtablewidgetitem_set_flags", prim_qt_qtablewidgetitem_set_flags);
+  vm->register_primitive("qt_qvboxlayout_new", prim_qt_qvboxlayout_new);
+  vm->register_primitive("qt_qvboxlayout_add_layout", prim_qt_qvboxlayout_add_layout);
+  vm->register_primitive("qt_qvboxlayout_add_widget", prim_qt_qvboxlayout_add_widget);
 
-  // vm->register_primitive("qt_qtextcursor_drag_right", prim_qt_qtextcursor_drag_right);
-  // vm->register_primitive("qt_qtextcursor_insert_text", prim_qt_qtextcursor_insert_text);
-  // vm->register_primitive("qt_qtextcursor_selected_text", prim_qt_qtextcursor_selected_text);
-  // vm->register_primitive("qt_qtextcursor_selection_end", prim_qt_qtextcursor_selection_end);
-  // vm->register_primitive("qt_qtextcursor_set_position", prim_qt_qtextcursor_set_position);
+  vm->register_primitive("qt_qwebelement_append_inside", prim_qt_qwebelement_append_inside);
+  vm->register_primitive("qt_qwebelement_append_outside", prim_qt_qwebelement_append_outside);
+  vm->register_primitive("qt_qwebelement_clone", prim_qt_qwebelement_clone);
+  vm->register_primitive("qt_qwebelement_find_first", prim_qt_qwebelement_find_first);
+  vm->register_primitive("qt_qwebelement_set_attribute", prim_qt_qwebelement_set_attribute);
+  vm->register_primitive("qt_qwebelement_set_inner_xml", prim_qt_qwebelement_set_inner_xml);
+  vm->register_primitive("qt_qwebelement_set_plain_text", prim_qt_qwebelement_set_plain_text);
+  vm->register_primitive("qt_qwebelement_set_style_property", prim_qt_qwebelement_set_style_property);
+  vm->register_primitive("qt_qwebelement_take_from_document", prim_qt_qwebelement_take_from_document);
+  vm->register_primitive("qt_qwebelement_to_outer_xml", prim_qt_qwebelement_to_outer_xml);
 
-  // vm->register_primitive("qt_qurl_fragment", prim_qt_qurl_fragment);
-  // vm->register_primitive("qt_qurl_has_fragment", prim_qt_qurl_has_fragment);
-  // vm->register_primitive("qt_qurl_has_query_item", prim_qt_qurl_has_query_item);
-  // vm->register_primitive("qt_qurl_path", prim_qt_qurl_path);
-  // vm->register_primitive("qt_qurl_query_item_value", prim_qt_qurl_query_item_value);
-  // vm->register_primitive("qt_qurl_to_string", prim_qt_qurl_to_string);
-
-  // vm->register_primitive("qt_qvboxlayout_new", prim_qt_qvboxlayout_new);
-  // vm->register_primitive("qt_qvboxlayout_add_layout", prim_qt_qvboxlayout_add_layout);
-  // vm->register_primitive("qt_qvboxlayout_add_widget", prim_qt_qvboxlayout_add_widget);
-
-  // vm->register_primitive("qt_qwebelement_append_inside", prim_qt_qwebelement_append_inside);
-  // vm->register_primitive("qt_qwebelement_append_outside", prim_qt_qwebelement_append_outside);
-  // vm->register_primitive("qt_qwebelement_clone", prim_qt_qwebelement_clone);
-  // vm->register_primitive("qt_qwebelement_find_first", prim_qt_qwebelement_find_first);
-  // vm->register_primitive("qt_qwebelement_set_attribute", prim_qt_qwebelement_set_attribute);
-  // vm->register_primitive("qt_qwebelement_set_inner_xml", prim_qt_qwebelement_set_inner_xml);
-  // vm->register_primitive("qt_qwebelement_set_plain_text", prim_qt_qwebelement_set_plain_text);
-  // vm->register_primitive("qt_qwebelement_set_style_property", prim_qt_qwebelement_set_style_property);
-  // vm->register_primitive("qt_qwebelement_take_from_document", prim_qt_qwebelement_take_from_document);
-  // vm->register_primitive("qt_qwebelement_to_outer_xml", prim_qt_qwebelement_to_outer_xml);
-
-  // vm->register_primitive("qt_qwebframe_add_to_javascript_window_object", prim_qt_qwebframe_add_to_javascript_window_object);
-  // vm->register_primitive("qt_qwebframe_document_element", prim_qt_qwebframe_document_element);
-  // vm->register_primitive("qt_qwebframe_scroll_to_anchor", prim_qt_qwebframe_scroll_to_anchor);
+  vm->register_primitive("qt_qwebframe_document_element", prim_qt_qwebframe_document_element);
+  vm->register_primitive("qt_qwebframe_scroll_to_anchor", prim_qt_qwebframe_scroll_to_anchor);
 
   // vm->register_primitive("qt_extra_qwebpage_enable_plugins", prim_qt_extra_qwebpage_enable_plugins);
 

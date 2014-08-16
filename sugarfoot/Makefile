@@ -22,21 +22,20 @@ HPP_FILES = mmc_image.hpp core_image.hpp vm.hpp report.hpp utils.hpp defs.hpp mm
 LIBS = -lboost_system-mt -lboost_filesystem-mt -lqscintilla2
 
 QT_FLAGS = -pipe -O2 -arch x86_64 -W \
-	-DQT_NO_DEBUG -DQT_SCRIPT_LIB -DQT_GUI_LIB -DQT_CORE_LIB -DQT_SHARED \
+	-DQT_NO_DEBUG -DQT_WEBKIT_LIB -DQT_SCRIPT_LIB -DQT_GUI_LIB -DQT_CORE_LIB -DQT_SHARED \
 	-I/usr/local/Cellar/qt/4.8.5/mkspecs/unsupported/macx-clang \
 	-I. -I/usr/local/Cellar/qt/4.8.5/lib/QtCore.framework/Versions/4/Headers \
 	-I/usr/local/Cellar/qt/4.8.5/lib/QtCore.framework/Versions/4/Headers \
 	-I/usr/local/Cellar/qt/4.8.5/lib/QtGui.framework/Versions/4/Headers \
-	-I/usr/local/Cellar/qt/4.8.5/lib/QtGui.framework/Versions/4/Headers \
 	-I/usr/local/Cellar/qt/4.8.5/lib/QtScript.framework/Versions/4/Headers \
-	-I/usr/local/Cellar/qt/4.8.5/lib/QtScript.framework/Versions/4/Headers \
+	-I/usr/local/Cellar/qt/4.8.5/lib/QtWebKit.framework/Versions/4/Headers \
 	-I/usr/local/Cellar/qt/4.8.5/include \
 	-I. \
 	-F/usr/local/Cellar/qt/4.8.5/lib \
 	-headerpad_max_install_names -arch x86_64 \
 	-F/usr/local/Cellar/qt/4.8.5/lib -L/usr/local/Cellar/qt/4.8.5/lib \
 	-framework QtScript -L/opt/X11/lib -L/usr/local/Cellar/qt/4.8.5/lib \
-	-F/usr/local/Cellar/qt/4.8.5/lib -framework QtCore -framework QtGui
+	-F/usr/local/Cellar/qt/4.8.5/lib -framework QtCore -framework QtGui -framework QtWebKit
 
 sf-vm: $(CPP_FILES) $(HPP_FILES)
 	moc qsc.hpp > qsc.moc.cpp

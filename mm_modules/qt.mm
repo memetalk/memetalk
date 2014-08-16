@@ -355,7 +355,7 @@ end //qt:QsciScintilla
 
 class QShortcut
 fields: self;
-init new: fun(sc, parent, slot) {
+init new: fun(parent) {
   <primitive "qt_qshortcut_new">
 }
 
