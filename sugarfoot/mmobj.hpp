@@ -73,6 +73,7 @@ public:
 
   oop mm_function_from_cfunction(oop cfun, oop imod);
   bool mm_function_is_prim(oop fun);
+  oop mm_function_get_name(oop fun);
 
   oop mm_function_get_module(oop fun);
   oop mm_function_get_prim_name(oop fun);
@@ -107,6 +108,7 @@ public:
   bool mm_compiled_function_is_top_level(oop cfun);
   oop mm_compiled_function_outer_cfun(oop cfun);
   oop mm_compiled_function_get_owner(oop cfun);
+  oop mm_compiled_function_get_name(oop cfun);
 
   oop mm_compiled_class_name(oop cclass);
   oop mm_compiled_class_super_name(oop cclass);

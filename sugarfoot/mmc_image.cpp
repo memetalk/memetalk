@@ -147,7 +147,9 @@ void MMCImage::load_aliases(oop imodule, oop aliases_dict, number num_params) {
             << " module_param: " << _mmobj->mm_string_cstr(module_param_name)
             << " param_index: " << param_index << endl;
 
-    oop entry = _vm->process()->do_send_0(module_param_object, _vm->new_symbol(alias_name));
+    int exc;
+    oop entry = _vm->process()->do_send_0(module_param_object, _vm->new_symbol(alias_name), &exc);
+    assert(exc == 0);
     debug() << "MMCImage::load_aliases entry: " << entry
             << " in imod idx: " << i + num_params << endl;
     _mmobj->mm_module_set_module_argument(imodule, entry, i + num_params);

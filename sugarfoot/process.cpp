@@ -12,6 +12,12 @@
 #include "mmobj.hpp"
 #include "utils.hpp"
 
+class mm_rewind {
+public:
+  mm_rewind(oop ex) : mm_exception(ex) {}
+  oop mm_exception;
+};
+
 Process::Process(VM* vm)
   : _vm(vm), _mmobj(vm->mmobj()) {
   init();
@@ -19,8 +25,8 @@ Process::Process(VM* vm)
 
 // int frame_count = 0;
 
-oop Process::run(oop recv, oop selector_sym) {
-  return do_send_0(recv, selector_sym);
+oop Process::run(oop recv, oop selector_sym, int* exc) {
+  return do_send_0(recv, selector_sym, exc);
 }
 
 void Process::init() {
@@ -209,15 +215,22 @@ bool Process::load_fun(oop recv, oop drecv, oop fun, bool should_allocate) {
     if (ret == 0) {
       oop value = stack_pop(); //shit
       unload_fun_and_return(value);
+      return false;
     } else if (ret == PRIM_RAISED) {
       oop ex_oop = stack_pop(); //shit
-      debug() << "prim returned RAISED " << ex_oop << endl;
+      debug() << "load_fun: prim returned: RAISED " << ex_oop << endl;
       pop_frame();
-      unwind_with_exception(ex_oop);
-      debug() << "unwind_with_exception: " << ex_oop << endl;
-      stack_push(ex_oop); //we rely on compiler generating a pop to bind ex_oop to the catch var
+      if (!unwind_with_exception(ex_oop)) {
+        debug() << "load_fun: unwind_with_exception reached primitive. c++ throwing...: " << ex_oop << endl;
+        throw mm_rewind(ex_oop);
+      } else {
+        debug() << "load_fun: unwind_with_exception rached catch block for " << ex_oop << endl;
+        // oop value = stack_pop(); //shit
+        // unload_fun_and_return(value);
+        stack_push(ex_oop); //we rely on compiler generating a pop instruction to bind ex_oop to the catch var
+        return false;
+      }
     }
-    return false;
   }
 
 
@@ -229,7 +242,7 @@ bool Process::load_fun(oop recv, oop drecv, oop fun, bool should_allocate) {
   return true;
 }
 
-oop Process::do_send_0(oop recv, oop selector) {
+oop Process::do_send_0(oop recv, oop selector, int* exc) {
   debug() << "-- begin do_send_0, recv: " << recv
           << ", selector: " << _mmobj->mm_symbol_cstr(selector) << endl;
 
@@ -248,28 +261,43 @@ oop Process::do_send_0(oop recv, oop selector) {
   }
 
   oop stop_at_fp = _fp;
-  if (load_fun(recv, drecv, fun, true)) {
-    fetch_cycle(stop_at_fp);
+  *exc = 0;
+  try {
+    if (load_fun(recv, drecv, fun, true)) {
+      fetch_cycle(stop_at_fp);
+    }
+  } catch(mm_rewind e) {
+    *exc = 1;
+    return e.mm_exception;
   }
+
   oop val = stack_pop();
   debug() << "-- end do_send_0, val: " << val << endl;
   return val;
 }
 
-oop Process::do_call(oop fun) {
+oop Process::do_call(oop fun, int* exc) {
   assert(_mmobj->mm_is_context(fun)); //since we pass NULL to load_fun
 
   debug() << "-- begin call, sp: " << _sp << ", fp: " << _fp << endl;
   oop stop_at_fp = _fp;
-  if (load_fun(NULL, NULL, fun, false)) {
-    fetch_cycle(stop_at_fp);
+
+  *exc = 0;
+  try {
+    if (load_fun(NULL, NULL, fun, false)) {
+      fetch_cycle(stop_at_fp);
+    }
+  } catch(mm_rewind e) {
+    *exc = 1;
+    return e.mm_exception;
   }
+
   oop val = stack_pop();
   debug() << "-- end call: " << val << " sp: " << _sp << ", fp: " << _fp << endl;
   return val;
 }
 
-oop Process::do_call(oop fun, oop args) {
+oop Process::do_call(oop fun, oop args, int* exc) {
   assert(_mmobj->mm_is_context(fun)); //since we pass NULL to load_fun
 
   number num_args = _mmobj->mm_list_size(args);
@@ -282,7 +310,7 @@ oop Process::do_call(oop fun, oop args) {
   for (int i = 0; i < num_args; i++) {
     stack_push(_mmobj->mm_list_entry(args, i));
   }
-  return do_call(fun);
+  return do_call(fun, exc);
 }
 
 void Process::fetch_cycle(void* stop_at_fp) {
@@ -542,22 +570,30 @@ int Process::execute_primitive(std::string name) {
 }
 
 
-void Process::unwind_with_exception(oop e) {
+bool Process::unwind_with_exception(oop e) {
   debug() << "** unwind_with_exception e: " << e << " on cp: " << _cp << endl;
   if (_cp == NULL) {
-    oop str = do_send_0(e, _vm->new_symbol("toString"));
+    int exc;
+    oop str = do_send_0(e, _vm->new_symbol("toString"), &exc);
+    assert(exc == 0);
     std::cerr << "Terminated with exception: \""
               << _mmobj->mm_string_cstr(str) << "\"" << endl;
     bail();
   }
 
+  debug() << "unwind_with_exception: " << _mmobj->mm_string_cstr(_mmobj->mm_function_get_name(_cp)) << endl;
+
+  if (_mmobj->mm_function_is_prim(_cp)) {
+    debug() << "->> unwind reached primitive " << _mmobj->mm_string_cstr(_mmobj->mm_function_get_prim_name(_cp)) << endl;
+    return false;
+  }
+
   bytecode* code = _mmobj->mm_function_get_code(_cp);
 
   number exception_frames_count = _mmobj->mm_function_exception_frames_count(_cp);
-  if (exception_frames_count == 0) {
+  if (exception_frames_count == 0) { //unable to handle
     pop_frame();
-    unwind_with_exception(e);
-    return;
+    return unwind_with_exception(e);
   }
 
   //exception frames are lexically ordered,
@@ -575,7 +611,9 @@ void Process::unwind_with_exception(oop e) {
       type_oop  = MM_NULL;
     } else {
       debug() << "fetching exception type for name: " << str_type_oop << endl;
-      type_oop = do_send_0(_mp, _vm->new_symbol(str_type_oop));
+      int exc;
+      type_oop = do_send_0(_mp, _vm->new_symbol(str_type_oop), &exc);
+      assert(exc == 0);
       debug() << "fetching exception type got " << type_oop << endl;;
     }
 
@@ -590,10 +628,10 @@ void Process::unwind_with_exception(oop e) {
         (type_oop == MM_NULL || is_subtype)) {
       debug() << "CAUGHT " << endl;
       _ip = code + catch_block;
-      return;
+      return true;
     }
   }
 
   pop_frame();
-  unwind_with_exception(e);
+  return unwind_with_exception(e);
 }

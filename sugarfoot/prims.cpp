@@ -19,7 +19,11 @@ static int prim_io_print(Process* proc) {
   oop obj = *((oop*) proc->fp() - 1);
 
   debug() << "---- prim_print" << endl;
-  oop oop_str = proc->do_send_0(obj, proc->vm()->new_symbol("toString"));
+  int exc;
+  oop oop_str = proc->do_send_0(obj, proc->vm()->new_symbol("toString"), &exc);
+  if (exc != 0) {
+    return PRIM_RAISED;
+  }
   debug() << "---- prim_print do_send_0 done " << oop_str << endl;
   std::cout << proc->mmobj()->mm_string_cstr(oop_str) << endl;
   proc->stack_push((oop)0);
@@ -153,7 +157,11 @@ static int prim_list_each(Process* proc) {
     oop next = proc->mmobj()->mm_list_entry(self, i);
     debug() << "list each[" << i << "] = " << next << endl;
     proc->stack_push(next);
-    oop val = proc->do_call(fun);
+    int exc;
+    oop val = proc->do_call(fun, &exc);
+    if (exc != 0) {
+      return PRIM_RAISED;
+    }
     debug() << "list each[" << i << "] fun returned " << val << endl;
   }
   proc->stack_push(self);
@@ -165,8 +173,12 @@ static int prim_list_to_string(Process* proc) {
   std::stringstream s;
   s << "[";
   for (int i = 0; i < proc->mmobj()->mm_list_size(self); i++) {
+    int exc;
     oop tostr = proc->do_send_0(proc->mmobj()->mm_list_entry(self, i),
-                              proc->vm()->new_symbol("toString"));
+                                proc->vm()->new_symbol("toString"), &exc);
+    if (exc != 0) {
+      return PRIM_RAISED;
+    }
     s << proc->mmobj()->mm_string_cstr(tostr) << ",";
   }
   s << "]";
@@ -310,6 +322,13 @@ static int prim_test_files(Process* proc) {
   return 0;
 }
 
+static int prim_test_catch_exception(Process* proc) {
+  int exc;
+  oop ret = proc->do_send_0(proc->mp(), proc->vm()->new_symbol("bar"), &exc);
+  proc->stack_push(ret);
+  return 0;
+}
+
 void init_primitives(VM* vm) {
   vm->register_primitive("io_print", prim_io_print);
 
@@ -345,6 +364,8 @@ void init_primitives(VM* vm) {
   vm->register_primitive("test_import", prim_test_import);
   vm->register_primitive("test_get_module_function", prim_test_get_module_function);
   vm->register_primitive("test_files", prim_test_files);
+
+  vm->register_primitive("test_catch_exception", prim_test_catch_exception);
 
   qt_init_primitives(vm);
 }

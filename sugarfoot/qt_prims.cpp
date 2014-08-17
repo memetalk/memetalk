@@ -2,6 +2,7 @@
 #include "process.hpp"
 Q_DECLARE_METATYPE (Process*);
 
+#include <assert.h>
 #include "qt_prims.hpp"
 #include "vm.hpp"
 #include "report.hpp"
@@ -72,7 +73,12 @@ QScriptValue mm_handle(QScriptContext *ctx, QScriptEngine *engine) {
       bail("TODO: unknown arg");
     }
   }
-  proc->do_call(mm_closure, mm_args);
+  int exc;
+  oop res = proc->do_call(mm_closure, mm_args, &exc);
+  if (exc != 0) {
+    oop oo_exc = proc->do_send_0(res, proc->vm()->new_symbol("toString"), &exc);
+    std::cerr << "Callback raised: " << proc->mmobj()->mm_string_cstr(oo_exc) << endl;
+  }
   return engine->undefinedValue();
 }
 
@@ -137,7 +143,9 @@ oop meme_instance(Process* proc, QObject* obj) {
     return (oop) prop.value<void*>();
   } else {
     oop qt_imod = proc->mp();
-    oop qt_class = proc->do_send_0(qt_imod, proc->mmobj()->mm_string_new(obj->metaObject()->className()));
+    int exc;
+    oop qt_class = proc->do_send_0(qt_imod, proc->mmobj()->mm_string_new(obj->metaObject()->className()), &exc);
+    assert(exc == 0);
     oop instance = proc->mmobj()->alloc_instance(qt_class);
     set_qt_instance(proc->mmobj(), instance, obj);
     set_meme_instance(obj, instance);
@@ -156,7 +164,9 @@ static
 oop meme_instance(Process* proc, QListWidgetItem* obj) {
   if (meme_mapping.find(obj) == meme_mapping.end()) {
     oop qt_imod = proc->mp();
-    oop qt_class = proc->do_send_0(qt_imod, proc->mmobj()->mm_string_new("QListWidgetItem"));
+    int exc;
+    oop qt_class = proc->do_send_0(qt_imod, proc->mmobj()->mm_string_new("QListWidgetItem"), &exc);
+    assert(exc == 0);
     oop instance = proc->mmobj()->alloc_instance(qt_class);
     set_qt_instance(proc->mmobj(), instance, obj);
     meme_mapping[obj] = instance;
@@ -175,7 +185,9 @@ static
 oop meme_instance(Process* proc, QTableWidgetItem* obj) {
   if (meme_mapping.find(obj) == meme_mapping.end()) {
     oop qt_imod = proc->mp();
-    oop qt_class = proc->do_send_0(qt_imod, proc->mmobj()->mm_string_new("QTableWidgetItem"));
+    int exc;
+    oop qt_class = proc->do_send_0(qt_imod, proc->mmobj()->mm_string_new("QTableWidgetItem"), &exc);
+    assert(exc == 0);
     oop instance = proc->mmobj()->alloc_instance(qt_class);
     set_qt_instance(proc->mmobj(), instance, obj);
     meme_mapping[obj] = instance;
@@ -189,7 +201,9 @@ static
 oop meme_instance(Process* proc, QTextCursor* obj) {
   if (meme_mapping.find(obj) == meme_mapping.end()) {
     oop qt_imod = proc->mp();
-    oop qt_class = proc->do_send_0(qt_imod, proc->mmobj()->mm_string_new("QTextCursor"));
+    int exc;
+    oop qt_class = proc->do_send_0(qt_imod, proc->mmobj()->mm_string_new("QTextCursor"), &exc);
+    assert(exc == 0);
     oop instance = proc->mmobj()->alloc_instance(qt_class);
     set_qt_instance(proc->mmobj(), instance, obj);
     meme_mapping[obj] = instance;
@@ -203,7 +217,9 @@ static
 oop meme_instance(Process* proc, QWebElement* obj) {
   if (meme_mapping.find(obj) == meme_mapping.end()) {
     oop qt_imod = proc->mp();
-    oop qt_class = proc->do_send_0(qt_imod, proc->mmobj()->mm_string_new("QWebElement"));
+    int exc;
+    oop qt_class = proc->do_send_0(qt_imod, proc->mmobj()->mm_string_new("QWebElement"), &exc);
+    assert(exc == 0);
     oop instance = proc->mmobj()->alloc_instance(qt_class);
     set_qt_instance(proc->mmobj(), instance, obj);
     meme_mapping[obj] = instance;
@@ -650,7 +666,12 @@ public:
     if (!r.first && !r.second) {
       QMainWindow::closeEvent(ev);
     } else {
-      _proc->do_send_0(_self, _proc->vm()->new_symbol("closeEvent"));
+      int exc;
+      oop res = _proc->do_send_0(_self, _proc->vm()->new_symbol("closeEvent"), &exc);
+      if (exc != 0) {
+        oop oo_exc = _proc->do_send_0(res, _proc->vm()->new_symbol("toString"), &exc);
+        std::cerr << "closeEvent raised: " << _proc->mmobj()->mm_string_cstr(oo_exc) << endl;
+      }
     }
   };
 private:

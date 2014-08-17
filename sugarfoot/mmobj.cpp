@@ -414,6 +414,13 @@ bool MMObj::mm_function_is_prim(oop fun) {
   return mm_compiled_function_is_prim(cfun);
 }
 
+oop MMObj::mm_function_get_name(oop fun) {
+  assert( *(oop*) fun == _core_image->get_prime("Function") ||
+          *(oop*) fun == _core_image->get_prime("Context"));
+  oop cfun = mm_function_get_cfun(fun);
+  return mm_compiled_function_get_name(cfun);
+}
+
 oop MMObj::mm_function_get_prim_name(oop fun) {
   assert( *(oop*) fun == _core_image->get_prime("Function") ||
           *(oop*) fun == _core_image->get_prime("Context"));
@@ -519,6 +526,11 @@ bool MMObj::mm_compiled_function_is_prim(oop cfun) {
 oop MMObj::mm_compiled_function_get_prim_name(oop cfun) {
   assert( *(oop*) cfun == _core_image->get_prime("CompiledFunction"));
   return (oop) ((oop*)cfun)[6];
+}
+
+oop MMObj::mm_compiled_function_get_name(oop cfun) {
+  assert( *(oop*) cfun == _core_image->get_prime("CompiledFunction"));
+  return (oop) ((oop*)cfun)[2];
 }
 
 bool MMObj::mm_compiled_function_is_getter(oop cfun) {

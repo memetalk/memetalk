@@ -57,8 +57,9 @@ int VM::start() {
 
   init_primitives(this);
 
-  oop retval = _process->run(imod, new_symbol("main"));
-  oop retval_str = _process->do_send_0(retval, new_symbol("toString"));
+  int exc;
+  oop retval = _process->run(imod, new_symbol("main"), &exc);
+  oop retval_str = _process->do_send_0(retval, new_symbol("toString"), &exc);
   debug() << "RETVAL: " << retval << " => " << _mmobj->mm_string_cstr(retval_str) << endl;
   return * (int*) (void*) &retval;
 }

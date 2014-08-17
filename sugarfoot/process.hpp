@@ -10,10 +10,11 @@ class VM;
 class MMObj;
 
 class Process {
+
 public:
   Process(VM*);
 
-  oop run(oop, oop);
+  oop run(oop, oop, int*);
 
   VM* vm() { return _vm; }
   oop dp() { return _dp; }
@@ -28,12 +29,12 @@ public:
   void stack_push(word);
   void stack_push(bytecode*);
 
-  void unwind_with_exception(oop);
+  bool unwind_with_exception(oop);
 
-  oop do_call(oop);
-  oop do_call(oop, oop);
+  oop do_call(oop, int*);
+  oop do_call(oop, oop, int*);
 
-  oop do_send_0(oop, oop);
+  oop do_send_0(oop, oop, int*);
 
   std::pair<oop,oop> lookup(oop, oop, oop);
 private:

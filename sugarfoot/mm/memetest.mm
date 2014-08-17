@@ -54,6 +54,7 @@ class_method assert: fun(x,desc) {
 class_method do_test: fun(mmc_test_file) {
   try {
     var m = this.test_import(mmc_test_file, [this]);
+    io.print("tet:executing " + mmc_test_file);
     m.main();
     io.print("test:passed " + mmc_test_file);
   } catch(AssertionException e) {
