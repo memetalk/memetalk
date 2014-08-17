@@ -54,11 +54,11 @@ oop MMObj::mm_compiled_module_classes(oop cmod) {
   return (oop) ((word*)cmod)[8];
 }
 
-oop MMObj::mm_new_boolean(number val) {
+oop MMObj::mm_boolean_new(number val) {
   return val ? MM_TRUE : MM_FALSE;
 }
 
-bool MMObj::mm_bool(oop val) {
+bool MMObj::mm_boolean_cbool(oop val) {
   assert(val == MM_TRUE || val == MM_FALSE);
   return val == MM_TRUE;
 }
@@ -103,17 +103,15 @@ oop MMObj::mm_list_new_empty() {
   return obj;
 }
 
-oop MMObj::mm_list_new(number size) {
-  oop obj = (oop) malloc(sizeof(word) * 4); // vt, delegate, size, elements frame
-
-  oop frame = (oop) calloc(sizeof(oop), size);
-
-  ((word**) obj)[0] = _core_image->get_prime("List");
-  ((word**) obj)[1] = mm_object_new();
-  ((word*) obj)[2] = (word) size;
-  ((word**) obj)[3] = frame;
-  return obj;
-}
+// oop MMObj::mm_list_new(number size) {
+//   oop obj = (oop) malloc(sizeof(word) * 4); // vt, delegate, size, elements frame
+//   oop frame = (oop) calloc(sizeof(oop), size);
+//   ((word**) obj)[0] = _core_image->get_prime("List");
+//   ((word**) obj)[1] = mm_object_new();
+//   ((word*) obj)[2] = (word) size;
+//   ((word**) obj)[3] = frame;
+//   return obj;
+// }
 
 
 number MMObj::mm_list_size(oop list) {

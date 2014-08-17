@@ -5,6 +5,7 @@
 #include <string>
 
 class VM;
+class Process;
 class CoreImage;
 
 char* read_mmc_file(const std::string& filepath, int* file_size);
@@ -20,5 +21,6 @@ bool is_small_int(oop num);
 number untag_small_int(oop num);
 oop tag_small_int(number num);
 
+bool check_and_print_exception(Process* proc, int exc, oop ex);
 
 #endif
