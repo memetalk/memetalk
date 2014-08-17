@@ -191,8 +191,9 @@ bool Process::load_fun(oop recv, oop drecv, oop fun, bool should_allocate) {
   } else {
     if (_mmobj->mm_function_uses_env(fun)) {
       setup_ep(fun, recv, drecv);
-      _rp = NULL; //to ease debug
+      _rp = NULL; //to remember me to use ep[rp] and dp[rp] if ep exists when executing bytecodes
       _dp = NULL;
+      debug() << "look out! we should use ep[dp] and ep[rp]: " << _rp << " " << _dp << endl;
     } else {
       _ep = NULL;
       _rp = recv;
@@ -362,7 +363,7 @@ void Process::handle_super_ctor_send(number num_args) {
   // debug() << " SUPER: " << selector << " -- " << _mmobj->mm_symbol_cstr(selector) << endl;
 
   // lookup starts at the parent of rp's class
-  oop instance = _dp;
+  oop instance = get_dp();
   oop klass = _mmobj->mm_object_vt(instance);
   oop pklass = _mmobj->mm_object_delegate(klass);
   oop receiver = _mmobj->mm_object_delegate(instance);
@@ -418,13 +419,13 @@ void Process::dispatch(int opcode, int arg) {
         stack_push(_mp);
         break;
       case PUSH_FIELD:
-        debug() << "PUSH_FIELD " << arg << " " << (oop) *(_dp + arg + 2) << endl;
-        stack_push(*(_dp + arg + 2));
+        debug() << "PUSH_FIELD " << arg << " " << (oop) *(get_dp() + arg + 2) <<  " dp: " << get_dp() << endl;
+        stack_push(*(get_dp() + arg + 2));
         break;
       case PUSH_THIS:
         if (_ep == NULL) {
-          debug() << "PUSH_THIS " << arg << " " << _rp << endl;
-          stack_push(_rp);
+          debug() << "PUSH_THIS " << arg << " " << get_rp() << endl;
+          stack_push(get_rp());
         } else {
           debug() << "PUSH_THIS [env] " << arg << " " << ((oop*)_ep)[0] << endl;
           stack_push(((oop*)_ep)[0]);
@@ -449,8 +450,8 @@ void Process::dispatch(int opcode, int arg) {
         break;
       case RETURN_THIS:
         if (_ep == NULL) {
-          debug() << "RETURN_THIS " << _rp << endl;
-          unload_fun_and_return(_rp);
+          debug() << "RETURN_THIS " << get_rp() << endl;
+          unload_fun_and_return(get_rp());
         } else {
           debug() << "RETURN_THIS [env] " << arg << " " << ((oop*)_ep)[0] << endl;
           unload_fun_and_return(((oop*)_ep)[0]);
@@ -468,9 +469,9 @@ void Process::dispatch(int opcode, int arg) {
         break;
       case POP_FIELD:
         val = stack_pop();
-        debug() << "POP_FIELD " << arg << " on " << (oop) (_dp + arg + 2) << " -- "
-                << (oop) *(_dp + arg + 2) << " = " << val << endl; //2: vt, delegate
-        *(_dp + arg + 2) = (word) val;
+        debug() << "POP_FIELD " << arg << " on " << (oop) (get_dp() + arg + 2) << " dp: " << get_dp() << " -- "
+                << (oop) *(get_dp() + arg + 2) << " = " << val << endl; //2: vt, delegate
+        *(get_dp() + arg + 2) = (word) val;
         break;
       case POP_ENV:
         val = stack_pop();

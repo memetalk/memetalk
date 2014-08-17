@@ -23,6 +23,13 @@ public:
   oop fp() { return _fp; }
   oop cp() { return _cp; }
   oop mp() { return _mp; }
+
+  oop get_rp() { if (_ep) { return ((oop*)_ep)[0]; } else { return _rp; } };
+  oop get_dp() { if (_ep) { return ((oop*)_ep)[1]; } else { return _dp; } };
+
+  // oop get_rp() { return _rp; };
+  // oop get_dp() { return _dp; };
+
   MMObj* mmobj() { return _mmobj; }
 
   void stack_push(oop);
