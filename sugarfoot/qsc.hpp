@@ -6,11 +6,6 @@
 
 
 
-/*
--Add the lexer
--Port the ctor code and methods.
- */
-
 #include <qsciscintilla.h>
 #include <QColor>
 #include <map>
