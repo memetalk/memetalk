@@ -145,7 +145,8 @@ oop meme_instance(Process* proc, QObject* obj) {
   } else {
     oop qt_imod = proc->mp();
     int exc;
-    oop qt_class = proc->do_send_0(qt_imod, proc->mmobj()->mm_string_new(obj->metaObject()->className()), &exc);
+    const char* name = obj->metaObject()->className();
+    oop qt_class = proc->do_send_0(qt_imod, proc->vm()->new_symbol(name), &exc);
     assert(exc == 0);
     oop instance = proc->mmobj()->alloc_instance(qt_class);
     set_qt_instance(proc->mmobj(), instance, obj);
@@ -166,7 +167,7 @@ oop meme_instance(Process* proc, QListWidgetItem* obj) {
   if (meme_mapping.find(obj) == meme_mapping.end()) {
     oop qt_imod = proc->mp();
     int exc;
-    oop qt_class = proc->do_send_0(qt_imod, proc->mmobj()->mm_string_new("QListWidgetItem"), &exc);
+    oop qt_class = proc->do_send_0(qt_imod, proc->vm()->new_symbol("QListWidgetItem"), &exc);
     assert(exc == 0);
     oop instance = proc->mmobj()->alloc_instance(qt_class);
     set_qt_instance(proc->mmobj(), instance, obj);
@@ -203,7 +204,7 @@ oop meme_instance(Process* proc, QTextCursor* obj) {
   if (meme_mapping.find(obj) == meme_mapping.end()) {
     oop qt_imod = proc->mp();
     int exc;
-    oop qt_class = proc->do_send_0(qt_imod, proc->mmobj()->mm_string_new("QTextCursor"), &exc);
+    oop qt_class = proc->do_send_0(qt_imod, proc->vm()->new_symbol("QTextCursor"), &exc);
     assert(exc == 0);
     oop instance = proc->mmobj()->alloc_instance(qt_class);
     set_qt_instance(proc->mmobj(), instance, obj);
@@ -219,7 +220,7 @@ oop meme_instance(Process* proc, QWebElement* obj) {
   if (meme_mapping.find(obj) == meme_mapping.end()) {
     oop qt_imod = proc->mp();
     int exc;
-    oop qt_class = proc->do_send_0(qt_imod, proc->mmobj()->mm_string_new("QWebElement"), &exc);
+    oop qt_class = proc->do_send_0(qt_imod, proc->vm()->new_symbol("QWebElement"), &exc);
     assert(exc == 0);
     oop instance = proc->mmobj()->alloc_instance(qt_class);
     set_qt_instance(proc->mmobj(), instance, obj);
