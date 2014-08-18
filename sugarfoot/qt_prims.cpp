@@ -729,9 +729,7 @@ static int prim_qt_qmenubar_add_menu(Process* proc) {
   oop text = *((oop*) proc->fp() - 1);
 
   QMenuBar* qtobj = (QMenuBar*) get_qt_instance(proc->mmobj(), data_self);
-
-  qtobj->addMenu(proc->mmobj()->mm_string_cstr(text));
-  proc->stack_push(proc->rp());
+  proc->stack_push(meme_instance(proc, qtobj->addMenu(proc->mmobj()->mm_string_cstr(text))));
   return 0;
 }
 
