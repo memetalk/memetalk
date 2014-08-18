@@ -59,10 +59,9 @@ void Process::push_frame(number arity, number num_locals) {
     stack_push((oop)0);
   }
 
-  // debug() << "push_frame [fm:" << frame_count++ << "]  arity: " << arity << " num locals: " << num_locals
-  //         << " SP:" << curr_sp
-  //         << " fp: " << (oop) fp << " cp: " << _cp << " ip: " << _ip << " ep: " << _ep
-  //         << " rp: " << _rp << " dp: " << _dp << " mp: " << _mp << endl;
+  debug() << "push_frame arity: " << arity << " num locals: " << num_locals
+          << " fp: " << (oop) fp << " cp: " << _cp << " ip: " << _ip << " ep: " << _ep
+          << " rp: " << _rp << " dp: " << _dp << " mp: " << _mp << endl;
 
   stack_push(fp);
   stack_push(_cp);
@@ -89,7 +88,7 @@ void Process::pop_frame() {
   _cp = stack_pop();
   _fp = stack_pop();
 
-  debug() << "pop_frame: fp: " << _fp << endl;
+  debug() << "pop_frame: fp: " << _fp << " rp: " << _rp << " dp: " << _dp << endl;
 
   // debug() << "pop_frame [fm:" << --frame_count << " arity: " << arity
   //         << " fp: " << _fp << " cp: " << _cp << " ip: " << _ip << " ep: " << _ep
@@ -98,7 +97,7 @@ void Process::pop_frame() {
   if (_cp) {// first frame has _cp = null
     // debug() << "pop_frame: getting module from fun " << _cp << endl;
     _mp = _mmobj->mm_function_get_module(_cp);
-    debug() << "MP for fun unloaded:" << _mp << endl;
+    debug() << "MP for fun unloaded: " << _mp << endl;
   } else {
     debug() << "++ MP for fun unloaded is null!" << endl;
   }
@@ -134,9 +133,9 @@ oop Process::ctor_rdp_for(oop rp, oop cp) {
 void Process::basic_new_and_load(oop recv) {
   oop klass = recv;
   oop instance = _mmobj->alloc_instance(klass);
-  debug() << "basic_new: " << instance << endl;
   _rp = instance;
   _dp = ctor_rdp_for(_rp, _cp);
+  debug() << "basic_new: " << instance << " dp: " << _dp << endl;
   if (_ep) {
     ((oop*)_ep)[0] = _rp;
     ((oop*)_ep)[1] = _dp;
@@ -186,6 +185,7 @@ bool Process::load_fun(oop recv, oop drecv, oop fun, bool should_allocate) {
     _ep = _mmobj->mm_context_get_env(fun);
     _rp = ((oop*)_ep)[0];
     _dp = ((oop*)_ep)[1];
+    debug() << "loaded ep with rp/dp: " << _rp << " " << _dp << endl;
     copy_params_to_env(_mmobj->mm_function_get_num_params(fun),
                        _mmobj->mm_function_get_env_offset(fun));
   } else {
@@ -258,7 +258,7 @@ oop Process::do_send_0(oop recv, oop selector, int* exc) {
   number arity = _mmobj->mm_function_get_num_params(fun);
   if (arity != 0) {
     debug() << 0 << " != " << arity << endl;
-    bail("arity and num_args differ");
+    bail("do_send_0: arity and num_args differ");
   }
 
   oop stop_at_fp = _fp;
@@ -305,7 +305,7 @@ oop Process::do_call(oop fun, oop args, int* exc) {
   number arity = _mmobj->mm_function_get_num_params(fun);
   if (num_args != arity) {
     debug() << num_args << " != " << arity << endl;
-    bail("arity and num_args differ");
+    bail("call: arity and num_args differ");
   }
 
   for (int i = 0; i < num_args; i++) {
@@ -353,7 +353,7 @@ void Process::handle_send(number num_args) {
   number arity = _mmobj->mm_function_get_num_params(fun);
   if (num_args != arity) {
     debug() << num_args << " != " << arity << endl;
-    bail("arity and num_args differ");
+    bail("handle_send: arity and num_args differ");
   }
   load_fun(recv, drecv, fun, true);
 }
@@ -382,7 +382,7 @@ void Process::handle_super_ctor_send(number num_args) {
   number arity = _mmobj->mm_function_get_num_params(fun);
   if (num_args != arity) {
     debug() << num_args << " != " << arity << endl;
-    bail("arity and num_args differ");
+    bail("handle_super_ctor_send: arity and num_args differ");
   }
 
   load_fun(_rp, drecv, fun, false);
@@ -392,7 +392,7 @@ void Process::handle_call(number num_args) {
   oop fun = stack_pop();
   number arity = _mmobj->mm_function_get_num_params(fun);
   if (num_args != arity) {
-    bail("arity and num_args differ");
+    bail("handle_call: arity and num_args differ");
   }
   load_fun(NULL, NULL, fun, false);
 
