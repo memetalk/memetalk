@@ -7,6 +7,8 @@
 #include <assert.h>
 #include "utils.hpp"
 
+#include <map>
+
 MMObj::MMObj(VM* vm, CoreImage* core)
   : _vm(vm), _core_image(core) {
 }
@@ -93,164 +95,126 @@ oop MMObj::mm_object_delegate(oop obj) {
   }
 }
 
-oop MMObj::mm_list_new_empty() {
+oop MMObj::mm_list_new() {
   oop obj = (oop) malloc(sizeof(word) * 4); // vt, delegate, size, elements frame
 
   ((word**) obj)[0] = _core_image->get_prime("List");
   ((word**) obj)[1] = mm_object_new();
-  ((word**) obj)[2] = 0;
-  ((word**) obj)[3] = NULL;
+  ((word*)  obj)[2] = -1;
+  ((std::vector<oop>**) obj)[3] = new std::vector<oop>;
   return obj;
 }
 
-// oop MMObj::mm_list_new(number size) {
-//   oop obj = (oop) malloc(sizeof(word) * 4); // vt, delegate, size, elements frame
-//   oop frame = (oop) calloc(sizeof(oop), size);
-//   ((word**) obj)[0] = _core_image->get_prime("List");
-//   ((word**) obj)[1] = mm_object_new();
-//   ((word*) obj)[2] = (word) size;
-//   ((word**) obj)[3] = frame;
-//   return obj;
-// }
-
-
 number MMObj::mm_list_size(oop list) {
   assert( *(oop*) list == _core_image->get_prime("List"));
-  return (number) ((word*)list)[2];
+  std::vector<oop>* elements = mm_list_frame(list);
+  return elements->size();
 }
 
 oop MMObj::mm_list_entry(oop list, number idx) {
   assert( *(oop*) list == _core_image->get_prime("List"));
-  number size = mm_list_size(list);
-  if (size == 0) {
-    bail("list is empty");
-  }
+  std::vector<oop>* elements = mm_list_frame(list);
+  return (*elements)[idx];
+}
 
-  oop frame =  mm_list_frame(list);
-  for(int i = 0; i < size; i++) {
-    if (i == idx) {
-      return * (oop*) (frame + idx);
+std::vector<oop>* MMObj::mm_list_frame(oop list) {
+  assert( *(oop*) list == _core_image->get_prime("List"));
+  number size = (number) ((oop*)list)[2];
+  if (size == -1) {
+    return (std::vector<oop>*) ((oop*)list)[3];
+  } else {
+    ((word*)list)[2] = -1;
+    std::vector<oop>* elements = new std::vector<oop>;
+    oop frame = ((oop*)list)[3];
+    for (int i = 0; i < size; i++) {
+      elements->push_back(((oop*)frame)[i]);
     }
+    ((std::vector<oop>**) list)[3] = elements;
+    return elements;
   }
-  bail("list entry not found");
-  return NULL;
-}
-
-oop MMObj::mm_list_frame(oop list) {
-  assert( *(oop*) list == _core_image->get_prime("List"));
-  assert(mm_list_size(list) > 0);
-
-  return ((oop*)list)[3];
-}
-
-void MMObj::mm_list_set_frame(oop list, oop begin) {
-  assert( *(oop*) list == _core_image->get_prime("List"));
-  ((oop*)list)[3] = begin;
 }
 
 number MMObj::mm_list_index_of(oop list, oop elem) {
   assert( *(oop*) list == _core_image->get_prime("List"));
-  number size = mm_list_size(list);
+  std::vector<oop>* elements = mm_list_frame(list);
 
-  if (size == 0) {
+  int pos = std::find(elements->begin(), elements->end(), elem) - elements->begin();
+  if (pos == mm_list_size(list)) {
     return -1;
+  } else {
+    return pos;
   }
-
-  oop frame =  mm_list_frame(list);
-  for(int i = 0; i < size; i++) {
-    oop e = ((oop*)frame)[i];
-    if (e == elem) {
-      return i;
-    }
-  }
-
-  return -1;
 }
 
 void MMObj::mm_list_prepend(oop list, oop element) {
   assert( *(oop*) list == _core_image->get_prime("List"));
-  number size = mm_list_size(list);
 
-  debug() << "List::prepend " << element << endl;
-
-  oop begin = (oop) malloc(sizeof(oop) * (size + 1));
-  if (size > 0) {
-    oop old_frame = mm_list_frame(list);
-    debug() << "moving mem from " << old_frame << " to " << begin << endl;
-    for (int i = 0; i < size; i++) {
-      begin[i+1] = old_frame[i];
-    }
-    free(old_frame);
-    debug() << "moving mem got " << begin << endl;
-  }
-
-  ((oop*)begin)[0] = element;
-
-  ((word*)list)[2] = size + 1;
-
-  mm_list_set_frame(list, begin);
+  std::vector<oop>* elements = mm_list_frame(list);
+  elements->insert(elements->begin(), element);
 }
 
 void MMObj::mm_list_append(oop list, oop element) {
   assert( *(oop*) list == _core_image->get_prime("List"));
-  number size = mm_list_size(list);
 
-  debug() << "List::append " << element << endl;
-
-  oop begin;
-  if (size == 0) {
-    begin = (oop) calloc(sizeof(oop), size + 1);
-    debug() << "alloc " << begin << " " << size + 1 << endl;
-  } else {
-    begin = mm_list_frame(list);
-    debug() << "reallocng " << begin << " " << size + 1 << endl;
-    begin = (oop) realloc(begin, sizeof(oop) * (size + 1));
-    debug() << "realloced " << begin << endl;
-  }
-
-  ((oop*)begin)[size] = element;
-
-
-  ((word*)list)[2] = size + 1;
-  mm_list_set_frame(list, begin);
+  std::vector<oop>* elements = mm_list_frame(list);
+  elements->push_back(element);
 }
 
-// void MMObj::mm_list_set(oop list, oop element, number idx) {
-//   assert( *(oop*) list == _core_image->get_prime("List"));
-//   assert(idx < mm_list_size(list));
-
-//   oop begin = mm_list_frame(list);
-//   * (oop*) (begin + idx) = element;
-// }
-
-oop MMObj::mm_dictionary_new(int num_entries) {
-  int basic = 3; //vt, delegate, size
-  int payload = num_entries * 2;
-  oop obj = (oop) malloc(sizeof(word) * (basic + payload));
+oop MMObj::mm_dictionary_new() {
+  int basic = 4; //vt, delegate, size, frame
+  oop obj = (oop) malloc(sizeof(word) * basic);
 
   ((word**) obj)[0] = _core_image->get_prime("Dictionary");
   ((word**) obj)[1] = mm_object_new();
-  ((word*) obj)[2] = num_entries;
+  ((word*) obj)[2] = -1;
+  ((std::map<oop, oop>**) obj)[3] = new std::map<oop, oop>;
   return obj;
+}
+
+std::map<oop, oop>* MMObj::mm_dictionary_frame(oop dict) {
+  assert( *(oop*) dict == _core_image->get_prime("Dictionary"));
+
+  number size = (number) ((oop*)dict)[2];
+  if (size == -1) {
+    return (std::map<oop, oop>*) ((oop*)dict)[3];
+  } else {
+    ((word*)dict)[2] = -1;
+    std::map<oop, oop>* elements = new std::map<oop, oop>;
+    oop frame = ((oop*)dict)[3];
+    for (int i = 0, j = 0; i < size; i++, j += 2) {
+      (*elements)[((oop*)frame)[j]] = ((oop*)frame)[j+1];
+    }
+    ((std::map<oop, oop>**) dict)[3] = elements;
+    return elements;
+  }
+}
+
+std::map<oop,oop>::iterator MMObj::mm_dictionary_begin(oop dict) {
+  assert( *(oop*) dict == _core_image->get_prime("Dictionary"));
+  std::map<oop, oop>* elements = mm_dictionary_frame(dict);
+  return elements->begin();
+}
+
+std::map<oop,oop>::iterator MMObj::mm_dictionary_end(oop dict) {
+  assert( *(oop*) dict == _core_image->get_prime("Dictionary"));
+  std::map<oop, oop>* elements = mm_dictionary_frame(dict);
+  return elements->end();
 }
 
 number MMObj::mm_dictionary_size(oop dict) {
   assert( *(oop*) dict == _core_image->get_prime("Dictionary"));
-  return (number) ((word*)dict)[2];
+  std::map<oop, oop>* elements = mm_dictionary_frame(dict);
+  return elements->size();
 }
-
-
 
 bool MMObj::mm_dictionary_has_key(oop dict, oop key) {
   assert( *(oop*) dict == _core_image->get_prime("Dictionary"));
 
-  number size = mm_dictionary_size(dict);
-  debug() << " Dict " << dict << " size " << size << " lookup: " << key << endl;
-
-  for(int i = 0; i < size; i++) {
-    oop mykey = mm_dictionary_entry_key(dict, i);
-    // debug() << " {vt: " << mm_object_vt(mykey) << "} =?= " << key << endl;
-    if (mykey == key) {
+  debug() << dict << " has key " << key << " ?" << endl;
+  std::map<oop, oop>* elements = mm_dictionary_frame(dict);
+  for (std::map<oop, oop>::iterator it = elements->begin(); it != elements->end(); it++) {
+    debug() << it->first << " =?= " << key << endl;
+    if (it->first == key) {
       return true;
     }
   }
@@ -260,50 +224,18 @@ bool MMObj::mm_dictionary_has_key(oop dict, oop key) {
 oop MMObj::mm_dictionary_get(oop dict, oop key) {
   assert( *(oop*) dict == _core_image->get_prime("Dictionary"));
 
-  number size = mm_dictionary_size(dict);
-  for(int i = 0; i < size; i++) {
-    if (mm_dictionary_entry_key(dict, i) == key) {
-      return mm_dictionary_entry_value(dict, i);
-    }
-  }
-  return NULL;
+  std::map<oop, oop>* elements = mm_dictionary_frame(dict);
+  return elements->at(key);
 }
 
-number MMObj::mm_dictionary_index_of(oop dict, oop key) {
+
+void MMObj::mm_dictionary_set(oop dict, oop key, oop value) {
   assert( *(oop*) dict == _core_image->get_prime("Dictionary"));
 
-  number size = mm_dictionary_size(dict);
-  for(int i = 0; i < size; i++) {
-    if (mm_dictionary_entry_key(dict, i) == key) {
-      return i;
-    }
-  }
-  return -1;
+  std::map<oop, oop>* elements = mm_dictionary_frame(dict);
+  (*elements)[key] = value;
 }
 
-
-oop MMObj::mm_dictionary_entry_key(oop dict, int idx) {
-  assert( *(oop*) dict == _core_image->get_prime("Dictionary"));
-  //0: vt
-  //1: delegate
-  //2: size
-  return (word*) dict[3 + (idx * 2)];
-}
-
-oop MMObj::mm_dictionary_entry_value(oop dict, int idx) {
-  assert( *(oop*) dict == _core_image->get_prime("Dictionary"));
-  //0: vt
-  //1: delegate
-  //2: size
-  return (word*) dict[3 + ((idx * 2)+1)];
-}
-
-void MMObj::mm_dictionary_set(oop dict, int idx, oop key, oop value) {
-  assert( *(oop*) dict == _core_image->get_prime("Dictionary"));
-
-  * (oop*) &dict[3 + (idx * 2)] = key;
-  * (oop*) &dict[3 + ((idx * 2)+1)] = value;
-}
 
 void MMObj::mm_module_set_dictionary(oop imodule, oop imod_dict) {
   assert( *(oop*) imod_dict == _core_image->get_prime("Dictionary"));
@@ -640,14 +572,16 @@ number MMObj::mm_compiled_class_num_fields(oop cclass) {
 oop MMObj::mm_cfuns_to_funs_dict(oop cfuns_dict, oop imod) {
   assert( *(oop*) cfuns_dict == _core_image->get_prime("Dictionary"));
 
-  number size = mm_dictionary_size(cfuns_dict);
-  oop funs_dict = mm_dictionary_new(size);
-  for (int i = 0; i < size; i++) {
-    oop str_name = mm_dictionary_entry_key(cfuns_dict, i);
+  // number size = mm_dictionary_size(cfuns_dict);
+  oop funs_dict = mm_dictionary_new();
+
+  std::map<oop, oop>::iterator it = mm_dictionary_begin(cfuns_dict);
+  for ( ; it != mm_dictionary_end(cfuns_dict); it++) {
+    oop str_name = it->first;
     char* str = mm_string_cstr(str_name);
-    oop cfun = mm_dictionary_entry_value(cfuns_dict, i);
+    oop cfun = it->second;
     oop fun = mm_function_from_cfunction(cfun, imod);
-    mm_dictionary_set(funs_dict, i, _vm->new_symbol(str), fun);
+    mm_dictionary_set(funs_dict, _vm->new_symbol(str), fun);
   }
   return funs_dict;
 }
@@ -703,7 +637,7 @@ oop MMObj::mm_new_slot_getter(oop imodule, oop owner, oop name, int idx) {
   * (oop*) cfun_getter = _core_image->get_prime("CompiledFunction");
   * (oop*) &cfun_getter[1] = mm_object_new();
   * (oop*) &cfun_getter[2] = name;
-  * (oop*) &cfun_getter[3] = mm_list_new_empty();
+  * (oop*) &cfun_getter[3] = mm_list_new();
   * (word*) &cfun_getter[7] = 1;
   * (word*) &cfun_getter[8] = idx;
   * (oop*) &cfun_getter[9] = owner;

@@ -2,6 +2,8 @@
 #define MMOBJ_HPP
 
 #include "defs.hpp"
+#include <vector>
+#include <map>
 
 class CoreImage;
 class VM;
@@ -29,27 +31,24 @@ public:
   oop mm_boolean_new(number val);
   bool mm_boolean_cbool(oop val);
 
-  // oop mm_list_new(number size);
-  oop mm_list_new_empty();
+  oop mm_list_new();
   number mm_list_size(oop list);
   number mm_list_index_of(oop list, oop elem);
   oop mm_list_entry(oop list, number idx);
-  oop mm_list_frame(oop);
-  void mm_list_set_frame(oop, oop);
-  // void mm_list_set(oop list, oop element, number idx);
+  std::vector<oop>* mm_list_frame(oop);
   void mm_list_prepend(oop list, oop element);
   void mm_list_append(oop list, oop element);
 
-  // oop mm_list_new(number size, oop*);
-
-  oop mm_dictionary_new(int num_entries);
+  oop mm_dictionary_new();
   number mm_dictionary_size(oop dict);
-  oop mm_dictionary_entry_key(oop dict, int idx);
-  oop mm_dictionary_entry_value(oop dict, int idx);
-  void mm_dictionary_set(oop dict, int idx, oop key, oop value);
+  // oop mm_dictionary_entry_key(oop dict, int idx);
+  // oop mm_dictionary_entry_value(oop dict, int idx);
+  void mm_dictionary_set(oop dict, oop key, oop value);
   bool mm_dictionary_has_key(oop dict, oop key);
   oop mm_dictionary_get(oop dict, oop key);
-  number mm_dictionary_index_of(oop dict, oop key);
+  std::map<oop,oop>* mm_dictionary_frame(oop);
+  std::map<oop,oop>::iterator mm_dictionary_begin(oop);
+  std::map<oop,oop>::iterator mm_dictionary_end(oop);
 
   void mm_module_set_dictionary(oop imodule, oop imod_dict);
   void mm_module_set_module_argument(oop imodule, oop arg, number idx);
