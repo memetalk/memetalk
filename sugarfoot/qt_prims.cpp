@@ -62,7 +62,7 @@ QScriptValue mm_handle(QScriptContext *ctx, QScriptEngine *engine) {
   oop mm_closure = (oop) ctx->argument(1).toVariant().value<void*>();
   QScriptValue args = ctx->argument(2);
 
-  oop mm_args = proc->mmobj()->mm_list_new_empty();
+  oop mm_args = proc->mmobj()->mm_list_new();
   for (int i = 0; i < args.property("length").toInt32(); i++) {
     QScriptValue arg = args.property(i);
     if (arg.isBool()) {
@@ -854,11 +854,11 @@ static int prim_qt_scintilla_get_cursor_position(Process* proc) {
   int line, index;
   qtobj->getCursorPosition(&line, &index);
 
-  oop dict = proc->mmobj()->mm_dictionary_new(2);
+  oop dict = proc->mmobj()->mm_dictionary_new();
   oop oop_line = proc->mmobj()->mm_string_new("line");
   oop oop_index = proc->mmobj()->mm_string_new("index");
-  proc->mmobj()->mm_dictionary_set(dict, 0, oop_line, tag_small_int(line));
-  proc->mmobj()->mm_dictionary_set(dict, 1, oop_index, tag_small_int(index));
+  proc->mmobj()->mm_dictionary_set(dict, oop_line, tag_small_int(line));
+  proc->mmobj()->mm_dictionary_set(dict, oop_index, tag_small_int(index));
   proc->stack_push(dict);
   return 0;
 }
@@ -870,16 +870,16 @@ static int prim_qt_scintilla_get_selection(Process* proc) {
   int lineFrom, indexFrom, lineTo, indexTo;
   qtobj->getSelection(&lineFrom, &indexFrom, &lineTo, &indexTo);
 
-  oop dict = proc->mmobj()->mm_dictionary_new(4);
+  oop dict = proc->mmobj()->mm_dictionary_new();
   oop oop_start_line = proc->mmobj()->mm_string_new("start_line");
   oop oop_end_line = proc->mmobj()->mm_string_new("end_line");
   oop oop_start_index = proc->mmobj()->mm_string_new("start_index");
   oop oop_end_index = proc->mmobj()->mm_string_new("end_index");
 
-  proc->mmobj()->mm_dictionary_set(dict, 0, oop_start_line, tag_small_int(lineFrom));
-  proc->mmobj()->mm_dictionary_set(dict, 1, oop_end_line, tag_small_int(lineTo));
-  proc->mmobj()->mm_dictionary_set(dict, 2, oop_start_index, tag_small_int(indexFrom));
-  proc->mmobj()->mm_dictionary_set(dict, 3, oop_end_index, tag_small_int(indexTo));
+  proc->mmobj()->mm_dictionary_set(dict, oop_start_line, tag_small_int(lineFrom));
+  proc->mmobj()->mm_dictionary_set(dict, oop_end_line, tag_small_int(lineTo));
+  proc->mmobj()->mm_dictionary_set(dict, oop_start_index, tag_small_int(indexFrom));
+  proc->mmobj()->mm_dictionary_set(dict, oop_end_index, tag_small_int(indexTo));
   proc->stack_push(dict);
   return 0;
 }
@@ -1484,13 +1484,13 @@ public:
   }
   oop create_args(const QStringList& names, const QStringList& vals) const { //dict(zip(names,vals))
     assert(names.size() == vals.size());
-    oop dict = _proc->mmobj()->mm_dictionary_new(vals.size());
+    oop dict = _proc->mmobj()->mm_dictionary_new();
     for (int i = 0; i < names.length(); i++) {
       oop key = _proc->mmobj()->mm_string_new(names[i].toLocal8Bit().data());
       oop val = _proc->mmobj()->mm_string_new(vals[i].toLocal8Bit().data());
-      _proc->mmobj()->mm_dictionary_set(dict, i, key, val);
+      _proc->mmobj()->mm_dictionary_set(dict, key, val);
     }
-    oop lst = _proc->mmobj()->mm_list_new_empty();
+    oop lst = _proc->mmobj()->mm_list_new();
     _proc->mmobj()->mm_list_append(lst, dict);
     return lst;
   }
@@ -1610,7 +1610,7 @@ static int prim_qt_qwidget_actions(Process* proc) {
   QWidget* w = (QWidget*) get_qt_instance(proc->mmobj(), data_self);
 
   QList<QAction*> lst = w->actions();
-  oop oop_lst = proc->mmobj()->mm_list_new_empty();
+  oop oop_lst = proc->mmobj()->mm_list_new();
   for (int i = 0; i < lst.size(); i++) {
     proc->mmobj()->mm_list_append(oop_lst, meme_instance(proc, lst[i]));
   }

@@ -45,6 +45,7 @@ private:
   word _names_size;
 
   oop _compiled_module;
+  std::map<oop, int> _alias_idx_map;
 };
 
 
