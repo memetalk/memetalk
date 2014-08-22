@@ -112,6 +112,12 @@
   instance_method toString: fun() {
     <primitive "dictionary_to_string">
   }
+  instance_method set: fun(key, value) {
+    <primitive "dictionary_set">
+  }
+  class_method new: fun() {
+    <primitive "dictionary_new">
+  }
   end
 
   class List

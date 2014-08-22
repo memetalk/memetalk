@@ -112,20 +112,16 @@ expr :fnobj = ['var-def' :id expr(fnobj)]              -> fnobj.emit_var_decl(id
                 !(fnobj.bind_catch_var(cp[1]))
                   [expr(fnobj)*]]
               -> fnobj.emit_try_catch(label_begin_try, label_begin_catch, end_pos, cp[0], cp[1])
-            | ['fun-literal'  ['params' :p]
-               !(fnobj.new_closure(p)):fn
-               ['body' [expr(fn)*]]] -> fnobj.emit_push_closure(fn)
-            | ['literal-array'  :e apply('exprs' fnobj e)] -> fnobj.emit_push_list(len(e))
-            | ['index' :e expr(fnobj) apply('expr' fnobj e)]    -> fnobj.emit_push_index()
             | assignment(fnobj)
             | atom(fnobj)
 
 catch_decl = ['catch' ['id' :type] :id]  -> (type, id)
            | ['catch' :id]               -> (None, id)
 
-
 assignment :fnobj = ['=' ['id' :v] expr(fnobj)]    -> fnobj.emit_local_assignment(v)
                   | ['=' ['field' :f] expr(fnobj)] -> fnobj.emit_field_assignment(f)
+
+dict_pairs :fnobj = (['pair' expr(fnobj) expr(fnobj)])*:e -> e
 
 atom :fnobj = ['literal-number' :x]   -> fnobj.emit_push_num_literal(x)
             | ['literal' 'this']      -> fnobj.emit_push_this()
@@ -138,6 +134,12 @@ atom :fnobj = ['literal-number' :x]   -> fnobj.emit_push_num_literal(x)
             | ['literal' 'context']   -> fnobj.emit_push_context()
             | ['id' :name]            -> fnobj.emit_push_var(name)
             | ['field' :name]         -> fnobj.emit_push_field(name)
+            | ['literal-array'  :e apply('exprs' fnobj e)]     -> fnobj.emit_push_list(len(e))
+            | ['literal-dict'   dict_pairs(fnobj):p]  -> fnobj.emit_push_dict(len(p))
+            | ['fun-literal'  ['params' :p]
+               !(fnobj.new_closure(p)):fn
+               ['body' [expr(fn)*]]] -> fnobj.emit_push_closure(fn)
+            | ['index' :e expr(fnobj) apply('expr' fnobj e)]   -> fnobj.emit_push_index()
 
 args :fnobj =  ['args' []] -> 0
             |  ['args' arglist(fnobj):arity] -> arity

@@ -1,15 +1,8 @@
-.preamble(ex1)
-  [X] <= ex1;
+.preamble()
 .code
 
-class Z < X
-class_method ha: fun() {
-  this.print(888);
-  return 7;
+main: fun() {
+  return {"a": 1, "b": 2};
 }
-end
 
-foo: fun() {
-  return Z.ha();
-}
 .endcode
