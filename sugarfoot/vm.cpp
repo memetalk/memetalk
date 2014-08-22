@@ -46,6 +46,8 @@ int VM::start() {
     bail("usage: sf-vm <file.mmc>");
   }
 
+  init_primitives(this); //module initialization could execute primitives
+
   char* filepath = _argv[1];
 
   _process = new Process(this);
@@ -55,7 +57,6 @@ int VM::start() {
 
   oop imod = instantiate_module(filepath, _mmobj->mm_list_new());
 
-  init_primitives(this);
 
   int exc;
   oop retval = _process->run(imod, new_symbol("main"), &exc);
