@@ -1479,8 +1479,8 @@ public:
       if (!check_and_print_exception(_proc, exc, obj)) {
         return (QObject*) get_qt_instance(_proc->mmobj(), obj);
       }
-      return NULL;
     }
+    return NULL;
   }
   oop create_args(const QStringList& names, const QStringList& vals) const { //dict(zip(names,vals))
     assert(names.size() == vals.size());
@@ -1623,7 +1623,9 @@ static int prim_qt_qwidget_add_action(Process* proc) {
   oop oop_action = *((oop*) proc->fp() - 1);
 
   QWidget* w = (QWidget*) get_qt_instance(proc->mmobj(), data_self);
-  w->addAction((QAction*)get_qt_instance(proc->mmobj(), oop_action));
+  QAction* ac = (QAction*)get_qt_instance(proc->mmobj(), oop_action);
+  debug() << "prim_qt_qwidget_add_action -- " << ac << endl;
+  w->addAction(ac);
   proc->stack_push(proc->rp());
   return 0;
 }
@@ -1731,7 +1733,7 @@ static int prim_qt_qwidget_set_minimum_size(Process* proc) {
   oop oop_w = *((oop*) proc->fp() - 2);
 
   QWidget* w = (QWidget*) get_qt_instance(proc->mmobj(), data_self);
-  w->setMinimumSize(untag_small_int(oop_w), untag_small_int(oop_w));
+  w->setMinimumSize(untag_small_int(oop_w), untag_small_int(oop_h));
   proc->stack_push(proc->rp());
   return 0;
 }
