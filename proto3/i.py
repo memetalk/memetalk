@@ -1121,11 +1121,12 @@ class Process():
         # will just break.
         # so, time for ugly hacks again
         global _module
-        def _run(proc):
-            proc.run()
-        p = multiprocessing.Process(target=_run, args=(self,))
-        setattr(_module, 'process_' + str(self.procid), p)
-        p.start()
+        # def _run(proc):
+        #     proc.run()
+        # p = multiprocessing.Process(target=_run, args=(self,))
+        # setattr(_module, 'process_' + str(self.procid), p)
+        # p.start()
+        self.run()
 
     def run(self):
         logger.info("running process:" + str(self.procid))
