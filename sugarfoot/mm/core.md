@@ -115,6 +115,9 @@
   instance_method set: fun(key, value) {
     <primitive "dictionary_set">
   }
+  instance_method index: fun(idx) {
+    <primitive "dictionary_index">
+  }
   class_method new: fun() {
     <primitive "dictionary_new">
   }

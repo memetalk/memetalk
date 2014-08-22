@@ -204,6 +204,14 @@ static int prim_dictionary_set(Process* proc) {
   return 0;
 }
 
+static int prim_dictionary_index(Process* proc) {
+  oop self =  proc->dp();
+  oop key = *((oop*) proc->fp() - 1);
+
+  proc->stack_push(proc->mmobj()->mm_dictionary_get(self, key));
+  return 0;
+}
+
 static int prim_dictionary_to_string(Process* proc) {
   oop self =  proc->dp();
   std::stringstream s;
@@ -406,6 +414,7 @@ void init_primitives(VM* vm) {
 
   vm->register_primitive("dictionary_new", prim_dictionary_new);
   vm->register_primitive("dictionary_set", prim_dictionary_set);
+  vm->register_primitive("dictionary_index", prim_dictionary_index);
   vm->register_primitive("dictionary_to_string", prim_dictionary_to_string);
 
   vm->register_primitive("string_append", prim_string_append);
