@@ -13,21 +13,8 @@ class CoreVirtualMemory(vmemory.VirtualMemory):
     def index_for(self, name):
         return self.base + self.index[name]
 
-    def reloc_table(self):
-        return [self.base + sum(self.cell_sizes[0:idx]) for idx,entry in enumerate(self.cells) if type(entry) == vmemory.PointerCell]
-
-    def object_table(self):
-        return reduce(lambda x,y: x+y, [e() for e in self.cells])
-
     def external_names(self):
         return sorted(set([x[0] for x in self.symb_table]))
-
-    def symbols_references(self):
-        sr = []
-        for text, ptr in self.symb_table:
-             for referer in [x for x in self.cells if type(x) == vmemory.PointerCell and x.target_cell == ptr]:
-                 sr.append((text, self.base + sum(self.cell_sizes[0:self.cells.index(referer)])))
-        return sr
 
     def append_external_ref(self, name, label):
         return self.append_label_ref(name, label) # core is self contained and does not require external names
@@ -75,64 +62,31 @@ class CoreVirtualMemory(vmemory.VirtualMemory):
         self.symb_table.append((string, oop))
         return oop
 
-    def _append_dict_prologue(self, size):
+    def append_dict_prologue(self, size, frame_oop):
         delegate = self.append_object_instance()        # Assumed to be object! if source change, this breaks
 
         self.append_int(pyutils.FRAME_TYPE_DVAR_OBJECT)
-        self.append_int((3 * bits.WSIZE) + (size * 2 * bits.WSIZE))
+        self.append_int(4 * bits.WSIZE)
 
         oop = self.append_label_ref(utils.class_label('Dictionary')) # vt
         self.append_pointer_to(delegate)          # delegate
         self.append_int(size)                     # dict length
+        if frame_oop is None:
+            self.append_null()
+        else:
+            self.append_pointer_to(frame_oop)
         return oop
-
-    def _append_dict_pairs(self, pairs):
-        for key, val in pairs:
-            self.append_pointer_to(key)
-            self.append_pointer_to(val)
-
-    def append_empty_dict(self):
-        return self._append_dict_prologue(0)
-
-    def append_string_dict(self, pydict):
-        pairs_oop = []
-        for key, val in pydict.iteritems():
-            key_oop = self.append_string_instance(key)
-            val_oop = self.append_string_instance(val)
-            pairs_oop.append((key_oop, val_oop))
-        return self.append_dict_with_pairs(pairs_oop)
-
-    def append_sym_dict_emiting_entries(self, entries_pydict):
-        pairs_oop = []
-        for key, entry, in entries_pydict.iteritems():
-            key_oop = self.append_symbol_instance(key)
-            val_oop = entry.fill(self)
-            pairs_oop.append((key_oop, val_oop))
-        return self.append_dict_with_pairs(pairs_oop)
-
-    def append_dict_emiting_entries(self, entries_pydict):
-        pairs_oop = []
-        for key, entry, in entries_pydict.iteritems():
-            key_oop = self.append_string_instance(key)
-            val_oop = entry.fill(self)
-            pairs_oop.append((key_oop, val_oop))
-        return self.append_dict_with_pairs(pairs_oop)
-
-    def append_dict_with_pairs(self, pairs):
-        oop = self._append_dict_prologue(len(pairs))
-        self._append_dict_pairs(pairs)
-        return oop
-
 
     def append_empty_list(self):
         delegate = self.append_object_instance()                 # Assumed to be object! if source change, this breaks
 
         self.append_int(pyutils.FRAME_TYPE_LIST_OBJECT)
-        self.append_int(3 * bits.WSIZE)
+        self.append_int(4 * bits.WSIZE)
 
         oop = self.append_label_ref(utils.class_label('List'))  # vt
         self.append_pointer_to(delegate)                        # delegate
         self.append_int(0)                                      # len
+        self.append_null()                                      # frame
         return oop
 
 
@@ -147,16 +101,15 @@ class CoreVirtualMemory(vmemory.VirtualMemory):
             oops = []
             for oop_element in oops_elements:         # .. elements
                 oops.append(self.append_pointer_to(oop_element))
-            frame_size = 4 * bits.WSIZE
-        else:
-            frame_size = 3 * bits.WSIZE
 
         self.append_int(pyutils.FRAME_TYPE_LIST_OBJECT)
-        self.append_int(frame_size)
+        self.append_int(4 * bits.WSIZE)
 
-        oop = self.append_label_ref('List')       # vt
+        oop = self.append_label_ref(utils.class_label('List'))  # vt
         self.append_pointer_to(delegate)          # delegate
         self.append_int(len(lst))                 # len
         if len(lst) > 0:
             self.append_pointer_to(oops[0])
+        else:
+            self.append_null()
         return oop

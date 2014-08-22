@@ -1,6 +1,7 @@
 from pdb import set_trace as br
 import math
 from pyutils import bits
+import pyutils
 
 
 class Cell(object):
@@ -140,6 +141,68 @@ class VirtualMemory(object):
         self._append_cell(cell, label)
         return cell
 
+
+    ###
+    def _physical_address(self, cell):
+        return self.base + sum(self.cell_sizes[0:self.cells.index(cell)])
+
+    def object_table(self):
+        return reduce(lambda x,y: x+y, [e() for e in self.cells])
+
+    def reloc_table(self):
+        return [self._physical_address(entry) for entry in self.cells if type(entry) == PointerCell]
+
+    def symbols_references(self):
+        sr = []
+        for text, ptr in self.symb_table:
+             for referer in [x for x in self.cells if type(x) == PointerCell and x.target_cell == ptr]:
+                 sr.append((text, self.base + sum(self.cell_sizes[0:self.cells.index(referer)])))
+        return sr
+
+    def append_string_dict(self, pydict):
+        pairs_oop = []
+        for key, val in iter(sorted(pydict.items())):
+            key_oop = self.append_string_instance(key)
+            val_oop = self.append_string_instance(val)
+            pairs_oop.append((key_oop, val_oop))
+        return self.append_dict_with_pairs(pairs_oop)
+
+    def append_dict_with_pairs(self, pairs):
+        frame_oop = self._append_dict_frame(pairs)
+        oop = self.append_dict_prologue(len(pairs), frame_oop)
+        return oop
+
+    def _append_dict_frame(self, pairs):
+        self.append_int(pyutils.FRAME_TYPE_ELEMENTS)
+        self.append_int(len(pairs) * 2 * bits.WSIZE)
+
+        oops = []
+        for key, val in pairs:
+            oops.append(self.append_pointer_to(key))
+            self.append_pointer_to(val)
+        if len(oops) > 0:
+            return oops[0]
+        else:
+            return None
+
+    def append_empty_dict(self):
+        return self.append_dict_prologue(0, None)
+
+    def append_dict_emiting_entries(self, entries_pydict):
+        pairs_oop = []
+        for key, entry, in iter(sorted(entries_pydict.items())):
+            key_oop = self.append_string_instance(key)
+            val_oop = entry.fill(self)
+            pairs_oop.append((key_oop, val_oop))
+        return self.append_dict_with_pairs(pairs_oop)
+
+    def append_sym_dict_emiting_entries(self, entries_pydict):
+        pairs_oop = []
+        for key, entry, in entries_pydict.iteritems():
+            key_oop = self.append_symbol_instance(key)
+            val_oop = entry.fill(self)
+            pairs_oop.append((key_oop, val_oop))
+        return self.append_dict_with_pairs(pairs_oop)
     ###
 
     def dump(self):
