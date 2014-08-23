@@ -63,7 +63,9 @@ public:
 
 
   oop mm_symbol_new(const char* str);
+  bool mm_is_symbol(oop);
   char* mm_symbol_cstr(oop);
+  oop mm_symbol_to_string(oop);
 
   bool mm_is_function(oop);
   bool mm_is_context(oop);

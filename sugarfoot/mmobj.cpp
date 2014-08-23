@@ -138,12 +138,21 @@ number MMObj::mm_list_index_of(oop list, oop elem) {
   assert( *(oop*) list == _core_image->get_prime("List"));
   std::vector<oop>* elements = mm_list_frame(list);
 
-  int pos = std::find(elements->begin(), elements->end(), elem) - elements->begin();
-  if (pos == mm_list_size(list)) {
-    return -1;
-  } else {
-    return pos;
+
+  std::vector<oop>::iterator it = elements->begin();
+  for (number pos = 0; it != elements->end(); it++, pos++) {
+    debug() << *it << " =?= " << elem << endl;
+    if (*it == elem) {
+      return pos;
+    //some temporary hack while we don't have a self-host compiler doing Object.==
+    } else if (mm_is_string(elem) and mm_is_string(*it)) {
+      debug() << mm_string_cstr(elem) << " <cmp> " << mm_string_cstr(*it) << endl;
+      if (strcmp(mm_string_cstr(elem), mm_string_cstr(*it)) == 0) {
+        return pos;
+      }
+    }
   }
+  return -1;
 }
 
 void MMObj::mm_list_prepend(oop list, oop element) {
@@ -577,11 +586,10 @@ oop MMObj::mm_cfuns_to_funs_dict(oop cfuns_dict, oop imod) {
 
   std::map<oop, oop>::iterator it = mm_dictionary_begin(cfuns_dict);
   for ( ; it != mm_dictionary_end(cfuns_dict); it++) {
-    oop str_name = it->first;
-    char* str = mm_string_cstr(str_name);
+    oop sym_name = it->first;
     oop cfun = it->second;
     oop fun = mm_function_from_cfunction(cfun, imod);
-    mm_dictionary_set(funs_dict, _vm->new_symbol(str), fun);
+    mm_dictionary_set(funs_dict, sym_name, fun);
   }
   return funs_dict;
 }
@@ -659,6 +667,10 @@ oop MMObj::mm_symbol_new(const char* str) {
   return symb;
 }
 
+bool MMObj::mm_is_symbol(oop sym) {
+  return *(oop*) sym == _core_image->get_prime("Symbol");
+}
+
 char* MMObj::mm_symbol_cstr(oop sym) {
   assert( *(oop*) sym == _core_image->get_prime("Symbol"));
   //0: vt
@@ -666,6 +678,11 @@ char* MMObj::mm_symbol_cstr(oop sym) {
   //2: size
   //3: <str> ...
   return (char*) &(sym[3]);
+}
+
+oop MMObj::mm_symbol_to_string(oop sym) {
+  assert( *(oop*) sym == _core_image->get_prime("Symbol"));
+  return mm_string_new(mm_symbol_cstr(sym));
 }
 
 
@@ -708,12 +725,12 @@ oop MMObj::mm_new(oop vt, oop delegate, number payload) {
 
 oop MMObj::alloc_instance(oop klass) {
   if (klass == NULL) {
-    // debug() << "alloc_instance: klass is null" << endl;
+    debug() << "alloc_instance: klass is null" << endl;
     return NULL;
   }
 
-  // debug() << "alloc_instance for klass " << klass << endl;
-  // debug() << "alloc_instance: class name: " << _mmobj->mm_string_cstr(_mmobj->mm_class_name(klass)) << endl;
+  debug() << "alloc_instance for klass " << klass << endl;
+  debug() << "alloc_instance: class name: " << mm_string_cstr(mm_class_name(klass)) << endl;
 
   number payload = mm_behavior_size(klass);
   if (payload == INVALID_PAYLOAD) {

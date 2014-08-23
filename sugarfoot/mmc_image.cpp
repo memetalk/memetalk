@@ -63,16 +63,15 @@ oop MMCImage::instantiate_class(oop class_name, oop cclass, oop cclass_dict, std
   if (mod_classes.find(super_name_str) != mod_classes.end()) {
     debug() << "Super class already instantiated" << endl;
     super_class = mod_classes.at(super_name_str);
-  } else if (_mmobj->mm_dictionary_has_key(cclass_dict, super_name)) {
+  } else if (_mmobj->mm_dictionary_has_key(cclass_dict, _vm->new_symbol(super_name_str))) {
     debug() << "Super class not instantiated. recursively instantiate it" << endl;
-    super_class = instantiate_class(super_name, _mmobj->mm_dictionary_get(cclass_dict, super_name), cclass_dict, mod_classes, imodule);
-  } else if(_mmobj->mm_dictionary_has_key(cmod_aliases_dict, super_name)) {
+    super_class = instantiate_class(super_name, _mmobj->mm_dictionary_get(cclass_dict, _vm->new_symbol(super_name_str)), cclass_dict, mod_classes, imodule);
+  } else if(_mmobj->mm_dictionary_has_key(cmod_aliases_dict, _vm->new_symbol(super_name_str))) {
     //when loading the aliases, have a _alias_idx_map<oop[string], int> to indicate where it will be in the imod
     super_class = _mmobj->mm_module_get_param(
       imodule, _alias_idx_map[super_name]); //_mmobj->mm_dictionary_index_of(cmod_aliases_dict, super_name) + num_params
     debug() << "Super class is module alias: " << super_class << endl;
-  }
-  else if (_mmobj->mm_list_index_of(cmod_params_list, super_name) != -1) {
+  } else  if (_mmobj->mm_list_index_of(cmod_params_list, super_name) != -1) {
     super_class = _mmobj->mm_module_get_param(
       imodule, _mmobj->mm_list_index_of(cmod_params_list, super_name));
     debug() << "Super class is module parameter: " << super_class << endl;
@@ -128,7 +127,7 @@ void MMCImage::load_default_dependencies_and_assign_module_arguments(oop imodule
     oop mod_name = it->second; //_mmobj->mm_dictionary_entry_value(default_params_dict, i);
     oop imd = _vm->instantiate_module(_mmobj->mm_string_cstr(mod_name),
                                       _mmobj->mm_list_new());
-    number midx = _mmobj->mm_list_index_of(params_list, lhs_name);
+    number midx = _mmobj->mm_list_index_of(params_list, _mmobj->mm_symbol_to_string(lhs_name));
     if (midx == -1) {
       bail("Could not bind unknown module parameter to default value");
     }
@@ -150,12 +149,12 @@ void MMCImage::load_aliases(oop imodule, oop aliases_dict, number num_params) {
     number param_index = _mmobj->mm_list_index_of(cmod_params_list, module_param_name);
     oop module_param_object = _mmobj->mm_module_get_param(imodule, param_index);
 
-    debug() << "alias name " << _mmobj->mm_string_cstr(alias_name)
+    debug() << "alias name " << _mmobj->mm_symbol_cstr(alias_name)
             << " module_param: " << _mmobj->mm_string_cstr(module_param_name)
             << " param_index: " << param_index << endl;
 
     int exc;
-    oop entry = _vm->process()->do_send_0(module_param_object, _vm->new_symbol(alias_name), &exc);
+    oop entry = _vm->process()->do_send_0(module_param_object, alias_name, &exc);
     assert(exc == 0);
     debug() << "MMCImage::load_aliases entry: " << entry
             << " in imod idx: " << i + num_params << endl;
@@ -172,9 +171,11 @@ void MMCImage::create_alias_getters(oop imodule, oop imod_dict,
   for (int i = 0 ; it != end; it++, i++) {
     oop name = it->first; //_mmobj->mm_dictionary_entry_key(aliases_dict, i);
     // oop module_param_name = _mmobj->mm_dictionary_entry_value(aliases_dict, i);
-    char* str = _mmobj->mm_string_cstr(name);
+    char* str = _mmobj->mm_symbol_cstr(name);
     debug() << "Creating getter for alias " << str << " " << i << endl;
-    oop getter = _mmobj->mm_new_slot_getter(imodule, _compiled_module, name, num_params + 4 + i); //imod: vt, delegate, dict, cmod
+    oop getter = _mmobj->mm_new_slot_getter(imodule,
+                                            _compiled_module, _mmobj->mm_symbol_to_string(name),
+                                            num_params + 4 + i); //imod: vt, delegate, dict, cmod
     _mmobj->mm_dictionary_set(imod_dict, _vm->new_symbol(str), getter);
   }
 }
@@ -267,8 +268,8 @@ oop MMCImage::instantiate_module(oop module_arguments_list) {
   std::map<oop, oop>::iterator it = _mmobj->mm_dictionary_begin(fun_dict);
   std::map<oop, oop>::iterator end = _mmobj->mm_dictionary_end(fun_dict);
   for ( ; it != end; it++) {
-    oop str_name = it->first; //_mmobj->mm_dictionary_entry_key(fun_dict, i);
-    char* str = _mmobj->mm_string_cstr(str_name);
+    oop sym_name = it->first; //_mmobj->mm_dictionary_entry_key(fun_dict, i);
+    char* str = _mmobj->mm_symbol_cstr(sym_name);
     oop cfun = it->second; //_mmobj->mm_dictionary_entry_value(fun_dict, i);
     oop fun = _mmobj->mm_function_from_cfunction(cfun, imodule);
     _mmobj->mm_dictionary_set(imod_dict, _vm->new_symbol(str), fun);
@@ -282,8 +283,9 @@ oop MMCImage::instantiate_module(oop module_arguments_list) {
   it = _mmobj->mm_dictionary_begin(cclass_dict);
   end = _mmobj->mm_dictionary_end(cclass_dict);
   for ( ; it != end; it++) {
-    oop str_name = it->first; //_mmobj->mm_dictionary_entry_key(cclass_dict, i);
-    char* cname = _mmobj->mm_string_cstr(str_name);
+    oop sym_name = it->first; //_mmobj->mm_dictionary_entry_key(cclass_dict, i);
+    oop str_name = _mmobj->mm_symbol_to_string(sym_name);
+    char* cname = _mmobj->mm_symbol_cstr(sym_name);
 
     oop cclass = it->second; //_mmobj->mm_dictionary_entry_value(cclass_dict, i);
     oop klass;

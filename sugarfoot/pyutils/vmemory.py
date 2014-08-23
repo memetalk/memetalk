@@ -159,10 +159,10 @@ class VirtualMemory(object):
                  sr.append((text, self.base + sum(self.cell_sizes[0:self.cells.index(referer)])))
         return sr
 
-    def append_string_dict(self, pydict):
+    def append_symbol_dict(self, pydict):
         pairs_oop = []
         for key, val in iter(sorted(pydict.items())):
-            key_oop = self.append_string_instance(key)
+            key_oop = self.append_symbol_instance(key)
             val_oop = self.append_string_instance(val)
             pairs_oop.append((key_oop, val_oop))
         return self.append_dict_with_pairs(pairs_oop)
@@ -188,13 +188,13 @@ class VirtualMemory(object):
     def append_empty_dict(self):
         return self.append_dict_prologue(0, None)
 
-    def append_dict_emiting_entries(self, entries_pydict):
-        pairs_oop = []
-        for key, entry, in iter(sorted(entries_pydict.items())):
-            key_oop = self.append_string_instance(key)
-            val_oop = entry.fill(self)
-            pairs_oop.append((key_oop, val_oop))
-        return self.append_dict_with_pairs(pairs_oop)
+    # def append_dict_emiting_entries(self, entries_pydict):
+    #     pairs_oop = []
+    #     for key, entry, in iter(sorted(entries_pydict.items())):
+    #         key_oop = self.append_string_instance(key)
+    #         val_oop = entry.fill(self)
+    #         pairs_oop.append((key_oop, val_oop))
+    #     return self.append_dict_with_pairs(pairs_oop)
 
     def append_sym_dict_emiting_entries(self, entries_pydict):
         pairs_oop = []

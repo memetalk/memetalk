@@ -1,9 +1,15 @@
-.preamble()
+.preamble(ex3)
+  ex3: meme:ex3;
+  [X] <= ex3;
 .code
 
+class Y
+init new: fun() {
+}
+end
+
 main: fun() {
-  var x = {"a": 1, "b": 2};
-  return x["b"];
+   return ex3.foo()[:c];
 }
 
 .endcode
