@@ -2,6 +2,9 @@
 .code
 
 class X
+class_method z: fun() {
+  return 11;
+}
 end
 
 foo: fun() {

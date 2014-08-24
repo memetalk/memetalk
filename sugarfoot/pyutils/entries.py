@@ -315,6 +315,12 @@ class VariableStorage(object):
         except Exception:
             return False
 
+    def defined(self, name):
+        for _, names in self.variables.items():
+            if name in names:
+                return True
+        return False
+
     def add_names(self, cfun, params):
         for name in params:
             self.add(cfun, name)
@@ -344,6 +350,11 @@ class VariableStorage(object):
         idx = self.variables.keys().index(cfun)
         return len(self._flat(self.variables.values()[:idx]))
 
+
+    def env_table(self, cfun):
+        idx = self.variables.keys().index(cfun)
+        offset = self.env_offset(cfun)
+        return {name: i+offset for i, name in enumerate(self.variables.values()[idx])}
 
 class CompiledFunction(Entry):
     def __init__(self, cmod, owner, name, params, ctor=False, env_storage=None, is_top_level=True, outer_cfun=None):
@@ -375,6 +386,16 @@ class CompiledFunction(Entry):
         self.accessor_field = 0
 
         self._label = None
+
+    def set_params(self, params):
+        self.params = params
+        self.var_declarations.add_names(self, params)
+
+    def declare_var(self, name):
+        self.var_declarations.add(self, name)
+
+    def declare_vars(self, names):
+        self.var_declarations.add_names(self, names)
 
     def set_getter(self, idx):
         self.accessor_flag = 1 # normal=0/getter=1/setter=2
@@ -494,13 +515,14 @@ class CompiledFunction(Entry):
         oop_name = vmem.append_string_instance(self.name)
         oop_params = vmem.append_list_of_strings(self.params)
         oop_prim_name = vmem.append_string_instance(self.prim_name)
+        oop_env_table  = vmem.append_symbol_to_int_dict(self.var_declarations.env_table(self))
 
         lit_frame_size = self.fill_literal_frame(vmem)
         bytecode_size = self.fill_bytecodes(vmem)
         exception_frames = self.fill_exceptions_frame(vmem)
 
         vmem.append_int(FRAME_TYPE_OBJECT)
-        vmem.append_int(22 * bits.WSIZE)
+        vmem.append_int(23 * bits.WSIZE)
 
         oop = vmem.append_external_ref('CompiledFunction', self.label()) # CompiledFunction vt
         vmem.append_pointer_to(oop_delegate)
@@ -552,6 +574,7 @@ class CompiledFunction(Entry):
         else:
             vmem.append_null()
 
+        vmem.append_pointer_to(oop_env_table)
         self.oop = oop
         return oop
 
@@ -585,7 +608,7 @@ class CompiledFunction(Entry):
         return name in self.cmod.top_level_names
 
     def identifier_is_prime(self, name):
-        return name in ['Object', 'String', 'List', 'Exception']
+        return name in ['Object', 'String', 'List', 'Exception', 'Context', 'CompiledFunction']
 
     def index_for_literal(self, entry):
         if entry not in self.literal_frame:
@@ -622,8 +645,14 @@ class CompiledFunction(Entry):
         if self.has_env and \
            (not self.identifier_is_module_scoped(name) and \
             not self.identifier_is_prime(name)):
-            idx = self.var_declarations.index(self, name)
-            self.bytecodes.append("push_env",idx)
+            if self.var_declarations.defined(name):
+                idx = self.var_declarations.index(self, name)
+                self.bytecodes.append("push_env",idx)
+            else:
+                idx = self.create_and_register_symbol_literal(name)
+                self.bytecodes.append('push_module', 0)
+                self.bytecodes.append('push_literal', idx)
+                self.bytecodes.append('send', 0)
         elif self.identifier_is_param(name):
             idx = self.params.index(name)
             self.bytecodes.append("push_param", idx)
@@ -637,6 +666,13 @@ class CompiledFunction(Entry):
             self.bytecodes.append('send', 0)
         else:
             raise Exception('push_var: undeclared ' + name)
+            # # for now, lets assume its a module instead of raising,
+            # # to make it easy for dynamic eval() code
+            # idx = self.create_and_register_symbol_literal(name)
+            # self.bytecodes.append('push_module', 0)
+            # self.bytecodes.append('push_literal', idx)
+            # self.bytecodes.append('send', 0)
+
 
     def emit_local_assignment(self, name):
         if self.has_env:
@@ -662,7 +698,7 @@ class CompiledFunction(Entry):
         self.bytecodes.append("ret_this",0)
 
     def emit_var_decl(self, name):
-        self.var_declarations.add(self, name)
+        self.declare_var(name)
         idx = self.var_declarations.index(self, name)
         if self.has_env:
             self.bytecodes.append("pop_env",idx)
@@ -695,7 +731,13 @@ class CompiledFunction(Entry):
             self.bytecodes.append("push_local", idx)
             self.bytecodes.append("call", arity)
         else:
-            raise Exception('Undeclared ' + name)
+            # raise Exception('Undeclared ' + name)
+            # for now, lets assume its a module instead of raising,
+            # to make it easy for dynamic eval() code
+            idx = self.create_and_register_symbol_literal(name)
+            self.bytecodes.append('push_module', 0)
+            self.bytecodes.append('push_literal', idx)
+            self.bytecodes.append('send', arity)
 
     def emit_call(self, arity):
         self.bytecodes.append('call', arity)
@@ -764,8 +806,8 @@ class CompiledFunction(Entry):
     def emit_push_closure(self, fn):
         idx_cfun = self.create_and_register_closure_literal(fn)
         idx_selector = self.create_and_register_symbol_literal("new_context")
-        self.bytecodes.append("push_module", 0)
         self.bytecodes.append("push_ep", 0)
+        self.bytecodes.append("push_module", 0)
         self.bytecodes.append('push_literal', idx_cfun)
         self.bytecodes.append('push_literal', idx_selector)
         self.bytecodes.append('send', 2)
@@ -777,7 +819,7 @@ class CompiledFunction(Entry):
 
     def bind_catch_var(self, name):
         if not self.var_declarations.has(self, name):
-            self.var_declarations.add(self, name)
+            self.declare_var(name)
         self.emit_local_assignment(name)
 
     def emit_catch_jump(self):
@@ -871,17 +913,21 @@ def create_module_to_string(cmod):
     return cfun
 
 class CompiledModule(Entry):
-    def __init__(self, name):
+    def __init__(self, name, params=None):
         super(CompiledModule, self).__init__()
         self.name = name
-        self.params = []
+        if params is None:
+            self.params = []
+            # eager loading of all top level names
+            self.top_level_names = []
+        else:
+            self.params = params
+            self.top_level_names = list(params)
         self.default_params = {}
         self.aliases = {}
         self.functions = {'toString': create_module_to_string(self)}
         self.classes = {}
 
-        # eager loading of all top level names
-        self.top_level_names = []
 
     def module_alias(self, libname, aliases):
         for alias in aliases:

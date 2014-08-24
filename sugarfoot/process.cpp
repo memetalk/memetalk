@@ -183,6 +183,7 @@ bool Process::load_fun(oop recv, oop drecv, oop fun, bool should_allocate) {
 
   if (_mmobj->mm_is_context(fun)) {
     _ep = _mmobj->mm_context_get_env(fun);
+    debug() << "setting up ctx ep: " << _ep << endl;
     _rp = ((oop*)_ep)[0];
     _dp = ((oop*)_ep)[1];
     debug() << "loaded ep with rp/dp: " << _rp << " " << _dp << endl;
@@ -241,6 +242,45 @@ bool Process::load_fun(oop recv, oop drecv, oop fun, bool should_allocate) {
   // debug() << "first instruction " << decode_opcode(*_ip) << endl;
   _code_size = _mmobj->mm_function_get_code_size(fun);
   return true;
+}
+
+oop Process::do_send(oop recv, oop selector, oop args, int* exc) {
+  debug() << "-- begin do_send, recv: " << recv
+          << ", selector: " << _mmobj->mm_symbol_cstr(selector) << endl;
+
+  number num_args = _mmobj->mm_list_size(args);
+  for (int i = 0; i < num_args; i++) {
+    stack_push(_mmobj->mm_list_entry(args, i));
+  }
+
+  std::pair<oop, oop> res = lookup(recv, _mmobj->mm_object_vt(recv), selector);
+
+  oop drecv = res.first;
+  oop fun = res.second;
+  if (!fun) {
+    bail("do_send: lookup failed"); //todo
+  }
+
+  number arity = _mmobj->mm_function_get_num_params(fun);
+  if (num_args != arity) {
+    debug() << num_args << " != " << arity << endl;
+    bail("do_send: arity and num_args differ");
+  }
+
+  oop stop_at_fp = _fp;
+  *exc = 0;
+  try {
+    if (load_fun(recv, drecv, fun, true)) {
+      fetch_cycle(stop_at_fp);
+    }
+  } catch(mm_rewind e) {
+    *exc = 1;
+    return e.mm_exception;
+  }
+
+  oop val = stack_pop();
+  debug() << "-- end do_send, val: " << val << endl;
+  return val;
 }
 
 oop Process::do_send_0(oop recv, oop selector, int* exc) {
@@ -438,6 +478,11 @@ void Process::dispatch(int opcode, int arg) {
       case PUSH_EP:
         debug() << "PUSH_EP " << arg << " -- " << _ep << endl;
         stack_push(_ep);
+        break;
+
+      case PUSH_CONTEXT:
+        debug() << "PUSH_CONTEXT " << arg << endl;
+        stack_push(_cp);
         break;
       case PUSH_BIN:
         debug() << "PUSH_BIN " << arg << endl;

@@ -69,8 +69,14 @@
   end
 
   class CompiledFunction
+    init withEnv: fun(text, vars, cmod) {
+      <primitive "compiled_function_with_env">
+    }
     instance_method new_context: fun(ep, module) {
       return Context.new(this, ep, module);
+    }
+    instance_method asContextWithVars: fun(imod, vars) {
+      <primitive "compiled_function_as_context_with_vars">
     }
   end
 
@@ -99,6 +105,9 @@
   }
   instance_method +: fun(other) {
     <primitive "string_append">
+  }
+  instance_method ==: fun(other) {
+    <primitive "string_equal">
   }
   end
 
@@ -164,14 +173,33 @@
 
 
   class Function
+    fields: compiled_function, module;
+    instance_method compiledFunction: fun() {
+      return @compiled_function;
+    }
+    instance_method getEnv: fun() {
+      <primitive "function_get_env">
+    }
   end
 
   class Context
-  fields: compiled_function, env, module;
+  fields: compiled_function, module, env;
   init new: fun(cfun, env, module) {
     @compiled_function = cfun;
     @env = env;
     @module = module;
+  }
+  instance_method compiledFunction: fun() {
+    return @compiled_function;
+  }
+  instance_method getEnv: fun() {
+    <primitive "context_get_env">
+  }
+  class_method withVars: fun(text, vars, imod) {
+    var cmod = get_compiled_module(imod);
+    var code = "fun() {" + text + "}";
+    var cfn = CompiledFunction.withEnv(code, vars, cmod);
+    return cfn.asContextWithVars(imod, vars);
   }
   end
 
@@ -196,5 +224,10 @@ class Exception
     this.new(msg).throw;
   }
 end
+
+// temps
+  get_compiled_module: fun(module) {
+    <primitive "get_compiled_module">
+  }
 
 .end

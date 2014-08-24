@@ -143,14 +143,14 @@ class VirtualMemory(object):
 
 
     ###
-    def _physical_address(self, cell):
+    def physical_address(self, cell):
         return self.base + sum(self.cell_sizes[0:self.cells.index(cell)])
 
     def object_table(self):
         return reduce(lambda x,y: x+y, [e() for e in self.cells])
 
     def reloc_table(self):
-        return [self._physical_address(entry) for entry in self.cells if type(entry) == PointerCell]
+        return [self.physical_address(entry) for entry in self.cells if type(entry) == PointerCell]
 
     def symbols_references(self):
         sr = []
@@ -158,6 +158,13 @@ class VirtualMemory(object):
              for referer in [x for x in self.cells if type(x) == PointerCell and x.target_cell == ptr]:
                  sr.append((text, self.base + sum(self.cell_sizes[0:self.cells.index(referer)])))
         return sr
+
+    def append_symbol_to_int_dict(self, pydict):
+        pairs_oop = []
+        for key, val in iter(sorted(pydict.items())):
+            key_oop = self.append_symbol_instance(key)
+            pairs_oop.append((key_oop, val))
+        return self.append_dict_with_pairs(pairs_oop)
 
     def append_symbol_dict(self, pydict):
         pairs_oop = []
@@ -179,7 +186,10 @@ class VirtualMemory(object):
         oops = []
         for key, val in pairs:
             oops.append(self.append_pointer_to(key))
-            self.append_pointer_to(val)
+            if isinstance(val, (int, long)):
+                self.append_tagged_int(val)
+            else:
+                self.append_pointer_to(val)
         if len(oops) > 0:
             return oops[0]
         else:

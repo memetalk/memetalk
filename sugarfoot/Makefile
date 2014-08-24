@@ -19,7 +19,7 @@ CPP_FILES =  mmc_image.cpp core_image.cpp vm.cpp report.cpp utils.cpp mmobj.cpp 
 
 HPP_FILES = mmc_image.hpp core_image.hpp vm.hpp report.hpp utils.hpp defs.hpp mmobj.hpp process.hpp prims.hpp qt_prims.hpp qsc.hpp
 
-LIBS = -lboost_system-mt -lboost_filesystem-mt -lqscintilla2
+LIBS = -lboost_system-mt -lboost_iostreams-mt -lboost_filesystem-mt -lqscintilla2
 
 QT_FLAGS = -pipe -O2 -arch x86_64 -W \
 	-DQT_NO_DEBUG -DQT_WEBKIT_LIB -DQT_SCRIPT_LIB -DQT_GUI_LIB -DQT_CORE_LIB -DQT_SHARED \

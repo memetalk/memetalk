@@ -8,6 +8,7 @@
 #include "report.hpp"
 #include <assert.h>
 #include "utils.hpp"
+#include "mmc_fun.hpp"
 
 VM::VM(int argc, char** argv, const char* core_img_filepath)
   : _argc(argc), _argv(argv), _core_image(new CoreImage(this, core_img_filepath)), _mmobj(new MMObj(this, _core_image)) {
@@ -99,4 +100,63 @@ oop VM::instantiate_module(char* name_or_path, oop module_args_list) {
 
 oop VM::get_prime(const char* name) {
   return _core_image->get_prime(name);
+}
+
+#include <iostream>
+#include <cstdio>
+#include <sstream>
+#include <boost/iostreams/stream.hpp>
+#include <boost/iostreams/device/file_descriptor.hpp>
+
+#include <sstream>
+#include <boost/property_tree/ptree.hpp>
+#include <boost/property_tree/json_parser.hpp>
+using boost::property_tree::ptree;
+using boost::property_tree::read_json;
+using boost::property_tree::write_json;
+
+static
+std::string get_compile_fun_json(const char* text, oop vars, MMObj* mmobj) {
+  ptree pt;
+  ptree env;
+
+  if (vars != MM_NULL) {
+    std::map<oop,oop>::iterator it = mmobj->mm_dictionary_begin(vars);
+    std::map<oop,oop>::iterator end = mmobj->mm_dictionary_end(vars);
+    for ( ; it != end; it++) {
+      oop name = it->first;
+      char* str_name = mmobj->mm_symbol_cstr(name);
+      env.push_back(std::make_pair("", str_name));
+    }
+  }
+
+  pt.put ("text", text);
+  pt.add_child("env_names",  env);
+  std::ostringstream buf;
+  write_json (buf, pt, false);
+  return buf.str();
+}
+
+oop VM::compile_fun(const char* text, oop vars, oop cmod) {
+  std::stringstream s;
+  std::string json = get_compile_fun_json(text, vars, _mmobj);
+
+  s << "python -m pycompiler.compiler -o '" << json << "'";
+
+  if (FILE* p = popen(s.str().c_str(), "r")) {
+    boost::iostreams::file_descriptor_source d(fileno(p), boost::iostreams::close_handle);
+    boost::iostreams::stream_buffer<boost::iostreams::file_descriptor_source> pstream(d);
+    std::stringstream out;
+    out << &pstream;
+    std::string data = out.str();
+
+    char* c_data = (char*) calloc(sizeof(char), data.size());
+    data.copy(c_data, data.size());
+    if (pclose(p) == 0) {
+      MMCFunction* mmcf = new MMCFunction(this, _core_image, c_data, data.size());
+      return mmcf->load();
+    } else {
+      bail("compilation error!");
+    }
+  }
 }

@@ -42,6 +42,7 @@ public:
   oop do_call(oop, oop, int*);
 
   oop do_send_0(oop, oop, int*);
+  oop do_send(oop, oop, oop, int*);
 
   std::pair<oop,oop> lookup(oop, oop, oop);
 private:

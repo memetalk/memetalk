@@ -141,11 +141,18 @@ number MMObj::mm_list_index_of(oop list, oop elem) {
 
   std::vector<oop>::iterator it = elements->begin();
   for (number pos = 0; it != elements->end(); it++, pos++) {
-    debug() << *it << " =?= " << elem << endl;
+    if (mm_is_string(*it)) {
+      debug() << mm_string_cstr(*it) << " =?= " << elem << endl;
+    } else if (mm_is_symbol(*it)) {
+      debug() << mm_symbol_cstr(*it) << " =?= " << elem << endl;
+    } else {
+      debug() << *it << " =?= " << elem << endl;
+    }
+
     if (*it == elem) {
       return pos;
     //some temporary hack while we don't have a self-host compiler doing Object.==
-    } else if (mm_is_string(elem) and mm_is_string(*it)) {
+    } else if (mm_is_string(elem) && mm_is_string(*it)) {
       debug() << mm_string_cstr(elem) << " <cmp> " << mm_string_cstr(*it) << endl;
       if (strcmp(mm_string_cstr(elem), mm_string_cstr(*it)) == 0) {
         return pos;
@@ -222,7 +229,14 @@ bool MMObj::mm_dictionary_has_key(oop dict, oop key) {
   debug() << dict << " has key " << key << " ?" << endl;
   std::map<oop, oop>* elements = mm_dictionary_frame(dict);
   for (std::map<oop, oop>::iterator it = elements->begin(); it != elements->end(); it++) {
-    debug() << it->first << " =?= " << key << endl;
+
+    if (mm_is_string(it->first)) {
+      debug() << mm_string_cstr(it->first) << " =?= " << key << endl;
+    } else if (mm_is_symbol(it->first)) {
+      debug() << mm_symbol_cstr(it->first) << " =?= " << key << endl;
+    } else {
+      debug() << it->first << " =?= " << key << endl;
+    }
     if (it->first == key) {
       return true;
     }
@@ -452,6 +466,13 @@ oop MMObj::mm_function_exception_frames(oop fun) {
   return mm_compiled_function_exception_frames(cfun);
 }
 
+oop MMObj::mm_function_env_table(oop fun) {
+  assert( *(oop*) fun == _core_image->get_prime("Function") ||
+          *(oop*) fun == _core_image->get_prime("Context"));
+  oop cfun = mm_function_get_cfun(fun);
+  return mm_compiled_function_env_table(cfun);
+}
+
 bool MMObj::mm_compiled_function_is_ctor(oop cfun) {
   assert( *(oop*) cfun == _core_image->get_prime("CompiledFunction"));
   return ((oop*)cfun)[4];
@@ -547,6 +568,11 @@ number MMObj::mm_compiled_function_exception_frames_count(oop cfun) {
 oop MMObj::mm_compiled_function_exception_frames(oop cfun) {
   assert( *(oop*) cfun == _core_image->get_prime("CompiledFunction"));
   return ((oop*)cfun)[21];
+}
+
+oop MMObj::mm_compiled_function_env_table(oop cfun) {
+  assert( *(oop*) cfun == _core_image->get_prime("CompiledFunction"));
+  return ((oop*)cfun)[22];
 }
 
 

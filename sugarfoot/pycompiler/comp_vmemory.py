@@ -12,13 +12,13 @@ class CompVirtualMemory(vmemory.VirtualMemory):
         self.string_table = {}
 
     def external_references(self):
-        return [(x[0], self._physical_address(x[1])) for x in self.ext_ref_table]
+        return [(x[0], self.physical_address(x[1])) for x in self.ext_ref_table]
 
     def external_names(self):
         return sorted(set([x[0] for x in self.ext_ref_table] + [x[0] for x in self.symb_table]))
 
     def reloc_table(self):
-        return [self._physical_address(entry) for entry in self.cells if type(entry) == vmemory.PointerCell]
+        return [self.physical_address(entry) for entry in self.cells if type(entry) == vmemory.PointerCell]
 
     def append_external_ref(self, name, label=None):
         oop = self.append_int(0xAAAA, label)

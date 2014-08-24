@@ -44,6 +44,21 @@ static int prim_string_append(Process* proc) {
   return 0;
 }
 
+static int prim_string_equal(Process* proc) {
+  oop self =  proc->dp();
+  oop other = *((oop*) proc->fp() - 1);
+
+  char* str_1 = proc->mmobj()->mm_string_cstr(self);
+  char* str_2 = proc->mmobj()->mm_string_cstr(other);
+
+  if (strcmp(str_1, str_2) == 0) {
+    proc->stack_push(MM_TRUE);
+  } else {
+    proc->stack_push(MM_FALSE);
+  }
+  return 0;
+}
+
 static int prim_number_sum(Process* proc) {
   oop self =  proc->dp();
   oop other = *((oop*) proc->fp() - 1);
@@ -316,6 +331,85 @@ static int prim_module_to_string(Process* proc) {
   return 0;
 }
 
+static int prim_compiled_function_with_env(Process* proc) {
+  // oop self =  proc->dp();
+  oop cmod = *((oop*) proc->fp() - 1);
+  oop vars = *((oop*) proc->fp() - 2);
+  oop text = *((oop*) proc->fp() - 3);
+
+  debug() << "prim_compiled_function_with_env " << proc->mmobj()->mm_string_cstr(text) << " -- " << cmod << " " << vars << endl;
+  oop cfun = proc->vm()->compile_fun(proc->mmobj()->mm_string_cstr(text), vars, cmod);
+  debug() << "prim_compiled_function_with_env: GOT cfun: " << cfun << " " << *(oop*) cfun << endl;
+  proc->stack_push(cfun);
+  return 0;
+}
+
+static int prim_compiled_function_as_context_with_vars(Process* proc) {
+  /* (1) allocate and assemble the ep/env from the vars with its values;
+     (2) instantiate a Context with (self, env, imod)
+  */
+
+  oop self =  proc->dp();
+  oop vars = *((oop*) proc->fp() - 1);
+  oop imod = *((oop*) proc->fp() - 2);
+
+  number env_size = proc->mmobj()->mm_compiled_function_get_num_locals_or_env(self);
+  oop env = (oop) calloc(sizeof(oop), env_size + 2); //+2: rp, dp
+
+  if (vars != MM_NULL) {
+    oop env_table = proc->mmobj()->mm_compiled_function_env_table(self);
+    std::map<oop,oop>::iterator it = proc->mmobj()->mm_dictionary_begin(vars);
+    std::map<oop,oop>::iterator end = proc->mmobj()->mm_dictionary_end(vars);
+    for ( ; it != end; it++) {
+      std::string name = proc->mmobj()->mm_symbol_cstr(it->first);
+      if (name == "this") {
+        ((oop*)env)[0] = it->second; //rp
+        ((oop*)env)[1] = it->second; //ep
+      } else {
+        number idx = untag_small_int(proc->mmobj()->mm_dictionary_get(env_table, it->first));
+        ((oop*)env)[idx+2] = it->second;
+      }
+    }
+  }
+
+  oop args = proc->mmobj()->mm_list_new();
+  proc->mmobj()->mm_list_append(args, self);
+  proc->mmobj()->mm_list_append(args, env);
+  proc->mmobj()->mm_list_append(args, imod);
+
+  debug() << "compiled_function_as_context_with_vars: Creating context..." << self << " " << vars << " " << imod << endl;
+
+  int exc;
+  oop ctx = proc->do_send(proc->vm()->get_prime("Context"), proc->vm()->new_symbol("new"), args, &exc);
+  if (exc != 0) {
+    return PRIM_RAISED;
+  }
+
+  // debug() << "compiled_function_as_context_with_vars: " << ctx << endl;
+  // debug() << "ctx[cfun] " << proc->mmobj()->mm_function_get_cfun(ctx) << endl;
+  // debug() << "ctx[env] " << proc->mmobj()->mm_context_get_env(ctx) << endl;
+  // debug() << "ctx[imod] " << proc->mmobj()->mm_function_get_module(ctx) << endl;
+
+  proc->stack_push(ctx);
+  return 0;
+}
+
+static int prim_context_get_env(Process* proc) {
+  oop self =  proc->dp();
+  proc->stack_push(proc->mmobj()->mm_function_env_table(self));
+  return 0;
+}
+
+static int prim_function_get_env(Process* proc) {
+  return prim_context_get_env(proc);
+}
+
+static int prim_get_compiled_module(Process* proc) {
+  oop imod = *((oop*) proc->fp() - 1);
+  proc->stack_push(proc->mmobj()->mm_module_get_cmod(imod));
+  return 0;
+}
+
 static int prim_test_import(Process* proc) {
   oop args = *((oop*) proc->fp() - 1);
   oop filepath = *((oop*) proc->fp() - 2);
@@ -418,12 +512,21 @@ void init_primitives(VM* vm) {
   vm->register_primitive("dictionary_to_string", prim_dictionary_to_string);
 
   vm->register_primitive("string_append", prim_string_append);
+  vm->register_primitive("string_equal", prim_string_equal);
+
+  vm->register_primitive("compiled_function_with_env", prim_compiled_function_with_env);
+  vm->register_primitive("compiled_function_as_context_with_vars", prim_compiled_function_as_context_with_vars);
+  vm->register_primitive("context_get_env", prim_context_get_env);
+  vm->register_primitive("function_get_env", prim_function_get_env);
+
 
   vm->register_primitive("test_import", prim_test_import);
   vm->register_primitive("test_get_module_function", prim_test_get_module_function);
   vm->register_primitive("test_files", prim_test_files);
 
   vm->register_primitive("test_catch_exception", prim_test_catch_exception);
+
+  vm->register_primitive("get_compiled_module", prim_get_compiled_module);
 
   qt_init_primitives(vm);
 }

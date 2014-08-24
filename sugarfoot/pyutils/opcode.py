@@ -32,6 +32,8 @@ opcode_mapping = {
     "push_bin": 8, # true:1/false:2/null: 0
     "push_ep": 9,
 
+    "push_context": 10,
+
     # pop
     "pop_param": 20,
     "pop_local": 21,
@@ -116,4 +118,4 @@ class Bytecode(object):
         for k,v in opcode_mapping.iteritems():
             if k == self.name:
                 return encode(v, self.arg())
-        raise Exception("Opcode not found for",self.key)
+        raise Exception("Opcode not found for",self.name)

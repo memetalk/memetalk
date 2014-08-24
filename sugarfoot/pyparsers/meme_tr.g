@@ -136,10 +136,16 @@ atom :fnobj = ['literal-number' :x]   -> fnobj.emit_push_num_literal(x)
             | ['field' :name]         -> fnobj.emit_push_field(name)
             | ['literal-array'  :e apply('exprs' fnobj e)]     -> fnobj.emit_push_list(len(e))
             | ['literal-dict'   dict_pairs(fnobj):p]  -> fnobj.emit_push_dict(len(p))
-            | ['fun-literal'  ['params' :p]
-               !(fnobj.new_closure(p)):fn
-               ['body' [expr(fn)*]]] -> fnobj.emit_push_closure(fn)
+            | funliteral(fnobj)
             | ['index' :e expr(fnobj) apply('expr' fnobj e)]   -> fnobj.emit_push_index()
+
+funliteral :fnobj = ['fun-literal'  ['params' :p]
+                      !(fnobj.new_closure(p)):fn
+                    ['body' [expr(fn)*]]] -> fnobj.emit_push_closure(fn)
+
+cfunliteral :fnobj = ['fun-literal'  ['params' :p]
+                      !(fnobj.set_params(p))
+                    ['body' [expr(fnobj)*]]] -> fnobj
 
 args :fnobj =  ['args' []] -> 0
             |  ['args' arglist(fnobj):arity] -> arity

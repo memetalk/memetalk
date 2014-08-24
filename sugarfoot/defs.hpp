@@ -38,6 +38,7 @@ typedef int (*prim_function_t) (Process*);
 #define PUSH_MODULE 7
 #define PUSH_BIN 8
 #define PUSH_EP 9
+#define PUSH_CONTEXT 10
 
 #define POP_LOCAL 21
 #define POP_FIELD 22

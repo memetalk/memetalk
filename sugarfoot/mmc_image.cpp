@@ -317,5 +317,7 @@ oop MMCImage::load() {
   link_external_references();
   link_symbols(_data, _es_size, HEADER_SIZE + _names_size + _ot_size + _er_size, _vm, _core_image);
   _compiled_module = (oop) * (word*)(& _data[HEADER_SIZE + _names_size]);
+
+  debug() << " ============ Done module: " << _name_or_path << " ===========" << endl;
   return _compiled_module;
 }

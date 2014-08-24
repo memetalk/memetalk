@@ -94,6 +94,7 @@ public:
 
   number mm_function_exception_frames_count(oop fun);
   oop mm_function_exception_frames(oop fun);
+  oop mm_function_env_table(oop fun);
 
   bytecode* mm_compiled_function_get_code(oop cfun);
   number mm_compiled_function_get_code_size(oop cfun);
@@ -122,6 +123,7 @@ public:
 
   number mm_compiled_function_exception_frames_count(oop cfun);
   oop mm_compiled_function_exception_frames(oop cfun);
+  oop mm_compiled_function_env_table(oop cfun);
 
   oop mm_class_behavior_new(oop super_class, oop funs_dict);
   oop mm_class_new(oop class_behavior, oop super_class, oop dict, oop compiled_class, number payload);
