@@ -69,7 +69,7 @@ oop MMCImage::instantiate_class(oop class_name, oop cclass, oop cclass_dict, std
   } else if(_mmobj->mm_dictionary_has_key(cmod_aliases_dict, _vm->new_symbol(super_name_str))) {
     //when loading the aliases, have a _alias_idx_map<oop[string], int> to indicate where it will be in the imod
     super_class = _mmobj->mm_module_get_param(
-      imodule, _alias_idx_map[super_name]); //_mmobj->mm_dictionary_index_of(cmod_aliases_dict, super_name) + num_params
+      imodule, _alias_idx_map[_vm->new_symbol(super_name_str)]); //_mmobj->mm_dictionary_index_of(cmod_aliases_dict, super_name) + num_params
     debug() << "Super class is module alias: " << super_class << endl;
   } else  if (_mmobj->mm_list_index_of(cmod_params_list, super_name) != -1) {
     super_class = _mmobj->mm_module_get_param(
