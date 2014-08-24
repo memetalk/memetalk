@@ -226,10 +226,9 @@ number MMObj::mm_dictionary_size(oop dict) {
 bool MMObj::mm_dictionary_has_key(oop dict, oop key) {
   assert( *(oop*) dict == _core_image->get_prime("Dictionary"));
 
-  debug() << dict << " has key " << key << " ?" << endl;
   std::map<oop, oop>* elements = mm_dictionary_frame(dict);
+  debug() << dict << "(" << elements->size() << ") has key " << key << " ?" << endl;
   for (std::map<oop, oop>::iterator it = elements->begin(); it != elements->end(); it++) {
-
     if (mm_is_string(it->first)) {
       debug() << mm_string_cstr(it->first) << " =?= " << key << endl;
     } else if (mm_is_symbol(it->first)) {

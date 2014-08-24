@@ -428,7 +428,7 @@ static int prim_module_to_string(Process* proc) {
   oop mod_name = proc->mmobj()->mm_compiled_module_name(cmod);
   char* str_mod_name = proc->mmobj()->mm_string_cstr(mod_name);
   std::stringstream s;
-  s << "#<" << str_mod_name << " modile instance: " << self << ">";
+  s << "#<" << str_mod_name << " module instance: " << self << ">";
   oop oop_str = proc->mmobj()->mm_string_new(s.str().c_str());
   proc->stack_push(oop_str);
   return 0;

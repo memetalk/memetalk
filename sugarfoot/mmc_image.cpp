@@ -165,7 +165,8 @@ void MMCImage::load_aliases(oop imodule, oop aliases_dict, number num_params) {
 
 void MMCImage::create_alias_getters(oop imodule, oop imod_dict,
                                     oop aliases_dict, number num_params) {
-  // number num_aliases = _mmobj->mm_dictionary_size(aliases_dict);
+  debug() << "Creating aliases: " << _mmobj->mm_dictionary_size(aliases_dict) << endl;
+
   std::map<oop, oop>::iterator it = _mmobj->mm_dictionary_begin(aliases_dict);
   std::map<oop, oop>::iterator end = _mmobj->mm_dictionary_end(aliases_dict);
   for (int i = 0 ; it != end; it++, i++) {
@@ -177,6 +178,7 @@ void MMCImage::create_alias_getters(oop imodule, oop imod_dict,
                                             _compiled_module, _mmobj->mm_symbol_to_string(name),
                                             num_params + 4 + i); //imod: vt, delegate, dict, cmod
     _mmobj->mm_dictionary_set(imod_dict, _vm->new_symbol(str), getter);
+    debug() << "alias dict has " << _mmobj->mm_dictionary_size(imod_dict) << endl;
   }
 }
 
@@ -234,7 +236,8 @@ oop MMCImage::instantiate_module(oop module_arguments_list) {
                                       _compiled_module,
                                       _core_image->get_module_instance());
 
-  debug() << "imodule " << imodule << " params:" << num_params
+  oop name = _mmobj->mm_compiled_module_name(_compiled_module);
+  debug() << "imodule " << imodule << " name:" << _mmobj->mm_string_cstr(name) << " params:" << num_params
           << " aliases " << num_aliases
           << " classes:" << num_classes << " (size: " << (num_params + num_classes + num_aliases) << ")" << endl;
 
