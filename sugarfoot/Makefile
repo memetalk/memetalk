@@ -15,9 +15,9 @@
 LIB_PATHS = -L/usr/local/Cellar/boost/1.54.0/lib
 INC_PATHS = -I/usr/local/Cellar/qscintilla2/2.7.1/include/Qsci
 
-CPP_FILES =  mmc_image.cpp core_image.cpp vm.cpp report.cpp utils.cpp mmobj.cpp main.cpp process.cpp prims.cpp qt_prims.cpp qsc.cpp
+CPP_FILES =  mmc_image.cpp core_image.cpp vm.cpp report.cpp utils.cpp mmobj.cpp main.cpp process.cpp prims.cpp mmc_fun.cpp  qt_prims.cpp qsc.cpp
 
-HPP_FILES = mmc_image.hpp core_image.hpp vm.hpp report.hpp utils.hpp defs.hpp mmobj.hpp process.hpp prims.hpp qt_prims.hpp qsc.hpp
+HPP_FILES = mmc_image.hpp core_image.hpp vm.hpp report.hpp utils.hpp defs.hpp mmobj.hpp process.hpp prims.hpp mmc_fun.hpp  qt_prims.hpp qsc.hpp
 
 LIBS = -lboost_system-mt -lboost_iostreams-mt -lboost_filesystem-mt -lqscintilla2
 
@@ -39,7 +39,7 @@ QT_FLAGS = -pipe -O2 -arch x86_64 -W \
 
 sf-vm: $(CPP_FILES) $(HPP_FILES)
 	moc qsc.hpp > qsc.moc.cpp
-	g++ -Wall -g $(CPP_FILES) $(LIBS) $(LIB_PATHS) $(INC_PATHS) $(QT_FLAGS) -o sf-vm
+	g++ -Wall -g $(CPP_FILES) $(LIBS) $(LIB_PATHS) $(INC_PATHS)  -o sf-vm $(QT_FLAGS)
 
 clean:
 	rm -f sf-vm

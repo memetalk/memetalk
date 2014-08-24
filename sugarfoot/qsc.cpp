@@ -1,4 +1,4 @@
-#include <qsc.hpp>
+#include "qsc.hpp"
 #include <qscicommandset.h>
 #include <QEvent>
 #include <QKeyEvent>
