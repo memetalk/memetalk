@@ -665,13 +665,13 @@ class CompiledFunction(Entry):
             self.bytecodes.append("push_literal", idx)
             self.bytecodes.append('send', 0)
         else:
-            raise Exception('push_var: undeclared ' + name)
-            # # for now, lets assume its a module instead of raising,
-            # # to make it easy for dynamic eval() code
-            # idx = self.create_and_register_symbol_literal(name)
-            # self.bytecodes.append('push_module', 0)
-            # self.bytecodes.append('push_literal', idx)
-            # self.bytecodes.append('send', 0)
+            # raise Exception('push_var: undeclared ' + name)
+            # for now, lets assume its a module instead of raising,
+            # to make it easy for dynamic eval() code
+            idx = self.create_and_register_symbol_literal(name)
+            self.bytecodes.append('push_module', 0)
+            self.bytecodes.append('push_literal', idx)
+            self.bytecodes.append('send', 0)
 
 
     def emit_local_assignment(self, name):

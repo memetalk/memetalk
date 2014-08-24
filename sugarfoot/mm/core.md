@@ -36,8 +36,14 @@
        toString: fun() {
          <primitive "behavior_to_string">
        }
+       toSource: fun() {
+         <primitive "behavior_to_source">
+       }
        ==: fun(other) {
          <primitive "equal">
+       }
+       !=: fun(other) {
+         return !(this == other);
        }
     }
   end
@@ -54,11 +60,17 @@
        toString: fun() {
          <primitive "object_to_string">
        }
+       toSource: fun() {
+         <primitive "object_to_source">
+       }
        !: fun() {
          <primitive "object_not">
        }
        ==: fun(other) {
          <primitive "equal">
+       }
+       !=: fun(other) {
+         return !(this == other);
        }
     }
   end
@@ -84,9 +96,12 @@
   end
 
   class Null
-  instance_method toString: fun() {
-    return "null";
-  }
+    instance_method toString: fun() {
+      return "null";
+    }
+    instance_method toSource: fun() {
+      return "null";
+    }
   end
 
   class Boolean
@@ -105,6 +120,12 @@
   }
   instance_method +: fun(other) {
     <primitive "string_append">
+  }
+  instance_method count: fun(other) {
+    <primitive "string_count">
+  }
+  instance_method size: fun() {
+    <primitive "string_size">
   }
   instance_method ==: fun(other) {
     <primitive "string_equal">
@@ -126,6 +147,9 @@
   }
   instance_method index: fun(idx) {
     <primitive "dictionary_index">
+  }
+  instance_method +: fun(other) {
+    <primitive "dictionary_plus">
   }
   class_method new: fun() {
     <primitive "dictionary_new">
@@ -224,6 +248,26 @@ class Exception
     this.new(msg).throw;
   }
 end
+
+
+  class Mirror
+    fields: mirrored;
+    init new: fun(mirrored) {
+      @mirrored = mirrored;
+    }
+    instance_method fields: fun() {
+      <primitive "mirror_fields">
+    }
+    instance_method valueFor: fun(name) {
+      <primitive "mirror_value_for">
+    }
+    instance_method setValueFor: fun(name, value) {
+      <primitive "mirror_set_value_for">
+    }
+    class_method vtFor: fun(obj) {
+      <primitive "mirror_vt">
+    }
+  end
 
 // temps
   get_compiled_module: fun(module) {

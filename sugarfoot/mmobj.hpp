@@ -10,7 +10,7 @@ class VM;
 
 class MMObj {
 public:
-  MMObj(VM*, CoreImage*);
+  MMObj(CoreImage*);
 
   oop mm_module_new(int num_fields, oop cmod, oop delegate);
 
@@ -116,6 +116,7 @@ public:
   oop mm_compiled_class_super_name(oop cclass);
   oop mm_compiled_class_own_methods(oop cclass);
   oop mm_compiled_class_methods(oop cclass);
+  oop mm_compiled_class_fields(oop cclass);
   number mm_compiled_class_num_fields(oop cclass);
 
   oop mm_compiled_function_get_literal_by_index(oop cfun, int idx);
@@ -137,12 +138,12 @@ public:
   oop mm_behavior_get_dict(oop);
   number mm_behavior_size(oop);
 
-  bool is_subtype(oop, oop);
+  bool delegates_to(oop, oop);
 
   CoreImage* core() { return _core_image; };
 
 private:
-  VM* _vm;
+  // VM* _vm;
   CoreImage* _core_image;
 };
 

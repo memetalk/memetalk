@@ -38,61 +38,10 @@ Q_DECLARE_METATYPE (Process*);
 #include <QMetaType>
 #include <QPushButton>
 
+Q_DECLARE_METATYPE (QListWidgetItem*);
 
 static
 QScriptEngine *engine;
-
-static const char* js_bridge =
-  "function qt_bind_connect(qtobj, signal, mm_closure, process) {"
-  "  var global = this;"
-  "  qtobj[signal].connect(qtobj, function() {"
-  "    return mm_handle(process, mm_closure, arguments);"
-  "  })"
-  "}";
-
-QScriptValue js_print(QScriptContext *ctx, QScriptEngine *engine) {
-  QString str = ctx->argument(0).toString();
-  std::cerr << "print: " << qPrintable(str) << endl;
-  return engine->undefinedValue();
-}
-
-static
-QScriptValue mm_handle(QScriptContext *ctx, QScriptEngine *engine) {
-  Process* proc = ctx->argument(0).toVariant().value<Process*>();
-  oop mm_closure = (oop) ctx->argument(1).toVariant().value<void*>();
-  QScriptValue args = ctx->argument(2);
-
-  oop mm_args = proc->mmobj()->mm_list_new();
-  for (int i = 0; i < args.property("length").toInt32(); i++) {
-    QScriptValue arg = args.property(i);
-    if (arg.isBool()) {
-      proc->mmobj()->mm_list_append(mm_args, proc->mmobj()->mm_boolean_new(arg.toBool()));
-    } else if (arg.isNull()) {
-      proc->mmobj()->mm_list_append(mm_args, MM_NULL);
-    } else if (arg.isNumber()) {
-      bail("TODO: arg.toNumber");
-    } else if (arg.isQObject()) {
-      bail("TODO: arg.toQObject");
-    } else {
-      bail("TODO: unknown arg");
-    }
-  }
-  int exc;
-  oop res = proc->do_call(mm_closure, mm_args, &exc);
-  check_and_print_exception(proc, exc, res);
-  return engine->undefinedValue();
-}
-
-static
-void init_qt_stuff() { //stuff that needs QApplication to exist
-  engine = new QScriptEngine;
-  engine->evaluate(js_bridge, "<qt_prims>");
-  QScriptValue globalObject = engine->globalObject();
-  globalObject.setProperty("mm_handle", engine->newFunction(mm_handle), QScriptValue::SkipInEnumeration);
-  globalObject.setProperty("print", engine->newFunction(js_print), QScriptValue::SkipInEnumeration);
-}
-
-///////////////////
 
 static
 oop lookup_bottom_qt_instance(MMObj* mmobj, oop obj) {
@@ -230,6 +179,74 @@ oop meme_instance(Process* proc, QWebElement* obj) {
     return meme_mapping[obj];
   }
 }
+
+
+
+/////////// bridge //////////////
+
+
+static const char* js_bridge =
+  "function qt_bind_connect(qtobj, signal, mm_closure, process) {"
+  "  var global = this;"
+  "  qtobj[signal].connect(qtobj, function() {"
+  "    print('SIGNAL!...' + arguments.length);"
+  "    for (var i = 0; i < arguments.length; i++) { print(arguments[i]); }"
+  "    return mm_handle(process, mm_closure, arguments);"
+  "  });"
+  "}";
+
+QScriptValue js_print(QScriptContext *ctx, QScriptEngine *engine) {
+  QString str = ctx->argument(0).toString();
+  std::cerr << "print: " << qPrintable(str) << endl;
+  return engine->undefinedValue();
+}
+
+static
+QScriptValue mm_handle(QScriptContext *ctx, QScriptEngine *engine) {
+  Process* proc = ctx->argument(0).toVariant().value<Process*>();
+  oop mm_closure = (oop) ctx->argument(1).toVariant().value<void*>();
+  QScriptValue args = ctx->argument(2);
+
+  oop mm_args = proc->mmobj()->mm_list_new();
+  for (int i = args.property("length").toInt32() -1; 0 <= i; i--) {
+    QScriptValue arg = args.property(i);
+    if (arg.isBool()) {
+      proc->mmobj()->mm_list_append(mm_args, proc->mmobj()->mm_boolean_new(arg.toBool()));
+    } else if (arg.isNull()) {
+      proc->mmobj()->mm_list_append(mm_args, MM_NULL);
+    } else if (arg.isNumber()) {
+      bail("TODO: arg.toNumber");
+    } else if (arg.isQObject()) {
+      bail("TODO: arg.toQObject");
+    } else {
+      QVariant v = arg.toVariant();
+      if (!v.isValid()) {
+        debug() << "mm_handle: unknown arg" << arg.scriptClass() << endl;
+        bail("TODO: unknown arg");
+      } else {
+        if (QString(v.typeName()) == "QListWidgetItem*") {
+          QListWidgetItem* p = v.value<QListWidgetItem*>();
+          std::cerr << "from variant: " << p << endl;
+          proc->mmobj()->mm_list_append(mm_args, meme_instance(proc, p));
+        }
+      }
+    }
+  }
+  int exc;
+  oop res = proc->do_call(mm_closure, mm_args, &exc);
+  check_and_print_exception(proc, exc, res);
+  return engine->undefinedValue();
+}
+
+static
+void init_qt_stuff() { //stuff that needs QApplication to exist
+  engine = new QScriptEngine;
+  engine->evaluate(js_bridge, "<qt_prims>");
+  QScriptValue globalObject = engine->globalObject();
+  globalObject.setProperty("mm_handle", engine->newFunction(mm_handle), QScriptValue::SkipInEnumeration);
+  globalObject.setProperty("print", engine->newFunction(js_print), QScriptValue::SkipInEnumeration);
+}
+
 
 ////////// bindings /////////
 
@@ -636,8 +653,8 @@ static int prim_qt_qlistwidget_current_item(Process* proc) {
 
 static int prim_qt_qlistwidgetitem_new(Process* proc) {
   oop data_self =  proc->dp();
-  oop oop_text = *((oop*) proc->fp() - 1);
-  oop oop_parent = *((oop*) proc->fp() - 2);
+  oop oop_parent = *((oop*) proc->fp() - 1);
+  oop oop_text = *((oop*) proc->fp() - 2);
 
   QListWidget* parent = (QListWidget*) get_qt_instance(proc->mmobj(), oop_parent);
 
@@ -871,10 +888,10 @@ static int prim_qt_scintilla_get_selection(Process* proc) {
   qtobj->getSelection(&lineFrom, &indexFrom, &lineTo, &indexTo);
 
   oop dict = proc->mmobj()->mm_dictionary_new();
-  oop oop_start_line = proc->mmobj()->mm_string_new("start_line");
-  oop oop_end_line = proc->mmobj()->mm_string_new("end_line");
-  oop oop_start_index = proc->mmobj()->mm_string_new("start_index");
-  oop oop_end_index = proc->mmobj()->mm_string_new("end_index");
+  oop oop_start_line = proc->vm()->new_symbol("start_line");
+  oop oop_end_line = proc->vm()->new_symbol("end_line");
+  oop oop_start_index = proc->vm()->new_symbol("start_index");
+  oop oop_end_index = proc->vm()->new_symbol("end_index");
 
   proc->mmobj()->mm_dictionary_set(dict, oop_start_line, tag_small_int(lineFrom));
   proc->mmobj()->mm_dictionary_set(dict, oop_end_line, tag_small_int(lineTo));
@@ -1945,6 +1962,7 @@ void qt_init_primitives(VM* vm) {
   vm->register_primitive("qt_qwidget_set_window_title", prim_qt_qwidget_set_window_title);
   vm->register_primitive("qt_qwidget_show", prim_qt_qwidget_show);
 
+  qRegisterMetaType<QListWidgetItem*>("QListWidgetItem");//Do this if you need signal/slots
 
   // vm->register_primitive("qt_qpushbutton_new", prim_qpushbutton_new);
 }

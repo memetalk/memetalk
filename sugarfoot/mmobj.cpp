@@ -9,8 +9,8 @@
 
 #include <map>
 
-MMObj::MMObj(VM* vm, CoreImage* core)
-  : _vm(vm), _core_image(core) {
+MMObj::MMObj(CoreImage* core)
+  : _core_image(core) {
 }
 
 oop MMObj::mm_module_new(int num_fields, oop cmod, oop delegate) {
@@ -586,6 +586,11 @@ oop MMObj::mm_compiled_class_super_name(oop cclass) {
   return ((oop*)cclass)[3];
 }
 
+oop MMObj::mm_compiled_class_fields(oop cclass) {
+  assert( *(oop*) cclass == _core_image->get_prime("CompiledClass"));
+  return ((oop*)cclass)[4];
+}
+
 oop MMObj::mm_compiled_class_methods(oop cclass) {
   assert( *(oop*) cclass == _core_image->get_prime("CompiledClass"));
   return ((oop*)cclass)[5];
@@ -728,15 +733,15 @@ number MMObj::mm_behavior_size(oop behavior) {
   }
 }
 
-bool MMObj::is_subtype(oop sub_type, oop super_type) {
-  debug() << "subtype? SUB " << sub_type << " " << super_type << endl;
+bool MMObj::delegates_to(oop sub_type, oop super_type) {
+  debug() << "delegates_to? " << sub_type << " " << super_type << endl;
   if (sub_type == NULL) {
     return false;
   }
   if (sub_type == super_type) {
     return true;
   } else {
-    return is_subtype(mm_object_delegate(sub_type), super_type);
+    return delegates_to(mm_object_delegate(sub_type), super_type);
   }
 }
 

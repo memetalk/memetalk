@@ -668,10 +668,10 @@ bool Process::unwind_with_exception(oop e) {
     debug() << "RAISE instr: " << instr << " try: " << try_block
             << " catch: " << catch_block << " type: " << type_oop << endl;
 
-    bool is_subtype = _mmobj->is_subtype(_mmobj->mm_object_vt(e), type_oop);
-    debug() << "subtype == " << is_subtype  << endl;
+    bool delegates_to = _mmobj->delegates_to(_mmobj->mm_object_vt(e), type_oop);
+    debug() << "delegates_to == " << delegates_to  << endl;
     if (instr >= try_block && instr < catch_block &&
-        (type_oop == MM_NULL || is_subtype)) {
+        (type_oop == MM_NULL || delegates_to)) {
       debug() << "CAUGHT " << endl;
       _ip = code + catch_block;
       return true;

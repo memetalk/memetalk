@@ -59,6 +59,30 @@ static int prim_string_equal(Process* proc) {
   return 0;
 }
 
+static int prim_string_size(Process* proc) {
+  oop self =  proc->dp();
+  char* str_1 = proc->mmobj()->mm_string_cstr(self);
+  int len = strlen(str_1);
+  proc->stack_push(tag_small_int(len));
+  return 0;
+}
+
+static int prim_string_count(Process* proc) {
+  oop self =  proc->dp();
+  oop other = *((oop*) proc->fp() - 1);
+
+  char* str_1 = proc->mmobj()->mm_string_cstr(self);
+  char* str_2 = proc->mmobj()->mm_string_cstr(other);
+  int count = 0;
+  char* pos = str_1;
+  while ((pos = strstr(pos, str_2)) != NULL) {
+    count++;
+    pos++;
+  }
+  proc->stack_push(tag_small_int(count));
+  return 0;
+}
+
 static int prim_number_sum(Process* proc) {
   oop self =  proc->dp();
   oop other = *((oop*) proc->fp() - 1);
@@ -255,6 +279,77 @@ static int prim_dictionary_to_string(Process* proc) {
   return 0;
 }
 
+static int prim_dictionary_plus(Process* proc) {
+  oop self =  proc->dp();
+  oop other = *((oop*) proc->fp() - 1);
+
+  oop d = proc->mmobj()->mm_dictionary_new();
+
+  std::map<oop, oop>::iterator it = proc->mmobj()->mm_dictionary_begin(self);
+  std::map<oop, oop>::iterator end = proc->mmobj()->mm_dictionary_end(self);
+  for ( ; it != end; it++) {
+    proc->mmobj()->mm_dictionary_set(d, it->first, it->second);
+  }
+
+   it = proc->mmobj()->mm_dictionary_begin(other);
+   end = proc->mmobj()->mm_dictionary_end(other);
+  for ( ; it != end; it++) {
+    proc->mmobj()->mm_dictionary_set(d, it->first, it->second);
+  }
+  proc->stack_push(d);
+  return 0;
+}
+
+static int prim_mirror_fields(Process* proc) {
+  oop self =  proc->dp();
+  oop mirrored = ((oop*)self)[2];
+
+
+  if (is_small_int(mirrored)) {
+    debug() << "prim_mirror_fields: mirrored is number" << endl;
+    oop lst = proc->mmobj()->mm_list_new();
+    proc->stack_push(lst);
+    return 0;
+  } else {
+    debug() << "prim_mirror_fields: mirrored is not number" << endl;
+
+    oop mirrored_class = proc->mmobj()->mm_object_vt(mirrored);
+
+    if (proc->mmobj()->delegates_to(mirrored_class, proc->vm()->get_prime("Object"))) {
+      // mirrored is a class instance
+      debug() << "prim_mirror_fields: mirrored is class instance" << endl;
+      oop cclass = proc->mmobj()->mm_class_get_compiled_class(mirrored_class);
+      proc->stack_push(proc->mmobj()->mm_compiled_class_fields(cclass));
+      return 0;
+    } else { //unknown structure
+      debug() << "prim_mirror_fields: mirrored has unknown structure" << endl;
+      oop lst = proc->mmobj()->mm_list_new();
+      proc->stack_push(lst);
+      return 0;
+    }
+  }
+}
+static int prim_mirror_value_for(Process* proc) {
+  oop self =  proc->dp();
+  oop name = *((oop*) proc->fp() - 1);
+
+  oop mirrored = ((oop*)self)[2];
+
+  //assume mirrored is a class instance
+  oop mirrored_class = proc->mmobj()->mm_object_vt(mirrored);
+  assert(proc->mmobj()->delegates_to(mirrored_class, proc->vm()->get_prime("Object")));
+
+  oop cclass = proc->mmobj()->mm_class_get_compiled_class(mirrored_class);
+  oop fields = proc->mmobj()->mm_compiled_class_fields(cclass);
+
+  number idx = proc->mmobj()->mm_list_index_of(fields, name);
+  debug() << "prim_mirror_value_for index of " << idx << endl;
+  proc->stack_push(((oop*)mirrored)[2+idx]);
+  return 0;
+}
+
+
+
 static int prim_equal(Process* proc) {
   oop self =  proc->rp();
   oop other = *((oop*) proc->fp() - 1);
@@ -294,6 +389,10 @@ static int prim_behavior_to_string(Process* proc) {
   return 0;
 }
 
+static int prim_behavior_to_source(Process* proc) {
+  return prim_behavior_to_string(proc);
+}
+
 static int prim_object_to_string(Process* proc) {
   oop self =  proc->rp();
 
@@ -306,6 +405,10 @@ static int prim_object_to_string(Process* proc) {
   oop oop_str = proc->mmobj()->mm_string_new(s.str().c_str());
   proc->stack_push(oop_str);
   return 0;
+}
+
+static int prim_object_to_source(Process* proc) {
+  return prim_object_to_string(proc);
 }
 
 static int prim_symbol_to_string(Process* proc) {
@@ -480,6 +583,7 @@ void init_primitives(VM* vm) {
   vm->register_primitive("io_print", prim_io_print);
 
   vm->register_primitive("behavior_to_string", prim_behavior_to_string);
+  vm->register_primitive("behavior_to_source", prim_behavior_to_source);
 
   vm->register_primitive("number_sum", prim_number_sum);
   vm->register_primitive("number_sub", prim_number_sub);
@@ -494,6 +598,7 @@ void init_primitives(VM* vm) {
 
   vm->register_primitive("object_not", prim_object_not);
   vm->register_primitive("object_to_string", prim_object_to_string);
+  vm->register_primitive("object_to_source", prim_object_to_source);
   vm->register_primitive("list_to_string", prim_list_to_string);
 
   vm->register_primitive("symbol_to_string", prim_symbol_to_string);
@@ -509,10 +614,18 @@ void init_primitives(VM* vm) {
   vm->register_primitive("dictionary_new", prim_dictionary_new);
   vm->register_primitive("dictionary_set", prim_dictionary_set);
   vm->register_primitive("dictionary_index", prim_dictionary_index);
+  vm->register_primitive("dictionary_plus", prim_dictionary_plus);
   vm->register_primitive("dictionary_to_string", prim_dictionary_to_string);
 
   vm->register_primitive("string_append", prim_string_append);
   vm->register_primitive("string_equal", prim_string_equal);
+  vm->register_primitive("string_count", prim_string_count);
+  vm->register_primitive("string_size", prim_string_size);
+
+
+  vm->register_primitive("mirror_fields", prim_mirror_fields);
+  vm->register_primitive("mirror_value_for", prim_mirror_value_for);
+
 
   vm->register_primitive("compiled_function_with_env", prim_compiled_function_with_env);
   vm->register_primitive("compiled_function_as_context_with_vars", prim_compiled_function_as_context_with_vars);

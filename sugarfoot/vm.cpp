@@ -11,7 +11,7 @@
 #include "mmc_fun.hpp"
 
 VM::VM(int argc, char** argv, const char* core_img_filepath)
-  : _argc(argc), _argv(argv), _core_image(new CoreImage(this, core_img_filepath)), _mmobj(new MMObj(this, _core_image)) {
+  : _argc(argc), _argv(argv), _core_image(new CoreImage(this, core_img_filepath)), _mmobj(new MMObj(_core_image)) {
 }
 
 MMObj* VM::mmobj() {
@@ -157,6 +157,9 @@ oop VM::compile_fun(const char* text, oop vars, oop cmod) {
       return mmcf->load();
     } else {
       bail("compilation error!");
+      return MM_NULL;
     }
   }
+  bail("pipe failed!");
+  return MM_NULL;
 }
