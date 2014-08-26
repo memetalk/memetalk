@@ -28,8 +28,9 @@ const char* CoreImage::PRIMES_NAMES[] = {"Behavior",
                                          "ImportError",
                                          "DoesNotUnderstand",
                                          "ArityError",
+                                         "CompileError",
                                          "Null"};
-int CoreImage::TOTAL_PRIMES = 19;
+int CoreImage::TOTAL_PRIMES = 20;
 
 
 CoreImage::CoreImage(VM* vm, const char* filepath)

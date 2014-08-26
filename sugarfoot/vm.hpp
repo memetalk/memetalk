@@ -36,7 +36,7 @@ public:
 
   Process* process() { return _process; };
 
-  oop compile_fun(const char* text, oop vars, oop cmod);
+  oop compile_fun(const char* text, oop vars, oop cmod, int*);
 private:
   void dump_prime_info();
   void dictionary_dump(oop dict);

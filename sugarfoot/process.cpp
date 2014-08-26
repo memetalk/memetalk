@@ -261,6 +261,7 @@ oop Process::do_send(oop recv, oop selector, int num_args, int *exc) {
   debug() << "-- begin do_send, recv: " << recv
           << ", selector: " << _mmobj->mm_symbol_cstr(selector) << " #args: " << num_args << endl;
 
+  *exc = 0;
   std::pair<oop, oop> res = lookup(recv, _mmobj->mm_object_vt(recv), selector);
 
   oop drecv = res.first;
@@ -287,7 +288,6 @@ oop Process::do_send(oop recv, oop selector, int num_args, int *exc) {
   }
 
   oop stop_at_fp = _fp;
-  *exc = 0;
   try {
     if (load_fun(recv, drecv, fun, true)) {
       fetch_cycle(stop_at_fp);

@@ -267,6 +267,12 @@ class ArityError < Exception
   }
 end
 
+class CompileError < Exception
+  instance_method toString: fun() {
+    return "CompileError: " + this.message.toString();
+  }
+end
+
   class Mirror
     fields: mirrored;
     init new: fun(mirrored) {

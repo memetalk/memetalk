@@ -146,12 +146,14 @@ std::string get_compile_fun_json(const char* text, oop vars, MMObj* mmobj) {
   return buf.str();
 }
 
-oop VM::compile_fun(const char* text, oop vars, oop cmod) {
+oop VM::compile_fun(const char* text, oop vars, oop cmod, int* exc) {
   std::stringstream s;
   std::string json = get_compile_fun_json(text, vars, _mmobj);
 
   s << "python -m pycompiler.compiler -o '" << json << "'";
+  debug() << "Executing python compiler: " << s.str() << endl;
 
+  *exc = 0;
   if (FILE* p = popen(s.str().c_str(), "r")) {
     boost::iostreams::file_descriptor_source d(fileno(p), boost::iostreams::close_handle);
     boost::iostreams::stream_buffer<boost::iostreams::file_descriptor_source> pstream(d);
@@ -165,10 +167,10 @@ oop VM::compile_fun(const char* text, oop vars, oop cmod) {
       MMCFunction* mmcf = new MMCFunction(this, _core_image, c_data, data.size());
       return mmcf->load();
     } else {
-      bail("compilation error!");
-      return MM_NULL;
+      *exc = 1;
+      return _process->mm_exception("CompileError", c_data);
     }
   }
-  bail("pipe failed!");
-  return MM_NULL;
+  *exc = 1;
+  return _process->mm_exception("CompileError", "pipe error: Unable to call compiler");
 }

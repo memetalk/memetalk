@@ -447,7 +447,7 @@ static int prim_compiled_function_with_env(Process* proc) {
 
   debug() << "prim_compiled_function_with_env " << proc->mmobj()->mm_string_cstr(text) << " -- " << cmod << " " << vars << endl;
   int exc;
-  oop cfun = proc->vm()->compile_fun(proc->mmobj()->mm_string_cstr(text), vars, cmod);
+  oop cfun = proc->vm()->compile_fun(proc->mmobj()->mm_string_cstr(text), vars, cmod, &exc);
   if (exc != 0) {
     proc->stack_push(cfun);
     return PRIM_RAISED;

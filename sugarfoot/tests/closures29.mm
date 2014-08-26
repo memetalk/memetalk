@@ -32,12 +32,24 @@ t5: fun() {
   return fn();
 }
 
+t6: fun() {
+  var fn = Context.withVars(" {{ ", {}, thisModule);
+  return fn();
+}
+
 main: fun() {
   test.assert(t1() == "10", "closure returning literal");
   test.assert(t2() == 100, "closure acessing module entry");
   test.assert(t3() == 3, "closure accessing this");
   test.assert(t4() == 4, "closure accessing specified value");
   test.assert(t5() == 105, "more complex expression in closure");
+
+  try {
+    t6();
+    test.assert(false, "Compilation should have failed");
+  } catch(CompileError e) {
+    test.assert(true, "Compilation succeeded");
+  }
 }
 
 .endcode
