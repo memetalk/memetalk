@@ -511,7 +511,23 @@ static int prim_compiled_function_as_context_with_vars(Process* proc) {
 
 static int prim_context_get_env(Process* proc) {
   oop self =  proc->dp();
-  proc->stack_push(proc->mmobj()->mm_function_env_table(self));
+
+  oop ctx_env = proc->mmobj()->mm_context_get_env(self);
+
+  oop env_table = proc->mmobj()->mm_function_env_table(self);
+
+  oop env_dict = proc->mmobj()->mm_dictionary_new();
+
+
+  std::map<oop, oop>::iterator it = proc->mmobj()->mm_dictionary_begin(env_table);
+  std::map<oop, oop>::iterator end = proc->mmobj()->mm_dictionary_end(env_table);
+  for ( ; it != end; it++) {
+    number idx = untag_small_int(it->second);
+    debug() << "env idx " << idx << endl;
+    proc->mmobj()->mm_dictionary_set(env_dict, it->first, ((oop*)ctx_env)[2+idx]); //2: rp, dp
+  }
+
+  proc->stack_push(env_dict);
   return 0;
 }
 

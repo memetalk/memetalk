@@ -112,6 +112,14 @@
       return "false";
     }
   }
+  instance_method and: fun(other) {
+    if (this) {
+      if (other) {
+         return true;
+      }
+    }
+    return false;
+  }
   end
 
   class String
