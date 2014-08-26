@@ -9,12 +9,19 @@
 class VM;
 class MMObj;
 
+class mm_rewind {
+public:
+  mm_rewind(oop ex) : mm_exception(ex) {}
+  oop mm_exception;
+};
+
+
 class Process {
 
 public:
   Process(VM*);
 
-  oop run(oop, oop, int*);
+  oop run(oop, oop);
 
   VM* vm() { return _vm; }
   oop dp() { return _dp; }
@@ -36,15 +43,21 @@ public:
   void stack_push(word);
   void stack_push(bytecode*);
 
-  bool unwind_with_exception(oop);
+  oop unwind_with_exception(oop);
 
   oop do_call(oop, int*);
   oop do_call(oop, oop, int*);
 
-  oop do_send_0(oop, oop, int*);
-  oop do_send(oop, oop, oop, int*);
+  oop send_0(oop recv, oop selector, int* exc);
+  oop send_1(oop recv, oop selector, oop arg, int* exc);
+  oop send(oop recv, oop selector, oop args, int* exc);
+  oop do_send(oop recv, oop selector, int num_args, int *exc);
 
   std::pair<oop,oop> lookup(oop, oop, oop);
+
+  void raise(const char*, const char*);
+  oop mm_exception(const char*, const char*);
+
 private:
   void init();
 

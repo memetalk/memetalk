@@ -42,6 +42,12 @@ void VM::dump_prime_info() {
   }
 }
 
+void VM::print_retval(oop retval) {
+  int exc;
+  oop retval_str = _process->send_0(retval, new_symbol("toString"), &exc);
+  debug() << "RETVAL: " << retval << " => " << _mmobj->mm_string_cstr(retval_str) << endl;
+}
+
 int VM::start() {
   if (_argc != 2) {
     bail("usage: sf-vm <file.mmc>");
@@ -56,13 +62,16 @@ int VM::start() {
   _core_image->load();
   // dump_prime_info();
 
-  oop imod = instantiate_module(filepath, _mmobj->mm_list_new());
+  oop imod;
+  try {
+    imod = instantiate_module(_process, filepath, _mmobj->mm_list_new());
+  } catch(mm_rewind e) {
+    print_retval(e.mm_exception);
+    return * (int*) (void*) &(e.mm_exception);
+  }
 
-
-  int exc;
-  oop retval = _process->run(imod, new_symbol("main"), &exc);
-  oop retval_str = _process->do_send_0(retval, new_symbol("toString"), &exc);
-  debug() << "RETVAL: " << retval << " => " << _mmobj->mm_string_cstr(retval_str) << endl;
+  oop retval = _process->run(imod, new_symbol("main"));
+  print_retval(retval);
   return * (int*) (void*) &retval;
 }
 
@@ -92,8 +101,8 @@ prim_function_t VM::get_primitive(std::string name) {
   return _primitives[name];
 }
 
-oop VM::instantiate_module(char* name_or_path, oop module_args_list) {
-  MMCImage* mmc = new MMCImage(this, _core_image, name_or_path);
+oop VM::instantiate_module(Process* proc, char* name_or_path, oop module_args_list) {
+  MMCImage* mmc = new MMCImage(proc, _core_image, name_or_path);
   mmc->load();
   return mmc->instantiate_module(module_args_list);
 }

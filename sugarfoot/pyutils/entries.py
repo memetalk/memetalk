@@ -160,8 +160,9 @@ class Behavior(Entry):
         self.parent_name = parent_name
         self.parent_label = behavior_label(parent_name)
         self.dictionary = {}
-        if parent_name != 'Object':
-            raise Exception('TODO')
+        # if parent_name != 'Object':
+        #     br()
+        #     raise Exception('TODO')
 
     def label(self):
         return behavior_label(self.name)

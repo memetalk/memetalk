@@ -242,13 +242,30 @@ class Exception
     return @message;
   }
   instance_method toString: fun() {
-    return this.message.toString();
+    return "Exception: " + this.message.toString();
   }
   class_method throw: fun(msg) {
     this.new(msg).throw;
   }
 end
 
+class ImportError < Exception
+  instance_method toString: fun() {
+    return "ImportError: " + this.message.toString();
+  }
+end
+
+class DoesNotUnderstand < Exception
+  instance_method toString: fun() {
+    return "DoesNotUnderstand: " + this.message.toString();
+  }
+end
+
+class ArityError < Exception
+  instance_method toString: fun() {
+    return "ArityError: " + this.message.toString();
+  }
+end
 
   class Mirror
     fields: mirrored;

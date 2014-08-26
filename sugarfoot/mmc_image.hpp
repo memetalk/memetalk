@@ -6,14 +6,14 @@
 #include <string>
 
 class CoreImage;
-class VM;
+class Process;
 class MMObj;
 
 class MMCImage {
   static word MAGIC_NUMBER;
   static word HEADER_SIZE;
 public:
-  MMCImage(VM*, CoreImage*, const std::string&);
+  MMCImage(Process*, CoreImage*, const std::string&);
   oop load();
   oop instantiate_module(oop);
 private:
@@ -30,7 +30,7 @@ private:
 
   void  create_param_getters(oop imodule, oop imod_dict, oop params_list);
 
-  VM* _vm;
+  Process* _proc;
   MMObj* _mmobj;
   CoreImage* _core_image;
 

@@ -133,7 +133,7 @@ oop tag_small_int(number num) {
 
 bool check_and_print_exception(Process* proc, int exc, oop ex) {
   if (exc != 0) {
-    oop oo_exc = proc->do_send_0(ex, proc->vm()->new_symbol("toString"), &exc);
+    oop oo_exc = proc->send_0(ex, proc->vm()->new_symbol("toString"), &exc);
     std::cerr << "Exception raised: " << proc->mmobj()->mm_string_cstr(oo_exc) << endl;
     return true;
   }

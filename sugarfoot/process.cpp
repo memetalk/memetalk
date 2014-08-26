@@ -11,22 +11,19 @@
 #include "report.hpp"
 #include "mmobj.hpp"
 #include "utils.hpp"
-
-class mm_rewind {
-public:
-  mm_rewind(oop ex) : mm_exception(ex) {}
-  oop mm_exception;
-};
+#include <sstream>
 
 Process::Process(VM* vm)
   : _vm(vm), _mmobj(vm->mmobj()) {
   init();
 }
 
-// int frame_count = 0;
-
-oop Process::run(oop recv, oop selector_sym, int* exc) {
-  return do_send_0(recv, selector_sym, exc);
+oop Process::run(oop recv, oop selector_sym) {
+  //atm, we don't need to check exc
+  //since ::unwind_with_exception will terminate the vm
+  //if there is no more stack to unwind.
+  int exc;
+  return send_0(recv, selector_sym, &exc);
 }
 
 void Process::init() {
@@ -222,16 +219,13 @@ bool Process::load_fun(oop recv, oop drecv, oop fun, bool should_allocate) {
       oop ex_oop = stack_pop(); //shit
       debug() << "load_fun: prim returned: RAISED " << ex_oop << endl;
       pop_frame();
-      if (!unwind_with_exception(ex_oop)) {
-        debug() << "load_fun: unwind_with_exception reached primitive. c++ throwing...: " << ex_oop << endl;
-        throw mm_rewind(ex_oop);
-      } else {
-        debug() << "load_fun: unwind_with_exception rached catch block for " << ex_oop << endl;
-        // oop value = stack_pop(); //shit
-        // unload_fun_and_return(value);
-        stack_push(ex_oop); //we rely on compiler generating a pop instruction to bind ex_oop to the catch var
-        return false;
-      }
+      //we rely on compiler generating a pop instruction to bind ex_oop to the catch var
+      stack_push(unwind_with_exception(ex_oop));
+        // debug() << "load_fun: unwind_with_exception reached primitive. c++ throwing...: " << ex_oop << endl;
+      debug() << "load_fun: unwind_with_exception rached catch block for " << ex_oop << endl;
+      // oop value = stack_pop(); //shit
+      // unload_fun_and_return(value);
+      return false;
     }
   }
 
@@ -244,27 +238,46 @@ bool Process::load_fun(oop recv, oop drecv, oop fun, bool should_allocate) {
   return true;
 }
 
-oop Process::do_send(oop recv, oop selector, oop args, int* exc) {
-  debug() << "-- begin do_send, recv: " << recv
-          << ", selector: " << _mmobj->mm_symbol_cstr(selector) << endl;
+oop Process::send_0(oop recv, oop selector, int* exc) {
+  return do_send(recv, selector, 0, exc);
+}
 
+oop Process::send_1(oop recv, oop selector, oop arg, int* exc) {
+  stack_push(arg);
+  return do_send(recv, selector, 1, exc);
+}
+
+oop Process::send(oop recv, oop selector, oop args, int* exc) {
   number num_args = _mmobj->mm_list_size(args);
   for (int i = 0; i < num_args; i++) {
     stack_push(_mmobj->mm_list_entry(args, i));
   }
+  return do_send(recv, selector, num_args, exc);
+}
+
+oop Process::do_send(oop recv, oop selector, int num_args, int *exc) {
+  debug() << "-- begin do_send, recv: " << recv
+          << ", selector: " << _mmobj->mm_symbol_cstr(selector) << " #args: " << num_args << endl;
 
   std::pair<oop, oop> res = lookup(recv, _mmobj->mm_object_vt(recv), selector);
 
   oop drecv = res.first;
   oop fun = res.second;
   if (!fun) {
-    bail("do_send: lookup failed"); //todo
+    std::stringstream s;
+    s << _mmobj->mm_symbol_cstr(selector) << " not found in object " << recv;
+    debug() << s << endl;
+    *exc = 1;
+    return mm_exception("DoesNotUnderstand", s.str().c_str());
   }
 
   number arity = _mmobj->mm_function_get_num_params(fun);
   if (num_args != arity) {
-    debug() << num_args << " != " << arity << endl;
-    bail("do_send: arity and num_args differ");
+    std::stringstream s;
+    s << _mmobj->mm_symbol_cstr(selector) << ": expects " <<  arity << " but got " << num_args;
+    debug() << s << endl;
+    *exc = 1;
+    return mm_exception("ArityError", s.str().c_str());
   }
 
   oop stop_at_fp = _fp;
@@ -283,39 +296,7 @@ oop Process::do_send(oop recv, oop selector, oop args, int* exc) {
   return val;
 }
 
-oop Process::do_send_0(oop recv, oop selector, int* exc) {
-  debug() << "-- begin do_send_0, recv: " << recv
-          << ", selector: " << _mmobj->mm_symbol_cstr(selector) << endl;
 
-  std::pair<oop, oop> res = lookup(recv, _mmobj->mm_object_vt(recv), selector);
-
-  oop drecv = res.first;
-  oop fun = res.second;
-  if (!fun) {
-    bail("do_send_0: lookup failed"); //todo
-  }
-
-  number arity = _mmobj->mm_function_get_num_params(fun);
-  if (arity != 0) {
-    debug() << 0 << " != " << arity << endl;
-    bail("do_send_0: arity and num_args differ");
-  }
-
-  oop stop_at_fp = _fp;
-  *exc = 0;
-  try {
-    if (load_fun(recv, drecv, fun, true)) {
-      fetch_cycle(stop_at_fp);
-    }
-  } catch(mm_rewind e) {
-    *exc = 1;
-    return e.mm_exception;
-  }
-
-  oop val = stack_pop();
-  debug() << "-- end do_send_0, val: " << val << endl;
-  return val;
-}
 
 oop Process::do_call(oop fun, int* exc) {
   assert(_mmobj->mm_is_context(fun)); //since we pass NULL to load_fun
@@ -344,8 +325,12 @@ oop Process::do_call(oop fun, oop args, int* exc) {
   number num_args = _mmobj->mm_list_size(args);
   number arity = _mmobj->mm_function_get_num_params(fun);
   if (num_args != arity) {
-    debug() << num_args << " != " << arity << endl;
-    bail("call: arity and num_args differ");
+    std::stringstream s;
+    s << _mmobj->mm_string_cstr(_mmobj->mm_function_get_name(fun)) << ": expects " <<  arity << " but got " << num_args;
+    debug() << s << endl;
+    oop ex = mm_exception("ArityError", s.str().c_str());
+    *exc = 1;
+    return ex;
   }
 
   for (int i = 0; i < num_args; i++) {
@@ -387,13 +372,20 @@ void Process::handle_send(number num_args) {
   debug() << "Lookup FOUND " << fun << endl;
 
   if (!fun) {
-    bail("lookup failed!!");
+    std::stringstream s;
+    s << _mmobj->mm_symbol_cstr(selector) << " not found in object " << recv;
+    //we rely on compiler generating a pop instruction to bind ex_oop to the catch var
+    stack_push(unwind_with_exception(mm_exception("DoesNotUnderstand", s.str().c_str())));
+    return;
   }
 
   number arity = _mmobj->mm_function_get_num_params(fun);
   if (num_args != arity) {
-    debug() << num_args << " != " << arity << endl;
-    bail("handle_send: arity and num_args differ");
+    std::stringstream s;
+    s << _mmobj->mm_string_cstr(_mmobj->mm_function_get_name(fun)) << ": expects " <<  arity << " but got " << num_args;
+    debug() << s << endl;
+    stack_push(unwind_with_exception(mm_exception("ArityError", s.str().c_str())));
+    return;
   }
   load_fun(recv, drecv, fun, true);
 }
@@ -413,7 +405,13 @@ void Process::handle_super_ctor_send(number num_args) {
   oop fun = res.second;
 
   if (!fun) {
-    bail("Lookup failed");
+    debug() << "super Lookup failed";
+    std::stringstream s;
+    s << _mmobj->mm_symbol_cstr(selector) << " not found in child object " << instance;
+    debug() << s << endl;
+    //we rely on compiler generating a pop instruction to bind ex_oop to the catch var
+    stack_push(unwind_with_exception(mm_exception("DoesNotUnderstand", s.str().c_str())));
+    return;
   }
 
   debug() << "Lookup FOUND " << fun << endl;
@@ -421,8 +419,11 @@ void Process::handle_super_ctor_send(number num_args) {
 
   number arity = _mmobj->mm_function_get_num_params(fun);
   if (num_args != arity) {
-    debug() << num_args << " != " << arity << endl;
-    bail("handle_super_ctor_send: arity and num_args differ");
+    std::stringstream s;
+    s << "arity and num_args differ: " << num_args << " != " << arity;
+    debug() << s << endl;
+    stack_push(unwind_with_exception(mm_exception("DoesNotUnderstand", s.str().c_str())));
+    return;
   }
 
   load_fun(_rp, drecv, fun, false);
@@ -432,7 +433,11 @@ void Process::handle_call(number num_args) {
   oop fun = stack_pop();
   number arity = _mmobj->mm_function_get_num_params(fun);
   if (num_args != arity) {
-    bail("handle_call: arity and num_args differ");
+    std::stringstream s;
+    s << _mmobj->mm_string_cstr(_mmobj->mm_function_get_name(fun)) << ": expects " <<  arity << " but got " << num_args;
+    debug() << s << endl;
+    stack_push(unwind_with_exception(mm_exception("ArityError", s.str().c_str())));
+    return;
   }
   load_fun(NULL, NULL, fun, false);
 
@@ -616,11 +621,11 @@ int Process::execute_primitive(std::string name) {
 }
 
 
-bool Process::unwind_with_exception(oop e) {
+oop Process::unwind_with_exception(oop e) {
   debug() << "** unwind_with_exception e: " << e << " on cp: " << _cp << endl;
   if (_cp == NULL) {
     int exc;
-    oop str = do_send_0(e, _vm->new_symbol("toString"), &exc);
+    oop str = send_0(e, _vm->new_symbol("toString"), &exc);
     assert(exc == 0);
     std::cerr << "Terminated with exception: \""
               << _mmobj->mm_string_cstr(str) << "\"" << endl;
@@ -631,13 +636,14 @@ bool Process::unwind_with_exception(oop e) {
 
   if (_mmobj->mm_function_is_prim(_cp)) {
     debug() << "->> unwind reached primitive " << _mmobj->mm_string_cstr(_mmobj->mm_function_get_prim_name(_cp)) << endl;
-    return false;
+    throw mm_rewind(e);
   }
 
   bytecode* code = _mmobj->mm_function_get_code(_cp);
 
   number exception_frames_count = _mmobj->mm_function_exception_frames_count(_cp);
-  if (exception_frames_count == 0) { //unable to handle
+  debug() << "exception frames: " << exception_frames_count << endl;
+  if (exception_frames_count == 0) { //_cp is unable to handle
     pop_frame();
     return unwind_with_exception(e);
   }
@@ -658,7 +664,7 @@ bool Process::unwind_with_exception(oop e) {
     } else {
       debug() << "fetching exception type for name: " << str_type_oop << endl;
       int exc;
-      type_oop = do_send_0(_mp, _vm->new_symbol(str_type_oop), &exc);
+      type_oop = send_0(_mp, _vm->new_symbol(str_type_oop), &exc);
       assert(exc == 0);
       debug() << "fetching exception type got " << type_oop << endl;;
     }
@@ -674,10 +680,29 @@ bool Process::unwind_with_exception(oop e) {
         (type_oop == MM_NULL || delegates_to)) {
       debug() << "CAUGHT " << endl;
       _ip = code + catch_block;
-      return true;
+      return e;
     }
   }
 
   pop_frame();
   return unwind_with_exception(e);
+}
+
+
+void Process::raise(const char* ex_type_name, const char* msg) {
+  debug() << "Process::raise" << ex_type_name << " -- " << msg << endl;
+  //TODO: this is used by mmc_image. I think we should just return the
+  // exception and let that class deal with it.
+  throw mm_rewind(mm_exception(ex_type_name, msg));
+}
+
+oop Process::mm_exception(const char* ex_type_name, const char* msg) {
+  debug() << "mm_exception: " << ex_type_name << " -- " << msg << endl;
+  oop ex_type = _vm->get_prime(ex_type_name);
+
+  int exc;
+  oop exobj = send_1(ex_type, _vm->new_symbol("new"), _mmobj->mm_string_new(msg), &exc);
+  assert(exc == 0);
+  debug() << "mm_exception: returning ex" << exobj << endl;
+  return exobj;
 }
