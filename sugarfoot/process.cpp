@@ -77,6 +77,8 @@ void Process::pop_frame() {
 
   // debug() << "pop_frame begin SP: " << _sp << endl;
 
+  _sp = _bp; //restore sp, ignoring frame data. push_frame/pop_frame are always in sync.
+
   _bp = stack_pop();
   _dp = stack_pop();
   _rp = stack_pop();
@@ -268,7 +270,9 @@ oop Process::do_send(oop recv, oop selector, int num_args, int *exc) {
     s << _mmobj->mm_symbol_cstr(selector) << " not found in object " << recv;
     debug() << s << endl;
     *exc = 1;
-    return mm_exception("DoesNotUnderstand", s.str().c_str());
+    oop ex = mm_exception("DoesNotUnderstand", s.str().c_str());
+    debug() << "-- end do_send returning exception object " << ex << endl;
+    return ex;
   }
 
   number arity = _mmobj->mm_function_get_num_params(fun);
@@ -277,7 +281,9 @@ oop Process::do_send(oop recv, oop selector, int num_args, int *exc) {
     s << _mmobj->mm_symbol_cstr(selector) << ": expects " <<  arity << " but got " << num_args;
     debug() << s << endl;
     *exc = 1;
-    return mm_exception("ArityError", s.str().c_str());
+    oop ex = mm_exception("ArityError", s.str().c_str());
+    debug() << "-- end do_send returning exception object " << ex << endl;
+    return ex;
   }
 
   oop stop_at_fp = _fp;
@@ -288,6 +294,7 @@ oop Process::do_send(oop recv, oop selector, int num_args, int *exc) {
     }
   } catch(mm_rewind e) {
     *exc = 1;
+    debug() << "-- end do_send with excepton: " << e.mm_exception << endl;
     return e.mm_exception;
   }
 
@@ -301,7 +308,7 @@ oop Process::do_send(oop recv, oop selector, int num_args, int *exc) {
 oop Process::do_call(oop fun, int* exc) {
   assert(_mmobj->mm_is_context(fun)); //since we pass NULL to load_fun
 
-  debug() << "-- begin call, sp: " << _sp << ", fp: " << _fp << endl;
+  debug() << "-- begin do_call, sp: " << _sp << ", fp: " << _fp << endl;
   oop stop_at_fp = _fp;
 
   *exc = 0;
@@ -311,6 +318,7 @@ oop Process::do_call(oop fun, int* exc) {
     }
   } catch(mm_rewind e) {
     *exc = 1;
+    debug() << "-- end do_call with excepton: " << e.mm_exception << endl;
     return e.mm_exception;
   }
 
@@ -329,6 +337,7 @@ oop Process::do_call(oop fun, oop args, int* exc) {
     s << _mmobj->mm_string_cstr(_mmobj->mm_function_get_name(fun)) << ": expects " <<  arity << " but got " << num_args;
     debug() << s << endl;
     oop ex = mm_exception("ArityError", s.str().c_str());
+    debug() << "do_call returning exception object " << ex << endl;
     *exc = 1;
     return ex;
   }
@@ -384,7 +393,11 @@ void Process::handle_send(number num_args) {
     std::stringstream s;
     s << _mmobj->mm_string_cstr(_mmobj->mm_function_get_name(fun)) << ": expects " <<  arity << " but got " << num_args;
     debug() << s << endl;
-    stack_push(unwind_with_exception(mm_exception("ArityError", s.str().c_str())));
+    oop ex = mm_exception("ArityError", s.str().c_str());
+    debug() << "handle_send: created exception " << ex << endl;
+    unwind_with_exception(ex);
+    debug() << "handle_send: unwinded ex. returning exception " << ex << endl;
+    stack_push(ex);
     return;
   }
   load_fun(recv, drecv, fun, true);
@@ -703,6 +716,6 @@ oop Process::mm_exception(const char* ex_type_name, const char* msg) {
   int exc;
   oop exobj = send_1(ex_type, _vm->new_symbol("new"), _mmobj->mm_string_new(msg), &exc);
   assert(exc == 0);
-  debug() << "mm_exception: returning ex" << exobj << endl;
+  debug() << "mm_exception: returning ex: " << exobj << endl;
   return exobj;
 }

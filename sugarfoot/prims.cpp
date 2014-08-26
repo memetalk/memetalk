@@ -20,13 +20,13 @@ static int prim_io_print(Process* proc) {
 
   debug() << "---- prim_print" << endl;
   int exc;
-  oop oop_str = proc->send_0(obj, proc->vm()->new_symbol("toString"), &exc);
+  oop res = proc->send_0(obj, proc->vm()->new_symbol("toString"), &exc);
   if (exc != 0) {
+    proc->stack_push(res);
     return PRIM_RAISED;
   }
-  debug() << "---- prim_print send_0 done " << oop_str << endl;
-  std::cout << proc->mmobj()->mm_string_cstr(oop_str) << endl;
-  proc->stack_push((oop)0);
+  std::cout << proc->mmobj()->mm_string_cstr(res) << endl;
+  proc->stack_push(MM_NULL);
   return 0;
 }
 
@@ -199,6 +199,8 @@ static int prim_list_each(Process* proc) {
     int exc;
     oop val = proc->do_call(fun, &exc);
     if (exc != 0) {
+      debug() << "prim_list_each raised" << endl;
+      proc->stack_push(val);
       return PRIM_RAISED;
     }
     debug() << "list each[" << i << "] fun returned " << val << endl;
@@ -213,12 +215,13 @@ static int prim_list_to_string(Process* proc) {
   s << "[";
   for (int i = 0; i < proc->mmobj()->mm_list_size(self); i++) {
     int exc;
-    oop tostr = proc->send_0(proc->mmobj()->mm_list_entry(self, i),
+    oop res = proc->send_0(proc->mmobj()->mm_list_entry(self, i),
                                 proc->vm()->new_symbol("toString"), &exc);
     if (exc != 0) {
+      proc->stack_push(res);
       return PRIM_RAISED;
     }
-    s << proc->mmobj()->mm_string_cstr(tostr) << ",";
+    s << proc->mmobj()->mm_string_cstr(res) << ",";
   }
   s << "]";
   oop oop_str = proc->mmobj()->mm_string_new(s.str().c_str());
@@ -259,19 +262,21 @@ static int prim_dictionary_to_string(Process* proc) {
   std::map<oop, oop>::iterator end = proc->mmobj()->mm_dictionary_end(self);
   for ( ; it != end; it++) {
     int exc;
-    oop tostr = proc->send_0(it->first,
+    oop res = proc->send_0(it->first,
                                 proc->vm()->new_symbol("toString"), &exc);
     if (exc != 0) {
+      proc->stack_push(res);
       return PRIM_RAISED;
     }
-    s << proc->mmobj()->mm_string_cstr(tostr) << ": ";
+    s << proc->mmobj()->mm_string_cstr(res) << ": ";
 
-    tostr = proc->send_0(it->second,
+    res = proc->send_0(it->second,
                                 proc->vm()->new_symbol("toString"), &exc);
     if (exc != 0) {
+      proc->stack_push(res);
       return PRIM_RAISED;
     }
-    s << proc->mmobj()->mm_string_cstr(tostr) << ", ";
+    s << proc->mmobj()->mm_string_cstr(res) << ", ";
   }
   s << "}";
   oop oop_str = proc->mmobj()->mm_string_new(s.str().c_str());
@@ -441,7 +446,13 @@ static int prim_compiled_function_with_env(Process* proc) {
   oop text = *((oop*) proc->fp() - 3);
 
   debug() << "prim_compiled_function_with_env " << proc->mmobj()->mm_string_cstr(text) << " -- " << cmod << " " << vars << endl;
+  int exc;
   oop cfun = proc->vm()->compile_fun(proc->mmobj()->mm_string_cstr(text), vars, cmod);
+  if (exc != 0) {
+    proc->stack_push(cfun);
+    return PRIM_RAISED;
+  }
+
   debug() << "prim_compiled_function_with_env: GOT cfun: " << cfun << " " << *(oop*) cfun << endl;
   proc->stack_push(cfun);
   return 0;
@@ -485,6 +496,7 @@ static int prim_compiled_function_as_context_with_vars(Process* proc) {
   int exc;
   oop ctx = proc->send(proc->vm()->get_prime("Context"), proc->vm()->new_symbol("new"), args, &exc);
   if (exc != 0) {
+    proc->stack_push(ctx);
     return PRIM_RAISED;
   }
 
