@@ -87,16 +87,18 @@ void set_meme_instance(QObject* obj, oop instance) {
 }
 
 static
-oop meme_instance(Process* proc, QObject* obj) {
+oop meme_instance(Process* proc, QObject* obj, int* exc) {
+  *exc = 0;
   QVariant prop = obj->property("meme_instance");
   if (prop.isValid()) {
     return (oop) prop.value<void*>();
   } else {
     oop qt_imod = proc->mp();
-    int exc;
     const char* name = obj->metaObject()->className();
-    oop qt_class = proc->send_0(qt_imod, proc->vm()->new_symbol(name), &exc);
-    assert(exc == 0);
+    oop qt_class = proc->send_0(qt_imod, proc->vm()->new_symbol(name), exc);
+    if (*exc != 0) {
+      return qt_class;
+    }
     oop instance = proc->mmobj()->alloc_instance(qt_class);
     set_qt_instance(proc->mmobj(), instance, obj);
     set_meme_instance(obj, instance);
@@ -112,12 +114,14 @@ void set_meme_instance(QListWidgetItem* obj, oop instance) {
 }
 
 static
-oop meme_instance(Process* proc, QListWidgetItem* obj) {
+oop meme_instance(Process* proc, QListWidgetItem* obj, int* exc) {
+  *exc = 0;
   if (meme_mapping.find(obj) == meme_mapping.end()) {
     oop qt_imod = proc->mp();
-    int exc;
-    oop qt_class = proc->send_0(qt_imod, proc->vm()->new_symbol("QListWidgetItem"), &exc);
-    assert(exc == 0);
+    oop qt_class = proc->send_0(qt_imod, proc->vm()->new_symbol("QListWidgetItem"), exc);
+    if (*exc != 0) {
+      return qt_class;
+    }
     oop instance = proc->mmobj()->alloc_instance(qt_class);
     set_qt_instance(proc->mmobj(), instance, obj);
     meme_mapping[obj] = instance;
@@ -149,12 +153,14 @@ void set_meme_instance(QTableWidgetItem* obj, oop instance) {
 // }
 
 static
-oop meme_instance(Process* proc, QTextCursor* obj) {
+oop meme_instance(Process* proc, QTextCursor* obj, int* exc) {
+  *exc = 0;
   if (meme_mapping.find(obj) == meme_mapping.end()) {
     oop qt_imod = proc->mp();
-    int exc;
-    oop qt_class = proc->send_0(qt_imod, proc->vm()->new_symbol("QTextCursor"), &exc);
-    assert(exc == 0);
+    oop qt_class = proc->send_0(qt_imod, proc->vm()->new_symbol("QTextCursor"), exc);
+    if (*exc != 0) {
+      return qt_class;
+    }
     oop instance = proc->mmobj()->alloc_instance(qt_class);
     set_qt_instance(proc->mmobj(), instance, obj);
     meme_mapping[obj] = instance;
@@ -165,12 +171,14 @@ oop meme_instance(Process* proc, QTextCursor* obj) {
 }
 
 static
-oop meme_instance(Process* proc, QWebElement* obj) {
+oop meme_instance(Process* proc, QWebElement* obj, int* exc) {
+  *exc = 0;
   if (meme_mapping.find(obj) == meme_mapping.end()) {
     oop qt_imod = proc->mp();
-    int exc;
-    oop qt_class = proc->send_0(qt_imod, proc->vm()->new_symbol("QWebElement"), &exc);
-    assert(exc == 0);
+    oop qt_class = proc->send_0(qt_imod, proc->vm()->new_symbol("QWebElement"), exc);
+    if (*exc != 0) {
+      return qt_class;
+    }
     oop instance = proc->mmobj()->alloc_instance(qt_class);
     set_qt_instance(proc->mmobj(), instance, obj);
     meme_mapping[obj] = instance;
@@ -227,7 +235,9 @@ QScriptValue mm_handle(QScriptContext *ctx, QScriptEngine *engine) {
         if (QString(v.typeName()) == "QListWidgetItem*") {
           QListWidgetItem* p = v.value<QListWidgetItem*>();
           std::cerr << "from variant: " << p << endl;
-          proc->mmobj()->mm_list_append(mm_args, meme_instance(proc, p));
+          int exc;
+          proc->mmobj()->mm_list_append(mm_args, meme_instance(proc, p, &exc));
+          assert(exc == 0);
         }
       }
     }
@@ -284,9 +294,10 @@ static int prim_qapplication_exit(Process* proc) {
 static int prim_qapplication_focus_widget(Process* proc) {
   oop data_self =  proc->dp();
   QApplication* app = (QApplication*) get_qt_instance(proc->mmobj(), data_self);
-  oop instance = meme_instance(proc, app->focusWidget());
+  int exc;
+  oop instance = meme_instance(proc, app->focusWidget(), &exc);
   proc->stack_push(instance);
-  return 0;
+  return exc;
 }
 
 /** QAction **/
@@ -645,8 +656,9 @@ static int prim_qt_qlistwidget_current_item(Process* proc) {
   oop data_self =  proc->dp();
 
   QListWidget* qtobj = (QListWidget*) get_qt_instance(proc->mmobj(), data_self);
-  proc->stack_push(meme_instance(proc, qtobj->currentItem()));
-  return 0;
+  int exc;
+  proc->stack_push(meme_instance(proc, qtobj->currentItem(), &exc));
+  return exc;
 }
 
 /** QListWidgetItem **/
@@ -714,8 +726,9 @@ static int prim_qt_qmainwindow_menu_bar(Process* proc) {
   oop data_self =  proc->dp();
 
   _QMainWindow* qtobj = (_QMainWindow*) get_qt_instance(proc->mmobj(), data_self);
-  proc->stack_push(meme_instance(proc, qtobj->menuBar()));
-  return 0;
+  int exc;
+  proc->stack_push(meme_instance(proc, qtobj->menuBar(), &exc));
+  return exc;
 }
 
 static int prim_qt_qmainwindow_set_central_widget(Process* proc) {
@@ -734,8 +747,9 @@ static int prim_qt_qmainwindow_status_bar(Process* proc) {
   oop data_self =  proc->dp();
 
   _QMainWindow* qtobj = (_QMainWindow*) get_qt_instance(proc->mmobj(), data_self);
-  proc->stack_push(meme_instance(proc, qtobj->statusBar()));
-  return 0;
+  int exc;
+  proc->stack_push(meme_instance(proc, qtobj->statusBar(), &exc));
+  return exc;
 }
 
 
@@ -746,8 +760,9 @@ static int prim_qt_qmenubar_add_menu(Process* proc) {
   oop text = *((oop*) proc->fp() - 1);
 
   QMenuBar* qtobj = (QMenuBar*) get_qt_instance(proc->mmobj(), data_self);
-  proc->stack_push(meme_instance(proc, qtobj->addMenu(proc->mmobj()->mm_string_cstr(text))));
-  return 0;
+  int exc;
+  proc->stack_push(meme_instance(proc, qtobj->addMenu(proc->mmobj()->mm_string_cstr(text)), &exc));
+  return exc;
 }
 
 
@@ -807,8 +822,9 @@ static int prim_qt_qplaintextedit_text_cursor(Process* proc) {
 
   QPlainTextEdit* qtobj = (QPlainTextEdit*) get_qt_instance(proc->mmobj(), data_self);
   QTextCursor* c = new QTextCursor(qtobj->textCursor());
-  proc->stack_push(meme_instance(proc, c));
-  return 0;
+  int exc;
+  proc->stack_push(meme_instance(proc, c, &exc));
+  return exc;
 }
 
 static int prim_qt_qplaintextedit_to_plain_text(Process* proc) {
@@ -1076,8 +1092,12 @@ static int prim_qt_qtablewidget_horizontal_header(Process* proc) {
   QTableWidget* qtobj = (QTableWidget*) get_qt_instance(proc->mmobj(), data_self);
   QHeaderView* header = qtobj->horizontalHeader();
 
-  oop instance = meme_instance(proc, header);
-
+  int exc;
+  oop instance = meme_instance(proc, header, &exc);
+  if (exc != 0) {
+    proc->stack_push(instance);
+    return exc;
+  }
   // oop qt_imod = proc->mp();
   // oop qt_class = proc->send_0(qt_imod, proc->mmobj()->mm_string_new("QHeaderView"));
   // oop instance = proc->mmobj()->alloc_instance(qt_class);
@@ -1163,7 +1183,12 @@ static int prim_qt_qtablewidget_vertical_header(Process* proc) {
   QTableWidget* qtobj = (QTableWidget*) get_qt_instance(proc->mmobj(), data_self);
   QHeaderView* header = qtobj->verticalHeader();
 
-  oop instance = meme_instance(proc, header);
+  int exc;
+  oop instance = meme_instance(proc, header, &exc);
+  if (exc != 0) {
+    proc->stack_push(instance);
+    return exc;
+  }
   // oop qt_imod = proc->mp();
   // oop qt_class = proc->send_0(qt_imod, proc->mmobj()->mm_string_new("QHeaderView"));
   // oop instance = proc->mmobj()->alloc_instance(qt_class);
@@ -1382,9 +1407,10 @@ static int prim_qt_qwebelement_clone(Process* proc) {
   QWebElement* qtobj = (QWebElement*) get_qt_instance(proc->mmobj(), data_self);
   QWebElement* el = new QWebElement(qtobj->clone());
 
-  oop instance = meme_instance(proc, el);
+  int exc;
+  oop instance = meme_instance(proc, el, &exc);
   proc->stack_push(instance);
-  return 0;
+  return exc;
 }
 
 static int prim_qt_qwebelement_find_first(Process* proc) {
@@ -1394,9 +1420,10 @@ static int prim_qt_qwebelement_find_first(Process* proc) {
   QWebElement* qtobj = (QWebElement*) get_qt_instance(proc->mmobj(), data_self);
   QWebElement* el = new QWebElement(qtobj->findFirst(proc->mmobj()->mm_string_cstr(oop_str)));
 
-  oop instance = meme_instance(proc, el);
+  int exc;
+  oop instance = meme_instance(proc, el, &exc);
   proc->stack_push(instance);
-  return 0;
+  return exc;
 }
 
 static int prim_qt_qwebelement_set_attribute(Process* proc) {
@@ -1445,9 +1472,10 @@ static int prim_qt_qwebelement_take_from_document(Process* proc) {
   oop data_self =  proc->dp();
 
   QWebElement* qtobj = (QWebElement*) get_qt_instance(proc->mmobj(), data_self);
-  oop instance = meme_instance(proc, &(qtobj->takeFromDocument()));
+  int exc;
+  oop instance = meme_instance(proc, &(qtobj->takeFromDocument()), &exc);
   proc->stack_push(instance);
-  return 0;
+  return exc;
 }
 
 static int prim_qt_qwebelement_to_outer_xml(Process* proc) {
@@ -1465,8 +1493,9 @@ static int prim_qt_qwebframe_document_element(Process* proc) {
 
   QWebFrame* qtobj = (QWebFrame*) get_qt_instance(proc->mmobj(), data_self);
   QWebElement* el = new QWebElement(qtobj->documentElement());
-  proc->stack_push(meme_instance(proc, el));
-  return 0;
+  int exc;
+  proc->stack_push(meme_instance(proc, el, &exc));
+  return exc;
 }
 
 static int prim_qt_qwebframe_scroll_to_anchor(Process* proc) {
@@ -1550,8 +1579,9 @@ static int prim_qt_qwebpage_main_frame(Process* proc) {
 
   QWebPage* qtobj = (QWebPage*) get_qt_instance(proc->mmobj(), data_self);
   QWebFrame* frame = qtobj->mainFrame();
-  proc->stack_push(meme_instance(proc, frame));
-  return 0;
+  int exc;
+  proc->stack_push(meme_instance(proc, frame, &exc));
+  return exc;
 }
 
 static int prim_qt_qwebpage_set_link_delegation_policy(Process* proc) {
@@ -1586,8 +1616,9 @@ static int prim_qt_qwebview_page(Process* proc) {
 
   QWebView* qtobj = (QWebView*) get_qt_instance(proc->mmobj(), data_self);
   QWebPage* page = qtobj->page();
-  proc->stack_push(meme_instance(proc, page));
-  return 0;
+  int exc;
+  proc->stack_push(meme_instance(proc, page, &exc));
+  return exc;
 }
 
 static int prim_qt_qwebview_set_html(Process* proc) {
@@ -1629,7 +1660,13 @@ static int prim_qt_qwidget_actions(Process* proc) {
   QList<QAction*> lst = w->actions();
   oop oop_lst = proc->mmobj()->mm_list_new();
   for (int i = 0; i < lst.size(); i++) {
-    proc->mmobj()->mm_list_append(oop_lst, meme_instance(proc, lst[i]));
+    int exc;
+    oop obj = meme_instance(proc, lst[i], &exc);
+    if (exc != 0) {
+      proc->stack_push(obj);
+      return exc;
+    }
+    proc->mmobj()->mm_list_append(oop_lst, obj);
   }
   proc->stack_push(oop_lst);
   return 0;

@@ -328,7 +328,7 @@ class VariableStorage(object):
 
     def add(self, cfun, name):
         if name in self.variables[cfun]:
-            raise Exception('redeclaration of ' + name)
+            raise Exception('redeclaration of ' + name + " in " + cfun.name)
         self.variables[cfun].append(name)
         return self.index(cfun, name)
 
@@ -719,7 +719,7 @@ class CompiledFunction(Entry):
             self.bytecodes.append('push_module', 0)
             self.bytecodes.append('push_literal', idx)
             self.bytecodes.append('send', arity)
-        elif self.has_env:
+        elif self.has_env and self.var_declarations.defined(name):
             idx = self.var_declarations.index(self, name)
             self.bytecodes.append("push_env", idx)
             self.bytecodes.append("call", arity)
