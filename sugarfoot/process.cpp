@@ -438,7 +438,7 @@ void Process::handle_super_ctor_send(number num_args) {
     return;
   }
 
-  load_fun(_rp, drecv, fun, false);
+  load_fun(get_rp(), drecv, fun, false);
 }
 
 void Process::handle_call(number num_args) {
