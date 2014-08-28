@@ -156,11 +156,17 @@
   instance_method toString: fun() {
     <primitive "symbol_to_string">
   }
+  instance_method toSource: fun() {
+    return ":" + this.toString;
+  }
   end
 
   class Dictionary
   instance_method toString: fun() {
     <primitive "dictionary_to_string">
+  }
+  instance_method toSource: fun() {
+    <primitive "dictionary_to_source">
   }
   instance_method set: fun(key, value) {
     <primitive "dictionary_set">
@@ -197,6 +203,9 @@
   }
   instance_method toString: fun() {
     <primitive "list_to_string">
+  }
+  instance_method toSource: fun() {
+    <primitive "list_to_source">
   }
   class_method new: fun() {
     <primitive "list_new">

@@ -449,6 +449,11 @@ init new: fun(inspectee) {
 //end idez:Inspector:new
 
 instance_method acceptIt: fun() {
+  var item = @fieldList.currentItem();
+  if (item.text() == '*self') {
+    return null; //do nothing
+  }
+
   try {
     //thisModule here: not appropriate.
     //it should be the module where inspectee was defined
@@ -456,7 +461,7 @@ instance_method acceptIt: fun() {
     // [if it isn't, fuck, use kernel imodule.]
     var ctx = Context.withVars(@textArea.text(), {:this:@inspectee}, thisModule);
     var new_value = ctx();
-    var slot = @fieldList.currentItem().entry();
+    var slot = item.entry();
     @mirror.setValueFor(slot, new_value);
     @textArea.saved();
   } catch(ex) {

@@ -268,6 +268,7 @@ static int prim_list_to_string(Process* proc) {
   oop self =  proc->dp();
   std::stringstream s;
   s << "[";
+  std::string comma = "";
   for (int i = 0; i < proc->mmobj()->mm_list_size(self); i++) {
     int exc;
     oop res = proc->send_0(proc->mmobj()->mm_list_entry(self, i),
@@ -276,13 +277,37 @@ static int prim_list_to_string(Process* proc) {
       proc->stack_push(res);
       return PRIM_RAISED;
     }
-    s << proc->mmobj()->mm_string_cstr(res) << ",";
+    s << comma << proc->mmobj()->mm_string_cstr(res);
+    comma = ", ";
   }
   s << "]";
   oop oop_str = proc->mmobj()->mm_string_new(s.str().c_str());
   proc->stack_push(oop_str);
   return 0;
 }
+
+static int prim_list_to_source(Process* proc) {
+  oop self =  proc->dp();
+  std::stringstream s;
+  s << "[";
+  std::string comma = "";
+  for (int i = 0; i < proc->mmobj()->mm_list_size(self); i++) {
+    int exc;
+    oop res = proc->send_0(proc->mmobj()->mm_list_entry(self, i),
+                                proc->vm()->new_symbol("toSource"), &exc);
+    if (exc != 0) {
+      proc->stack_push(res);
+      return PRIM_RAISED;
+    }
+    s << comma << proc->mmobj()->mm_string_cstr(res);
+    comma = ", ";
+  }
+  s << "]";
+  oop oop_str = proc->mmobj()->mm_string_new(s.str().c_str());
+  proc->stack_push(oop_str);
+  return 0;
+}
+
 
 static int prim_dictionary_new(Process* proc) {
   oop self = proc->mmobj()->mm_dictionary_new();
@@ -315,6 +340,7 @@ static int prim_dictionary_to_string(Process* proc) {
   s << "{";
   std::map<oop, oop>::iterator it = proc->mmobj()->mm_dictionary_begin(self);
   std::map<oop, oop>::iterator end = proc->mmobj()->mm_dictionary_end(self);
+  std::string comma = "";
   for ( ; it != end; it++) {
     int exc;
     oop res = proc->send_0(it->first,
@@ -323,7 +349,7 @@ static int prim_dictionary_to_string(Process* proc) {
       proc->stack_push(res);
       return PRIM_RAISED;
     }
-    s << proc->mmobj()->mm_string_cstr(res) << ": ";
+    s << comma << proc->mmobj()->mm_string_cstr(res) << ": ";
 
     res = proc->send_0(it->second,
                                 proc->vm()->new_symbol("toString"), &exc);
@@ -331,7 +357,40 @@ static int prim_dictionary_to_string(Process* proc) {
       proc->stack_push(res);
       return PRIM_RAISED;
     }
-    s << proc->mmobj()->mm_string_cstr(res) << ", ";
+    s << proc->mmobj()->mm_string_cstr(res);
+    comma = ", ";
+  }
+  s << "}";
+  oop oop_str = proc->mmobj()->mm_string_new(s.str().c_str());
+  proc->stack_push(oop_str);
+  return 0;
+}
+
+static int prim_dictionary_to_source(Process* proc) {
+  oop self =  proc->dp();
+  std::stringstream s;
+  s << "{";
+  std::map<oop, oop>::iterator it = proc->mmobj()->mm_dictionary_begin(self);
+  std::map<oop, oop>::iterator end = proc->mmobj()->mm_dictionary_end(self);
+  std::string comma = "";
+  for ( ; it != end; it++) {
+    int exc;
+    oop res = proc->send_0(it->first,
+                                proc->vm()->new_symbol("toSource"), &exc);
+    if (exc != 0) {
+      proc->stack_push(res);
+      return PRIM_RAISED;
+    }
+    s << comma << proc->mmobj()->mm_string_cstr(res) << ": ";
+
+    res = proc->send_0(it->second,
+                                proc->vm()->new_symbol("toSource"), &exc);
+    if (exc != 0) {
+      proc->stack_push(res);
+      return PRIM_RAISED;
+    }
+    s << proc->mmobj()->mm_string_cstr(res);
+    comma = ", ";
   }
   s << "}";
   oop oop_str = proc->mmobj()->mm_string_new(s.str().c_str());
@@ -539,7 +598,7 @@ static int prim_object_to_source(Process* proc) {
 }
 
 static int prim_symbol_to_string(Process* proc) {
-  oop self =  proc->rp();
+  oop self =  proc->dp();
   char* str = proc->mmobj()->mm_symbol_cstr(self);
   debug() << "prim_symbol_to_string: " << self << " str: " << str << endl;
   oop oop_str = proc->mmobj()->mm_string_new(str);
@@ -760,7 +819,6 @@ void init_primitives(VM* vm) {
   vm->register_primitive("object_not", prim_object_not);
   vm->register_primitive("object_to_string", prim_object_to_string);
   vm->register_primitive("object_to_source", prim_object_to_source);
-  vm->register_primitive("list_to_string", prim_list_to_string);
 
   vm->register_primitive("symbol_to_string", prim_symbol_to_string);
 
@@ -772,6 +830,8 @@ void init_primitives(VM* vm) {
   vm->register_primitive("list_index", prim_list_index);
   vm->register_primitive("list_each", prim_list_each);
   vm->register_primitive("list_has", prim_list_has);
+  vm->register_primitive("list_to_string", prim_list_to_string);
+  vm->register_primitive("list_to_source", prim_list_to_source);
 
   vm->register_primitive("dictionary_new", prim_dictionary_new);
   vm->register_primitive("dictionary_set", prim_dictionary_set);
@@ -779,6 +839,7 @@ void init_primitives(VM* vm) {
   vm->register_primitive("dictionary_plus", prim_dictionary_plus);
   vm->register_primitive("dictionary_has", prim_dictionary_has);
   vm->register_primitive("dictionary_to_string", prim_dictionary_to_string);
+  vm->register_primitive("dictionary_to_source", prim_dictionary_to_source);
 
   vm->register_primitive("string_append", prim_string_append);
   vm->register_primitive("string_equal", prim_string_equal);
