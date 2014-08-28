@@ -223,7 +223,7 @@ static const char* js_bridge =
 
 QScriptValue js_print(QScriptContext *ctx, QScriptEngine *engine) {
   QString str = ctx->argument(0).toString();
-  std::cerr << "print: " << qPrintable(str) << endl;
+  // std::cerr << "print: " << qPrintable(str) << endl;
   return engine->undefinedValue();
 }
 
