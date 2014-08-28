@@ -165,6 +165,10 @@ static int prim_number_to_string(Process* proc) {
   return 0;
 }
 
+static int prim_number_to_source(Process* proc) {
+  return prim_number_to_string(proc);
+}
+
 static int prim_exception_throw(Process* proc) {
   oop self =  proc->rp();
   proc->stack_push(self);
@@ -673,6 +677,7 @@ void init_primitives(VM* vm) {
   vm->register_primitive("number_mul", prim_number_mul);
   vm->register_primitive("number_lt", prim_number_lt);
   vm->register_primitive("number_to_string", prim_number_to_string);
+  vm->register_primitive("number_to_source", prim_number_to_source);
 
   vm->register_primitive("exception_throw", prim_exception_throw);
 

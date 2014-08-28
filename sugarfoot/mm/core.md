@@ -213,6 +213,9 @@
     instance_method toString: fun() {
       <primitive "number_to_string">
     }
+    instance_method toSource: fun() {
+      <primitive "number_to_source">
+    }
   end
 
 
