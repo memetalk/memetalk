@@ -106,6 +106,23 @@ static int prim_string_from(Process* proc) {
   return 0;
 }
 
+#include <boost/algorithm/string/replace.hpp>
+static int prim_string_replace_all(Process* proc) {
+  oop self =  proc->dp();
+  oop val = *((oop*) proc->fp() - 1);
+  oop what = *((oop*) proc->fp() - 2);
+
+  std::string str = proc->mmobj()->mm_string_cstr(self);
+  std::string _what = proc->mmobj()->mm_string_cstr(what);
+  std::string _val = proc->mmobj()->mm_string_cstr(val);
+
+  std::string output = boost::replace_all_copy(str, _what, _val);
+
+  proc->stack_push(proc->mmobj()->mm_string_new(output.c_str()));
+  return 0;
+}
+
+
 static int prim_number_sum(Process* proc) {
   oop self =  proc->dp();
   oop other = *((oop*) proc->fp() - 1);
@@ -422,13 +439,43 @@ static int prim_mirror_value_for(Process* proc) {
     oop fields = proc->mmobj()->mm_compiled_class_fields(cclass);
 
     number idx = proc->mmobj()->mm_list_index_of(fields, entry);
+    assert(idx >= 0);
     debug() << "prim_mirror_value_for index of " << idx << endl;
     proc->stack_push(((oop*)mirrored)[2+idx]);
     return 0;
   }
 }
 
+static int prim_mirror_set_value_for(Process* proc) {
+  oop self =  proc->dp();
+  oop value = *((oop*) proc->fp() - 1);
+  oop entry = *((oop*) proc->fp() - 2);
 
+  oop mirrored = ((oop*)self)[2];
+
+  if (proc->mmobj()->mm_is_list(mirrored)) {
+    proc->mmobj()->mm_list_set(mirrored, untag_small_int(entry), value);
+    proc->stack_push(proc->rp());
+    return 0;
+  } else if (proc->mmobj()->mm_is_dictionary(mirrored)) {
+    proc->mmobj()->mm_dictionary_set(mirrored, entry, value);
+    return 0;
+  } else { //generic instance ?
+    //assume mirrored is a class instance
+    oop mirrored_class = proc->mmobj()->mm_object_vt(mirrored);
+    assert(proc->mmobj()->delegates_to(mirrored_class, proc->vm()->get_prime("Object")));
+
+    oop cclass = proc->mmobj()->mm_class_get_compiled_class(mirrored_class);
+    oop fields = proc->mmobj()->mm_compiled_class_fields(cclass);
+
+    number idx = proc->mmobj()->mm_list_index_of(fields, entry);
+    assert(idx >= 0);
+    debug() << "prim_mirror_set_value_for index of " << idx << endl;
+    ((oop*)mirrored)[2+idx] = value;
+    proc->stack_push(proc->rp());
+    return 0;
+  }
+}
 
 static int prim_equal(Process* proc) {
   oop self =  proc->rp();
@@ -739,10 +786,12 @@ void init_primitives(VM* vm) {
   vm->register_primitive("string_size", prim_string_size);
   vm->register_primitive("string_rindex", prim_string_rindex);
   vm->register_primitive("string_from", prim_string_from);
+  vm->register_primitive("string_replace_all", prim_string_replace_all);
 
 
   vm->register_primitive("mirror_entries", prim_mirror_entries);
   vm->register_primitive("mirror_value_for", prim_mirror_value_for);
+  vm->register_primitive("mirror_set_value_for", prim_mirror_set_value_for);
 
 
   vm->register_primitive("compiled_function_with_env", prim_compiled_function_with_env);

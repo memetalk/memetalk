@@ -126,6 +126,9 @@
   instance_method toString: fun() {
     return this;
   }
+  instance_method toSource: fun() {
+    return "\"" + this.replace_all("\"", "\\"") + "\"";
+  }
   instance_method +: fun(other) {
     <primitive "string_append">
   }
@@ -143,6 +146,9 @@
   }
   instance_method from: fun(idx) {
     <primitive "string_from">
+  }
+  instance_method replace_all: fun(what, value) {
+    <primitive "string_replace_all">
   }
   end
 

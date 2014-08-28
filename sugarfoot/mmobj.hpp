@@ -12,6 +12,18 @@ class MMObj {
 public:
   MMObj(CoreImage*);
 
+  oop mm_new(oop vt, oop delegate, number payload);
+  oop alloc_instance(oop klass);
+
+  oop mm_object_new();
+  oop mm_object_vt(oop);
+  oop mm_object_delegate(oop);
+
+  oop mm_behavior_get_dict(oop);
+  number mm_behavior_size(oop);
+
+  bool delegates_to(oop, oop);
+
   oop mm_module_new(int num_fields, oop cmod, oop delegate);
 
   oop mm_compiled_module_classes(oop);
@@ -20,13 +32,6 @@ public:
   oop mm_compiled_module_params(oop);
   oop mm_compiled_module_default_params(oop);
   oop mm_compiled_module_aliases(oop);
-
-  oop mm_new(oop vt, oop delegate, number payload);
-  oop alloc_instance(oop klass);
-
-  oop mm_object_new();
-  oop mm_object_vt(oop);
-  oop mm_object_delegate(oop);
 
   oop mm_boolean_new(number val);
   bool mm_boolean_cbool(oop val);
@@ -38,6 +43,7 @@ public:
   std::vector<oop>* mm_list_frame(oop);
   void mm_list_prepend(oop list, oop element);
   void mm_list_append(oop list, oop element);
+  void mm_list_set(oop list, number idx, oop element);
 
   oop mm_dictionary_new();
   number mm_dictionary_size(oop dict);
@@ -137,11 +143,6 @@ public:
 
   oop mm_cfuns_to_funs_dict(oop cfuns_dict, oop imod);
   oop mm_new_slot_getter(oop imodule, oop owner, oop name, int idx);
-
-  oop mm_behavior_get_dict(oop);
-  number mm_behavior_size(oop);
-
-  bool delegates_to(oop, oop);
 
   CoreImage* core() { return _core_image; };
 

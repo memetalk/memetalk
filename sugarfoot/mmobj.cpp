@@ -154,6 +154,13 @@ number MMObj::mm_list_index_of(oop list, oop elem) {
   return -1;
 }
 
+void MMObj::mm_list_set(oop list, number idx, oop element) {
+  assert( *(oop*) list == _core_image->get_prime("List"));
+  std::vector<oop>* elements = mm_list_frame(list);
+  (*elements)[idx] = element;
+}
+
+
 void MMObj::mm_list_prepend(oop list, oop element) {
   assert( *(oop*) list == _core_image->get_prime("List"));
 
