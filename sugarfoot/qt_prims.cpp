@@ -252,7 +252,7 @@ QScriptValue mm_handle(QScriptContext *ctx, QScriptEngine *engine) {
       } else {
         if (QString(v.typeName()) == "QListWidgetItem*") {
           QListWidgetItem* p = v.value<QListWidgetItem*>();
-          std::cerr << "from variant: " << p << endl;
+          // std::cerr << "from variant: " << p << endl;
           int exc;
           proc->mmobj()->mm_list_append(mm_args, meme_instance(proc, p, &exc));
           assert(exc == 0);
