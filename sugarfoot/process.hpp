@@ -24,8 +24,8 @@ public:
   oop run(oop, oop);
 
   VM* vm() { return _vm; }
-  oop dp() { return _dp; }
-  oop rp() { return _rp; }
+  oop dp() { return get_dp(); }
+  oop rp() { return get_rp(); }
   oop sp() { return _sp; }
   oop fp() { return _fp; }
   oop cp() { return _cp; }
