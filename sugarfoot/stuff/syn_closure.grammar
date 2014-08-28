@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ufwb version="1.8">
+    <grammar name="closure" start="id:65" author="thiago silva">
+        <description>Grammar for my file format</description>
+        <structure name="mmc" id="65" encoding="ISO_8859-1:1987" endian="big" signed="no">
+            <structref name="header" id="67" structure="id:66"/>
+            <structref name="names" id="69" structure="id:68"/>
+            <structref name="object_table" id="71" structure="id:70"/>
+            <structref name="external_references" id="73" structure="id:72"/>
+            <structref name="external_symbols" id="75" structure="id:74"/>
+            <structref name="reloc_table" id="77" structure="id:76"/>
+        </structure>
+        <structure name="header" id="66" encoding="ISO_8859-1:1987" endian="little" signed="no">
+            <number name="magic" mustmatch="yes" id="79" fillcolor="59F970" type="integer" length="8" display="hex">
+                <fixedvalues>
+                    <fixedvalue value="0x420"/>
+                </fixedvalues>
+            </number>
+            <number name="ot_size" id="80" fillcolor="59F970" type="integer" length="8"/>
+            <number name="er_size" id="81" fillcolor="59F970" type="integer" length="8"/>
+            <number name="es_size" id="82" fillcolor="59F970" type="integer" length="8"/>
+            <number name="names_size" id="83" fillcolor="59F970" type="integer" length="8"/>
+            <number name="cfun_addr" id="106" type="integer" length="8" display="hex"/>
+        </structure>
+        <structure name="names" id="68" length="names_size" encoding="ISO_8859-1:1987" endian="big" signed="no">
+            <structure name="entry" id="85" length="0" repeatmax="-1">
+                <string name="aString" id="86" fillcolor="FFB200" type="zero-terminated"/>
+                <structure name="padding" id="87" repeatmin="0">
+                    <number name="null" mustmatch="yes" id="88" fillcolor="CACACA" repeatmax="-1" type="integer" length="1">
+                        <fixedvalues>
+                            <fixedvalue value="0"/>
+                        </fixedvalues>
+                    </number>
+                </structure>
+            </structure>
+        </structure>
+        <structure name="object_table" id="70" length="ot_size" encoding="ISO_8859-1:1987" endian="big" signed="no">
+            <grammarref name="object" id="92" filename="/Users/jester/src/memetalk/sugarfoot/stuff/syn_object_table.grammar"/>
+        </structure>
+        <structure name="external_references" id="72" length="er_size" encoding="ISO_8859-1:1987" endian="little" signed="no">
+            <structure name="entry" id="94" length="0" repeatmax="-1">
+                <number name="name_addr" id="95" type="integer" length="8" display="hex"/>
+                <number name="obj_addr" id="96" type="integer" length="8" display="hex"/>
+            </structure>
+        </structure>
+        <structure name="external_symbols" id="74" length="es_size" encoding="ISO_8859-1:1987" endian="little" signed="no">
+            <structure name="entry" id="99" repeatmax="-1">
+                <number name="name_addr" id="100" type="integer" length="8" display="hex"/>
+                <number name="obj_addr" id="101" type="integer" length="8" display="hex"/>
+            </structure>
+        </structure>
+        <structure name="reloc_table" id="76" encoding="ISO_8859-1:1987" endian="big" signed="no">
+            <number name="addr" id="104" repeatmax="-1" type="integer" length="8" endian="little" display="hex"/>
+        </structure>
+    </grammar>
+</ufwb>
