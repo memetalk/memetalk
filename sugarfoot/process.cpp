@@ -129,11 +129,10 @@ oop Process::ctor_rdp_for(oop rp, oop cp) {
   }
 }
 
-void Process::basic_new_and_load(oop recv) {
-  oop klass = recv;
+void Process::basic_new_and_load(oop klass) {
   oop instance = _mmobj->alloc_instance(klass);
   _rp = instance;
-  _dp = ctor_rdp_for(_rp, _cp);
+  _dp = ctor_rdp_for(instance, _cp);
   debug() << "basic_new: " << instance << " dp: " << _dp << endl;
   if (_ep) {
     ((oop*)_ep)[0] = _rp;
