@@ -787,3 +787,12 @@ oop MMObj::alloc_instance(oop klass) {
   debug() << "Created recursive delegate " << instance << endl;
   return instance;
 }
+
+
+bool MMObj::mm_is_list(oop obj) {
+  return *(oop*) obj == _core_image->get_prime("List");
+}
+
+bool MMObj::mm_is_dictionary(oop obj) {
+  return *(oop*) obj == _core_image->get_prime("Dictionary");
+}

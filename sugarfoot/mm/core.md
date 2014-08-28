@@ -301,13 +301,16 @@ end
     init new: fun(mirrored) {
       @mirrored = mirrored;
     }
-    instance_method fields: fun() {
-      <primitive "mirror_fields">
+    //instance_method fields: fun() { //strings only
+    //  <primitive "mirror_fields">
+    //}
+    instance_method entries: fun() { //can be a list of anything
+      <primitive "mirror_entries">
     }
-    instance_method valueFor: fun(name) {
+    instance_method valueFor: fun(entry) { //requirement: entry \in self.entries()
       <primitive "mirror_value_for">
     }
-    instance_method setValueFor: fun(name, value) {
+    instance_method setValueFor: fun(entry, value) { //requirement: entry \in self.entries()
       <primitive "mirror_set_value_for">
     }
     class_method vtFor: fun(obj) {

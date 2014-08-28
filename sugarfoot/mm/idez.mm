@@ -1,7 +1,7 @@
 .preamble(qt, io)
   qt : meme:qt;
   io : meme:io;
-  [QWidget, QMainWindow, QsciScintilla, QLineEdit, QComboBox, QTableWidget, QTableWidgetItem] <= qt;
+  [QWidget, QMainWindow, QsciScintilla, QLineEdit, QComboBox, QTableWidget, QListWidgetItem, QTableWidgetItem] <= qt;
 .code
 
 
@@ -351,6 +351,16 @@ class Workspace < QMainWindow
   }
 end //idez:Workspace
 
+class InspectorEntryList < QListWidgetItem
+fields: entry;
+init new: fun(entry, parent) {
+  super.new(entry.toString, parent);
+  @entry = entry;
+}
+instance_method entry: fun() {
+  return @entry;
+}
+end
 
 class Inspector < QMainWindow
 fields: inspectee, variables, mirror, fieldList, textArea, lineEdit;
@@ -446,7 +456,7 @@ instance_method acceptIt: fun() {
     // [if it isn't, fuck, use kernel imodule.]
     var ctx = Context.withVars(@textArea.text(), {:this:@inspectee}, thisModule);
     var new_value = ctx();
-    var slot = @fieldList.currentItem().text();
+    var slot = @fieldList.currentItem().entry();
     @mirror.setValueFor(slot, new_value);
     @textArea.saved();
   } catch(ex) {
@@ -483,7 +493,7 @@ instance_method inspectIt: fun() {
 
 instance_method itemActivated: fun(item) {
   if (item.text() != '*self') {
-    var value = @mirror.valueFor(item.text());
+    var value = @mirror.valueFor(item.entry());
     Inspector.new(value).show();
   }
 }
@@ -492,15 +502,15 @@ instance_method itemSelected: fun(item) { //QListWidgetItem, curr from the signa
   if (item.text() == '*self') {
     @textArea.setText(@inspectee.toSource());
   } else {
-    var value = @mirror.valueFor(item.text());
+    var value = @mirror.valueFor(item.entry());
     @textArea.setText(value.toSource());
   }
 }
 
 instance_method loadValues: fun() {
   qt.QListWidgetItem.new('*self', @fieldList);
-  @mirror.fields().each(fun(name) {
-      qt.QListWidgetItem.new(name, @fieldList);
+  @mirror.entries().each(fun(entry) {
+    InspectorEntryList.new(entry, @fieldList);
   });
 }
 

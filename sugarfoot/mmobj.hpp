@@ -62,6 +62,9 @@ public:
   char* mm_string_cstr(oop);
 
 
+  bool mm_is_list(oop);
+  bool mm_is_dictionary(oop);
+
   oop mm_symbol_new(const char* str);
   bool mm_is_symbol(oop);
   char* mm_symbol_cstr(oop);

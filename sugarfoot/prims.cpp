@@ -354,52 +354,78 @@ static int prim_dictionary_has(Process* proc) {
   return 0;
 }
 
-static int prim_mirror_fields(Process* proc) {
+static int prim_mirror_entries(Process* proc) {
   oop self =  proc->dp();
   oop mirrored = ((oop*)self)[2];
 
 
   if (is_small_int(mirrored)) {
-    debug() << "prim_mirror_fields: mirrored is number" << endl;
+    debug() << "prim_mirror_entries: mirrored is number" << endl;
     oop lst = proc->mmobj()->mm_list_new();
     proc->stack_push(lst);
     return 0;
+  } else if (proc->mmobj()->mm_is_list(mirrored)) {
+      oop lst = proc->mmobj()->mm_list_new();
+      for (number i = 0; i < proc->mmobj()->mm_list_size(mirrored); i++) {
+        proc->mmobj()->mm_list_append(lst, tag_small_int(i));
+      }
+      proc->stack_push(lst);
+      return 0;
+  } else if (proc->mmobj()->mm_is_dictionary(mirrored)) {
+      oop lst = proc->mmobj()->mm_list_new();
+
+      std::map<oop, oop>::iterator it = proc->mmobj()->mm_dictionary_begin(mirrored);
+      std::map<oop, oop>::iterator end = proc->mmobj()->mm_dictionary_end(mirrored);
+      for ( ; it != end; it++) {
+        proc->mmobj()->mm_list_append(lst, it->first);
+      }
+      proc->stack_push(lst);
+      return 0;
   } else {
-    debug() << "prim_mirror_fields: mirrored is not number" << endl;
+    debug() << "prim_mirror_entries: mirrored is not [number|list|dict]" << endl;
 
     oop mirrored_class = proc->mmobj()->mm_object_vt(mirrored);
 
     if (proc->mmobj()->delegates_to(mirrored_class, proc->vm()->get_prime("Object"))) {
       // mirrored is a class instance
-      debug() << "prim_mirror_fields: mirrored is class instance" << endl;
+      debug() << "prim_mirror_entries: mirrored is class instance" << endl;
       oop cclass = proc->mmobj()->mm_class_get_compiled_class(mirrored_class);
       proc->stack_push(proc->mmobj()->mm_compiled_class_fields(cclass));
       return 0;
     } else { //unknown structure
-      debug() << "prim_mirror_fields: mirrored has unknown structure" << endl;
+      debug() << "prim_mirror_entries: mirrored has unknown structure" << endl;
       oop lst = proc->mmobj()->mm_list_new();
       proc->stack_push(lst);
       return 0;
     }
   }
 }
+
 static int prim_mirror_value_for(Process* proc) {
   oop self =  proc->dp();
-  oop name = *((oop*) proc->fp() - 1);
+  oop entry = *((oop*) proc->fp() - 1);
 
   oop mirrored = ((oop*)self)[2];
 
-  //assume mirrored is a class instance
-  oop mirrored_class = proc->mmobj()->mm_object_vt(mirrored);
-  assert(proc->mmobj()->delegates_to(mirrored_class, proc->vm()->get_prime("Object")));
+  if (proc->mmobj()->mm_is_list(mirrored)) {
+    proc->stack_push(proc->mmobj()->mm_list_entry(mirrored, untag_small_int(entry)));
+    return 0;
+  } else if (proc->mmobj()->mm_is_dictionary(mirrored)) {
+    proc->stack_push(proc->mmobj()->mm_dictionary_get(mirrored, entry));
+    return 0;
+  } else { //generic instance ?
+    //assume mirrored is a class instance
+    oop mirrored_class = proc->mmobj()->mm_object_vt(mirrored);
+    assert(proc->mmobj()->delegates_to(mirrored_class, proc->vm()->get_prime("Object")));
 
-  oop cclass = proc->mmobj()->mm_class_get_compiled_class(mirrored_class);
-  oop fields = proc->mmobj()->mm_compiled_class_fields(cclass);
+    oop cclass = proc->mmobj()->mm_class_get_compiled_class(mirrored_class);
+    oop fields = proc->mmobj()->mm_compiled_class_fields(cclass);
 
-  number idx = proc->mmobj()->mm_list_index_of(fields, name);
-  debug() << "prim_mirror_value_for index of " << idx << endl;
-  proc->stack_push(((oop*)mirrored)[2+idx]);
-  return 0;
+    number idx = proc->mmobj()->mm_list_index_of(fields, entry);
+    debug() << "prim_mirror_value_for index of " << idx << endl;
+    proc->stack_push(((oop*)mirrored)[2+idx]);
+    return 0;
+  }
 }
 
 
@@ -715,7 +741,7 @@ void init_primitives(VM* vm) {
   vm->register_primitive("string_from", prim_string_from);
 
 
-  vm->register_primitive("mirror_fields", prim_mirror_fields);
+  vm->register_primitive("mirror_entries", prim_mirror_entries);
   vm->register_primitive("mirror_value_for", prim_mirror_value_for);
 
 
