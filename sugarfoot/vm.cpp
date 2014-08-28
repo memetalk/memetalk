@@ -44,6 +44,7 @@ void VM::dump_prime_info() {
 
 void VM::print_retval(oop retval) {
   int exc;
+  debug() << " ======== the end ======= " << endl;
   oop retval_str = _process->send_0(retval, new_symbol("toString"), &exc);
   debug() << "RETVAL: " << retval << " => " << _mmobj->mm_string_cstr(retval_str) << endl;
 }

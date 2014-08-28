@@ -138,6 +138,12 @@
   instance_method ==: fun(other) {
     <primitive "string_equal">
   }
+  instance_method rindex: fun(arg) {
+    <primitive "string_rindex">
+  }
+  instance_method from: fun(idx) {
+    <primitive "string_from">
+  }
   end
 
   class Symbol
@@ -159,6 +165,9 @@
   instance_method +: fun(other) {
     <primitive "dictionary_plus">
   }
+  instance_method has: fun(key) {
+    <primitive "dictionary_has">
+  }
   class_method new: fun() {
     <primitive "dictionary_new">
   }
@@ -176,6 +185,9 @@
   }
   instance_method each: fun(fn) {
     <primitive "list_each">
+  }
+  instance_method has: fun(value) {
+    <primitive "list_has">
   }
   instance_method toString: fun() {
     <primitive "list_to_string">
@@ -305,4 +317,11 @@ end
     <primitive "get_compiled_module">
   }
 
+  get_module: fun(name) {
+    <primitive "get_module">
+  }
+
+  modules_path: fun() {
+     <primitive "modules_path">
+  }
 .end

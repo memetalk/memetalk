@@ -188,6 +188,24 @@ oop meme_instance(Process* proc, QWebElement* obj, int* exc) {
   }
 }
 
+static
+oop meme_instance(Process* proc, QUrl* obj, int* exc) {
+  *exc = 0;
+  if (meme_mapping.find(obj) == meme_mapping.end()) {
+    oop qt_imod = proc->mp();
+    oop qt_class = proc->send_0(qt_imod, proc->vm()->new_symbol("QUrl"), exc);
+    if (*exc != 0) {
+      return qt_class;
+    }
+    oop instance = proc->mmobj()->alloc_instance(qt_class);
+    set_qt_instance(proc->mmobj(), instance, obj);
+    meme_mapping[obj] = instance;
+    return instance;
+  } else {
+    return meme_mapping[obj];
+  }
+}
+
 
 
 /////////// bridge //////////////
@@ -197,7 +215,7 @@ static const char* js_bridge =
   "function qt_bind_connect(qtobj, signal, mm_closure, process) {"
   "  var global = this;"
   "  qtobj[signal].connect(qtobj, function() {"
-  "    print('SIGNAL!...' + arguments.length);"
+  // "    print('SIGNAL!...' + arguments.length);"
   "    for (var i = 0; i < arguments.length; i++) { print(arguments[i]); }"
   "    return mm_handle(process, mm_closure, arguments);"
   "  });"
@@ -235,6 +253,11 @@ QScriptValue mm_handle(QScriptContext *ctx, QScriptEngine *engine) {
         if (QString(v.typeName()) == "QListWidgetItem*") {
           QListWidgetItem* p = v.value<QListWidgetItem*>();
           std::cerr << "from variant: " << p << endl;
+          int exc;
+          proc->mmobj()->mm_list_append(mm_args, meme_instance(proc, p, &exc));
+          assert(exc == 0);
+        } else if (QString(v.typeName()) == "QUrl") {
+          QUrl *p = new QUrl(v.value<QUrl>());
           int exc;
           proc->mmobj()->mm_list_append(mm_args, meme_instance(proc, p, &exc));
           assert(exc == 0);
@@ -1510,7 +1533,7 @@ static int prim_qt_qwebframe_scroll_to_anchor(Process* proc) {
 
 /** QWebPage **/
 
-class WebPluginFactory : public QWebPluginFactory{
+class WebPluginFactory : public QWebPluginFactory {
 private:
   oop _fun;
   Process* _proc;
@@ -1532,7 +1555,8 @@ public:
     assert(names.size() == vals.size());
     oop dict = _proc->mmobj()->mm_dictionary_new();
     for (int i = 0; i < names.length(); i++) {
-      oop key = _proc->mmobj()->mm_string_new(names[i].toLocal8Bit().data());
+      oop key = _proc->vm()->new_symbol(names[i].toLocal8Bit().data());
+      debug() << "FACTORY args: " << names[i].toLocal8Bit().data() << endl;
       oop val = _proc->mmobj()->mm_string_new(vals[i].toLocal8Bit().data());
       _proc->mmobj()->mm_dictionary_set(dict, key, val);
     }
@@ -1563,7 +1587,6 @@ static int prim_qt_extra_qwebpage_enable_plugins(Process* proc) {
   oop oop_fun = *((oop*) proc->fp() - 1);
   oop oop_name = *((oop*) proc->fp() - 2);
 
-  //lives forever on the heap
   WebPluginFactory* factory = new WebPluginFactory(oop_fun, proc, proc->mmobj()->mm_string_cstr(oop_name));
   QWebPage* qtobj = (QWebPage*) get_qt_instance(proc->mmobj(), data_self);
   QWebSettings::globalSettings()->setAttribute(QWebSettings::PluginsEnabled, true);

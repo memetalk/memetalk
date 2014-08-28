@@ -83,6 +83,29 @@ static int prim_string_count(Process* proc) {
   return 0;
 }
 
+static int prim_string_rindex(Process* proc) {
+  oop self =  proc->dp();
+  oop arg = *((oop*) proc->fp() - 1);
+  std::string str = proc->mmobj()->mm_string_cstr(self);
+  std::string str_arg = proc->mmobj()->mm_string_cstr(arg);
+  std::size_t pos = str.rfind(str_arg);
+  if (pos == std::string::npos) {
+    proc->stack_push(tag_small_int(-1));
+  } else {
+    proc->stack_push(tag_small_int(pos));
+  }
+  return 0;
+}
+
+static int prim_string_from(Process* proc) {
+  oop self =  proc->dp();
+  oop idx = *((oop*) proc->fp() - 1);
+  std::string str = proc->mmobj()->mm_string_cstr(self);
+  std::string sub = str.substr(untag_small_int(idx));
+  proc->stack_push(proc->mmobj()->mm_string_new(sub.c_str()));
+  return 0;
+}
+
 static int prim_number_sum(Process* proc) {
   oop self =  proc->dp();
   oop other = *((oop*) proc->fp() - 1);
@@ -209,6 +232,17 @@ static int prim_list_each(Process* proc) {
   return 0;
 }
 
+static int prim_list_has(Process* proc) {
+  oop self =  proc->dp();
+  oop value = *((oop*) proc->fp() - 1);
+  if (proc->mmobj()->mm_list_index_of(self, value) == -1) {
+    proc->stack_push(MM_FALSE);
+  } else {
+    proc->stack_push(MM_TRUE);
+  }
+  return 0;
+}
+
 static int prim_list_to_string(Process* proc) {
   oop self =  proc->dp();
   std::stringstream s;
@@ -296,12 +330,23 @@ static int prim_dictionary_plus(Process* proc) {
     proc->mmobj()->mm_dictionary_set(d, it->first, it->second);
   }
 
-   it = proc->mmobj()->mm_dictionary_begin(other);
-   end = proc->mmobj()->mm_dictionary_end(other);
+  it = proc->mmobj()->mm_dictionary_begin(other);
+  end = proc->mmobj()->mm_dictionary_end(other);
   for ( ; it != end; it++) {
     proc->mmobj()->mm_dictionary_set(d, it->first, it->second);
   }
   proc->stack_push(d);
+  return 0;
+}
+
+static int prim_dictionary_has(Process* proc) {
+  oop self =  proc->dp();
+  oop key = *((oop*) proc->fp() - 1);
+  if (proc->mmobj()->mm_dictionary_has_key(self, key)) {
+    proc->stack_push(MM_TRUE);
+  } else {
+    proc->stack_push(MM_FALSE);
+  }
   return 0;
 }
 
@@ -607,6 +652,16 @@ static int prim_test_catch_exception(Process* proc) {
   return 0;
 }
 
+static int prim_modules_path(Process* proc) {
+  const char* mmpath = getenv("MEME_PATH");
+  if (mmpath) {
+    proc->stack_push(proc->mmobj()->mm_string_new(mmpath));
+  } else {
+    proc->stack_push(proc->mmobj()->mm_string_new("./mm"));
+  }
+  return 0;
+}
+
 void init_primitives(VM* vm) {
   vm->register_primitive("io_print", prim_io_print);
 
@@ -638,17 +693,21 @@ void init_primitives(VM* vm) {
   vm->register_primitive("list_prepend", prim_list_prepend);
   vm->register_primitive("list_index", prim_list_index);
   vm->register_primitive("list_each", prim_list_each);
+  vm->register_primitive("list_has", prim_list_has);
 
   vm->register_primitive("dictionary_new", prim_dictionary_new);
   vm->register_primitive("dictionary_set", prim_dictionary_set);
   vm->register_primitive("dictionary_index", prim_dictionary_index);
   vm->register_primitive("dictionary_plus", prim_dictionary_plus);
+  vm->register_primitive("dictionary_has", prim_dictionary_has);
   vm->register_primitive("dictionary_to_string", prim_dictionary_to_string);
 
   vm->register_primitive("string_append", prim_string_append);
   vm->register_primitive("string_equal", prim_string_equal);
   vm->register_primitive("string_count", prim_string_count);
   vm->register_primitive("string_size", prim_string_size);
+  vm->register_primitive("string_rindex", prim_string_rindex);
+  vm->register_primitive("string_from", prim_string_from);
 
 
   vm->register_primitive("mirror_fields", prim_mirror_fields);
@@ -668,6 +727,8 @@ void init_primitives(VM* vm) {
   vm->register_primitive("test_catch_exception", prim_test_catch_exception);
 
   vm->register_primitive("get_compiled_module", prim_get_compiled_module);
+
+  vm->register_primitive("modules_path", prim_modules_path);
 
   qt_init_primitives(vm);
 }

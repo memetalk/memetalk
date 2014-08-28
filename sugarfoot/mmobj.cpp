@@ -141,14 +141,6 @@ number MMObj::mm_list_index_of(oop list, oop elem) {
 
   std::vector<oop>::iterator it = elements->begin();
   for (number pos = 0; it != elements->end(); it++, pos++) {
-    if (mm_is_string(*it)) {
-      debug() << mm_string_cstr(*it) << " =?= " << elem << endl;
-    } else if (mm_is_symbol(*it)) {
-      debug() << mm_symbol_cstr(*it) << " =?= " << elem << endl;
-    } else {
-      debug() << *it << " =?= " << elem << endl;
-    }
-
     if (*it == elem) {
       return pos;
     //some temporary hack while we don't have a self-host compiler doing Object.==
@@ -229,15 +221,13 @@ bool MMObj::mm_dictionary_has_key(oop dict, oop key) {
   std::map<oop, oop>* elements = mm_dictionary_frame(dict);
   debug() << dict << "(" << elements->size() << ") has key " << key << " ?" << endl;
   for (std::map<oop, oop>::iterator it = elements->begin(); it != elements->end(); it++) {
-    if (mm_is_string(it->first)) {
-      debug() << mm_string_cstr(it->first) << " =?= " << key << endl;
-    } else if (mm_is_symbol(it->first)) {
-      debug() << mm_symbol_cstr(it->first) << " =?= " << key << endl;
-    } else {
-      debug() << it->first << " =?= " << key << endl;
-    }
     if (it->first == key) {
       return true;
+    } else if (mm_is_string(key) && mm_is_string(it->first)) {
+      debug() << dict << "(" << elements->size() << ") has key " << mm_string_cstr(key) << " ?=" << mm_string_cstr(it->first) << endl;
+      if (strcmp(mm_string_cstr(key), mm_string_cstr(it->first)) == 0) {
+        return true;
+      }
     }
   }
   return false;
@@ -247,7 +237,23 @@ oop MMObj::mm_dictionary_get(oop dict, oop key) {
   assert( *(oop*) dict == _core_image->get_prime("Dictionary"));
 
   std::map<oop, oop>* elements = mm_dictionary_frame(dict);
-  return elements->at(key);
+
+  debug() << dict << "(" << elements->size() << ") get " << key << endl;
+  for (std::map<oop, oop>::iterator it = elements->begin(); it != elements->end(); it++) {
+    debug() << dict << "(" << elements->size() << ") get direct? " << (it->first == key) << endl;
+    if (it->first == key) {
+      return it->second;
+    } else {
+      debug() << dict << "(" << elements->size() << ") get string? " << (mm_is_string(key) && mm_is_string(it->first)) << endl;
+      if (mm_is_string(key) && mm_is_string(it->first)) {
+        debug() << dict << "(" << elements->size() << ") get: " << mm_is_string(key) << " =?= " << mm_string_cstr(it->first) << endl;
+        if (strcmp(mm_string_cstr(key), mm_string_cstr(it->first)) == 0) {
+          return it->second;
+        }
+      }
+    }
+  }
+  return MM_NULL;
 }
 
 
