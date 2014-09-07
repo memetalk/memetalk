@@ -676,7 +676,8 @@ oop Process::unwind_with_exception(oop e) {
     } else {
       debug() << "fetching exception type for name: " << str_type_oop << endl;
       int exc;
-      type_oop = send_0(_mp, _vm->new_symbol(str_type_oop), &exc);
+      oop mp = _mmobj->mm_function_get_module(_cp);
+      type_oop = send_0(mp, _vm->new_symbol(str_type_oop), &exc);
       assert(exc == 0);
       debug() << "fetching exception type got " << type_oop << endl;;
     }
