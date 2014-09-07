@@ -29,6 +29,7 @@ const char* CoreImage::PRIMES_NAMES[] = {"Behavior",
                                          "DoesNotUnderstand",
                                          "ArityError",
                                          "CompileError",
+                                         "Process",
                                          "Null"};
 int CoreImage::TOTAL_PRIMES = 20;
 

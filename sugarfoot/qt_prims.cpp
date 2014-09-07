@@ -286,13 +286,15 @@ void init_qt_stuff() { //stuff that needs QApplication to exist
 
 /** QApplication **/
 
+static QApplication* _app = NULL;
+
 static int prim_qapplication_new(Process* proc) {
   oop data_self =  proc->dp();
-  QApplication* app = new QApplication(proc->vm()->argc(), proc->vm()->argv());
-  set_meme_instance(app, proc->rp());
+  _app = new QApplication(proc->vm()->argc(), proc->vm()->argv());
+  set_meme_instance(_app, proc->rp());
   // debug() << "QT: QApplication " << app << endl;
   init_qt_stuff();
-  set_qt_instance(proc->mmobj(), data_self, app);
+  set_qt_instance(proc->mmobj(), data_self, _app);
   proc->stack_push(proc->rp());
   return 0;
 }
@@ -1854,6 +1856,15 @@ static int prim_qt_qwidget_show(Process* proc) {
 }
 
 
+static int prim_qt_maybe_construct_qapp(Process* proc) {
+  if (!_app) {
+    _app = new QApplication(proc->vm()->argc(), proc->vm()->argv());
+    init_qt_stuff();
+  }
+  proc->stack_push(proc->rp());
+  return 0;
+}
+
 // static int prim_qpushbutton_new(Process* proc) {
 //   oop data_self =  proc->dp();
 //   oop oop_parent = *((oop*) proc->fp() - 1);
@@ -2021,6 +2032,8 @@ void qt_init_primitives(VM* vm) {
   vm->register_primitive("qt_qwidget_set_stylesheet", prim_qt_qwidget_set_stylesheet);
   vm->register_primitive("qt_qwidget_set_window_title", prim_qt_qwidget_set_window_title);
   vm->register_primitive("qt_qwidget_show", prim_qt_qwidget_show);
+
+  vm->register_primitive("qt_maybe_construct_qapp", prim_qt_maybe_construct_qapp);
 
   qRegisterMetaType<QListWidgetItem*>("QListWidgetItem");//Do this if you need signal/slots
 

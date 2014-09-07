@@ -11,11 +11,13 @@
 #include "report.hpp"
 #include "mmobj.hpp"
 #include "utils.hpp"
+#include "ctrl.hpp"
 #include <sstream>
 
 Process::Process(VM* vm)
-  : _vm(vm), _mmobj(vm->mmobj()) {
+  : _vm(vm), _mmobj(vm->mmobj()), _control(new ProcessControl()) {
   init();
+  _state = RUNNING_STATE;
 }
 
 oop Process::run(oop recv, oop selector_sym) {
@@ -30,6 +32,7 @@ void Process::init() {
   _stack = (word*) malloc(DEFAULT_STACK_SIZE);
   // debug() << " Initial stack " << _stack << endl;
 
+  _state = INVALID_STATE;
   _sp = _stack; //stack
   _fp = _stack; //frame
   _bp = NULL; //base
@@ -353,6 +356,9 @@ void Process::fetch_cycle(void* stop_at_fp) {
   while ((_fp > stop_at_fp) && _ip) { // && ((_ip - start_ip) * sizeof(bytecode))  < _code_size) {
     // debug() << "fp " << _fp << " stop " <<  stop_at_fp << " ip-start " <<  (_ip - start_ip)  << " codesize " <<  _code_size <<
     //   "ip " << _ip << std::endl;
+
+    tick();
+
     bytecode code = *_ip;
     if (_ip != 0) { // the bottommost frame has ip = 0
       _ip++; //this can't be done after dispatch, where an ip for a different fun may be set
@@ -365,6 +371,24 @@ void Process::fetch_cycle(void* stop_at_fp) {
     // debug() << " [end of dispatch] " << opcode << endl;
   }
   debug() << "end fetch_cycle" << endl;
+}
+
+void Process::tick() {
+  switch(_state) {
+    case PAUSED_STATE:
+      debug() << "process::tick: paused" << endl;
+      _control->pause();
+      break;
+    case RUNNING_STATE:
+      debug() << "process::tick: resuming" << endl;
+      _control->resume();
+      break;
+  }
+}
+
+void Process::step() {
+  debug() << "Process::step resuming ..." << endl;
+  _control->resume();
 }
 
 void Process::handle_send(number num_args) {

@@ -788,6 +788,41 @@ static int prim_test_catch_exception(Process* proc) {
   return 0;
 }
 
+static int prim_test_debug(Process* proc) {
+  // std::cerr << "prim_test_debug" << endl;
+  proc->pause();
+
+  // std::cerr << "prim_test_debug: paused" << endl;
+  Process* dbg_proc = new Process(proc->vm());
+  // std::cerr << "prim_test_debug: created new process" << endl;
+
+  oop p = proc->mmobj()->alloc_instance(proc->vm()->get_prime("Process"));
+  ((oop*)p)[2] = (oop) proc;
+
+  int exc;
+  oop res = dbg_proc->send_1(proc->mp(), proc->vm()->new_symbol("dbg_main"), p, &exc);
+  if (exc != 0) {
+    proc->stack_push(res);
+    return PRIM_RAISED;
+  }
+
+  // std::cerr << "prim_test_debug: called dbg_main" << endl;
+
+  proc->stack_push(proc->rp());
+  return 0;
+}
+
+static int prim_process_step(Process* proc) {
+  oop oop_target_proc = proc->rp();
+
+  Process* target_proc = (Process*) (((oop*)oop_target_proc)[2]);
+  target_proc->step();
+
+  proc->stack_push(proc->rp());
+  return 0;
+}
+
+
 static int prim_modules_path(Process* proc) {
   const char* mmpath = getenv("MEME_PATH");
   if (mmpath) {
@@ -866,6 +901,9 @@ void init_primitives(VM* vm) {
   vm->register_primitive("test_files", prim_test_files);
 
   vm->register_primitive("test_catch_exception", prim_test_catch_exception);
+  vm->register_primitive("test_debug", prim_test_debug);
+
+  vm->register_primitive("process_step", prim_process_step);
 
   vm->register_primitive("get_compiled_module", prim_get_compiled_module);
 

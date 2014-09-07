@@ -1,25 +1,63 @@
 .preamble(qt, io)
-  qt : meme:qt;
-  io : meme:io;
-  [QWidget] <= qt;
+ qt : meme:qt;
+ io : meme:io;
+ [QMainWindow, QWidget] <= qt;
 .code
 
-class QPushButton < QWidget
-init new: fun(label, parent) {
-  <primitive "qt_qpushbutton_new">
+class Debugger < QMainWindow
+fields: process;
+init new: fun(proc) {
+  super.new(null);
+  @process = proc;
+  this.resize(200,200);
+  var action = qt.QAction.new("Step", this);
+  action.setShortcut("ctrl+s");
+  action.connect("triggered", fun(_) {
+      this.step();
+  });
+  action.setShortcutContext(0); //widget context
+  var execMenu = this.menuBar().addMenu("Exec");
+  execMenu.addAction(action);
+}
+
+instance_method step: fun() {
+  @process.step();
 }
 end
 
-main: fun() {
-  var app = qt.QApplication.new();
-  var w = qt.QWidget.new(null);
-  var button = QPushButton.new("oi", w);
-  button.connect("pressed", fun() { io.print("pressed") });
-  w.show();
+maybe_init_qt: fun() {
+  <primitive "qt_maybe_construct_qapp">
+}
 
-  var e = qt.QsciScintilla.new(null);
-  e.show();
-  app.exec();
+dbg_main: fun(proc) {
+  io.print("dbg_main: maybe init qt");
+  maybe_init_qt();
+  io.print("dbg_main: inited");
+  var d = Debugger.new(proc);
+  io.print("dbg_main: dbg new");
+  d.show();
+  io.print("dbg_main: dbg shown");
+}
+
+debug: fun() {
+  <primitive "test_debug">
+}
+
+bar: fun() {
+  io.print("bar: caling debug");
+  debug();
+  io.print("bar: debug returned");
+}
+
+f: fun() {
+  <primitive "test_catch_exception">
+}
+
+main: fun() {
+  io.print("main: caling bar");
+  //bar();
+  f();
+  io.print("main: bar returned");
 }
 
 .endcode

@@ -8,6 +8,7 @@
 
 class VM;
 class MMObj;
+class ProcessControl;
 
 class mm_rewind {
 public:
@@ -17,7 +18,11 @@ public:
 
 
 class Process {
-
+  enum {
+    INVALID_STATE,
+    RUNNING_STATE,
+    PAUSED_STATE
+  };
 public:
   Process(VM*);
 
@@ -58,6 +63,8 @@ public:
   void raise(const char*, const char*);
   oop mm_exception(const char*, const char*);
 
+  void pause() { _state = PAUSED_STATE; };
+  void step();
 private:
   void init();
 
@@ -83,9 +90,13 @@ private:
   void handle_call(number);
   void basic_new_and_load(oop);
 
+  void tick();
+
   VM* _vm;
   MMObj* _mmobj;
 
+  int _state;
+  ProcessControl* _control;
   oop _mp;
   oop _cp;
   oop _rp;

@@ -333,7 +333,15 @@ end
     }
   end
 
+
 // temps
+  class Process
+    fields: self;
+  instance_method step: fun() {
+    <primitive "process_step">
+  }
+  end
+
   get_compiled_module: fun(module) {
     <primitive "get_compiled_module">
   }
