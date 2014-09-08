@@ -13,6 +13,12 @@ MMObj::MMObj(CoreImage* core)
   : _core_image(core) {
 }
 
+oop MMObj::mm_process_new(Process* proc) {
+  oop obj = alloc_instance(_core_image->get_prime("Process"));
+  ((oop*)obj)[2] = (oop) proc;
+  return obj;
+}
+
 oop MMObj::mm_module_new(int num_fields, oop cmod, oop delegate) {
   oop imodule = (oop) malloc(sizeof(word) * (4 + num_fields)); //4: vt, delegate, dict, cmod
 
@@ -226,12 +232,12 @@ bool MMObj::mm_dictionary_has_key(oop dict, oop key) {
   assert( *(oop*) dict == _core_image->get_prime("Dictionary"));
 
   std::map<oop, oop>* elements = mm_dictionary_frame(dict);
-  debug() << dict << "(" << elements->size() << ") has key " << key << " ?" << endl;
+  // debug() << dict << "(" << elements->size() << ") has key " << key << " ?" << endl;
   for (std::map<oop, oop>::iterator it = elements->begin(); it != elements->end(); it++) {
     if (it->first == key) {
       return true;
     } else if (mm_is_string(key) && mm_is_string(it->first)) {
-      debug() << dict << "(" << elements->size() << ") has key " << mm_string_cstr(key) << " ?=" << mm_string_cstr(it->first) << endl;
+      // debug() << dict << "(" << elements->size() << ") has key " << mm_string_cstr(key) << " ?=" << mm_string_cstr(it->first) << endl;
       if (strcmp(mm_string_cstr(key), mm_string_cstr(it->first)) == 0) {
         return true;
       }
@@ -247,13 +253,13 @@ oop MMObj::mm_dictionary_get(oop dict, oop key) {
 
   debug() << dict << "(" << elements->size() << ") get " << key << endl;
   for (std::map<oop, oop>::iterator it = elements->begin(); it != elements->end(); it++) {
-    debug() << dict << "(" << elements->size() << ") get direct? " << (it->first == key) << endl;
+    // debug() << dict << "(" << elements->size() << ") get direct? " << (it->first == key) << endl;
     if (it->first == key) {
       return it->second;
     } else {
-      debug() << dict << "(" << elements->size() << ") get string? " << (mm_is_string(key) && mm_is_string(it->first)) << endl;
+      // debug() << dict << "(" << elements->size() << ") get string? " << (mm_is_string(key) && mm_is_string(it->first)) << endl;
       if (mm_is_string(key) && mm_is_string(it->first)) {
-        debug() << dict << "(" << elements->size() << ") get: " << mm_is_string(key) << " =?= " << mm_string_cstr(it->first) << endl;
+        // debug() << dict << "(" << elements->size() << ") get: " << mm_is_string(key) << " =?= " << mm_string_cstr(it->first) << endl;
         if (strcmp(mm_string_cstr(key), mm_string_cstr(it->first)) == 0) {
           return it->second;
         }
@@ -485,6 +491,28 @@ oop MMObj::mm_function_env_table(oop fun) {
   return mm_compiled_function_env_table(cfun);
 }
 
+oop MMObj::mm_function_get_text(oop fun) {
+  assert( *(oop*) fun == _core_image->get_prime("Function") ||
+          *(oop*) fun == _core_image->get_prime("Context"));
+  oop cfun = mm_function_get_cfun(fun);
+  return mm_compiled_function_get_text(cfun);
+}
+
+oop MMObj::mm_function_get_line_mapping(oop fun) {
+  assert( *(oop*) fun == _core_image->get_prime("Function") ||
+          *(oop*) fun == _core_image->get_prime("Context"));
+  oop cfun = mm_function_get_cfun(fun);
+  return mm_compiled_function_get_line_mapping(cfun);
+}
+
+oop MMObj::mm_function_get_loc_mapping(oop fun) {
+  assert( *(oop*) fun == _core_image->get_prime("Function") ||
+          *(oop*) fun == _core_image->get_prime("Context"));
+  oop cfun = mm_function_get_cfun(fun);
+  return mm_compiled_function_get_loc_mapping(cfun);
+}
+
+
 bool MMObj::mm_compiled_function_is_ctor(oop cfun) {
   assert( *(oop*) cfun == _core_image->get_prime("CompiledFunction"));
   return ((oop*)cfun)[4];
@@ -587,6 +615,21 @@ oop MMObj::mm_compiled_function_env_table(oop cfun) {
   return ((oop*)cfun)[22];
 }
 
+oop MMObj::mm_compiled_function_get_text(oop cfun) {
+  assert( *(oop*) cfun == _core_image->get_prime("CompiledFunction"));
+  return ((oop*)cfun)[23];
+}
+
+oop MMObj::mm_compiled_function_get_line_mapping(oop cfun) {
+  assert( *(oop*) cfun == _core_image->get_prime("CompiledFunction"));
+  return ((oop*)cfun)[24];
+}
+
+oop MMObj::mm_compiled_function_get_loc_mapping(oop cfun) {
+  assert( *(oop*) cfun == _core_image->get_prime("CompiledFunction"));
+  return ((oop*)cfun)[25];
+}
+
 
 oop MMObj::mm_compiled_class_name(oop cclass) {
   assert( *(oop*) cclass == _core_image->get_prime("CompiledClass"));
@@ -612,8 +655,6 @@ oop MMObj::mm_compiled_class_own_methods(oop cclass) {
   assert( *(oop*) cclass == _core_image->get_prime("CompiledClass"));
   return ((oop*)cclass)[6];
 }
-
-
 
 number MMObj::mm_compiled_class_num_fields(oop cclass) {
   assert( *(oop*) cclass == _core_image->get_prime("CompiledClass"));

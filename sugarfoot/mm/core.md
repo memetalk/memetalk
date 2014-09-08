@@ -90,6 +90,18 @@
     instance_method asContextWithVars: fun(imod, vars) {
       <primitive "compiled_function_as_context_with_vars">
     }
+    instance_method text: fun() {
+      <primitive "compiled_function_get_text">
+    }
+    // instance_method line_mapping: fun() {
+    //   <primitive "compiled_function_get_line_mapping">
+    // }
+    // instance_method loc_mapping: fun() {
+    //   <primitive "compiled_function_get_loc_mapping">
+    // }
+    instance_method source_location_for_ip: fun(ip) {
+      <primitive "compiled_function_loc_for_ip">
+    }
   end
 
   class CompiledModule
@@ -340,6 +352,12 @@ end
   instance_method step: fun() {
     <primitive "process_step">
   }
+  instance_method cp: fun() {
+    <primitive "process_cp">
+  }
+  instance_method ip: fun() {
+    <primitive "process_ip">
+  }
   end
 
   get_compiled_module: fun(module) {
@@ -352,5 +370,9 @@ end
 
   modules_path: fun() {
      <primitive "modules_path">
+  }
+
+  debug: fun() {
+     <primitive "test_debug">
   }
 .end

@@ -76,7 +76,7 @@ void CoreImage::load_prime_objects_table() {
   int start_index = HEADER_SIZE + _names_size;
   const char* base = _data;
 
-  for (int i = 0; i < _num_entries * 2; i += 2) {
+  for (word i = 0; i < _num_entries * 2; i += 2) {
     word name_offset = unpack_word(_data, start_index + (i * WSIZE));
     char* prime_name = (char*) (base + name_offset);
     if (is_prime(prime_name)) {

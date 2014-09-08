@@ -1,10 +1,10 @@
 #define  WSIZE 8
 
 #if WSIZE == 4
-  typedef int word;
+  typedef unsigned int word;
   typedef int number;
 #elif WSIZE == 8
-  typedef long word;
+  typedef unsigned long word;
   typedef long number;
 #endif
 

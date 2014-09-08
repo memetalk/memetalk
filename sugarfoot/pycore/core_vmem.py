@@ -113,3 +113,27 @@ class CoreVirtualMemory(vmemory.VirtualMemory):
         else:
             self.append_null()
         return oop
+
+
+    # used internally to create class fields list, etc.
+    def append_list_of_ints(self, lst):
+        delegate = self.append_object_instance()  # Assumed to be object! if source change, this breaks
+
+        if len(lst) > 0:
+            self.append_int(pyutils.FRAME_TYPE_ELEMENTS)
+            self.append_int(len(lst) * bits.WSIZE)
+            oops = []
+            for oop_element in lst:         # .. elements
+                oops.append(self.append_tagged_int(oop_element))
+
+        self.append_int(pyutils.FRAME_TYPE_LIST_OBJECT)
+        self.append_int(4 * bits.WSIZE)
+
+        oop = self.append_label_ref(utils.class_label('List'))  # vt
+        self.append_pointer_to(delegate)          # delegate
+        self.append_int(len(lst))                 # len
+        if len(lst) > 0:
+            self.append_pointer_to(oops[0])
+        else:
+            self.append_null()
+        return oop

@@ -159,6 +159,20 @@ class VirtualMemory(object):
                  sr.append((text, self.base + sum(self.cell_sizes[0:self.cells.index(referer)])))
         return sr
 
+    def append_int_to_int_dict(self, pydict):
+        pairs_oop = []
+        for key, val in iter(sorted(pydict.items())):
+            pairs_oop.append((key, val))
+        return self.append_dict_with_pairs(pairs_oop)
+
+    def append_int_to_int_list(self, pydict):
+        pairs_oop = []
+        for key, val in iter(sorted(pydict.items())):
+            val_oop = self.append_list_of_ints(val)
+            pairs_oop.append((key, val_oop))
+        return self.append_dict_with_pairs(pairs_oop)
+
+
     def append_symbol_to_int_dict(self, pydict):
         pairs_oop = []
         for key, val in iter(sorted(pydict.items())):
@@ -185,11 +199,16 @@ class VirtualMemory(object):
 
         oops = []
         for key, val in pairs:
-            oops.append(self.append_pointer_to(key))
+            if isinstance(key, (int, long)):
+                oops.append(self.append_tagged_int(key))
+            else:
+                oops.append(self.append_pointer_to(key))
+
             if isinstance(val, (int, long)):
                 self.append_tagged_int(val)
             else:
                 self.append_pointer_to(val)
+
         if len(oops) > 0:
             return oops[0]
         else:

@@ -182,6 +182,25 @@ bool Process::load_fun(oop recv, oop drecv, oop fun, bool should_allocate) {
   push_frame(_mmobj->mm_function_get_num_params(fun),
              _mmobj->mm_function_get_num_locals_or_env(fun));
 
+  std::cerr << "line mapping: " << endl;
+  oop mapping = _mmobj->mm_function_get_line_mapping(fun);
+  std::map<oop, oop>::iterator it = _mmobj->mm_dictionary_begin(mapping);
+  std::map<oop, oop>::iterator end = _mmobj->mm_dictionary_end(mapping);
+  for ( ; it != end; it++) {
+    std::cerr << untag_small_int(it->first) << " => " << untag_small_int(it->second) << endl;
+  }
+  std::cerr << "loc mapping: " << endl;
+  mapping = _mmobj->mm_function_get_loc_mapping(fun);
+  it = _mmobj->mm_dictionary_begin(mapping);
+  end = _mmobj->mm_dictionary_end(mapping);
+  for ( ; it != end; it++) {
+    std::cerr << untag_small_int(it->first) << " => [" << _mmobj->mm_list_size(it->second) << "] " ;
+    for(int i = 0; i < _mmobj->mm_list_size(it->second); i++) {
+      std::cerr << " " << untag_small_int(_mmobj->mm_list_entry(it->second, i));
+    }
+    std::cerr << endl;
+  }
+
   if (_mmobj->mm_is_context(fun)) {
     _ep = _mmobj->mm_context_get_env(fun);
     debug() << "setting up ctx ep: " << _ep << endl;
@@ -223,6 +242,10 @@ bool Process::load_fun(oop recv, oop drecv, oop fun, bool should_allocate) {
       oop ex_oop = stack_pop(); //shit
       debug() << "load_fun: prim returned: RAISED " << ex_oop << endl;
       pop_frame();
+      if (_vm->running_online() && !exception_has_handler(ex_oop, _bp)) {
+        _vm->start_debugger(this);
+        pause();
+      }
       //we rely on compiler generating a pop instruction to bind ex_oop to the catch var
       stack_push(unwind_with_exception(ex_oop));
         // debug() << "load_fun: unwind_with_exception reached primitive. c++ throwing...: " << ex_oop << endl;
@@ -376,11 +399,11 @@ void Process::fetch_cycle(void* stop_at_fp) {
 void Process::tick() {
   switch(_state) {
     case PAUSED_STATE:
-      debug() << "process::tick: paused" << endl;
+//      debug() << "process::tick: paused" << endl;
       _control->pause();
       break;
     case RUNNING_STATE:
-      debug() << "process::tick: resuming" << endl;
+//      debug() << "process::tick: resuming" << endl;
       _control->resume();
       break;
   }
@@ -657,8 +680,78 @@ int Process::execute_primitive(std::string name) {
 }
 
 
+bool Process::exception_has_handler(oop e, oop bp) {
+  oop cp = * ((oop*)bp - 5);
+  debug() << "** exception_has_handler e: " << e << " on cp: " << cp << endl;
+
+  if (cp == NULL) {
+    return false;
+  }
+
+  debug() << "exception_has_handler: " << _mmobj->mm_string_cstr(_mmobj->mm_function_get_name(cp)) << endl;
+
+  if (_mmobj->mm_function_is_prim(cp)) {
+    return exception_has_handler(e, *(oop*)bp);
+  }
+
+  bytecode* code = _mmobj->mm_function_get_code(cp);
+
+  number exception_frames_count = _mmobj->mm_function_exception_frames_count(cp);
+  debug() << "exception frames: " << exception_frames_count << endl;
+  if (exception_frames_count == 0) { //cp is unable to handle
+    return exception_has_handler(e, *(oop*)bp);
+  }
+
+  //exception frames are lexically ordered,
+  //so iterating normally we always reach the innermost frame first
+  oop exception_frames = _mmobj->mm_function_exception_frames(cp);
+  for(int i = 0; i < exception_frames_count; i++) {
+    oop frame_begin = exception_frames + (4 * i);
+
+    word try_block =  *(word*) frame_begin;
+    word catch_block = *(word*) (frame_begin + 1);
+    oop str_type_oop = *(oop*) (frame_begin + 3);
+
+    oop type_oop;
+    if (str_type_oop == MM_NULL) {
+      type_oop  = MM_NULL;
+    } else {
+      debug() << "fetching exception type for name: " << str_type_oop << endl;
+      oop mp = _mmobj->mm_function_get_module(cp);
+      int exc;
+      type_oop = send_0(mp, _vm->new_symbol(str_type_oop), &exc);
+      assert(exc == 0);
+      debug() << "fetching exception type got " << type_oop << endl;;
+    }
+
+    bytecode* ip = (bytecode*) * ((oop*)bp - 4);
+
+    unsigned long instr = ip - code;
+
+    debug() << "RAISE instr: " << instr << " try: " << try_block
+            << " catch: " << catch_block << " type: " << type_oop << endl;
+
+    bool delegates_to = _mmobj->delegates_to(_mmobj->mm_object_vt(e), type_oop);
+    debug() << "delegates_to == " << delegates_to  << endl;
+
+    debug() << "::" <<  (instr >= try_block) << " " << (instr < catch_block)
+            << " " << (type_oop == MM_NULL) << " " << delegates_to << endl;
+
+    if (instr >= try_block && instr < catch_block &&
+        (type_oop == MM_NULL || delegates_to)) {
+      debug() << "CAUGHT " << endl;
+      return true;
+    }
+  }
+
+  return exception_has_handler(e, *(oop*)bp);
+}
+
 oop Process::unwind_with_exception(oop e) {
   debug() << "** unwind_with_exception e: " << e << " on cp: " << _cp << endl;
+
+  tick();
+
   if (_cp == NULL) {
     int exc;
     oop str = send_0(e, _vm->new_symbol("toString"), &exc);
@@ -706,7 +799,7 @@ oop Process::unwind_with_exception(oop e) {
       debug() << "fetching exception type got " << type_oop << endl;;
     }
 
-    number instr = _ip - code;
+    word instr = _ip - code;
 
     debug() << "RAISE instr: " << instr << " try: " << try_block
             << " catch: " << catch_block << " type: " << type_oop << endl;

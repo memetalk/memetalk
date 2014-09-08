@@ -17,6 +17,16 @@ from . import (behavior_label,
 
 from pdb import set_trace as br
 
+    #!(fnobj.current_bytecode_pos()):bpos or fnobj.update_line_mapping(bpos, ast)
+def emitter(fn):
+    def wrapper(self, *args):
+        ast = args[0]
+        bpos = self.current_bytecode_pos()
+        res = fn(self, *args)
+        self.update_line_mapping(bpos, ast)
+        return res
+    return wrapper
+
 class Entry(object):
     def __init__(self):
         self.oop = None
@@ -370,6 +380,10 @@ class CompiledFunction(Entry):
         self.owner = owner
         self.is_top_level = is_top_level
         self.outer_cfun = outer_cfun
+        self.text = ''
+        self.start_line = -1
+        self.line_mapping = {}
+        self.location_mapping = {}
 
         if env_storage:
             self.has_env = True
@@ -388,6 +402,12 @@ class CompiledFunction(Entry):
 
         self._label = None
 
+    def set_text(self, text):
+        self.text = text
+
+    def set_line(self, head):
+        self.start_line = head.start_line
+
     def set_params(self, params):
         self.params = params
         self.var_declarations.add_names(self, params)
@@ -401,7 +421,6 @@ class CompiledFunction(Entry):
     def set_getter(self, idx):
         self.accessor_flag = 1 # normal=0/getter=1/setter=2
         self.accessor_field = idx
-
 
     def body_processor(self):
         return self
@@ -516,6 +535,9 @@ class CompiledFunction(Entry):
         oop_name = vmem.append_string_instance(self.name)
         oop_params = vmem.append_list_of_strings(self.params)
         oop_prim_name = vmem.append_string_instance(self.prim_name)
+        oop_text = vmem.append_string_instance(self.text)
+        oop_line_mappings = vmem.append_int_to_int_dict(self.line_mapping)
+        oop_loc_mappings = vmem.append_int_to_int_list(self.location_mapping)
         oop_env_table  = vmem.append_symbol_to_int_dict(self.var_declarations.env_table(self))
 
         lit_frame_size = self.fill_literal_frame(vmem)
@@ -523,7 +545,7 @@ class CompiledFunction(Entry):
         exception_frames = self.fill_exceptions_frame(vmem)
 
         vmem.append_int(FRAME_TYPE_OBJECT)
-        vmem.append_int(23 * bits.WSIZE)
+        vmem.append_int(26 * bits.WSIZE)
 
         oop = vmem.append_external_ref('CompiledFunction', self.label()) # CompiledFunction vt
         vmem.append_pointer_to(oop_delegate)
@@ -576,6 +598,9 @@ class CompiledFunction(Entry):
             vmem.append_null()
 
         vmem.append_pointer_to(oop_env_table)
+        vmem.append_pointer_to(oop_text)
+        vmem.append_pointer_to(oop_line_mappings)
+        vmem.append_pointer_to(oop_loc_mappings)
         self.oop = oop
         return oop
 
@@ -642,7 +667,11 @@ class CompiledFunction(Entry):
         return self.index_for_literal(entry)
 
 
-    def emit_push_var(self, name):
+    # emit procedures
+    #!(fnobj.current_bytecode_pos()):bpos or fnobj.update_line_mapping(bpos, ast)
+
+    @emitter
+    def emit_push_var(self, _, name):
         if self.has_env and \
            (not self.identifier_is_module_scoped(name) and \
             not self.identifier_is_prime(name)):
@@ -675,7 +704,8 @@ class CompiledFunction(Entry):
             self.bytecodes.append('send', 0)
 
 
-    def emit_local_assignment(self, name):
+    @emitter
+    def emit_local_assignment(self, _, name):
         if self.has_env:
             idx = self.var_declarations.index(self, name)
             self.bytecodes.append("pop_env",idx)
@@ -688,17 +718,39 @@ class CompiledFunction(Entry):
         else:
             raise Exception('local_assignment: undeclared ' + name)
 
-    def emit_return_top(self):
+    @emitter
+    def emit_return_top(self, _):
         self.bytecodes.append("ret_top",0)
 
-    def emit_return_null(self):
+    @emitter
+    def emit_return_null(self, _):
         self.bytecodes.append('push_bin', 0)
         self.bytecodes.append("ret_top",0)
 
-    def emit_return_this(self):
+    @emitter
+    def emit_return_this(self, _):
         self.bytecodes.append("ret_this",0)
 
-    def emit_var_decl(self, name):
+    def current_bytecode_pos(self):
+        return len(self.bytecodes)
+
+    def update_line_mapping(self, bpos, ast):
+        if ast is None or not hasattr(ast, 'start_line'):
+            return
+
+        # self.location_mapping: bytecode_offset => expression region
+        # self.line_mapping: lineno => bytecode_offset
+
+        start_line = ast.start_line - self.start_line
+        end_line = ast.end_line - self.start_line
+        for i in range(bpos, self.current_bytecode_pos()):
+            if i not in self.location_mapping:
+                self.location_mapping[i] = [start_line, ast.start_col, end_line, ast.end_col]
+
+        self.line_mapping[start_line] = bpos
+
+    @emitter
+    def emit_var_decl(self, _, name):
         self.declare_var(name)
         idx = self.var_declarations.index(self, name)
         if self.has_env:
@@ -706,14 +758,17 @@ class CompiledFunction(Entry):
         else:
             self.bytecodes.append("pop_local", idx)
 
-    def emit_field_assignment(self, field):
+    @emitter
+    def emit_field_assignment(self, _, field):
         idx = self.owner.fields.index(field)
         self.bytecodes.append('pop_field', idx)
 
-    def emit_pop(self):
+    @emitter
+    def emit_pop(self, _):
         self.bytecodes.append('pop', 0)
 
-    def emit_send_or_local_call(self, name, arity):
+    @emitter
+    def emit_send_or_local_call(self, _, name, arity):
         if self.identifier_is_module_scoped(name):
             idx = self.create_and_register_symbol_literal(name)
             self.bytecodes.append('push_module', 0)
@@ -740,26 +795,31 @@ class CompiledFunction(Entry):
             self.bytecodes.append('push_literal', idx)
             self.bytecodes.append('send', arity)
 
-    def emit_call(self, arity):
+    @emitter
+    def emit_call(self, _, arity):
         self.bytecodes.append('call', arity)
 
-    def emit_send(self, selector, arity):
+    @emitter
+    def emit_send(self, _, selector, arity):
         idx = self.create_and_register_symbol_literal(selector)
         self.bytecodes.append('push_literal', idx)
         self.bytecodes.append('send', arity)
 
-    def emit_super_ctor_send(self, selector, arity):
+    @emitter
+    def emit_super_ctor_send(self, _, selector, arity):
         idx = self.create_and_register_symbol_literal(selector)
         self.bytecodes.append('push_literal', idx)
         self.bytecodes.append('super_ctor_send', arity)
 
 
-    def emit_binary(self, selector):
+    @emitter
+    def emit_binary(self, _, selector):
         idx = self.create_and_register_symbol_literal(selector)
         self.bytecodes.append('push_literal', idx)
         self.bytecodes.append('send', 1)
 
-    def emit_unary(self, selector):
+    @emitter
+    def emit_unary(self, _, selector):
         idx = self.create_and_register_symbol_literal(selector)
         self.bytecodes.append('push_literal', idx)
         self.bytecodes.append('send', 0)
@@ -774,37 +834,47 @@ class CompiledFunction(Entry):
         self.bytecodes.append('jmp', lb)
         return lb
 
-    def emit_push_num_literal(self, num):
+    @emitter
+    def emit_push_num_literal(self, _, num):
         idx = self.create_and_register_number_literal(num)
         self.bytecodes.append("push_literal", idx)
 
-    def emit_push_this(self):
+    @emitter
+    def emit_push_this(self, _):
         self.bytecodes.append('push_this', 0)
 
-    def emit_push_str_literal(self, string):
+    @emitter
+    def emit_push_str_literal(self, _, string):
         idx = self.create_and_register_string_literal(string)
         self.bytecodes.append('push_literal', idx)
 
-    def emit_push_sym_literal(self, sym):
+    @emitter
+    def emit_push_sym_literal(self, _, sym):
         idx = self.create_and_register_symbol_literal(sym)
         self.bytecodes.append('push_literal', idx)
 
-    def emit_push_null(self):
+    @emitter
+    def emit_push_null(self, _):
         self.bytecodes.append('push_bin', 0)
 
-    def emit_push_true(self):
+    @emitter
+    def emit_push_true(self, _):
         self.bytecodes.append('push_bin', 1)
 
-    def emit_push_false(self):
+    @emitter
+    def emit_push_false(self, _):
         self.bytecodes.append('push_bin', 2)
 
-    def emit_push_module(self):
+    @emitter
+    def emit_push_module(self, _):
         self.bytecodes.append('push_module', 0)
 
-    def emit_push_context(self):
+    @emitter
+    def emit_push_context(self, _):
         self.bytecodes.append('push_context', 0)
 
-    def emit_push_closure(self, fn):
+    @emitter
+    def emit_push_closure(self, _, fn):
         idx_cfun = self.create_and_register_closure_literal(fn)
         idx_selector = self.create_and_register_symbol_literal("new_context")
         self.bytecodes.append("push_ep", 0)
@@ -814,14 +884,15 @@ class CompiledFunction(Entry):
         self.bytecodes.append('send', 2)
 
 
-    def emit_push_field(self, field):
+    @emitter
+    def emit_push_field(self, _, field):
         idx = self.owner.fields.index(field)
         self.bytecodes.append('push_field', idx)
 
     def bind_catch_var(self, name):
         if not self.var_declarations.has(self, name):
             self.declare_var(name)
-        self.emit_local_assignment(name)
+        self.emit_local_assignment(None, name)
 
     def emit_catch_jump(self):
         self.bytecodes.append("jmp", 0)
@@ -837,7 +908,8 @@ class CompiledFunction(Entry):
         self.add_exception_entry(lb_begin_try, lb_begin_catch, catch_type, var_idx)
 
 
-    def emit_push_list(self, length):
+    @emitter
+    def emit_push_list(self, _, length):
         idx_length = self.create_and_register_number_literal(length)
         idx_selector = self.create_and_register_symbol_literal("new")
         idx_append = self.create_and_register_symbol_literal("prepend")
@@ -854,7 +926,8 @@ class CompiledFunction(Entry):
             self.bytecodes.append('push_literal', idx_append)
             self.bytecodes.append('send', 1)
 
-    def emit_push_dict(self, length):
+    @emitter
+    def emit_push_dict(self, _, length):
         idx_length = self.create_and_register_number_literal(length)
         idx_selector = self.create_and_register_symbol_literal("new")
         idx_set = self.create_and_register_symbol_literal("set")
@@ -871,7 +944,8 @@ class CompiledFunction(Entry):
             self.bytecodes.append('push_literal', idx_set)
             self.bytecodes.append('send', 2)
 
-    def emit_push_index(self):
+    @emitter
+    def emit_push_index(self, _):
         idx_selector = self.create_and_register_symbol_literal("index")
         self.bytecodes.append('push_literal', idx_selector)
         self.bytecodes.append('send', 1)
@@ -887,6 +961,12 @@ class Function(Entry):
 
     def uses_env(self, val):
         self.cfun.uses_env(val)
+
+    def set_line(self, line):
+        self.cfun.set_line(line)
+
+    def set_text(self, text):
+        self.cfun.set_text(text)
 
     def set_primitive(self, prim_name):
         self.cfun.set_primitive(prim_name)

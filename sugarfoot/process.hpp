@@ -35,6 +35,7 @@ public:
   oop fp() { return _fp; }
   oop cp() { return _cp; }
   oop mp() { return _mp; }
+  bytecode* ip() { return _ip; }
 
   oop get_rp() { if (_ep) { return ((oop*)_ep)[0]; } else { return _rp; } };
   oop get_dp() { if (_ep) { return ((oop*)_ep)[1]; } else { return _dp; } };
@@ -89,6 +90,8 @@ private:
   void handle_super_ctor_send(number);
   void handle_call(number);
   void basic_new_and_load(oop);
+
+  bool exception_has_handler(oop e, oop bp);
 
   void tick();
 

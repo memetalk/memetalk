@@ -290,7 +290,9 @@ static QApplication* _app = NULL;
 
 static int prim_qapplication_new(Process* proc) {
   oop data_self =  proc->dp();
-  _app = new QApplication(proc->vm()->argc(), proc->vm()->argv());
+  if (!_app) {
+    _app = new QApplication(proc->vm()->argc(), proc->vm()->argv());
+  }
   set_meme_instance(_app, proc->rp());
   // debug() << "QT: QApplication " << app << endl;
   init_qt_stuff();

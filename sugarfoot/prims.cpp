@@ -690,6 +690,57 @@ static int prim_compiled_function_as_context_with_vars(Process* proc) {
   return 0;
 }
 
+static int prim_compiled_function_get_text(Process* proc) {
+  oop self =  proc->dp();
+  proc->stack_push(proc->mmobj()->mm_compiled_function_get_text(self));
+  return 0;
+}
+
+// static int prim_compiled_function_get_line_mapping(Process* proc) {
+//   oop self =  proc->dp();
+//   proc->stack_push(proc->mmobj()->mm_compiled_function_get_line_mapping(self));
+//   return 0;
+// }
+
+// static int prim_compiled_function_get_loc_mapping(Process* proc) {
+//   oop self =  proc->dp();
+//   proc->stack_push(proc->mmobj()->mm_compiled_function_get_loc_mapping(self));
+//   return 0;
+// }
+
+static int prim_compiled_function_loc_for_ip(Process* proc) {
+  oop self =  proc->dp();
+  if (proc->mmobj()->mm_compiled_function_is_prim(self)) {
+    std::cerr << "LOCINFO IS NULL" << std::endl;
+    proc->stack_push(MM_NULL);
+    return 0;
+  }
+
+  bytecode* ip = (bytecode*) *((oop*) proc->fp() - 1);
+  bytecode* base_ip = proc->mmobj()->mm_compiled_function_get_code(self);
+  word idx = ip - base_ip;
+  std::cerr << "IDX : " << idx << endl;
+
+  oop mapping = proc->mmobj()->mm_compiled_function_get_loc_mapping(self);
+  std::map<oop, oop>::iterator it = proc->mmobj()->mm_dictionary_begin(mapping);
+  std::map<oop, oop>::iterator end = proc->mmobj()->mm_dictionary_end(mapping);
+  oop the_lst = MM_NULL;
+  for ( ; it != end; it++) {
+    number b_offset = untag_small_int(it->first);
+    std::cerr << " -- " << b_offset << " " <<  idx << std::endl;
+    if (b_offset == idx) {
+      the_lst = it->second;
+      break;
+    } else if(b_offset > idx) {
+      break;
+    } else {
+      the_lst = it->second;
+    }
+  }
+  proc->stack_push(the_lst);
+  return 0;
+}
+
 static int prim_context_get_env(Process* proc) {
   oop self =  proc->dp();
 
@@ -789,28 +840,32 @@ static int prim_test_catch_exception(Process* proc) {
 }
 
 static int prim_test_debug(Process* proc) {
-  // std::cerr << "prim_test_debug" << endl;
+  proc->vm()->start_debugger(proc);
   proc->pause();
-
-  // std::cerr << "prim_test_debug: paused" << endl;
-  Process* dbg_proc = new Process(proc->vm());
-  // std::cerr << "prim_test_debug: created new process" << endl;
-
-  oop p = proc->mmobj()->alloc_instance(proc->vm()->get_prime("Process"));
-  ((oop*)p)[2] = (oop) proc;
-
-  int exc;
-  oop res = dbg_proc->send_1(proc->mp(), proc->vm()->new_symbol("dbg_main"), p, &exc);
-  if (exc != 0) {
-    proc->stack_push(res);
-    return PRIM_RAISED;
-  }
-
-  // std::cerr << "prim_test_debug: called dbg_main" << endl;
-
   proc->stack_push(proc->rp());
   return 0;
 }
+//   // std::cerr << "prim_test_debug" << endl;
+//   proc->pause();
+
+//   // std::cerr << "prim_test_debug: paused" << endl;
+//   Process* dbg_proc = new Process(proc->vm());
+//   // std::cerr << "prim_test_debug: created new process" << endl;
+
+//   oop oop_target_proc = proc->mmobj()->mm_process_new(proc);
+
+//   int exc;
+//   oop res = dbg_proc->send_1(proc->mp(), proc->vm()->new_symbol("dbg_main"), oop_target_proc, &exc);
+//   if (exc != 0) {
+//     proc->stack_push(res);
+//     return PRIM_RAISED;
+//   }
+
+//   // std::cerr << "prim_test_debug: called dbg_main" << endl;
+
+//   proc->stack_push(proc->rp());
+//   return 0;
+// }
 
 static int prim_process_step(Process* proc) {
   oop oop_target_proc = proc->rp();
@@ -819,6 +874,22 @@ static int prim_process_step(Process* proc) {
   target_proc->step();
 
   proc->stack_push(proc->rp());
+  return 0;
+}
+
+static int prim_process_cp(Process* proc) {
+  oop oop_target_proc = proc->rp();
+
+  Process* target_proc = (Process*) (((oop*)oop_target_proc)[2]);
+  proc->stack_push(target_proc->cp());
+  return 0;
+}
+
+static int prim_process_ip(Process* proc) {
+  oop oop_target_proc = proc->rp();
+
+  Process* target_proc = (Process*) (((oop*)oop_target_proc)[2]);
+  proc->stack_push((oop) target_proc->ip());
   return 0;
 }
 
@@ -892,6 +963,12 @@ void init_primitives(VM* vm) {
 
   vm->register_primitive("compiled_function_with_env", prim_compiled_function_with_env);
   vm->register_primitive("compiled_function_as_context_with_vars", prim_compiled_function_as_context_with_vars);
+
+  vm->register_primitive("compiled_function_get_text", prim_compiled_function_get_text);
+  // vm->register_primitive("compiled_function_get_line_mapping", prim_compiled_function_get_line_mapping);
+  // vm->register_primitive("compiled_function_get_loc_mapping", prim_compiled_function_get_loc_mapping);
+  vm->register_primitive("compiled_function_loc_for_ip", prim_compiled_function_loc_for_ip);
+
   vm->register_primitive("context_get_env", prim_context_get_env);
   vm->register_primitive("function_get_env", prim_function_get_env);
 
@@ -904,6 +981,8 @@ void init_primitives(VM* vm) {
   vm->register_primitive("test_debug", prim_test_debug);
 
   vm->register_primitive("process_step", prim_process_step);
+  vm->register_primitive("process_cp", prim_process_cp);
+  vm->register_primitive("process_ip", prim_process_ip);
 
   vm->register_primitive("get_compiled_module", prim_get_compiled_module);
 

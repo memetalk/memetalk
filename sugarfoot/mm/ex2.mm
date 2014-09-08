@@ -1,49 +1,34 @@
-.preamble()
+.preamble(io)
+  io: meme:io;
 .code
 
-class X
-class_method z: fun() {
-  return 100;
-}
-end
-
-
-t1: fun() {
-  var fn = Context.withVars("\"10\"", null, thisModule);
-  return fn();
+g: fun() {
+  //Exception.throw("test");
+  debug();
+  return 99;
 }
 
-t2: fun() {
-  var fn = Context.withVars("X.z", null, thisModule);
-  return fn();
+
+bar: fun() {
+  return g();
 }
 
-t3: fun() {
-  var fn = Context.withVars("this", {:this: 3}, thisModule);
-  return fn();
+foo: fun() {
+  <primitive "test_catch_exception">
 }
 
-t4: fun() {
-  var fn = Context.withVars("a", {:a: 4}, thisModule);
-  return fn();
+f: fun() {
+  //return foo();
+  return g() + 1;
 }
 
-t5: fun() {
-  var fn = Context.withVars("a + X.z", {:a: 5}, thisModule);
-  return fn();
-}
 
 main: fun() {
-  // return t1();
-  // return t2();
-  // return t3();
-  // return t4();
-  return t5();
-
-  // var a = 10;
-  // var b = 20;
-  // var x = fun(c) { var d = 9; d };
-  // return thisContext.getEnv();
+  f();
+  var x = 10;
+  x = x + 2;
+  return x + 3 - 4;
 }
+
 
 .endcode

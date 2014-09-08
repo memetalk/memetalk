@@ -13,10 +13,12 @@ class Process;
 class VM {
 
 public:
-  VM(int argc, char** argv, const char* core_img_filepath);
+  VM(int argc, char** argv, bool online, const char* core_img_filepath);
 
   int& argc() { return _argc; };
   char** argv() { return _argv; };
+
+  bool running_online() { return _online; };
 
   MMObj* mmobj();
 
@@ -37,6 +39,8 @@ public:
   Process* process() { return _process; };
 
   oop compile_fun(const char* text, oop vars, oop cmod, int*);
+
+  oop start_debugger(Process* target);
 private:
   void dump_prime_info();
   void dictionary_dump(oop dict);
@@ -44,6 +48,7 @@ private:
 
   int _argc;
   char** _argv;
+  bool _online;
   CoreImage* _core_image;
   MMObj* _mmobj;
   Process* _process;

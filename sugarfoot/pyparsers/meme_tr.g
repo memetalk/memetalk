@@ -24,9 +24,11 @@ definition :modobj =  function_definition(modobj)
                    |  class_definition(modobj)
                    |  object_definition(modobj)
 
-function_definition :modobj = ['fun' :name params:p  !(modobj.new_function(name, p)):fnobj
-                                :uses_env !(fnobj.uses_env(uses_env))
-                                ['body' body(fnobj.body_processor())]]
+function_definition :modobj =  !(self.input.head()[0]):ast
+                               ['fun' :name params:p  !(modobj.new_function(name, p)):fnobj
+                                     !(fnobj.set_line(ast))
+                                     :uses_env !(fnobj.uses_env(uses_env))
+                                     ['body' body(fnobj.body_processor())]] !(fnobj.set_text(ast.text))
 
 class_definition :modobj =  ['class' [:name :parent]
                               ['fields' :fields]
@@ -35,20 +37,26 @@ class_definition :modobj =  ['class' [:name :parent]
                               [instance_method(klass)*]
                               [class_method(klass)*]]
 
-constructor :klass = ['ctor' :name params:p !(klass.new_ctor(name, p)):fnobj
-                        :uses_env !(fnobj.uses_env(uses_env))
-                        ['body' body(fnobj.body_processor())]]
+constructor :klass =  !(self.input.head()[0]):ast
+                        ['ctor' :name params:p !(klass.new_ctor(name, p)):fnobj
+                             !(fnobj.set_line(ast))
+                             :uses_env !(fnobj.uses_env(uses_env))
+                             ['body' body(fnobj.body_processor())]]  !(fnobj.set_text(ast.text))
 
 constructors :klass = ['ctors' [constructor(klass)*]]
                      | ['ctors' []]
 
-instance_method :klass = ['fun' :name params:p !(klass.new_instance_method(name, p)):fnobj
-                                :uses_env !(fnobj.uses_env(uses_env))
-                                ['body' body(fnobj.body_processor())]]
+instance_method :klass = !(self.input.head()[0]):ast
+                           ['fun' :name params:p !(klass.new_instance_method(name, p)):fnobj
+                                  !(fnobj.set_line(ast))
+                                  :uses_env !(fnobj.uses_env(uses_env))
+                                  ['body' body(fnobj.body_processor())]]  !(fnobj.set_text(ast.text))
 
-class_method :klass = ['fun' :name params:p  !(klass.new_class_method(name, p)):fnobj
-                       :uses_env !(fnobj.uses_env(uses_env))
-                       ['body' body(fnobj.body_processor())]]
+class_method :klass = !(self.input.head()[0]):ast
+                         ['fun' :name params:p  !(klass.new_class_method(name, p)):fnobj
+                          !(fnobj.set_line(ast))
+                          :uses_env !(fnobj.uses_env(uses_env))
+                          ['body' body(fnobj.body_processor())]]  !(fnobj.set_text(ast.text))
 
 params = ['params' []]  -> []
        | ['params' :xs] -> xs
@@ -70,82 +78,84 @@ obj_function :obj = constructor(obj)
                   | function_definition(obj)
 
 
-body :fnobj = [(expr(fnobj)*) ['end-body']] -> fnobj.emit_return_this()
-            | [['primitive' ['literal-string' :name]]:ast (:ignore)*]   -> fnobj.set_primitive(name)
+body :fnobj = [(expr(fnobj)*) ['end-body']]:ast -> fnobj.emit_return_this(ast)
+            | [['primitive' ['literal-string' :name]] (:ignore)*]   -> fnobj.set_primitive(name)
 
 exprs :fnobj = [expr(fnobj)*]
 
-expr :fnobj = ['var-def' :id expr(fnobj)]              -> fnobj.emit_var_decl(id)
-            | ['return' expr(fnobj)]                   -> fnobj.emit_return_top()
-            | ['return-null']                           -> fnobj.emit_return_null()
-            | ['return-top']                           -> fnobj.emit_return_top()
-            | ['super-ctor-send' :s args(fnobj):arity] -> fnobj.emit_super_ctor_send(s, arity)
-            | ['send-or-local-call' :name args(fnobj):arity]         -> fnobj.emit_send_or_local_call(name, arity)
-            | ['send' :e :s args(fnobj):arity] apply('expr' fnobj e) -> fnobj.emit_send(s, arity)
-            | ['call' :e args(fnobj):arity apply('expr' fnobj e)]  -> fnobj.emit_call(arity)
-            | ['pop' expr(fnobj)]                -> fnobj.emit_pop()
-            | ['not' expr(fnobj)]                -> fnobj.emit_unary('!')
-            | ['negative' expr(fnobj)]           -> fnobj.emit_unary('-')
-            | ['bit-neg' expr(fnobj)]           -> fnobj.emit_unary('~')
-            | ['and' :e expr(fnobj) apply('expr' fnobj e)]    -> fnobj.emit_binary('and')
-            | ['+'  :e expr(fnobj) apply('expr' fnobj e)]      -> fnobj.emit_binary('+')
-            | ['-'  :e expr(fnobj) apply('expr' fnobj e)]      -> fnobj.emit_binary('-')
-            | ['*'  :e expr(fnobj) apply('expr' fnobj e)]      -> fnobj.emit_binary('*')
-            | ['<'  :e expr(fnobj) apply('expr' fnobj e)]      -> fnobj.emit_binary('<')
-            | ['<=' :e expr(fnobj) apply('expr' fnobj e)]     -> fnobj.emit_binary('<=')
-            | ['>'  :e expr(fnobj) apply('expr' fnobj e)]      -> fnobj.emit_binary('>')
-            | ['>=' :e expr(fnobj) apply('expr' fnobj e)]     -> fnobj.emit_binary('>=')
-            | ['==' :e expr(fnobj) apply('expr' fnobj e)]     -> fnobj.emit_binary('==')
-            | ['!=' :e expr(fnobj) apply('expr' fnobj e)]     -> fnobj.emit_binary('!=')
-            | ['if' expr(fnobj)
-                !(fnobj.emit_jz()):label [expr(fnobj)*]] -> label.as_current()
-            | ['if/else' expr(fnobj)
-                !(fnobj.emit_jz()):lb1 [expr(fnobj)*]
-                 !(fnobj.emit_jmp()):lb2 !(lb1.as_current())
-                [expr(fnobj)*]]                  -> lb2.as_current()
-            | ['try'
-                !(fnobj.current_label()):label_begin_try
-                  [expr(fnobj)*]
-                !(fnobj.emit_catch_jump()):end_pos
-                !(fnobj.current_label()):label_begin_catch
-                  catch_decl:cp
-                !(fnobj.bind_catch_var(cp[1]))
-                  [expr(fnobj)*]]
-              -> fnobj.emit_try_catch(label_begin_try, label_begin_catch, end_pos, cp[0], cp[1])
-            | assignment(fnobj)
-            | atom(fnobj)
+foo :fnobj :ast = 'var-def' :id expr(fnobj) ->  fnobj.emit_var_decl(ast, id)
+               | 'return' expr(fnobj)       ->  fnobj.emit_return_top(ast)
+               | 'return-null' -> fnobj.emit_return_null(ast)
+               | 'return-top' -> fnobj.emit_return_top(ast)
+               | 'super-ctor-send' :s args(fnobj):arity -> fnobj.emit_super_ctor_send(ast, s, arity)
+               | 'send-or-local-call' :name args(fnobj):arity -> fnobj.emit_send_or_local_call(ast, name, arity)
+               | 'send' :e :s args(fnobj):arity apply('expr' fnobj e) -> fnobj.emit_send(ast, s, arity)
+               | 'call' :e args(fnobj):arity apply('expr' fnobj e) -> fnobj.emit_call(ast, arity)
+               | 'pop' expr(fnobj) -> fnobj.emit_pop(ast)
+               | 'not' expr(fnobj) -> fnobj.emit_unary(ast, '!')
+               | 'negative' expr(fnobj) -> fnobj.emit_unary(ast, '-')
+               | 'bit-neg' expr(fnobj) -> fnobj.emit_unary(ast, '~')
+               | 'and' :e expr(fnobj) apply('expr' fnobj e) -> fnobj.emit_binary(ast, 'and')
+               | '+'  :e expr(fnobj) apply('expr' fnobj e) -> fnobj.emit_binary(ast, '+')
+               | '-'  :e expr(fnobj) apply('expr' fnobj e) -> fnobj.emit_binary(ast, '-')
+               | '*'  :e expr(fnobj) apply('expr' fnobj e) -> fnobj.emit_binary(ast, '*')
+               | '<'  :e expr(fnobj) apply('expr' fnobj e) -> fnobj.emit_binary(ast, '<')
+               | '<=' :e expr(fnobj) apply('expr' fnobj e) -> fnobj.emit_binary(ast, '<=')
+               | '>'  :e expr(fnobj) apply('expr' fnobj e) -> fnobj.emit_binary(ast, '>')
+               | '>=' :e expr(fnobj) apply('expr' fnobj e) -> fnobj.emit_binary(ast, '>=')
+               | '==' :e expr(fnobj) apply('expr' fnobj e) -> fnobj.emit_binary(ast, '==')
+               | '!=' :e expr(fnobj) apply('expr' fnobj e) -> fnobj.emit_binary(ast, '!=')
+               | 'if' expr(fnobj)
+                   !(fnobj.emit_jz()):label [expr(fnobj)*] -> label.as_current()
+               | 'if/else' expr(fnobj)
+                  !(fnobj.emit_jz()):lb1 [expr(fnobj)*]
+                  !(fnobj.emit_jmp()):lb2 !(lb1.as_current())
+                  [expr(fnobj)*] -> lb2.as_current()
+               | 'try'
+                  !(fnobj.current_label()):label_begin_try
+                    [expr(fnobj)*]
+                  !(fnobj.emit_catch_jump()):end_pos
+                  !(fnobj.current_label()):label_begin_catch
+                    catch_decl:cp
+                  !(fnobj.bind_catch_var(cp[1]))
+                    [expr(fnobj)*] -> fnobj.emit_try_catch(label_begin_try, label_begin_catch, end_pos, cp[0], cp[1])
+               | '=' ['id' :v] expr(fnobj)    -> fnobj.emit_local_assignment(ast, v)
+               | '=' ['field' :f] expr(fnobj) -> fnobj.emit_field_assignment(ast, f)
+               | 'literal-number' :x -> fnobj.emit_push_num_literal(ast, x)
+               | 'literal' 'this' -> fnobj.emit_push_this(ast)
+               | 'literal-string' :x -> fnobj.emit_push_str_literal(ast, x)
+               | 'literal-symbol' :x -> fnobj.emit_push_sym_literal(ast, x)
+               | 'literal' 'null'       -> fnobj.emit_push_null(ast)
+               | 'literal' 'true'       -> fnobj.emit_push_true(ast)
+               | 'literal' 'false'      -> fnobj.emit_push_false(ast)
+               | 'literal' 'module'     -> fnobj.emit_push_module(ast)
+               | 'literal' 'context'    -> fnobj.emit_push_context(ast)
+               | 'id' :name             -> fnobj.emit_push_var(ast, name)
+               | 'field' :name          -> fnobj.emit_push_field(ast, name)
+               | 'literal-array'  :e apply('exprs' fnobj e)      -> fnobj.emit_push_list(ast, len(e))
+               | 'literal-dict'   dict_pairs(fnobj):p   -> fnobj.emit_push_dict(ast, len(p))
+               | 'index' :e expr(fnobj) apply('expr' fnobj e)    -> fnobj.emit_push_index(ast)
+
+expr :fnobj = !(self.input.head()[0]):ast [foo(fnobj ast)]
+            | funliteral(fnobj)
+
 
 catch_decl = ['catch' ['id' :type] :id]  -> (type, id)
            | ['catch' :id]               -> (None, id)
 
-assignment :fnobj = ['=' ['id' :v] expr(fnobj)]    -> fnobj.emit_local_assignment(v)
-                  | ['=' ['field' :f] expr(fnobj)] -> fnobj.emit_field_assignment(f)
-
 dict_pairs :fnobj = (['pair' expr(fnobj) expr(fnobj)])*:e -> e
 
-atom :fnobj = ['literal-number' :x]   -> fnobj.emit_push_num_literal(x)
-            | ['literal' 'this']      -> fnobj.emit_push_this()
-            | ['literal-string' :x]   -> fnobj.emit_push_str_literal(x)
-            | ['literal-symbol' :x]   -> fnobj.emit_push_sym_literal(x)
-            | ['literal' 'null']      -> fnobj.emit_push_null()
-            | ['literal' 'true']      -> fnobj.emit_push_true()
-            | ['literal' 'false']     -> fnobj.emit_push_false()
-            | ['literal' 'module']    -> fnobj.emit_push_module()
-            | ['literal' 'context']   -> fnobj.emit_push_context()
-            | ['id' :name]            -> fnobj.emit_push_var(name)
-            | ['field' :name]         -> fnobj.emit_push_field(name)
-            | ['literal-array'  :e apply('exprs' fnobj e)]     -> fnobj.emit_push_list(len(e))
-            | ['literal-dict'   dict_pairs(fnobj):p]  -> fnobj.emit_push_dict(len(p))
-            | funliteral(fnobj)
-            | ['index' :e expr(fnobj) apply('expr' fnobj e)]   -> fnobj.emit_push_index()
+funliteral :fnobj = !(self.input.head()[0]):ast ['fun-literal'  ['params' :p]
+                       !(fnobj.new_closure(p)):fn
+                       !(fn.set_line(ast))
+                       ['body' [expr(fn)*]]]:ast
+                     !(fn.set_text(ast.text))
+                      -> fnobj.emit_push_closure(ast, fn)
 
-funliteral :fnobj = ['fun-literal'  ['params' :p]
-                      !(fnobj.new_closure(p)):fn
-                    ['body' [expr(fn)*]]] -> fnobj.emit_push_closure(fn)
-
-cfunliteral :fnobj = ['fun-literal'  ['params' :p]
-                      !(fnobj.set_params(p))
-                    ['body' [expr(fnobj)*]]] -> fnobj
+cfunliteral :fnobj =  !(self.input.head()[0]):ast ['fun-literal'  ['params' :p]
+                        !(fnobj.set_line(ast))
+                        !(fnobj.set_params(p))
+                        ['body' [expr(fnobj)*]]] -> fnobj
 
 args :fnobj =  ['args' []] -> 0
             |  ['args' arglist(fnobj):arity] -> arity

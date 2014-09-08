@@ -1,9 +1,13 @@
-.preamble(qt, io)
+.preamble(qt, io, dd)
   qt : meme:qt;
   io : meme:io;
+  dd : meme:dd;
   [QWidget, QMainWindow, QsciScintilla, QLineEdit, QComboBox, QTableWidget, QListWidgetItem, QTableWidgetItem] <= qt;
 .code
 
+debug: fun(proc) {
+  return dd.main(proc);
+}
 
 main: fun() {
   var app = qt.QApplication.new();

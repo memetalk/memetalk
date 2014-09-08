@@ -10,8 +10,9 @@
 #include "utils.hpp"
 #include "mmc_fun.hpp"
 
-VM::VM(int argc, char** argv, const char* core_img_filepath)
-  : _argc(argc), _argv(argv), _core_image(new CoreImage(this, core_img_filepath)), _mmobj(new MMObj(_core_image)) {
+VM::VM(int argc, char** argv, bool online, const char* core_img_filepath)
+  : _argc(argc), _argv(argv), _online(online),
+    _core_image(new CoreImage(this, core_img_filepath)), _mmobj(new MMObj(_core_image)) {
 }
 
 MMObj* VM::mmobj() {
@@ -54,11 +55,12 @@ int VM::start() {
     bail("usage: sf-vm <file.mmc>");
   }
 
+  _process = new Process(this);
+
   init_primitives(this); //module initialization could execute primitives
 
   char* filepath = _argv[1];
 
-  _process = new Process(this);
 
   _core_image->load();
   // dump_prime_info();
@@ -74,6 +76,27 @@ int VM::start() {
   oop retval = _process->run(imod, new_symbol("main"));
   print_retval(retval);
   return * (int*) (void*) &retval;
+}
+
+oop VM::start_debugger(Process* target) {
+  oop imod;
+  Process* dbg_proc = new Process(this);
+  try {
+    imod = instantiate_module(dbg_proc, "idez", _mmobj->mm_list_new());
+  } catch(mm_rewind e) {
+    bail("VM::start_debugger raised");
+    // print_retval(e.mm_exception);
+    // return * (int*) (void*) &(e.mm_exception);
+  }
+
+  oop oop_target_proc = _mmobj->mm_process_new(target);
+  int exc;
+  oop retval = dbg_proc->send_1(imod, new_symbol("debug"), oop_target_proc, &exc);
+  if (exc != 0) {
+    bail("VM::start_debugger: debug() raised");
+  }
+  // print_retval(retval);
+  return retval;
 }
 
 oop VM::new_symbol(const char* cstr) {
@@ -147,7 +170,7 @@ std::string get_compile_fun_json(const char* text, oop vars, MMObj* mmobj) {
   return buf.str();
 }
 
-oop VM::compile_fun(const char* text, oop vars, oop cmod, int* exc) {
+oop VM::compile_fun(const char* text, oop vars, oop /*cmod*/, int* exc) {
   std::stringstream s;
   std::string json = get_compile_fun_json(text, vars, _mmobj);
 

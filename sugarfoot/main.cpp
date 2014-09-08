@@ -1,5 +1,7 @@
 #include "vm.hpp"
+#include <cstdlib>
 
 int main(int argc, char** argv) {
-  return (new VM(argc, argv, "core.img"))->start();
+  char* online = getenv("ONLINE");
+  return (new VM(argc, argv, !!online, "core.img"))->start();
 }

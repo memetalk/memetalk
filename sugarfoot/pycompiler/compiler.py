@@ -279,15 +279,18 @@ class Compiler(ASTBuilder):
         mmc.dump()
 
 
+def main():
+    opts, nonopts = getopt.getopt(sys.argv[1:], 'f:o:')
+    if len(opts) == 0:
+        for path in sys.argv[1:]:
+            Compiler().compile(path)
+    else:
+        # python -m pycompiler.compiler -o '{"text":"fun() {X.z}","env_names":""}'
+        # python -m pycompiler.compiler -o '{"text":"fun() {a}","env_names":["a"]}'
 
-opts, nonopts = getopt.getopt(sys.argv[1:], 'f:o:')
-if len(opts) == 0:
-    for path in sys.argv[1:]:
-        Compiler().compile(path)
-else:
-    # python -m pycompiler.compiler -o '{"text":"fun() {X.z}","env_names":""}'
-    # python -m pycompiler.compiler -o '{"text":"fun() {a}","env_names":["a"]}'
+        dopts = dict(opts)
+        js = ejson.loads(dopts['-o'])
+        Compiler().compile_function(js['text'], js['env_names'])
 
-    dopts = dict(opts)
-    js = ejson.loads(dopts['-o'])
-    Compiler().compile_function(js['text'], js['env_names'])
+import cProfile
+cProfile.run('main()')

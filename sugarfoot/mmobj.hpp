@@ -12,6 +12,8 @@ class MMObj {
 public:
   MMObj(CoreImage*);
 
+  oop mm_process_new(Process* proc);
+
   oop mm_new(oop vt, oop delegate, number payload);
   oop alloc_instance(oop klass);
 
@@ -105,6 +107,10 @@ public:
   oop mm_function_exception_frames(oop fun);
   oop mm_function_env_table(oop fun);
 
+  oop mm_function_get_text(oop cfun);
+  oop mm_function_get_line_mapping(oop cfun);
+  oop mm_function_get_loc_mapping(oop cfun);
+
   bytecode* mm_compiled_function_get_code(oop cfun);
   number mm_compiled_function_get_code_size(oop cfun);
   number mm_compiled_function_get_num_locals_or_env(oop cfun);
@@ -120,6 +126,10 @@ public:
   oop mm_compiled_function_outer_cfun(oop cfun);
   oop mm_compiled_function_get_owner(oop cfun);
   oop mm_compiled_function_get_name(oop cfun);
+
+  oop mm_compiled_function_get_text(oop cfun);
+  oop mm_compiled_function_get_line_mapping(oop cfun);
+  oop mm_compiled_function_get_loc_mapping(oop cfun);
 
   oop mm_compiled_class_name(oop cclass);
   oop mm_compiled_class_super_name(oop cclass);

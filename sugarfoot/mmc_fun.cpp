@@ -38,7 +38,7 @@ void MMCFunction::link_external_references() {
   const char* base = _data;
   int start_external_refs = HEADER_SIZE + _names_size + _ot_size;
 
-  for (int i = 0; i < _er_size; i += (2 * WSIZE)) {
+  for (word i = 0; i < _er_size; i += (2 * WSIZE)) {
     word name_offset = unpack_word(_data, start_external_refs + i);
     char* name = (char*) (base + name_offset);
     word obj_offset = unpack_word(_data, start_external_refs + i + WSIZE);
