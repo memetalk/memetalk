@@ -31,6 +31,10 @@ init new: fun(proc) {
 
 instance_method step: fun() {
   @process.step();
+}
+
+instance_method process_paused: fun() { //this is called from the vm
+  io.print("DDD: PROCESS_PAUSED");
   @editor.setText(@process.cp().compiledFunction().text());
   var locInfo = @process.cp().compiledFunction().source_location_for_ip(@process.ip);
   if (locInfo) {

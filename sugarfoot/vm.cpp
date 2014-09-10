@@ -78,7 +78,7 @@ int VM::start() {
   return * (int*) (void*) &retval;
 }
 
-oop VM::start_debugger(Process* target) {
+std::pair<Process*, oop> VM::start_debugger(Process* target) {
   oop imod;
   Process* dbg_proc = new Process(this);
   try {
@@ -91,12 +91,11 @@ oop VM::start_debugger(Process* target) {
 
   oop oop_target_proc = _mmobj->mm_process_new(target);
   int exc;
-  oop retval = dbg_proc->send_1(imod, new_symbol("debug"), oop_target_proc, &exc);
+  oop handler = dbg_proc->send_1(imod, new_symbol("debug"), oop_target_proc, &exc);
   if (exc != 0) {
     bail("VM::start_debugger: debug() raised");
   }
-  // print_retval(retval);
-  return retval;
+  return std::pair<Process*, oop>(dbg_proc, handler);
 }
 
 oop VM::new_symbol(const char* cstr) {

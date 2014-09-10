@@ -110,9 +110,8 @@ _QScintilla::_QScintilla(QWidget* parent)
 }
 
 void _QScintilla::paused_at_line(int start_line, int start_col, int end_line, int end_col) {
-  std::cerr << "pause_at_line " << start_line << " " << start_col << " " <<
-    end_line << " " << end_col << std::endl;
-
+  // std::cerr << "pause_at_line " << start_line << " " << start_col << " " <<
+  //   end_line << " " << end_col << std::endl;
   // margin arrow
   markerDeleteAll(CURRENT_LINE_MARKER);
   markerAdd(start_line, CURRENT_LINE_MARKER);

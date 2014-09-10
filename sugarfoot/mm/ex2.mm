@@ -8,7 +8,6 @@ g: fun() {
   return 99;
 }
 
-
 bar: fun() {
   return g();
 }
@@ -26,6 +25,7 @@ f: fun() {
 main: fun() {
   f();
   var x = 10;
+  io.print(x);
   x = x + 2;
   return x + 3 - 4;
 }

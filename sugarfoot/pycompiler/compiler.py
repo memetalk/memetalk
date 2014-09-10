@@ -292,5 +292,6 @@ def main():
         js = ejson.loads(dopts['-o'])
         Compiler().compile_function(js['text'], js['env_names'])
 
-import cProfile
-cProfile.run('main()')
+main()
+# import cProfile
+# cProfile.run('main()')

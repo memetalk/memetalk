@@ -512,6 +512,13 @@ oop MMObj::mm_function_get_loc_mapping(oop fun) {
   return mm_compiled_function_get_loc_mapping(cfun);
 }
 
+bool MMObj::mm_function_loc_mapping_matches_ip(oop fun, bytecode* ip) {
+  assert( *(oop*) fun == _core_image->get_prime("Function") ||
+          *(oop*) fun == _core_image->get_prime("Context"));
+  oop cfun = mm_function_get_cfun(fun);
+  return mm_compiled_function_loc_mapping_matches_ip(cfun, ip);
+}
+
 
 bool MMObj::mm_compiled_function_is_ctor(oop cfun) {
   assert( *(oop*) cfun == _core_image->get_prime("CompiledFunction"));
@@ -630,6 +637,29 @@ oop MMObj::mm_compiled_function_get_loc_mapping(oop cfun) {
   return ((oop*)cfun)[25];
 }
 
+bool MMObj::mm_compiled_function_loc_mapping_matches_ip(oop cfun, bytecode* ip) {
+  assert( *(oop*) cfun == _core_image->get_prime("CompiledFunction"));
+
+  bytecode* base_ip = mm_compiled_function_get_code(cfun);
+  word idx = ip - base_ip;
+  // std::cerr << "MMOBJ IDX : " << idx << endl;
+
+  oop mapping = mm_compiled_function_get_loc_mapping(cfun);
+  std::map<oop, oop>::iterator it = mm_dictionary_begin(mapping);
+  std::map<oop, oop>::iterator end = mm_dictionary_end(mapping);
+  for ( ; it != end; it++) {
+    word b_offset = untag_small_int(it->first);
+    // std::cerr << "LOC_MATCHES_IP? -- " << b_offset << " " <<  idx << std::endl;
+    if (idx == b_offset) {
+      return true;
+    }
+    if (b_offset > idx) {
+      break;
+    }
+  }
+  // std::cerr << "LOC_MATCHES_IP? RET FALSE: " << idx << std::endl;
+  return false;
+}
 
 oop MMObj::mm_compiled_class_name(oop cclass) {
   assert( *(oop*) cclass == _core_image->get_prime("CompiledClass"));

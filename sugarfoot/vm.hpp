@@ -40,7 +40,8 @@ public:
 
   oop compile_fun(const char* text, oop vars, oop cmod, int*);
 
-  oop start_debugger(Process* target);
+  std::pair<Process*, oop> start_debugger(Process* target);
+
 private:
   void dump_prime_info();
   void dictionary_dump(oop dict);

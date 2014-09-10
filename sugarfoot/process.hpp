@@ -20,8 +20,9 @@ public:
 class Process {
   enum {
     INVALID_STATE,
-    RUNNING_STATE,
-    PAUSED_STATE
+    RUN_STATE,
+    STEP_INTO_STATE,
+    HALT_STATE
   };
 public:
   Process(VM*);
@@ -64,9 +65,11 @@ public:
   void raise(const char*, const char*);
   oop mm_exception(const char*, const char*);
 
-  void pause() { _state = PAUSED_STATE; };
+  void halt_and_debug();
   void step();
 private:
+  void pause() { _state = HALT_STATE; };
+
   void init();
 
   bool load_fun(oop, oop, oop, bool);
@@ -93,13 +96,15 @@ private:
 
   bool exception_has_handler(oop e, oop bp);
 
-  void tick();
+  void tick(bool = false);
 
   VM* _vm;
   MMObj* _mmobj;
 
   int _state;
   ProcessControl* _control;
+  std::pair<Process*, oop> _dbg_handler;
+
   oop _mp;
   oop _cp;
   oop _rp;
@@ -115,6 +120,7 @@ private:
   word* _stack;
 
   number _code_size;
+
 };
 
 #endif

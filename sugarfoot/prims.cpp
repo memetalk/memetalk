@@ -711,7 +711,7 @@ static int prim_compiled_function_get_text(Process* proc) {
 static int prim_compiled_function_loc_for_ip(Process* proc) {
   oop self =  proc->dp();
   if (proc->mmobj()->mm_compiled_function_is_prim(self)) {
-    std::cerr << "LOCINFO IS NULL" << std::endl;
+    debug() << "LOCINFO IS NULL" << endl;
     proc->stack_push(MM_NULL);
     return 0;
   }
@@ -719,15 +719,15 @@ static int prim_compiled_function_loc_for_ip(Process* proc) {
   bytecode* ip = (bytecode*) *((oop*) proc->fp() - 1);
   bytecode* base_ip = proc->mmobj()->mm_compiled_function_get_code(self);
   word idx = ip - base_ip;
-  std::cerr << "IDX : " << idx << endl;
+  // std::cerr << "IDX : " << idx << endl;
 
   oop mapping = proc->mmobj()->mm_compiled_function_get_loc_mapping(self);
   std::map<oop, oop>::iterator it = proc->mmobj()->mm_dictionary_begin(mapping);
   std::map<oop, oop>::iterator end = proc->mmobj()->mm_dictionary_end(mapping);
   oop the_lst = MM_NULL;
   for ( ; it != end; it++) {
-    number b_offset = untag_small_int(it->first);
-    std::cerr << " -- " << b_offset << " " <<  idx << std::endl;
+    word b_offset = untag_small_int(it->first);
+    // std::cerr << " -- " << b_offset << " " <<  idx << std::endl;
     if (b_offset == idx) {
       the_lst = it->second;
       break;
@@ -840,8 +840,7 @@ static int prim_test_catch_exception(Process* proc) {
 }
 
 static int prim_test_debug(Process* proc) {
-  proc->vm()->start_debugger(proc);
-  proc->pause();
+  proc->halt_and_debug();
   proc->stack_push(proc->rp());
   return 0;
 }

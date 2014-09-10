@@ -110,6 +110,7 @@ public:
   oop mm_function_get_text(oop cfun);
   oop mm_function_get_line_mapping(oop cfun);
   oop mm_function_get_loc_mapping(oop cfun);
+  bool mm_function_loc_mapping_matches_ip(oop, bytecode*);
 
   bytecode* mm_compiled_function_get_code(oop cfun);
   number mm_compiled_function_get_code_size(oop cfun);
@@ -130,6 +131,7 @@ public:
   oop mm_compiled_function_get_text(oop cfun);
   oop mm_compiled_function_get_line_mapping(oop cfun);
   oop mm_compiled_function_get_loc_mapping(oop cfun);
+  bool mm_compiled_function_loc_mapping_matches_ip(oop, bytecode*);
 
   oop mm_compiled_class_name(oop cclass);
   oop mm_compiled_class_super_name(oop cclass);

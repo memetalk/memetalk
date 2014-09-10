@@ -15,9 +15,9 @@
 #include <sstream>
 
 Process::Process(VM* vm)
-  : _vm(vm), _mmobj(vm->mmobj()), _control(new ProcessControl()) {
+  : _vm(vm), _mmobj(vm->mmobj()), _control(new ProcessControl()), _dbg_handler(NULL, MM_NULL) {
   init();
-  _state = RUNNING_STATE;
+  _state = RUN_STATE;
 }
 
 oop Process::run(oop recv, oop selector_sym) {
@@ -182,24 +182,24 @@ bool Process::load_fun(oop recv, oop drecv, oop fun, bool should_allocate) {
   push_frame(_mmobj->mm_function_get_num_params(fun),
              _mmobj->mm_function_get_num_locals_or_env(fun));
 
-  std::cerr << "line mapping: " << endl;
-  oop mapping = _mmobj->mm_function_get_line_mapping(fun);
-  std::map<oop, oop>::iterator it = _mmobj->mm_dictionary_begin(mapping);
-  std::map<oop, oop>::iterator end = _mmobj->mm_dictionary_end(mapping);
-  for ( ; it != end; it++) {
-    std::cerr << untag_small_int(it->first) << " => " << untag_small_int(it->second) << endl;
-  }
-  std::cerr << "loc mapping: " << endl;
-  mapping = _mmobj->mm_function_get_loc_mapping(fun);
-  it = _mmobj->mm_dictionary_begin(mapping);
-  end = _mmobj->mm_dictionary_end(mapping);
-  for ( ; it != end; it++) {
-    std::cerr << untag_small_int(it->first) << " => [" << _mmobj->mm_list_size(it->second) << "] " ;
-    for(int i = 0; i < _mmobj->mm_list_size(it->second); i++) {
-      std::cerr << " " << untag_small_int(_mmobj->mm_list_entry(it->second, i));
-    }
-    std::cerr << endl;
-  }
+  // std::cerr << "line mapping: " << " " << _mmobj->mm_string_cstr(_mmobj->mm_function_get_name(fun)) << endl;
+  // oop mapping = _mmobj->mm_function_get_line_mapping(fun);
+  // std::map<oop, oop>::iterator it = _mmobj->mm_dictionary_begin(mapping);
+  // std::map<oop, oop>::iterator end = _mmobj->mm_dictionary_end(mapping);
+  // for ( ; it != end; it++) {
+  //   std::cerr << untag_small_int(it->first) << " => " << untag_small_int(it->second) << endl;
+  // }
+  // std::cerr << "loc mapping: " << endl;
+  // mapping = _mmobj->mm_function_get_loc_mapping(fun);
+  // it = _mmobj->mm_dictionary_begin(mapping);
+  // end = _mmobj->mm_dictionary_end(mapping);
+  // for ( ; it != end; it++) {
+  //   std::cerr << untag_small_int(it->first) << " => [" << _mmobj->mm_list_size(it->second) << "] " ;
+  //   for(int i = 0; i < _mmobj->mm_list_size(it->second); i++) {
+  //     std::cerr << " " << untag_small_int(_mmobj->mm_list_entry(it->second, i));
+  //   }
+  //   std::cerr << endl;
+  // }
 
   if (_mmobj->mm_is_context(fun)) {
     _ep = _mmobj->mm_context_get_env(fun);
@@ -243,8 +243,7 @@ bool Process::load_fun(oop recv, oop drecv, oop fun, bool should_allocate) {
       debug() << "load_fun: prim returned: RAISED " << ex_oop << endl;
       pop_frame();
       if (_vm->running_online() && !exception_has_handler(ex_oop, _bp)) {
-        _vm->start_debugger(this);
-        pause();
+        halt_and_debug();
       }
       //we rely on compiler generating a pop instruction to bind ex_oop to the catch var
       stack_push(unwind_with_exception(ex_oop));
@@ -262,6 +261,7 @@ bool Process::load_fun(oop recv, oop drecv, oop fun, bool should_allocate) {
   _ip = _mmobj->mm_function_get_code(fun);
   // debug() << "first instruction " << decode_opcode(*_ip) << endl;
   _code_size = _mmobj->mm_function_get_code_size(fun);
+
   return true;
 }
 
@@ -380,8 +380,6 @@ void Process::fetch_cycle(void* stop_at_fp) {
     // debug() << "fp " << _fp << " stop " <<  stop_at_fp << " ip-start " <<  (_ip - start_ip)  << " codesize " <<  _code_size <<
     //   "ip " << _ip << std::endl;
 
-    tick();
-
     bytecode code = *_ip;
     if (_ip != 0) { // the bottommost frame has ip = 0
       _ip++; //this can't be done after dispatch, where an ip for a different fun may be set
@@ -389,28 +387,76 @@ void Process::fetch_cycle(void* stop_at_fp) {
     }
     int opcode = decode_opcode(code);
     int arg = decode_args(code);
-    // debug() << " [dispatching] " << opcode << endl;
+    // if (_state != RUN_STATE) {
+    //   // std::cerr << " [dispatching] " << opcode << endl;
+    // }
     dispatch(opcode, arg);
+    tick();
     // debug() << " [end of dispatch] " << opcode << endl;
   }
   debug() << "end fetch_cycle" << endl;
 }
 
-void Process::tick() {
-  switch(_state) {
-    case PAUSED_STATE:
-//      debug() << "process::tick: paused" << endl;
+void Process::tick(bool frame_changed) { //frame_changed: unwind/return and call/send pass true here
+  if (!_ip) return;
+
+  if (_state == STEP_INTO_STATE) {
+    //Do a _control->pause() on:
+    //   1) next cp's source expression; or
+    //   2) frame change (call, return or unwind).
+
+    // std::cerr << "tick:STEP state. Frame change? " << frame_changed
+              // << " next opcode: " <<  decode_opcode(*_ip) << endl;
+
+    bool hl_expr = _mmobj->mm_function_loc_mapping_matches_ip(_cp, _ip);
+
+    // std::cerr << " is on  HL-expr? " << hl_expr << endl;
+
+    assert(_dbg_handler.first != NULL && _dbg_handler.second != MM_NULL);
+
+    if (frame_changed) {
+      int exc;
+      oop retval = _dbg_handler.first->send_0(_dbg_handler.second, _vm->new_symbol("process_paused"), &exc);
+      check_and_print_exception(_dbg_handler.first, exc, retval);
+      // std::cerr << "tick: FRAME CHANGED" << endl;
+      _state = HALT_STATE;
       _control->pause();
-      break;
-    case RUNNING_STATE:
-//      debug() << "process::tick: resuming" << endl;
-      _control->resume();
-      break;
+    } else if (hl_expr) { //ip is beginning of high-level instruction?
+      int exc;
+      oop retval = _dbg_handler.first->send_0(_dbg_handler.second, _vm->new_symbol("process_paused"), &exc);
+      check_and_print_exception(_dbg_handler.first, exc, retval);
+      // std::cerr << "tick: REACHED NEXT HIGH-LEVEL EXPR" << endl;
+      _state = HALT_STATE;
+      _control->pause();
+    } else {
+      // std::cerr << "tick: IGNORED INSTR...will keep going" << endl;
+    }
+  } else if (_state == HALT_STATE) {
+    int exc;
+    oop retval = _dbg_handler.first->send_0(_dbg_handler.second, _vm->new_symbol("process_paused"), &exc);
+    check_and_print_exception(_dbg_handler.first, exc, retval);
+    // std::cerr << "tick:HALT state. " << " opcode: " <<  decode_opcode(*_ip) << endl;
+    _control->pause();
   }
 }
 
+//   if (_state == HALT_STATE /* || should_break()*/) {
+// //      debug() << "process::tick: paused" << endl;
+//     assert(_dbg_handler.first != NULL && _dbg_handler.second != MM_NULL);
+//     _state = HALT_STATE;
+//     int exc;
+//     oop retval = _dbg_handler.first->send_0(_dbg_handler.second, _vm->new_symbol("process_paused"), &exc);
+//     check_and_print_exception(_dbg_handler.first, exc, retval);
+//     _control->pause();
+//   } else if (_state == RUN_STATE) {
+// //      debug() << "process::tick: resuming" << endl;
+//       _control->resume();
+//   }
+///}
+
 void Process::step() {
-  debug() << "Process::step resuming ..." << endl;
+  // std::cerr << "Process::step resuming ..." << endl;
+  _state = STEP_INTO_STATE;
   _control->resume();
 }
 
@@ -750,7 +796,7 @@ bool Process::exception_has_handler(oop e, oop bp) {
 oop Process::unwind_with_exception(oop e) {
   debug() << "** unwind_with_exception e: " << e << " on cp: " << _cp << endl;
 
-  tick();
+  tick(true);
 
   if (_cp == NULL) {
     int exc;
@@ -835,4 +881,10 @@ oop Process::mm_exception(const char* ex_type_name, const char* msg) {
   assert(exc == 0);
   debug() << "mm_exception: returning ex: " << exobj << endl;
   return exobj;
+}
+
+void Process::halt_and_debug() {
+  // std::cerr << "Process::halt_and_debug" << endl;
+  _dbg_handler = _vm->start_debugger(this);
+  pause();
 }

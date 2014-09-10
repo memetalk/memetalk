@@ -743,9 +743,13 @@ class CompiledFunction(Entry):
 
         start_line = ast.start_line - self.start_line
         end_line = ast.end_line - self.start_line
-        for i in range(bpos, self.current_bytecode_pos()):
-            if i not in self.location_mapping:
-                self.location_mapping[i] = [start_line, ast.start_col, end_line, ast.end_col]
+
+        # print self.name, bpos, [start_line, ast.start_col, end_line, ast.end_col]
+        if bpos not in self.location_mapping:
+            self.location_mapping[bpos] = [start_line, ast.start_col, end_line, ast.end_col]
+        # for i in range(bpos, self.current_bytecode_pos()):
+        #     if i not in self.location_mapping:
+        #         self.location_mapping[i] = [start_line, ast.start_col, end_line, ast.end_col]
 
         self.line_mapping[start_line] = bpos
 
