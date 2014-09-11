@@ -349,8 +349,11 @@ end
 // temps
   class Process
     fields: self;
-  instance_method step: fun() {
-    <primitive "process_step">
+  instance_method stepInto: fun() {
+    <primitive "process_step_into">
+  }
+  instance_method stepOver: fun() {
+    <primitive "process_step_over">
   }
   instance_method cp: fun() {
     <primitive "process_cp">

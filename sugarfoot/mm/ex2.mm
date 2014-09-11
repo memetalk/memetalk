@@ -4,7 +4,6 @@
 
 g: fun() {
   //Exception.throw("test");
-  debug();
   return 99;
 }
 
@@ -23,7 +22,9 @@ f: fun() {
 
 
 main: fun() {
+  debug();
   f();
+  //bla
   var x = 10;
   io.print(x);
   x = x + 2;

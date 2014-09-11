@@ -11,14 +11,24 @@ init new: fun(proc) {
   this.setWindowTitle("Debugger");
 
   @process = proc;
-  this.resize(200,200);
-  var action = qt.QAction.new("Step", this);
+  this.resize(600,300);
+
+  var execMenu = this.menuBar().addMenu("Exec");
+
+  var action = qt.QAction.new("Step into", this);
   action.setShortcut("ctrl+s");
   action.connect("triggered", fun(_) {
-      this.step();
+    @process.stepInto();
   });
   action.setShortcutContext(0); //widget context
-  var execMenu = this.menuBar().addMenu("Exec");
+  execMenu.addAction(action);
+
+  action = qt.QAction.new("Step over", this);
+  action.setShortcut("ctrl+o");
+  action.connect("triggered", fun(_) {
+      @process.stepOver();
+  });
+  action.setShortcutContext(0); //widget context
   execMenu.addAction(action);
 
   var centralWidget = QWidget.new(this);
@@ -27,10 +37,6 @@ init new: fun(proc) {
   @editor = QsciScintilla.new(centralWidget);
   mainLayout.addWidget(@editor);
   @editor.setText(@process.cp().compiledFunction().text());
-}
-
-instance_method step: fun() {
-  @process.step();
 }
 
 instance_method process_paused: fun() { //this is called from the vm

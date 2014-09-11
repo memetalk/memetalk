@@ -107,10 +107,11 @@ public:
   oop mm_function_exception_frames(oop fun);
   oop mm_function_env_table(oop fun);
 
-  oop mm_function_get_text(oop cfun);
-  oop mm_function_get_line_mapping(oop cfun);
-  oop mm_function_get_loc_mapping(oop cfun);
-  bool mm_function_loc_mapping_matches_ip(oop, bytecode*);
+  oop mm_function_get_text(oop fun);
+  oop mm_function_get_line_mapping(oop fun);
+  oop mm_function_get_loc_mapping(oop fun);
+  bytecode* mm_function_next_expr(oop fun, bytecode* ip);
+  bytecode* mm_function_next_line_expr(oop fun, bytecode* ip);
 
   bytecode* mm_compiled_function_get_code(oop cfun);
   number mm_compiled_function_get_code_size(oop cfun);
@@ -132,6 +133,8 @@ public:
   oop mm_compiled_function_get_line_mapping(oop cfun);
   oop mm_compiled_function_get_loc_mapping(oop cfun);
   bool mm_compiled_function_loc_mapping_matches_ip(oop, bytecode*);
+  bytecode* mm_compiled_function_next_expr(oop cfun, bytecode* ip);
+  bytecode* mm_compiled_function_next_line_expr(oop cfun, bytecode* ip);
 
   oop mm_compiled_class_name(oop cclass);
   oop mm_compiled_class_super_name(oop cclass);

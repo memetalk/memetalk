@@ -3,6 +3,7 @@
 
 #include <string>
 #include <map>
+#include <list>
 
 #include "defs.hpp"
 
@@ -22,6 +23,7 @@ class Process {
     INVALID_STATE,
     RUN_STATE,
     STEP_INTO_STATE,
+    STEP_OVER_STATE,
     HALT_STATE
   };
 public:
@@ -66,7 +68,8 @@ public:
   oop mm_exception(const char*, const char*);
 
   void halt_and_debug();
-  void step();
+  void step_into();
+  void step_over();
 private:
   void pause() { _state = HALT_STATE; };
 
@@ -92,11 +95,14 @@ private:
   void handle_send(number);
   void handle_super_ctor_send(number);
   void handle_call(number);
+  void handle_return(oop);
   void basic_new_and_load(oop);
 
   bool exception_has_handler(oop e, oop bp);
 
-  void tick(bool = false);
+  void tick();
+  void maybe_tick_call();
+  void maybe_tick_return();
 
   VM* _vm;
   MMObj* _mmobj;
@@ -120,7 +126,8 @@ private:
   word* _stack;
 
   number _code_size;
-
+  std::list<bytecode*> _volatile_breakpoints;
+  oop _step_fp;
 };
 
 #endif

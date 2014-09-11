@@ -745,13 +745,13 @@ class CompiledFunction(Entry):
         end_line = ast.end_line - self.start_line
 
         # print self.name, bpos, [start_line, ast.start_col, end_line, ast.end_col]
-        if bpos not in self.location_mapping:
-            self.location_mapping[bpos] = [start_line, ast.start_col, end_line, ast.end_col]
+        # if bpos not in self.location_mapping:
+        self.location_mapping[bpos] = [start_line, ast.start_col, end_line, ast.end_col]
         # for i in range(bpos, self.current_bytecode_pos()):
         #     if i not in self.location_mapping:
         #         self.location_mapping[i] = [start_line, ast.start_col, end_line, ast.end_col]
 
-        self.line_mapping[start_line] = bpos
+        self.line_mapping[bpos] = start_line
 
     @emitter
     def emit_var_decl(self, _, name):

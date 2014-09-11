@@ -512,11 +512,18 @@ oop MMObj::mm_function_get_loc_mapping(oop fun) {
   return mm_compiled_function_get_loc_mapping(cfun);
 }
 
-bool MMObj::mm_function_loc_mapping_matches_ip(oop fun, bytecode* ip) {
+bytecode* MMObj::mm_function_next_expr(oop fun, bytecode* ip) {
   assert( *(oop*) fun == _core_image->get_prime("Function") ||
           *(oop*) fun == _core_image->get_prime("Context"));
   oop cfun = mm_function_get_cfun(fun);
-  return mm_compiled_function_loc_mapping_matches_ip(cfun, ip);
+  return mm_compiled_function_next_expr(cfun, ip);
+}
+
+bytecode* MMObj::mm_function_next_line_expr(oop fun, bytecode* ip) {
+  assert( *(oop*) fun == _core_image->get_prime("Function") ||
+          *(oop*) fun == _core_image->get_prime("Context"));
+  oop cfun = mm_function_get_cfun(fun);
+  return mm_compiled_function_next_line_expr(cfun, ip);
 }
 
 
@@ -637,29 +644,98 @@ oop MMObj::mm_compiled_function_get_loc_mapping(oop cfun) {
   return ((oop*)cfun)[25];
 }
 
-bool MMObj::mm_compiled_function_loc_mapping_matches_ip(oop cfun, bytecode* ip) {
+bytecode* MMObj::mm_compiled_function_next_expr(oop cfun, bytecode* ip) {
   assert( *(oop*) cfun == _core_image->get_prime("CompiledFunction"));
 
   bytecode* base_ip = mm_compiled_function_get_code(cfun);
   word idx = ip - base_ip;
-  // std::cerr << "MMOBJ IDX : " << idx << endl;
 
   oop mapping = mm_compiled_function_get_loc_mapping(cfun);
   std::map<oop, oop>::iterator it = mm_dictionary_begin(mapping);
   std::map<oop, oop>::iterator end = mm_dictionary_end(mapping);
+  word next_offset = INT_MAX;
   for ( ; it != end; it++) {
     word b_offset = untag_small_int(it->first);
-    // std::cerr << "LOC_MATCHES_IP? -- " << b_offset << " " <<  idx << std::endl;
-    if (idx == b_offset) {
-      return true;
-    }
-    if (b_offset > idx) {
-      break;
+    if ((idx < b_offset) && (next_offset > b_offset)) {
+      next_offset = b_offset;
     }
   }
-  // std::cerr << "LOC_MATCHES_IP? RET FALSE: " << idx << std::endl;
-  return false;
+  if (next_offset == INT_MAX) {
+    std::cerr << "WARNING: next_expr for " << idx << " is NULL" << endl;
+    return NULL;
+  } else {
+    return base_ip + next_offset;
+  }
 }
+
+bytecode* MMObj::mm_compiled_function_next_line_expr(oop cfun, bytecode* ip) {
+  assert( *(oop*) cfun == _core_image->get_prime("CompiledFunction"));
+
+  bytecode* base_ip = mm_compiled_function_get_code(cfun);
+  word idx = ip - base_ip;
+
+  oop mapping = mm_compiled_function_get_line_mapping(cfun);
+  std::map<oop, oop>::iterator it = mm_dictionary_begin(mapping);
+  std::map<oop, oop>::iterator end = mm_dictionary_end(mapping);
+  word current_line = 0;
+  for ( ; it != end; it++) {
+    word b_offset = untag_small_int(it->first);
+    word line = untag_small_int(it->second);
+    // std::cerr << " SEARCH CURR LINE "
+    //           << idx << " " << b_offset << " " << line << endl;
+    if ((idx >= b_offset) && (current_line < line)) {
+      // std::cerr << "GOT LINE " << line << endl;
+      current_line = line;
+    }
+  }
+
+  it = mm_dictionary_begin(mapping);
+  word next_line = INT_MAX;
+  word next_offset = 0;
+  for ( ; it != end; it++) {
+    word line = untag_small_int(it->second);
+    // std::cerr << "line: " << line << " " << current_line << " " << next_line << endl;
+    if (line > current_line && next_line > line) {
+      next_line = line;
+      next_offset = untag_small_int(it->first);
+    }
+  }
+
+  if (next_line == INT_MAX) {
+    std::cerr << "WARNING: next_line for " << idx << " is NULL" << endl;
+    return NULL;
+  } else {
+    // std::cerr << " CURR LINE " << current_line << " NEXT: " << next_line
+    //           << " offset: " << next_offset << endl;
+    return base_ip + next_offset;
+  }
+}
+
+// bool MMObj::mm_compiled_function_loc_mapping_matches_ip(oop cfun, bytecode* ip) {
+//   assert( *(oop*) cfun == _core_image->get_prime("CompiledFunction"));
+
+//   bytecode* base_ip = mm_compiled_function_get_code(cfun);
+//   word idx = ip - base_ip;
+//   // std::cerr << "MMOBJ IDX : " << idx << endl;
+
+//   oop mapping = mm_compiled_function_get_loc_mapping(cfun);
+//   std::map<oop, oop>::iterator it = mm_dictionary_begin(mapping);
+//   std::map<oop, oop>::iterator end = mm_dictionary_end(mapping);
+//   for ( ; it != end; it++) {
+//     word b_offset = untag_small_int(it->first);
+//     // std::cerr << "LOC_MATCHES_IP? -- " << b_offset << " " <<  idx << std::endl;
+//     if (idx == b_offset) {
+//       return true;
+//     }
+//     if (b_offset > idx) {
+//       break;
+//     }
+//   }
+//   // std::cerr << "LOC_MATCHES_IP? RET FALSE: " << idx << std::endl;
+//   return false;
+// }
+
+
 
 oop MMObj::mm_compiled_class_name(oop cclass) {
   assert( *(oop*) cclass == _core_image->get_prime("CompiledClass"));

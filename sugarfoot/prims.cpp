@@ -866,11 +866,21 @@ static int prim_test_debug(Process* proc) {
 //   return 0;
 // }
 
-static int prim_process_step(Process* proc) {
+static int prim_process_step_into(Process* proc) {
   oop oop_target_proc = proc->rp();
 
   Process* target_proc = (Process*) (((oop*)oop_target_proc)[2]);
-  target_proc->step();
+  target_proc->step_into();
+
+  proc->stack_push(proc->rp());
+  return 0;
+}
+
+static int prim_process_step_over(Process* proc) {
+  oop oop_target_proc = proc->rp();
+
+  Process* target_proc = (Process*) (((oop*)oop_target_proc)[2]);
+  target_proc->step_over();
 
   proc->stack_push(proc->rp());
   return 0;
@@ -979,7 +989,8 @@ void init_primitives(VM* vm) {
   vm->register_primitive("test_catch_exception", prim_test_catch_exception);
   vm->register_primitive("test_debug", prim_test_debug);
 
-  vm->register_primitive("process_step", prim_process_step);
+  vm->register_primitive("process_step_into", prim_process_step_into);
+  vm->register_primitive("process_step_over", prim_process_step_over);
   vm->register_primitive("process_cp", prim_process_cp);
   vm->register_primitive("process_ip", prim_process_ip);
 

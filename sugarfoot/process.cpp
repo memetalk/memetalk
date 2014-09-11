@@ -18,6 +18,7 @@ Process::Process(VM* vm)
   : _vm(vm), _mmobj(vm->mmobj()), _control(new ProcessControl()), _dbg_handler(NULL, MM_NULL) {
   init();
   _state = RUN_STATE;
+  _step_fp = MM_NULL;
 }
 
 oop Process::run(oop recv, oop selector_sym) {
@@ -261,7 +262,7 @@ bool Process::load_fun(oop recv, oop drecv, oop fun, bool should_allocate) {
   _ip = _mmobj->mm_function_get_code(fun);
   // debug() << "first instruction " << decode_opcode(*_ip) << endl;
   _code_size = _mmobj->mm_function_get_code_size(fun);
-
+  maybe_tick_call();
   return true;
 }
 
@@ -381,82 +382,102 @@ void Process::fetch_cycle(void* stop_at_fp) {
     //   "ip " << _ip << std::endl;
 
     bytecode code = *_ip;
-    if (_ip != 0) { // the bottommost frame has ip = 0
+
+    tick();
+
+    // if (_ip != 0) { // the bottommost frame has ip = 0
       _ip++; //this can't be done after dispatch, where an ip for a different fun may be set
              //(thus, doing so would skip the first instruction)
-    }
+    // }
+
     int opcode = decode_opcode(code);
     int arg = decode_args(code);
     // if (_state != RUN_STATE) {
-    //   // std::cerr << " [dispatching] " << opcode << endl;
+    //   char* name = _mmobj->mm_string_cstr(_mmobj->mm_function_get_name(_cp));
+    //   std::cerr << " [dispatching] " << name << " " << (_ip-1) << " " << opcode << endl;
     // }
     dispatch(opcode, arg);
-    tick();
     // debug() << " [end of dispatch] " << opcode << endl;
   }
   debug() << "end fetch_cycle" << endl;
 }
 
-void Process::tick(bool frame_changed) { //frame_changed: unwind/return and call/send pass true here
-  if (!_ip) return;
-
+void Process::maybe_tick_return() {
   if (_state == STEP_INTO_STATE) {
-    //Do a _control->pause() on:
-    //   1) next cp's source expression; or
-    //   2) frame change (call, return or unwind).
+    _volatile_breakpoints.push_back(_ip);
+  }
+  // std::cerr << "maybe_tick_return: " << _step_fp << " " << _fp << endl;
+}
 
-    // std::cerr << "tick:STEP state. Frame change? " << frame_changed
-              // << " next opcode: " <<  decode_opcode(*_ip) << endl;
-
-    bool hl_expr = _mmobj->mm_function_loc_mapping_matches_ip(_cp, _ip);
-
-    // std::cerr << " is on  HL-expr? " << hl_expr << endl;
-
-    assert(_dbg_handler.first != NULL && _dbg_handler.second != MM_NULL);
-
-    if (frame_changed) {
-      int exc;
-      oop retval = _dbg_handler.first->send_0(_dbg_handler.second, _vm->new_symbol("process_paused"), &exc);
-      check_and_print_exception(_dbg_handler.first, exc, retval);
-      // std::cerr << "tick: FRAME CHANGED" << endl;
-      _state = HALT_STATE;
-      _control->pause();
-    } else if (hl_expr) { //ip is beginning of high-level instruction?
-      int exc;
-      oop retval = _dbg_handler.first->send_0(_dbg_handler.second, _vm->new_symbol("process_paused"), &exc);
-      check_and_print_exception(_dbg_handler.first, exc, retval);
-      // std::cerr << "tick: REACHED NEXT HIGH-LEVEL EXPR" << endl;
-      _state = HALT_STATE;
-      _control->pause();
-    } else {
-      // std::cerr << "tick: IGNORED INSTR...will keep going" << endl;
-    }
-  } else if (_state == HALT_STATE) {
-    int exc;
-    oop retval = _dbg_handler.first->send_0(_dbg_handler.second, _vm->new_symbol("process_paused"), &exc);
-    check_and_print_exception(_dbg_handler.first, exc, retval);
-    // std::cerr << "tick:HALT state. " << " opcode: " <<  decode_opcode(*_ip) << endl;
-    _control->pause();
+void Process::maybe_tick_call() {
+  if (_state == STEP_INTO_STATE) {
+    _volatile_breakpoints.push_back(_ip);
   }
 }
 
-//   if (_state == HALT_STATE /* || should_break()*/) {
-// //      debug() << "process::tick: paused" << endl;
-//     assert(_dbg_handler.first != NULL && _dbg_handler.second != MM_NULL);
-//     _state = HALT_STATE;
-//     int exc;
-//     oop retval = _dbg_handler.first->send_0(_dbg_handler.second, _vm->new_symbol("process_paused"), &exc);
-//     check_and_print_exception(_dbg_handler.first, exc, retval);
-//     _control->pause();
-//   } else if (_state == RUN_STATE) {
-// //      debug() << "process::tick: resuming" << endl;
-//       _control->resume();
-//   }
-///}
+void Process::tick() {
+  if (!_ip) return;
 
-void Process::step() {
-  // std::cerr << "Process::step resuming ..." << endl;
+  if (_state == RUN_STATE || _state == STEP_INTO_STATE || _state == STEP_OVER_STATE) {
+    for(std::list<bytecode*>::iterator it = _volatile_breakpoints.begin(); it != _volatile_breakpoints.end(); it++) {
+      // std::cerr << "tick: looking for breakpoint "
+      //           << *it << " =?= " << _ip
+      //           << " -- opcode: " << decode_opcode(*_ip) << endl;
+      if (*it == _ip) {
+        // std::cerr << "BREAK on "  << _ip << " " << decode_opcode(*_ip) << endl;
+        _volatile_breakpoints.erase(it);
+        goto do_pause;
+      }
+    }
+    if (_step_fp == _fp) {
+      // std::cerr << "BREAK on FP"  << _fp << " " << _ip << " " << decode_opcode(*_ip) << endl;
+      goto do_pause;
+    }
+  } else if (_state == HALT_STATE) {
+    // std::cerr << "tick:HALT state. goto pause " << endl;
+    goto do_pause;
+  }
+  return;
+
+  do_pause:
+    // std::cerr << "tick: do_pause " << endl;
+    int exc;
+    oop retval = _dbg_handler.first->send_0(_dbg_handler.second,
+                                            _vm->new_symbol("process_paused"), &exc);
+    check_and_print_exception(_dbg_handler.first, exc, retval);
+    // std::cerr << "tick:HALT "
+    //           << _mmobj->mm_string_cstr(_mmobj->mm_function_get_name(_cp))
+    //           << " next opcode" <<  decode_opcode(*_ip) << endl;
+    _state = HALT_STATE;
+    _volatile_breakpoints.clear();
+    _step_fp = MM_NULL;
+    _control->pause();
+    // std::cerr << "Process::tick: resuming..." << endl;
+}
+
+void Process::step_into() {
+  // std::cerr << "Process::step_into..." << endl;
+  bytecode* next = _mmobj->mm_function_next_expr(_cp, _ip);
+  if (next) {
+    // std::cerr << "step_into: BP on next op: " << next << " "
+    //           << decode_opcode(*next) << endl;
+    _volatile_breakpoints.push_back(next);
+  }
   _state = STEP_INTO_STATE;
+  _control->resume();
+}
+
+void Process::step_over() {
+  // std::cerr << "Process::step_over resuming ..." << endl;
+  bytecode* next = _mmobj->mm_function_next_line_expr(_cp, _ip);
+  if (next) {
+    // std::cerr << "step_over: BP on next op: " << next << " "
+    //           << decode_opcode(*next) << endl;
+    _volatile_breakpoints.push_back(next);
+  }
+  _step_fp = *((oop*)_fp + 1); //previous frame
+  // std::cerr  << "ste_over" << _step_fp << " " << *((oop*)_bp - 6) << std::endl;
+  _state = STEP_OVER_STATE;
   _control->resume();
 }
 
@@ -548,6 +569,11 @@ void Process::handle_call(number num_args) {
 
 }
 
+void Process::handle_return(oop val) {
+  unload_fun_and_return(val);
+  maybe_tick_return();
+}
+
 void Process::dispatch(int opcode, int arg) {
     // debug() << " executing " << opcode << " " << arg << endl;
     oop val;
@@ -601,15 +627,15 @@ void Process::dispatch(int opcode, int arg) {
       case RETURN_TOP:
         val = stack_pop();
         debug() << "RETURN_TOP " << arg << " " << val << endl;
-        unload_fun_and_return(val);
+        handle_return(val);
         break;
       case RETURN_THIS:
         if (_ep == NULL) {
           debug() << "RETURN_THIS " << get_rp() << endl;
-          unload_fun_and_return(get_rp());
+          handle_return(get_rp());
         } else {
           debug() << "RETURN_THIS [env] " << arg << " " << ((oop*)_ep)[0] << endl;
-          unload_fun_and_return(((oop*)_ep)[0]);
+          handle_return(((oop*)_ep)[0]);
         }
         break;
       case POP:
@@ -796,7 +822,7 @@ bool Process::exception_has_handler(oop e, oop bp) {
 oop Process::unwind_with_exception(oop e) {
   debug() << "** unwind_with_exception e: " << e << " on cp: " << _cp << endl;
 
-  tick(true);
+  maybe_tick_return();
 
   if (_cp == NULL) {
     int exc;
