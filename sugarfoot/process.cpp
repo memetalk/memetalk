@@ -161,9 +161,9 @@ void Process::setup_ep(oop fun, oop recv, oop drecv) {
 void Process::copy_params_to_env(number params, number env_offset) {
   debug() << "Process::copy_params_to_env " << params << " " << env_offset << endl;
 
-  for (int i = 0; i < params; i++) {
-    debug() << "ep[" << i+2+env_offset << "] = " << * (oop*)(_fp - (i+1)) << endl;
-    ((oop*)_ep)[i+2+env_offset] = * (oop*)(_fp - (i+1));
+  for (int i = 0, j = params - 1; i < params; i++, j--) {
+    debug() << "ep[" << j+2+env_offset << "] = " << * (oop*)(_fp - (i+1)) << endl;
+    ((oop*)_ep)[j+2+env_offset] = * (oop*)(_fp - (i+1));
   }
 }
 
