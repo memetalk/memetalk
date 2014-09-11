@@ -24,6 +24,7 @@ class Process {
     RUN_STATE,
     STEP_INTO_STATE,
     STEP_OVER_STATE,
+    STEP_OUT_STATE,
     HALT_STATE
   };
 public:
@@ -70,6 +71,8 @@ public:
   void halt_and_debug();
   void step_into();
   void step_over();
+  void step_over_line();
+  void step_out();
 private:
   void pause() { _state = HALT_STATE; };
 

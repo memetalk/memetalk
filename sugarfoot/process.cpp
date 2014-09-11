@@ -430,7 +430,12 @@ void Process::tick() {
       }
     }
     if (_step_fp == _fp) {
-      // std::cerr << "BREAK on FP"  << _fp << " " << _ip << " " << decode_opcode(*_ip) << endl;
+      // std::cerr << "BREAK on FP "  << _fp << " " << _ip << " " << decode_opcode(*_ip) << endl;
+      goto do_pause;
+    }
+  } else if (_state == STEP_OUT_STATE) {
+    if (_step_fp == _fp) {
+      // std::cerr << "BREAK on FP "  << _fp << " " << _ip << " " << decode_opcode(*_ip) << endl;
       goto do_pause;
     }
   } else if (_state == HALT_STATE) {
@@ -469,15 +474,37 @@ void Process::step_into() {
 
 void Process::step_over() {
   // std::cerr << "Process::step_over resuming ..." << endl;
-  bytecode* next = _mmobj->mm_function_next_line_expr(_cp, _ip);
+  bytecode* next = _mmobj->mm_function_next_expr(_cp, _ip);
   if (next) {
     // std::cerr << "step_over: BP on next op: " << next << " "
     //           << decode_opcode(*next) << endl;
     _volatile_breakpoints.push_back(next);
   }
-  _step_fp = *((oop*)_fp + 1); //previous frame
-  // std::cerr  << "ste_over" << _step_fp << " " << *((oop*)_bp - 6) << std::endl;
+  _step_fp = *((oop*)_bp - 6); //previous frame
+  // std::cerr  << "ste_over will br on: " << _step_fp << " " << std::endl;
   _state = STEP_OVER_STATE;
+  _control->resume();
+}
+
+void Process::step_over_line() {
+  // std::cerr << "Process::step_over_line resuming ..." << endl;
+  bytecode* next = _mmobj->mm_function_next_line_expr(_cp, _ip);
+  if (next) {
+    // std::cerr << "step_over_line: BP on next op: " << next << " "
+    //           << decode_opcode(*next) << endl;
+    _volatile_breakpoints.push_back(next);
+  }
+  _step_fp = *((oop*)_bp - 6); //previous frame
+  // std::cerr  << "ste_over_line will br on FP: " << _step_fp << " " << *((oop*)_bp - 6) << std::endl;
+  _state = STEP_OVER_STATE;
+  _control->resume();
+}
+
+void Process::step_out() {
+  // std::cerr << "Process::step_out resuming ..." << endl;
+  _step_fp = *((oop*)_bp - 6); //previous frame
+  // std::cerr  << "ste_out will br on FP: " << _step_fp << " " << std::endl;
+  _state = STEP_OUT_STATE;
   _control->resume();
 }
 

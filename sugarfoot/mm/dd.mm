@@ -23,10 +23,26 @@ init new: fun(proc) {
   action.setShortcutContext(0); //widget context
   execMenu.addAction(action);
 
+  action = qt.QAction.new("Step over Line", this);
+  action.setShortcut("ctrl+p");
+  action.connect("triggered", fun(_) {
+      @process.stepOverLine();
+  });
+  action.setShortcutContext(0); //widget context
+  execMenu.addAction(action);
+
   action = qt.QAction.new("Step over", this);
   action.setShortcut("ctrl+o");
   action.connect("triggered", fun(_) {
       @process.stepOver();
+  });
+  action.setShortcutContext(0); //widget context
+  execMenu.addAction(action);
+
+  action = qt.QAction.new("Step out", this);
+  action.setShortcut("ctrl+u");
+  action.connect("triggered", fun(_) {
+      @process.stepOut();
   });
   action.setShortcutContext(0); //widget context
   execMenu.addAction(action);

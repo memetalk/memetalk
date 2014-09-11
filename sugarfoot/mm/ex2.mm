@@ -4,7 +4,8 @@
 
 g: fun() {
   //Exception.throw("test");
-  return 99;
+  var x = 1;
+  return x;
 }
 
 bar: fun() {
@@ -17,7 +18,8 @@ foo: fun() {
 
 f: fun() {
   //return foo();
-  return g() + 1;
+  var z = 2;
+  return g() + 3;
 }
 
 

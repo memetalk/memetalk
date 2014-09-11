@@ -355,6 +355,12 @@ end
   instance_method stepOver: fun() {
     <primitive "process_step_over">
   }
+  instance_method stepOverLine: fun() {
+    <primitive "process_step_over_line">
+  }
+  instance_method stepOut: fun() {
+    <primitive "process_step_out">
+  }
   instance_method cp: fun() {
     <primitive "process_cp">
   }
