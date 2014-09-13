@@ -15,7 +15,7 @@
 #include <sstream>
 
 Process::Process(VM* vm)
-  : _vm(vm), _mmobj(vm->mmobj()), _control(new ProcessControl()), _dbg_handler(NULL, MM_NULL) {
+  :   _is_dbg(false), _vm(vm), _mmobj(vm->mmobj()), _control(new ProcessControl()), _dbg_handler(NULL, MM_NULL) {
   init();
   _state = RUN_STATE;
   _step_fp = MM_NULL;
@@ -32,10 +32,10 @@ oop Process::run(oop recv, oop selector_sym) {
 void Process::init() {
   _stack = (word*) malloc(DEFAULT_STACK_SIZE);
   // debug() << " Initial stack " << _stack << endl;
-
+  _stack_depth = 0;
   _state = INVALID_STATE;
   _sp = _stack; //stack
-  _fp = _stack; //frame
+  _fp = _stack; //frame ??
   _bp = NULL; //base
   _ip = NULL; //instruction
   _mp = NULL; //module
@@ -49,6 +49,7 @@ void Process::push_frame(number arity, number num_locals) {
   // debug() << "++ Push frame:  " << _sp << " num locals " << num_locals << endl;
 
   // oop curr_sp = _sp;
+  _stack_depth++;
 
   stack_push(arity);
 
@@ -61,8 +62,8 @@ void Process::push_frame(number arity, number num_locals) {
   }
 
   debug() << "push_frame arity: " << arity << " num locals: " << num_locals
-          << " fp: " << (oop) fp << " cp: " << _cp << " ip: " << _ip << " ep: " << _ep
-          << " rp: " << _rp << " dp: " << _dp << " mp: " << _mp << endl;
+            << " fp: " << (oop) fp << " cp: " << _cp << " ip: " << _ip << " ep: " << _ep
+            << " rp: " << _rp << " dp: " << _dp << " mp: " << _mp << endl;
 
   stack_push(fp);
   stack_push(_cp);
@@ -72,6 +73,20 @@ void Process::push_frame(number arity, number num_locals) {
   stack_push(_dp);
   stack_push(_bp);
   _bp = _sp;
+
+  // //logging
+  // if (!_is_dbg) {
+  //   if (_cp) {
+  //     oop name = _mmobj->mm_function_get_name(_cp);
+  //     char* str_name = _mmobj->mm_string_cstr(name);
+  //     std::cerr << "FRAME: " << str_name << " FP" << _fp << " BP:" << _bp
+  //               << " CP: " << _cp << " IP: " << _ip << endl;
+  //   } else {
+  //     std::cerr << "FRAME FP:" << _fp << " BP:" << _bp
+  //               << " CP: " << _cp << " IP: " << _ip << endl;
+  //   }
+  // }
+
   // debug() << " push frame SP is: " << _sp << endl;
 }
 
@@ -80,6 +95,8 @@ void Process::pop_frame() {
   word fp = (word) _fp;
 
   // debug() << "pop_frame begin SP: " << _sp << endl;
+
+  _stack_depth--;
 
   _sp = _bp; //restore sp, ignoring frame data. push_frame/pop_frame are always in sync.
 
@@ -940,4 +957,23 @@ void Process::halt_and_debug() {
   // std::cerr << "Process::halt_and_debug" << endl;
   _dbg_handler = _vm->start_debugger(this);
   pause();
+}
+
+
+unsigned int Process::stack_depth() {
+  return  _stack_depth;
+}
+
+oop Process::bp_at(unsigned int idx) { //backwards 0 is current
+  if (idx == 0) {
+    // std::cerr << "Process::bp_at BP[" << idx << "] ret&: " << &_bp << endl;
+    return (oop) &_bp;
+  }
+  oop bp = _bp;
+  for (unsigned int i = 0; i < idx-1; i++) {
+    bp = *(oop*) bp;
+    // std::cerr << "Process::bp_at " << i << " = " << bp << endl;
+  }
+  // std::cerr << "Process::bp_at BP[" << idx << "] ret: " << bp << endl;
+  return bp;
 }

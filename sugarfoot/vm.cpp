@@ -81,6 +81,7 @@ int VM::start() {
 std::pair<Process*, oop> VM::start_debugger(Process* target) {
   oop imod;
   Process* dbg_proc = new Process(this);
+  dbg_proc->is_debugger(true); //to help filter logs
   try {
     imod = instantiate_module(dbg_proc, "idez", _mmobj->mm_list_new());
   } catch(mm_rewind e) {
@@ -124,7 +125,7 @@ prim_function_t VM::get_primitive(std::string name) {
   return _primitives[name];
 }
 
-oop VM::instantiate_module(Process* proc, char* name_or_path, oop module_args_list) {
+oop VM::instantiate_module(Process* proc, const char* name_or_path, oop module_args_list) {
   MMCImage* mmc = new MMCImage(proc, _core_image, name_or_path);
   mmc->load();
   return mmc->instantiate_module(module_args_list);

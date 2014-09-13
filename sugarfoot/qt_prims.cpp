@@ -241,7 +241,7 @@ QScriptValue mm_handle(QScriptContext *ctx, QScriptEngine *engine) {
     } else if (arg.isNull()) {
       proc->mmobj()->mm_list_append(mm_args, MM_NULL);
     } else if (arg.isNumber()) {
-      bail("TODO: arg.toNumber");
+      proc->mmobj()->mm_list_append(mm_args, tag_small_int(arg.toVariant().toInt()));
     } else if (arg.isQObject()) {
       bail("TODO: arg.toQObject");
     } else {
@@ -360,7 +360,7 @@ static int prim_qaction_connect(Process* proc) {
   QScriptValue bridge = globalObject.property("qt_bind_connect");
   bridge.call(globalObject, args);
   if (engine->hasUncaughtException()) {
-    debug() << "QT: exception: " << qPrintable(engine->uncaughtException().toString()) << endl;
+    std::cerr << "QT: exception: " << qPrintable(engine->uncaughtException().toString()) << endl;
     bail();
   }
   proc->stack_push(proc->rp());
@@ -416,6 +416,8 @@ static int prim_qt_qcombobox_new(Process* proc) {
 static int prim_qt_qcombobox_add_item(Process* proc) {
   oop data_self =  proc->dp();
   oop item = *((oop*) proc->fp() - 1);
+
+  // std::cerr << "add ITEM " << proc->mmobj()->mm_string_cstr(item) << endl;
 
   QComboBox* qtobj = (QComboBox*) get_qt_instance(proc->mmobj(), data_self);
   qtobj->addItem(proc->mmobj()->mm_string_cstr(item));

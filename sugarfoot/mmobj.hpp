@@ -13,6 +13,9 @@ public:
   MMObj(CoreImage*);
 
   oop mm_process_new(Process* proc);
+  Process* mm_process_get_proc(oop);
+  oop mm_frame_new(oop);
+  oop mm_frame_get_bp(oop);
 
   oop mm_new(oop vt, oop delegate, number payload);
   oop alloc_instance(oop klass);

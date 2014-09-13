@@ -9,7 +9,7 @@ g: fun() {
 }
 
 bar: fun() {
-  return g();
+  return f();
 }
 
 foo: fun() {
@@ -25,8 +25,8 @@ f: fun() {
 
 main: fun() {
   debug();
-  f();
-  //bla
+  //f();
+  foo();
   var x = 10;
   io.print(x);
   x = x + 2;

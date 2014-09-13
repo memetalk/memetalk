@@ -30,7 +30,7 @@ public:
 
   prim_function_t get_primitive(std::string);
 
-  oop instantiate_module(Process*, char* name, oop module_args_list);
+  oop instantiate_module(Process*, const char* name, oop module_args_list);
 
   oop get_prime(const char* name);
 

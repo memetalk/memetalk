@@ -173,6 +173,32 @@ static int prim_number_lt(Process* proc) {
   return 0;
 }
 
+static int prim_number_gt(Process* proc) {
+  oop self =  proc->dp();
+  oop other = *((oop*) proc->fp() - 1);
+
+  assert(is_small_int(self));
+  assert(is_small_int(other));
+
+  oop res =  (oop) (untag_small_int(self) > untag_small_int(other));
+  debug() << " PRIM< " << untag_small_int(self) << " > " << untag_small_int(other) << " = " << (untag_small_int(self) < untag_small_int(other)) << endl;
+  proc->stack_push((oop)res);
+  return 0;
+}
+
+static int prim_number_gteq(Process* proc) {
+  oop self =  proc->dp();
+  oop other = *((oop*) proc->fp() - 1);
+
+  assert(is_small_int(self));
+  assert(is_small_int(other));
+
+  oop res =  (oop) (untag_small_int(self) >= untag_small_int(other));
+  debug() << " PRIM< " << untag_small_int(self) << " >= " << untag_small_int(other) << " = " << (untag_small_int(self) < untag_small_int(other)) << endl;
+  proc->stack_push((oop)res);
+  return 0;
+}
+
 static int prim_number_to_string(Process* proc) {
   oop self =  proc->dp();
   std::stringstream s;
@@ -250,6 +276,36 @@ static int prim_list_each(Process* proc) {
     debug() << "list each[" << i << "] fun returned " << val << endl;
   }
   proc->stack_push(self);
+  return 0;
+}
+
+static int prim_list_map(Process* proc) {
+  oop self =  proc->dp();
+  oop fun = *((oop*) proc->fp() - 1);
+
+  number size = proc->mmobj()->mm_list_size(self);
+  oop ret = proc->mmobj()->mm_list_new();
+  for (int i = 0; i < size; i++) {
+    oop next = proc->mmobj()->mm_list_entry(self, i);
+    debug() << "list each[" << i << "] = " << next << endl;
+    proc->stack_push(next);
+    int exc;
+    oop val = proc->do_call(fun, &exc);
+    if (exc != 0) {
+      debug() << "prim_list_each raised" << endl;
+      proc->stack_push(val);
+      return PRIM_RAISED;
+    }
+    debug() << "list map[" << i << "] fun returned " << val << endl;
+    proc->mmobj()->mm_list_append(ret, val);
+  }
+  proc->stack_push(ret);
+  return 0;
+}
+
+static int prim_list_size(Process* proc) {
+  oop self =  proc->dp();
+  proc->stack_push(tag_small_int(proc->mmobj()->mm_list_size(self)));
   return 0;
 }
 
@@ -923,6 +979,45 @@ static int prim_process_ip(Process* proc) {
   return 0;
 }
 
+static int prim_process_frames(Process* proc) {
+  oop oop_target_proc = proc->rp();
+
+  Process* target_proc = proc->mmobj()->mm_process_get_proc(oop_target_proc);
+
+  oop frames = proc->mmobj()->mm_list_new();
+  // std::cerr << "prim_process_frames: stack deph: " << target_proc->stack_depth() << endl;
+  for (unsigned int i = 0; i < target_proc->stack_depth(); i++) {
+    // std::cerr << "getting bp " << endl;
+    oop bp = target_proc->bp_at(i);
+    // std::cerr << "prim_process_frames bp: " << bp << endl;
+    oop frame = proc->mmobj()->mm_frame_new(bp);
+    // std::cerr << "appending frame to list " << endl;
+    proc->mmobj()->mm_list_append(frames, frame);
+  }
+  proc->stack_push(frames);
+  return 0;
+}
+
+static int prim_frame_ip(Process* proc) {
+  oop frame = proc->dp();
+  oop bp =   proc->mmobj()->mm_frame_get_bp(frame);
+  // std::cerr << "prim_frame_ip bp: " << bp << endl;
+  oop ip = *((oop*)(bp - 4));
+  // std::cerr << "prim_frame_ip bp: " << bp << " has ip: " << ip << endl;
+  proc->stack_push(ip);
+  return 0;
+}
+
+static int prim_frame_cp(Process* proc) {
+  oop frame = proc->dp();
+  oop bp =   proc->mmobj()->mm_frame_get_bp(frame);
+  // std::cerr << "prim_frame_cp bp: " << bp << endl;
+  oop cp = *((oop*)(bp - 5));
+  // std::cerr << "prim_frame_cp bp: " << bp << " has cp: " << cp << endl;
+  proc->stack_push(cp);
+  return 0;
+}
+
 
 static int prim_modules_path(Process* proc) {
   const char* mmpath = getenv("MEME_PATH");
@@ -944,6 +1039,8 @@ void init_primitives(VM* vm) {
   vm->register_primitive("number_sub", prim_number_sub);
   vm->register_primitive("number_mul", prim_number_mul);
   vm->register_primitive("number_lt", prim_number_lt);
+  vm->register_primitive("number_gt", prim_number_gt);
+  vm->register_primitive("number_gteq", prim_number_gteq);
   vm->register_primitive("number_to_string", prim_number_to_string);
   vm->register_primitive("number_to_source", prim_number_to_source);
 
@@ -965,9 +1062,11 @@ void init_primitives(VM* vm) {
   vm->register_primitive("list_prepend", prim_list_prepend);
   vm->register_primitive("list_index", prim_list_index);
   vm->register_primitive("list_each", prim_list_each);
+  vm->register_primitive("list_map", prim_list_map);
   vm->register_primitive("list_has", prim_list_has);
   vm->register_primitive("list_to_string", prim_list_to_string);
   vm->register_primitive("list_to_source", prim_list_to_source);
+  vm->register_primitive("list_size", prim_list_size);
 
   vm->register_primitive("dictionary_new", prim_dictionary_new);
   vm->register_primitive("dictionary_set", prim_dictionary_set);
@@ -1016,6 +1115,10 @@ void init_primitives(VM* vm) {
   vm->register_primitive("process_step_out", prim_process_step_out);
   vm->register_primitive("process_cp", prim_process_cp);
   vm->register_primitive("process_ip", prim_process_ip);
+  vm->register_primitive("process_frames", prim_process_frames);
+
+  vm->register_primitive("frame_ip", prim_frame_ip);
+  vm->register_primitive("frame_cp", prim_frame_cp);
 
   vm->register_primitive("get_compiled_module", prim_get_compiled_module);
 

@@ -19,6 +19,22 @@ oop MMObj::mm_process_new(Process* proc) {
   return obj;
 }
 
+Process* MMObj::mm_process_get_proc(oop proc) {
+  assert( *(oop*) proc == _core_image->get_prime("Process"));
+  return (Process*) (((oop*)proc)[2]);
+}
+
+oop MMObj::mm_frame_new(oop bp) {
+  oop obj = alloc_instance(_core_image->get_prime("Frame"));
+  ((oop*)obj)[2] = bp;
+  return obj;
+}
+
+oop MMObj::mm_frame_get_bp(oop frame) {
+  assert( *(oop*) frame == _core_image->get_prime("Frame"));
+  return ((oop*)frame)[2];
+}
+
 oop MMObj::mm_module_new(int num_fields, oop cmod, oop delegate) {
   oop imodule = (oop) malloc(sizeof(word) * (4 + num_fields)); //4: vt, delegate, dict, cmod
 

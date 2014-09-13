@@ -30,8 +30,9 @@ const char* CoreImage::PRIMES_NAMES[] = {"Behavior",
                                          "ArityError",
                                          "CompileError",
                                          "Process",
+                                         "Frame",
                                          "Null"};
-int CoreImage::TOTAL_PRIMES = 21;
+int CoreImage::TOTAL_PRIMES = 22;
 
 
 CoreImage::CoreImage(VM* vm, const char* filepath)
@@ -96,6 +97,9 @@ void CoreImage::load_prime_objects_table() {
 
 oop CoreImage::get_prime(const char* name) {
   // debug() << "getting prime [" << name << "]" << endl;
+  if (!is_prime(name)) {
+    std::cerr << "ERROR: we will crash: " << name << " is not prime" << endl;
+  }
   return _primes.at(name);
 }
 

@@ -73,6 +73,12 @@ public:
   void step_over();
   void step_over_line();
   void step_out();
+
+  word* stack() { return _stack; };
+  unsigned int stack_depth();
+  oop bp_at(unsigned int);
+
+  void is_debugger(bool t) { _is_dbg = t; }; //to help filter logs
 private:
   void pause() { _state = HALT_STATE; };
 
@@ -107,6 +113,7 @@ private:
   void maybe_tick_call();
   void maybe_tick_return();
 
+  bool _is_dbg;
   VM* _vm;
   MMObj* _mmobj;
 
@@ -114,20 +121,21 @@ private:
   ProcessControl* _control;
   std::pair<Process*, oop> _dbg_handler;
 
-  oop _mp;
+  //this order is important: it reflects the order of registers
+  //in the stack, and is used by bp_at()
+  word* _fp;
   oop _cp;
+  bytecode* _ip;
+  oop _ep;
   oop _rp;
   oop _dp;
-  oop _ep;
   oop _bp;
-
-  word* _fp;
+  //
+  oop _mp;
   word* _sp;
 
-  bytecode* _ip;
-
   word* _stack;
-
+  unsigned int _stack_depth;
   number _code_size;
   std::list<bytecode*> _volatile_breakpoints;
   oop _step_fp;

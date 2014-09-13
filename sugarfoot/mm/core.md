@@ -81,6 +81,12 @@
   end
 
   class CompiledFunction
+   fields: name, params, is_ctor, is_prim, prim_name, accessor_flags,
+           accessor_field, owner, params, has_env, is_top_level,
+           outer_cfun, storage_size, env_offset, lit_frame_size,
+           literal_frame_addr, bytecode_size, bytecode_addr,
+           exception_frame_addr, env_table, text, line_mappings,
+           loc_mappings;
     init withEnv: fun(text, vars, cmod) {
       <primitive "compiled_function_with_env">
     }
@@ -102,9 +108,30 @@
     instance_method source_location_for_ip: fun(ip) {
       <primitive "compiled_function_loc_for_ip">
     }
+    instance_method lineForInstruction: fun(ip) {
+      if (@is_prim) {
+        return 0;
+      } else {
+        return this.source_location_for_ip(ip)[0];
+      }
+    }
+    instance_method fullName: fun() {
+      return @owner.fullName + "/" + @name;
+    }
+    instance_method isTopLevel: fun() {
+      return @is_top_level;
+    }
+    instance_method isEmbedded: fun() {
+      return @is_top_level;
+    }
   end
 
   class CompiledModule
+   fields: name, license, params, default_params, aliases, functions, classes,
+           parent_module;
+  instance_method fullName: fun() {
+    return @name;
+  }
   end
 
   class Null
@@ -210,6 +237,9 @@
   instance_method each: fun(fn) {
     <primitive "list_each">
   }
+  instance_method map: fun(fn) {
+    <primitive "list_map">
+  }
   instance_method has: fun(value) {
     <primitive "list_has">
   }
@@ -218,6 +248,9 @@
   }
   instance_method toSource: fun() {
     <primitive "list_to_source">
+  }
+  instance_method size: fun() {
+    <primitive "list_size">
   }
   class_method new: fun() {
     <primitive "list_new">
@@ -236,6 +269,12 @@
     }
     instance_method <: fun(arg) {
       <primitive "number_lt">
+    }
+    instance_method >: fun(arg) {
+      <primitive "number_gt">
+    }
+    instance_method >=: fun(arg) {
+      <primitive "number_gteq">
     }
     instance_method toString: fun() {
       <primitive "number_to_string">
@@ -366,6 +405,19 @@ end
   }
   instance_method ip: fun() {
     <primitive "process_ip">
+  }
+  instance_method frames: fun() {
+    <primitive "process_frames">
+  }
+  end
+
+  class Frame
+  fields: self;
+  instance_method cp: fun() {
+    <primitive "frame_cp">
+  }
+  instance_method ip: fun() {
+    <primitive "frame_ip">
   }
   end
 
