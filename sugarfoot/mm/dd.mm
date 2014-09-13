@@ -17,7 +17,7 @@ instance_method codeFor: fun(i) {
     return cp.text();
   } else {
     io.print("codeFor: TODO NOT TOP LEVEL");
-    return "";
+    return cp.outerCompiledFunction().text();
   }
 // else {
 //     if (cp.isEmbedded()) {

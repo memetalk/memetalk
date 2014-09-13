@@ -76,8 +76,11 @@
   end
 
   class CompiledClass
-    fields: module, name, super_class_name,
-            fields, methods, own_methods;
+    fields: name, super_class_name, fields,
+            methods, class_methods, module;
+    instance_method fullName: fun() {
+      return @module.fullName() + ":" + @name;
+    }
   end
 
   class CompiledFunction
@@ -121,8 +124,8 @@
     instance_method isTopLevel: fun() {
       return @is_top_level;
     }
-    instance_method isEmbedded: fun() {
-      return @is_top_level;
+    instance_method outerCompiledFunction: fun() {
+      return @outer_cfun;
     }
   end
 

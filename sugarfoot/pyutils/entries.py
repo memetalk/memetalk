@@ -739,10 +739,14 @@ class CompiledFunction(Entry):
             return
 
         # self.location_mapping: bytecode_offset => expression region
-        # self.line_mapping: lineno => bytecode_offset
+        # self.line_mapping: bytecode_offset => lineno
 
-        start_line = ast.start_line - self.start_line
-        end_line = ast.end_line - self.start_line
+        if self.outer_cfun:
+            start_line = ast.start_line - self.outer_cfun.start_line
+            end_line = ast.end_line - self.outer_cfun.start_line
+        else:
+            start_line = ast.start_line - self.start_line
+            end_line = ast.end_line - self.start_line
 
         # print self.name, bpos, [start_line, ast.start_col, end_line, ast.end_col]
         # if bpos not in self.location_mapping:

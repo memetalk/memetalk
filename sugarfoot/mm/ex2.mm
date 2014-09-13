@@ -25,8 +25,11 @@ f: fun() {
 
 main: fun() {
   debug();
-  //f();
-  foo();
+  var f = fun() {
+    var y = 1;
+    return y;
+  };
+  var k = f();
   var x = 10;
   io.print(x);
   x = x + 2;
