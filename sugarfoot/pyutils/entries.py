@@ -773,23 +773,23 @@ class CompiledFunction(Entry):
 
     @emitter
     def emit_send_or_local_call(self, _, name, arity):
-        if self.identifier_is_module_scoped(name):
-            idx = self.create_and_register_symbol_literal(name)
-            self.bytecodes.append('push_module', 0)
-            self.bytecodes.append('push_literal', idx)
-            self.bytecodes.append('send', arity)
-        elif self.has_env and self.var_declarations.defined(name):
+        if self.has_env and self.var_declarations.defined(name):
             idx = self.var_declarations.index(self, name)
             self.bytecodes.append("push_env", idx)
-            self.bytecodes.append("call", arity)
-        elif self.identifier_is_param(name):
-            idx = self.var_declarations.index(self, name)
-            self.bytecodes.append("push_param", idx)
             self.bytecodes.append("call", arity)
         elif self.identifier_is_decl(name):
             idx = self.var_declarations.index(self, name)
             self.bytecodes.append("push_local", idx)
             self.bytecodes.append("call", arity)
+        elif self.identifier_is_param(name):
+            idx = self.var_declarations.index(self, name)
+            self.bytecodes.append("push_param", idx)
+            self.bytecodes.append("call", arity)
+        elif self.identifier_is_module_scoped(name):
+            idx = self.create_and_register_symbol_literal(name)
+            self.bytecodes.append('push_module', 0)
+            self.bytecodes.append('push_literal', idx)
+            self.bytecodes.append('send', arity)
         else:
             # raise Exception('Undeclared ' + name)
             # for now, lets assume its a module instead of raising,
