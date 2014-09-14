@@ -152,10 +152,9 @@ funliteral :fnobj = !(self.input.head()[0]):ast ['fun-literal'  ['params' :p]
                      !(fn.set_text(ast.text))
                       -> fnobj.emit_push_closure(ast, fn)
 
-cfunliteral :fnobj =  !(self.input.head()[0]):ast ['fun-literal'  ['params' :p]
-                        !(fnobj.set_line(ast))
-                        !(fnobj.set_params(p))
-                        ['body' [expr(fnobj)*]]] -> fnobj
+cfunliteral :fnobj =  !(self.input.head()[0]):ast
+                      !(fnobj.set_line(ast))
+                      [expr(fnobj)*] -> fnobj
 
 args :fnobj =  ['args' []] -> 0
             |  ['args' arglist(fnobj):arity] -> arity

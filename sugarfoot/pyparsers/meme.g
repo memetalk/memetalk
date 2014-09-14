@@ -269,6 +269,8 @@ funliteral_body = !(self.input.position):begin stmt:x stmts:xs expr:e -> self.i.
                 | !(self.input.position):begin expr:e          -> self.i.ast(begin, [e, ['return-top']])
                 |  -> self.i.sint_ast(self.input.position,[self.i.sint_ast(self.input.position,['return-null'])])
 
+cfunliteral_body = funliteral_body:x spaces ~anything -> x
+
 lit_symbol = spaces !(self.input.position):begin token(":") alpha_name:xs
            -> self.i.ast(begin, ["literal-symbol", xs])
 

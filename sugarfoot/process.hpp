@@ -4,6 +4,7 @@
 #include <string>
 #include <map>
 #include <list>
+#include <fstream>
 
 #include "defs.hpp"
 
@@ -55,6 +56,7 @@ public:
 
   oop unwind_with_exception(oop);
 
+  oop do_call_protected(oop, int*);
   oop do_call(oop, int*);
   oop do_call(oop, oop, int*);
 
@@ -80,6 +82,7 @@ public:
 
   void is_debugger(bool t) { _is_dbg = t; }; //to help filter logs
 private:
+  std::ostream&  dbg();
   void pause() { _state = HALT_STATE; };
 
   void init();

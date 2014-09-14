@@ -4,7 +4,6 @@
 .preamble(test)
 .code
 
-// -- module functions --
 
 main: fun() {
   var z = 9;
@@ -24,8 +23,6 @@ main: fun() {
 x: fun(g) {
   return g()(10);
 }
-
-// -- module classes --
 
 
 .end

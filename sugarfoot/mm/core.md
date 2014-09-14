@@ -90,13 +90,16 @@
            literal_frame_addr, bytecode_size, bytecode_addr,
            exception_frame_addr, env_table, text, line_mappings,
            loc_mappings;
-    init withEnv: fun(text, vars, cmod) {
+    init withEnv: fun(text, scope_names, cmod) {
       <primitive "compiled_function_with_env">
+    }
+    init withFrame: fun(text, frame, cmod) {
+      <primitive "compiled_function_with_frame">
     }
     instance_method new_context: fun(ep, module) {
       return Context.new(this, ep, module);
     }
-    instance_method asContextWithVars: fun(imod, vars) {
+    instance_method asContextWithVars: fun(imod, vars_dict) {
       <primitive "compiled_function_as_context_with_vars">
     }
     instance_method text: fun() {
@@ -222,6 +225,12 @@
   instance_method has: fun(key) {
     <primitive "dictionary_has">
   }
+  instance_method keys: fun() {
+    <primitive "dictionary_keys">
+  }
+  instance_method size: fun() {
+    <primitive "dictionary_size">
+  }
   class_method new: fun() {
     <primitive "dictionary_new">
   }
@@ -311,11 +320,15 @@
   instance_method getEnv: fun() {
     <primitive "context_get_env">
   }
-  class_method withVars: fun(text, vars, imod) {
+  class_method withVars: fun(code, vars, imod) {
     var cmod = get_compiled_module(imod);
-    var code = "fun() {" + text + "}";
-    var cfn = CompiledFunction.withEnv(code, vars, cmod);
+    var cfn = CompiledFunction.withEnv(code, vars.keys(), cmod);
     return cfn.asContextWithVars(imod, vars);
+  }
+  class_method withFrame: fun(code, frame, imod) {
+    var cmod = get_compiled_module(imod);
+    var cfn = CompiledFunction.withFrame(code, frame, cmod);
+    return cfn.new_context(frame.ep, imod);
   }
   end
 
@@ -412,6 +425,12 @@ end
   instance_method frames: fun() {
     <primitive "process_frames">
   }
+  instance_method apply: fun(fn) {
+    <primitive "process_apply">
+  }
+  // instance_method evalInFrame: fun(text, frame_idx) {
+  //   <primitive "process_eval_in_frame">
+  // }
   end
 
   class Frame
@@ -421,6 +440,9 @@ end
   }
   instance_method ip: fun() {
     <primitive "frame_ip">
+  }
+  instance_method ep: fun() {
+    <primitive "frame_ep">
   }
   end
 

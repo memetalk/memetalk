@@ -260,8 +260,7 @@ class Compiler(ASTBuilder):
         self.parser = MemeParser(text)
         self.parser.i = self
 
-        ast = self.do_parse(self.parser, 'funliteral')[0]
-
+        ast = self.do_parse(self.parser, 'cfunliteral_body')[0]
         # print ast
 
         cmod = entries.CompiledModule('dummy_module')

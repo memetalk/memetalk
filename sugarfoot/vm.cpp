@@ -43,10 +43,10 @@ void VM::dump_prime_info() {
   }
 }
 
-void VM::print_retval(oop retval) {
+void VM::print_retval(Process* proc, oop retval) {
   int exc;
   debug() << " ======== the end ======= " << endl;
-  oop retval_str = _process->send_0(retval, new_symbol("toString"), &exc);
+  oop retval_str = proc->send_0(retval, new_symbol("toString"), &exc);
   debug() << "RETVAL: " << retval << " => " << _mmobj->mm_string_cstr(retval_str) << endl;
 }
 
@@ -55,7 +55,7 @@ int VM::start() {
     bail("usage: sf-vm <file.mmc>");
   }
 
-  _process = new Process(this);
+  Process* proc = new Process(this);
 
   init_primitives(this); //module initialization could execute primitives
 
@@ -67,14 +67,14 @@ int VM::start() {
 
   oop imod;
   try {
-    imod = instantiate_module(_process, filepath, _mmobj->mm_list_new());
+    imod = instantiate_module(proc, filepath, _mmobj->mm_list_new());
   } catch(mm_rewind e) {
-    print_retval(e.mm_exception);
+    print_retval(proc, e.mm_exception);
     return * (int*) (void*) &(e.mm_exception);
   }
 
-  oop retval = _process->run(imod, new_symbol("main"));
-  print_retval(retval);
+  oop retval = proc->run(imod, new_symbol("main"));
+  print_retval(proc, retval);
   return * (int*) (void*) &retval;
 }
 
@@ -149,18 +149,12 @@ using boost::property_tree::read_json;
 using boost::property_tree::write_json;
 
 static
-std::string get_compile_fun_json(const char* text, oop vars, MMObj* mmobj) {
+std::string get_compile_fun_json(const char* text, std::list<std::string> vars) {
   ptree pt;
   ptree env;
 
-  if (vars != MM_NULL) {
-    std::map<oop,oop>::iterator it = mmobj->mm_dictionary_begin(vars);
-    std::map<oop,oop>::iterator end = mmobj->mm_dictionary_end(vars);
-    for ( ; it != end; it++) {
-      oop name = it->first;
-      char* str_name = mmobj->mm_symbol_cstr(name);
-      env.push_back(std::make_pair("", str_name));
-    }
+  for (std::list<std::string>::iterator it = vars.begin(); it != vars.end(); it++) {
+    env.push_back(std::make_pair("", *it));
   }
 
   pt.put ("text", text);
@@ -170,9 +164,9 @@ std::string get_compile_fun_json(const char* text, oop vars, MMObj* mmobj) {
   return buf.str();
 }
 
-oop VM::compile_fun(const char* text, oop vars, oop /*cmod*/, int* exc) {
+oop VM::compile_fun(Process* proc, const char* text, std::list<std::string> vars, oop cmod, int* exc) {
   std::stringstream s;
-  std::string json = get_compile_fun_json(text, vars, _mmobj);
+  std::string json = get_compile_fun_json(text, vars);
 
   s << "python -m pycompiler.compiler -o '" << json << "'";
   debug() << "Executing python compiler: " << s.str() << endl;
@@ -189,12 +183,14 @@ oop VM::compile_fun(const char* text, oop vars, oop /*cmod*/, int* exc) {
     data.copy(c_data, data.size());
     if (pclose(p) == 0) {
       MMCFunction* mmcf = new MMCFunction(this, _core_image, c_data, data.size());
-      return mmcf->load();
+      oop cfun = mmcf->load();
+      _mmobj->mm_compiled_function_set_cmod(cfun, cmod);
+      return cfun;
     } else {
       *exc = 1;
-      return _process->mm_exception("CompileError", c_data);
+      return proc->mm_exception("CompileError", c_data);
     }
   }
   *exc = 1;
-  return _process->mm_exception("CompileError", "pipe error: Unable to call compiler");
+  return proc->mm_exception("CompileError", "pipe error: Unable to call compiler");
 }

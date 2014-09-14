@@ -115,6 +115,28 @@ class CompVirtualMemory(vmemory.VirtualMemory):
             self.append_null()
         return oop
 
+    def append_list_of_symbols(self, lst):
+        oops_elements = [self.append_symbol_instance(string) for string in lst]
+        delegate = self.append_object_instance()
+
+        if len(lst) > 0:
+            self.append_int(pyutils.FRAME_TYPE_ELEMENTS)
+            self.append_int(len(lst) * bits.WSIZE)
+            oops = []
+            for oop_element in oops_elements:         # .. elements
+                oops.append(self.append_pointer_to(oop_element))
+
+        self.append_int(pyutils.FRAME_TYPE_LIST_OBJECT)
+        self.append_int(4 * bits.WSIZE)
+
+        oop = self.append_external_ref('List')    # vt
+        self.append_pointer_to(delegate)          # delegate
+        self.append_int(len(lst))                 # len
+        if len(lst) > 0:
+            self.append_pointer_to(oops[0])
+        else:
+            self.append_null()
+        return oop
 
     # used internally to create class fields list, etc.
     def append_list_of_ints(self, lst):

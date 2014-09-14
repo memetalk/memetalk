@@ -16,7 +16,6 @@ instance_method codeFor: fun(i) {
   if (cp.isTopLevel()) {
     return cp.text();
   } else {
-    io.print("codeFor: TODO NOT TOP LEVEL");
     return cp.outerCompiledFunction().text();
   }
 // else {
@@ -104,7 +103,7 @@ init new: fun(proc) {
   execMenu.addAction(action);
 
   action = qt.QAction.new("Step over Line", this);
-  action.setShortcut("ctrl+p");
+  action.setShortcut("ctrl+k");
   action.connect("triggered", fun(_) {
       @process.stepOverLine();
   });
@@ -123,6 +122,22 @@ init new: fun(proc) {
   action.setShortcut("ctrl+u");
   action.connect("triggered", fun(_) {
       @process.stepOut();
+  });
+  action.setShortcutContext(0); //widget context
+  execMenu.addAction(action);
+
+  action = qt.QAction.new("Do it", this);
+  action.setShortcut("ctrl+d");
+  action.connect("triggered", fun(_) {
+      this.doIt();
+  });
+  action.setShortcutContext(0); //widget context
+  execMenu.addAction(action);
+
+  action = qt.QAction.new("Print it", this);
+  action.setShortcut("ctrl+p");
+  action.connect("triggered", fun(_) {
+      this.printIt();
   });
   action.setShortcutContext(0); //widget context
   execMenu.addAction(action);
@@ -152,6 +167,39 @@ instance_method process_paused: fun() { //this is called from the vm
   //this.updateUI();
 }
 
+instance_method insertSelectedText: fun(text) {
+  var pos = @editor.getSelection();
+  @editor.insertAt(text, pos[:end_line], pos[:end_index]);
+  var nl = text.count("\n");
+  if (nl == 0) {
+    @editor.setSelection(pos[:end_line], pos[:end_index], pos[:end_line], pos[:end_index] + text.size);
+  } else {
+    var pl = text.rindex("\n");
+    @editor.setSelection(pos[:end_line], pos[:end_index], pos[:end_line] + nl, text.from(pl).size() - 1);
+  }
+}
+
+instance_method doIt: fun() {
+  try {
+    io.print("Eval in frame: " + @frame_index.toString + " -- " + @editor.selectedText());
+    var ctx = Context.withFrame(@editor.selectedText(), @process.frames()[@frame_index], thisModule);
+    @process.apply(ctx);
+  } catch(ex) {
+    this.insertSelectedText(ex.message());
+  }
+}
+
+instance_method printIt: fun() {
+  try {
+    io.print("Eval in frame: " + @frame_index.toString + " -- " + @editor.selectedText());
+    var ctx = Context.withFrame(@editor.selectedText(), @process.frames()[@frame_index], thisModule);
+    var res = @process.apply(ctx);
+    this.insertSelectedText(res.toString);
+  } catch(ex) {
+    this.insertSelectedText(ex.message());
+  }
+}
+
 instance_method updateUI: fun() {
   io.print("DDD: updateUI " + @frame_index.toString);
   if (@frame_index >= 0) {
@@ -159,6 +207,7 @@ instance_method updateUI: fun() {
     // @editor.setFrameIndex(@frame_index);
     var locInfo = @execFrames.locationInfoFor(@frame_index);
     if (locInfo) {
+      io.print(locInfo);
       @editor.pausedAtLine(locInfo[0], locInfo[1], locInfo[2], locInfo[3]);
     }
   }

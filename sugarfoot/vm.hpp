@@ -4,6 +4,7 @@
 #include "defs.hpp"
 #include <map>
 #include <string>
+#include <list>
 
 
 class CoreImage;
@@ -36,23 +37,23 @@ public:
 
   CoreImage* core() { return _core_image; };
 
-  Process* process() { return _process; };
+  // Process* process() { return _process; };
 
-  oop compile_fun(const char* text, oop vars, oop cmod, int*);
+  oop compile_fun(Process*, const char* text, std::list<std::string>, oop cmod, int*);
 
   std::pair<Process*, oop> start_debugger(Process* target);
 
 private:
   void dump_prime_info();
   void dictionary_dump(oop dict);
-  void print_retval(oop retval);
+  void print_retval(Process*, oop retval);
 
   int _argc;
   char** _argv;
   bool _online;
   CoreImage* _core_image;
   MMObj* _mmobj;
-  Process* _process;
+//  std::list<Process*> _processes;
 
   std::map<std::string, oop> _symbols;
 

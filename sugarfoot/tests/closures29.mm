@@ -8,12 +8,12 @@ class_method z: fun() {
 end
 
 t1: fun() {
-  var fn = Context.withVars("\"10\"", null, thisModule);
+  var fn = Context.withVars("\"10\"", {}, thisModule);
   return fn();
 }
 
 t2: fun() {
-  var fn = Context.withVars("X.z", null, thisModule);
+  var fn = Context.withVars("X.z", {}, thisModule);
   return fn();
 }
 

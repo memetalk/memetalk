@@ -4,6 +4,7 @@
 #include "defs.hpp"
 #include <vector>
 #include <map>
+#include <list>
 
 class CoreImage;
 class VM;
@@ -16,6 +17,8 @@ public:
   Process* mm_process_get_proc(oop);
   oop mm_frame_new(oop);
   oop mm_frame_get_bp(oop);
+  oop mm_frame_get_cp(oop);
+  oop mm_frame_get_ep(oop);
 
   oop mm_new(oop vt, oop delegate, number payload);
   oop alloc_instance(oop klass);
@@ -56,6 +59,7 @@ public:
   // oop mm_dictionary_entry_value(oop dict, int idx);
   void mm_dictionary_set(oop dict, oop key, oop value);
   bool mm_dictionary_has_key(oop dict, oop key);
+  oop mm_dictionary_keys(oop dict);
   oop mm_dictionary_get(oop dict, oop key);
   std::map<oop,oop>* mm_dictionary_frame(oop);
   std::map<oop,oop>::iterator mm_dictionary_begin(oop);
@@ -135,6 +139,9 @@ public:
   oop mm_compiled_function_get_text(oop cfun);
   oop mm_compiled_function_get_line_mapping(oop cfun);
   oop mm_compiled_function_get_loc_mapping(oop cfun);
+  oop mm_compiled_function_get_cmod(oop cfun);
+  void mm_compiled_function_set_cmod(oop cfun, oop cmod);
+
   bool mm_compiled_function_loc_mapping_matches_ip(oop, bytecode*);
   bytecode* mm_compiled_function_next_expr(oop cfun, bytecode* ip);
   bytecode* mm_compiled_function_next_line_expr(oop cfun, bytecode* ip);
@@ -161,6 +168,8 @@ public:
 
   oop mm_cfuns_to_funs_dict(oop cfuns_dict, oop imod);
   oop mm_new_slot_getter(oop imodule, oop owner, oop name, int idx);
+
+  std::list<std::string> mm_sym_list_to_cstring_list(oop);
 
   CoreImage* core() { return _core_image; };
 

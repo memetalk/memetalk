@@ -332,6 +332,13 @@ class VariableStorage(object):
                 return True
         return False
 
+    def visible(self, name, cfun):
+        try:
+            self.index(cfun, name)
+            return True
+        except Exception:
+            return False
+
     def add_names(self, cfun, params):
         for name in params:
             self.add(cfun, name)
@@ -362,10 +369,12 @@ class VariableStorage(object):
         return len(self._flat(self.variables.values()[:idx]))
 
 
-    def env_table(self, cfun):
-        idx = self.variables.keys().index(cfun)
-        offset = self.env_offset(cfun)
-        return {name: i+offset for i, name in enumerate(self.variables.values()[idx])}
+    def env_table(self):
+        ret = []
+        for scope_vars in self.variables.values():
+            for var in scope_vars:
+                ret.append(var)
+        return ret
 
 class CompiledFunction(Entry):
     def __init__(self, cmod, owner, name, params, ctor=False, env_storage=None, is_top_level=True, outer_cfun=None):
@@ -538,14 +547,14 @@ class CompiledFunction(Entry):
         oop_text = vmem.append_string_instance(self.text)
         oop_line_mappings = vmem.append_int_to_int_dict(self.line_mapping)
         oop_loc_mappings = vmem.append_int_to_int_list(self.location_mapping)
-        oop_env_table  = vmem.append_symbol_to_int_dict(self.var_declarations.env_table(self))
+        oop_env_table  = vmem.append_list_of_symbols(self.var_declarations.env_table())
 
         lit_frame_size = self.fill_literal_frame(vmem)
         bytecode_size = self.fill_bytecodes(vmem)
         exception_frames = self.fill_exceptions_frame(vmem)
 
         vmem.append_int(FRAME_TYPE_OBJECT)
-        vmem.append_int(26 * bits.WSIZE)
+        vmem.append_int(27 * bits.WSIZE)
 
         oop = vmem.append_external_ref('CompiledFunction', self.label()) # CompiledFunction vt
         vmem.append_pointer_to(oop_delegate)
@@ -601,6 +610,8 @@ class CompiledFunction(Entry):
         vmem.append_pointer_to(oop_text)
         vmem.append_pointer_to(oop_line_mappings)
         vmem.append_pointer_to(oop_loc_mappings)
+
+        vmem.append_label_ref(self.cmod.label())
         self.oop = oop
         return oop
 
@@ -627,7 +638,7 @@ class CompiledFunction(Entry):
         return name in self.params
 
     def identifier_is_decl(self, name):
-        return self.var_declarations.has(self, name)
+        return name not in self.params and self.var_declarations.has(self, name)
 
     def identifier_is_module_scoped(self, name):
         # this wont work if the class or function wasn;t compiled yet
@@ -777,15 +788,15 @@ class CompiledFunction(Entry):
 
     @emitter
     def emit_send_or_local_call(self, _, name, arity):
-        if self.has_env and self.var_declarations.defined(name):
+        if self.has_env and self.var_declarations.visible(name, self):
             idx = self.var_declarations.index(self, name)
             self.bytecodes.append("push_env", idx)
             self.bytecodes.append("call", arity)
-        elif self.identifier_is_decl(name):
+        elif (not self.has_env) and self.identifier_is_decl(name):
             idx = self.var_declarations.index(self, name)
             self.bytecodes.append("push_local", idx)
             self.bytecodes.append("call", arity)
-        elif self.identifier_is_param(name):
+        elif (not self.has_env) and self.identifier_is_param(name):
             idx = self.var_declarations.index(self, name)
             self.bytecodes.append("push_param", idx)
             self.bytecodes.append("call", arity)

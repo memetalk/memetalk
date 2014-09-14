@@ -486,6 +486,18 @@ static int prim_dictionary_has(Process* proc) {
   return 0;
 }
 
+static int prim_dictionary_keys(Process* proc) {
+  oop self =  proc->dp();
+  proc->stack_push(proc->mmobj()->mm_dictionary_keys(self));
+  return 0;
+}
+
+static int prim_dictionary_size(Process* proc) {
+  oop self =  proc->dp();
+  proc->stack_push(tag_small_int(proc->mmobj()->mm_dictionary_size(self)));
+  return 0;
+}
+
 static int prim_mirror_entries(Process* proc) {
   oop self =  proc->dp();
   oop mirrored = ((oop*)self)[2];
@@ -679,18 +691,46 @@ static int prim_module_to_string(Process* proc) {
 static int prim_compiled_function_with_env(Process* proc) {
   // oop self =  proc->dp();
   oop cmod = *((oop*) proc->fp() - 1);
-  oop vars = *((oop*) proc->fp() - 2);
+  oop scope_names = *((oop*) proc->fp() - 2);
   oop text = *((oop*) proc->fp() - 3);
 
-  debug() << "prim_compiled_function_with_env " << proc->mmobj()->mm_string_cstr(text) << " -- " << cmod << " " << vars << endl;
+  // debug() << "prim_compiled_function_with_env " << proc->mmobj()->mm_string_cstr(text) << " -- " << cmod << " " << vars << endl;
+
+  std::list<std::string> lst = proc->mmobj()->mm_sym_list_to_cstring_list(scope_names);
+
   int exc;
-  oop cfun = proc->vm()->compile_fun(proc->mmobj()->mm_string_cstr(text), vars, cmod, &exc);
+  oop cfun = proc->vm()->compile_fun(proc, proc->mmobj()->mm_string_cstr(text), lst, cmod, &exc);
   if (exc != 0) {
     proc->stack_push(cfun);
     return PRIM_RAISED;
   }
 
-  debug() << "prim_compiled_function_with_env: GOT cfun: " << cfun << " " << *(oop*) cfun << endl;
+  // debug() << "prim_compiled_function_with_env: GOT cfun: " << cfun << " " << *(oop*) cfun << endl;
+  proc->stack_push(cfun);
+  return 0;
+}
+
+static int prim_compiled_function_with_frame(Process* proc) {
+  oop cmod = *((oop*) proc->fp() - 1);
+  oop frame = *((oop*) proc->fp() - 2);
+  oop text = *((oop*) proc->fp() - 3);
+
+  oop fn = proc->mmobj()->mm_frame_get_cp(frame);
+  std::cerr << "prim_compiled_function_with_frame: fn: " << fn << endl;
+  oop env_table = proc->mmobj()->mm_function_env_table(fn);
+  std::cerr << "prim_compiled_function_with_frame: env_table: " << env_table << endl;
+
+  std::list<std::string> lst = proc->mmobj()->mm_sym_list_to_cstring_list(env_table);
+
+  int exc;
+  oop cfun = proc->vm()->compile_fun(proc, proc->mmobj()->mm_string_cstr(text), lst, cmod, &exc);
+  std::cerr << "prim_compiled_function_with_frame: cfun: " << cfun << " " << exc << endl;
+  if (exc != 0) {
+    proc->stack_push(cfun);
+    return PRIM_RAISED;
+  }
+
+  // debug() << "prim_compiled_function_with_env: GOT cfun: " << cfun << " " << *(oop*) cfun << endl;
   proc->stack_push(cfun);
   return 0;
 }
@@ -717,7 +757,7 @@ static int prim_compiled_function_as_context_with_vars(Process* proc) {
         ((oop*)env)[0] = it->second; //rp
         ((oop*)env)[1] = it->second; //ep
       } else {
-        number idx = untag_small_int(proc->mmobj()->mm_dictionary_get(env_table, it->first));
+        number idx = proc->mmobj()->mm_list_index_of(env_table, it->first);
         ((oop*)env)[idx+2] = it->second;
       }
     }
@@ -806,14 +846,19 @@ static int prim_context_get_env(Process* proc) {
 
   oop env_dict = proc->mmobj()->mm_dictionary_new();
 
-
-  std::map<oop, oop>::iterator it = proc->mmobj()->mm_dictionary_begin(env_table);
-  std::map<oop, oop>::iterator end = proc->mmobj()->mm_dictionary_end(env_table);
-  for ( ; it != end; it++) {
-    number idx = untag_small_int(it->second);
-    debug() << "env idx " << idx << endl;
-    proc->mmobj()->mm_dictionary_set(env_dict, it->first, ((oop*)ctx_env)[2+idx]); //2: rp, dp
+  for (number i = 0; i < proc->mmobj()->mm_list_size(env_table); i++) {
+    oop key = proc->mmobj()->mm_list_entry(env_table, i);
+    oop val = ((oop*)ctx_env)[2+i];
+    proc->mmobj()->mm_dictionary_set(env_dict, key, val);
   }
+
+  // std::map<oop, oop>::iterator it = proc->mmobj()->mm_dictionary_begin(env_table);
+  // std::map<oop, oop>::iterator end = proc->mmobj()->mm_dictionary_end(env_table);
+  // for ( ; it != end; it++) {
+  //   number idx = untag_small_int(it->second);
+  //   debug() << "env idx " << idx << endl;
+  //   proc->mmobj()->mm_dictionary_set(env_dict, it->first, ((oop*)ctx_env)[2+idx]); //2: rp, dp
+  // }
 
   proc->stack_push(env_dict);
   return 0;
@@ -998,6 +1043,21 @@ static int prim_process_frames(Process* proc) {
   return 0;
 }
 
+static int prim_process_apply(Process* proc) {
+  oop oop_target_proc = proc->rp();
+  oop fn = *((oop*) proc->fp() - 1);
+
+  Process* target_proc = proc->mmobj()->mm_process_get_proc(oop_target_proc);
+  int exc;
+  oop res = target_proc->do_call_protected(fn, &exc);
+  if (exc != 0) {
+    proc->stack_push(res);
+    return PRIM_RAISED;
+  }
+  proc->stack_push(res);
+  return 0;
+}
+
 static int prim_frame_ip(Process* proc) {
   oop frame = proc->dp();
   oop bp =   proc->mmobj()->mm_frame_get_bp(frame);
@@ -1010,11 +1070,17 @@ static int prim_frame_ip(Process* proc) {
 
 static int prim_frame_cp(Process* proc) {
   oop frame = proc->dp();
-  oop bp =   proc->mmobj()->mm_frame_get_bp(frame);
+  // oop bp =   proc->mmobj()->mm_frame_get_bp(frame);
   // std::cerr << "prim_frame_cp bp: " << bp << endl;
-  oop cp = *((oop*)(bp - 5));
+  // oop cp = *((oop*)(bp - 5));
   // std::cerr << "prim_frame_cp bp: " << bp << " has cp: " << cp << endl;
-  proc->stack_push(cp);
+  proc->stack_push(proc->mmobj()->mm_frame_get_cp(frame));
+  return 0;
+}
+
+static int prim_frame_ep(Process* proc) {
+  oop frame = proc->dp();
+  proc->stack_push(proc->mmobj()->mm_frame_get_ep(frame));
   return 0;
 }
 
@@ -1073,6 +1139,8 @@ void init_primitives(VM* vm) {
   vm->register_primitive("dictionary_index", prim_dictionary_index);
   vm->register_primitive("dictionary_plus", prim_dictionary_plus);
   vm->register_primitive("dictionary_has", prim_dictionary_has);
+  vm->register_primitive("dictionary_keys", prim_dictionary_keys);
+  vm->register_primitive("dictionary_size", prim_dictionary_size);
   vm->register_primitive("dictionary_to_string", prim_dictionary_to_string);
   vm->register_primitive("dictionary_to_source", prim_dictionary_to_source);
 
@@ -1091,6 +1159,7 @@ void init_primitives(VM* vm) {
 
 
   vm->register_primitive("compiled_function_with_env", prim_compiled_function_with_env);
+  vm->register_primitive("compiled_function_with_frame", prim_compiled_function_with_frame);
   vm->register_primitive("compiled_function_as_context_with_vars", prim_compiled_function_as_context_with_vars);
 
   vm->register_primitive("compiled_function_get_text", prim_compiled_function_get_text);
@@ -1116,9 +1185,12 @@ void init_primitives(VM* vm) {
   vm->register_primitive("process_cp", prim_process_cp);
   vm->register_primitive("process_ip", prim_process_ip);
   vm->register_primitive("process_frames", prim_process_frames);
+  vm->register_primitive("process_apply", prim_process_apply);
+  // vm->register_primitive("process_eval_in_frame", prim_process_eval_in_frame);
 
   vm->register_primitive("frame_ip", prim_frame_ip);
   vm->register_primitive("frame_cp", prim_frame_cp);
+  vm->register_primitive("frame_ep", prim_frame_ep);
 
   vm->register_primitive("get_compiled_module", prim_get_compiled_module);
 
