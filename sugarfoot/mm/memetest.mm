@@ -5,9 +5,6 @@
  io: meme:io;
 .code
 
-print: fun(arg) {
-  <primitive "io_print">
-}
 
 //outside of Exception hierarchy, so
 //the catch blocks of exception tests won't suppress it

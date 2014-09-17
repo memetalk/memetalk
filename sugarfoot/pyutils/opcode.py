@@ -20,33 +20,31 @@ WORD_SIZE = 4
 
 opcode_mapping = {
     # push
-    "push_param": 1,
+    # "push_param": 1,
     "push_local": 2,
     "push_literal": 3,
     "push_field": 4,
-    "push_env": 5,
 
     "push_this": 6,
     "push_module": 7,
 
     "push_bin": 8, # true:1/false:2/null: 0
-    "push_ep": 9,
+    "push_fp": 9,
 
     "push_context": 10,
 
     # pop
-    "pop_param": 20,
+    # "pop_param": 20,
     "pop_local": 21,
     "pop_field": 22,
-    "pop_env": 23,
     "pop": 24,
     # ret
     "ret_this":  30,
     "ret_top":  31,
-    "ret_bin":  32,
-    "ret_param":  33,
-    "ret_local":  34,
-    "ret_field":  35,
+    # "ret_bin":  32,
+    # "ret_param":  33,
+    # "ret_local":  34,
+    # "ret_field":  35,
     # calls
     "send":  40,
     "call":  41,

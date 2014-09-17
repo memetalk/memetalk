@@ -28,21 +28,19 @@ typedef int (*prim_function_t) (Process*);
 
 // bytecodes
 
-#define PUSH_PARAM 1
+//#define PUSH_PARAM 1
 #define PUSH_LOCAL 2
 #define PUSH_LITERAL 3
 #define PUSH_FIELD 4
-#define PUSH_ENV 5
 
 #define PUSH_THIS 6
 #define PUSH_MODULE 7
 #define PUSH_BIN 8
-#define PUSH_EP 9
+#define PUSH_FP 9
 #define PUSH_CONTEXT 10
 
 #define POP_LOCAL 21
 #define POP_FIELD 22
-#define POP_ENV 23
 #define POP 24
 
 #define RETURN_TOP 31

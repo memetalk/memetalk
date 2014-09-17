@@ -34,16 +34,19 @@ public:
   oop run(oop, oop);
 
   VM* vm() { return _vm; }
-  oop dp() { return get_dp(); }
-  oop rp() { return get_rp(); }
   oop sp() { return _sp; }
   oop fp() { return _fp; }
   oop cp() { return _cp; }
   oop mp() { return _mp; }
   bytecode* ip() { return _ip; }
 
-  oop get_rp() { if (_ep) { return ((oop*)_ep)[0]; } else { return _rp; } };
-  oop get_dp() { if (_ep) { return ((oop*)_ep)[1]; } else { return _dp; } };
+  oop rp();
+  oop dp();
+
+  oop set_rp(oop);
+  oop set_dp(oop);
+
+  oop get_arg(number idx);
 
   // oop get_rp() { return _rp; };
   // oop get_dp() { return _dp; };
@@ -95,13 +98,14 @@ private:
   int execute_primitive(std::string);
   void fetch_cycle(void*);
 
-  void push_frame(number, number);
+  void push_frame(oop,oop,number, number);
   void pop_frame();
 
   oop ctor_rdp_for(oop rp, oop cp);
 
-  void setup_ep(oop, oop, oop);
-  void copy_params_to_env(number, number);
+  void setup_fp(number, number);
+  void copy_params_to_env(oop, number, number);
+  void restore_fp(oop, number, number);
 
   void dispatch(int, int);
   void handle_send(number);
@@ -126,12 +130,10 @@ private:
 
   //this order is important: it reflects the order of registers
   //in the stack, and is used by bp_at()
-  word* _fp;
+  oop _fp;
   oop _cp;
   bytecode* _ip;
-  oop _ep;
-  oop _rp;
-  oop _dp;
+  number _ss;
   oop _bp;
   //
   oop _mp;

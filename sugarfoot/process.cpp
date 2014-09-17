@@ -35,44 +35,67 @@ void Process::init() {
   _stack_depth = 0;
   _state = INVALID_STATE;
   _sp = _stack; //stack
-  _fp = _stack; //frame ??
+  _fp = NULL;
   _bp = NULL; //base
   _ip = NULL; //instruction
   _mp = NULL; //module
   _cp = NULL; //context
-  _rp = NULL; //receiver
-  _dp = NULL; //receiver data
-  _ep = NULL; //env
+  _ss = 0; //local storage
 }
 
-void Process::push_frame(number arity, number num_locals) {
+oop Process::get_arg(number idx) {
+  // std::cerr << "Process::get_arg " << idx << " fp: " << _fp << " *:" << * ((oop*)_fp + idx) << endl;
+  return * ((oop*)_fp + idx);
+};
+
+oop Process::set_rp(oop rp) {
+  return * (oop*) (_fp + _ss) = rp;
+}
+
+oop Process::set_dp(oop dp) {
+  return * (oop*) (_fp + _ss + 1) = dp;
+}
+
+oop Process::rp() {
+  dbg() << "Process::rp  fp:" <<  _fp << " _ss:" << _ss << " ==> " << * (oop*) (_fp + _ss) << endl;
+  return * (oop*) (_fp + _ss );
+}
+
+oop Process::dp() {
+  return * (oop*) (_fp + _ss + 1);
+}
+
+void Process::push_frame(oop recv, oop drecv, number arity, number storage_size) {
   // dbg() << "++ Push frame:  " << _sp << " num locals " << num_locals << endl;
 
   // oop curr_sp = _sp;
   _stack_depth++;
 
-  stack_push(arity);
+  oop fp = _fp;
+  _fp = _sp - (arity - 1);  // _sp points to the last arg pushed
 
-  word fp = (word) _fp;
-  dbg() << "push_frame: fp: " << _fp << endl;
+  dbg() << "push_frame before -- sp: " << _sp << " old fp: " << fp << " new fp:" << _fp << endl;
 
-  _fp = _sp;
-  for (int i = 0; i < num_locals; i++) {
-    stack_push((oop)0);
+  for (int i = 0; i < storage_size - arity; i++) {
+    stack_push(MM_NULL);
   }
 
-  dbg() << "push_frame arity: " << arity << " num locals: " << num_locals
-            << " fp: " << (oop) fp << " cp: " << _cp << " ip: " << _ip << " ep: " << _ep
-            << " rp: " << _rp << " dp: " << _dp << " mp: " << _mp << endl;
+
+  stack_push(recv);
+  stack_push(drecv);
 
   stack_push(fp);
   stack_push(_cp);
   stack_push(_ip);
-  stack_push(_ep);
-  stack_push(_rp);
-  stack_push(_dp);
+  stack_push(_ss); //storage size
   stack_push(_bp);
   _bp = _sp;
+
+  _ss = storage_size;
+
+  dbg() << "push_frame result: arity: " << arity << " storage: " << storage_size
+        << " fp: " << _fp << " bp: " << _bp << " cp: " << _cp << " ip: " << _ip
+        << " mp: " << _mp << endl;
 
   // //logging
   // if (!_is_dbg) {
@@ -91,8 +114,7 @@ void Process::push_frame(number arity, number num_locals) {
 }
 
 void Process::pop_frame() {
-  number arity = *_fp;
-  word fp = (word) _fp;
+  number storage_size = _ss;
 
   // dbg() << "pop_frame begin SP: " << _sp << endl;
 
@@ -101,18 +123,18 @@ void Process::pop_frame() {
   _sp = _bp; //restore sp, ignoring frame data. push_frame/pop_frame are always in sync.
 
   _bp = stack_pop();
-  _dp = stack_pop();
-  _rp = stack_pop();
-  _ep = stack_pop();
+  _ss = (number) stack_pop();
   _ip = (bytecode*) stack_pop();
   _cp = stack_pop();
   _fp = stack_pop();
 
-  dbg() << "pop_frame: fp: " << _fp << " rp: " << _rp << " dp: " << _dp << endl;
+  dbg() << "pop_frame: fp: " << _fp << endl;
 
-  // dbg() << "pop_frame [fm:" << --frame_count << " arity: " << arity
-  //         << " fp: " << _fp << " cp: " << _cp << " ip: " << _ip << " ep: " << _ep
-  //         << " rp: " << _rp << " dp: " << _dp << " mp (before): " << _mp << endl;
+  _sp = _sp - (storage_size + 2); //2: fp, dp
+
+  dbg() << "pop_frame [fm:" << _stack_depth << " storage_size: " << _ss
+        << " sp: " << _sp << " fp: " << _fp << " bp: " << _bp << " cp: " << _cp << " ip: " << _ip
+        << " mp (before): " << _mp << endl;
 
   if (_cp) {// first frame has _cp = null
     // dbg() << "pop_frame: getting module from fun " << _cp << endl;
@@ -121,9 +143,6 @@ void Process::pop_frame() {
   } else {
     dbg() << "++ MP for fun unloaded is null!" << endl;
   }
-
-  _sp = (oop) fp - (arity + 1);
-  // dbg() << "-- pop frame SP:" <<  _sp << endl;
 }
 
 void Process::unload_fun_and_return(oop retval) {
@@ -151,41 +170,48 @@ oop Process::ctor_rdp_for(oop rp, oop cp) {
 }
 
 void Process::basic_new_and_load(oop klass) {
-  oop instance = _mmobj->alloc_instance(klass);
-  _rp = instance;
-  _dp = ctor_rdp_for(instance, _cp);
-  dbg() << "basic_new: " << instance << " dp: " << _dp << endl;
-  if (_ep) {
-    ((oop*)_ep)[0] = _rp;
-    ((oop*)_ep)[1] = _dp;
-  }
+  oop rp = _mmobj->alloc_instance(klass);
+  oop dp = ctor_rdp_for(rp, _cp);
+  dbg() << "basic_new: " << rp << " dp: " << dp << endl;
+  set_rp(rp);
+  set_dp(dp);
 }
 
-void Process::setup_ep(oop fun, oop recv, oop drecv) {
-  number params = _mmobj->mm_function_get_num_params(fun);
-  number size = _mmobj->mm_function_get_num_locals_or_env(fun);
-  _ep = (oop) calloc(sizeof(oop), size + 2); //+2: space for rp, dp
-  dbg() << "Allocated ep: " << _ep << " - " << " size: " << size
-          << " params: " << params
-          << " rp/dp: "<< recv << " " << drecv << endl;
+void Process::setup_fp(number params, number storage_size) {
+  //ideally this should be a calloc followed by memcpy
+  oop fp = (oop) calloc(sizeof(oop), storage_size + 2); //+2: space for rp, dp
+  dbg() << "Process::setup_fp allocated fp: " << fp << " - " << " params: " << params
+        << " storage_size: " << storage_size << endl;
 
-  ((oop*)_ep)[0] = recv;
-  ((oop*)_ep)[1] = drecv;
+  for (int i = 0; i < storage_size + 2; i++) {
+    dbg() << "Process::setup_fp new_fp[" << i << " - " << (oop*)fp << "]  " << *((oop*)_fp + i) << endl;
+    ((oop*)fp)[i] = *((oop*)_fp + i);
+  }
 
-  copy_params_to_env(params, _mmobj->mm_function_get_env_offset(fun));
+  // for (int j = 0, i = params; i > 0; i--, j++) { //copying parameters
+  //   ((oop*)fp)[j] = *((oop*)_fp - 2 - i); //-2: rp,dp
+  // }
+  // ((oop*)fp)[storage_size] =  *((oop*)_fp + storage_size); //rp
+  // ((oop*)fp)[storage_size+1] =*((oop*)_fp + storage_size + 1); //dp
+  // ((oop*)fp)[storage_size+2] = (oop) params;
+
+  _fp = fp;
 }
 
-void Process::copy_params_to_env(number params, number env_offset) {
-  dbg() << "Process::copy_params_to_env " << params << " " << env_offset << endl;
+void Process::restore_fp(oop fp, number params, number env_offset) {
+  dbg() << "Process::restore_fp " << fp << " " << params << " " << env_offset << endl;
 
-  for (int i = 0, j = params - 1; i < params; i++, j--) {
-    dbg() << "ep[" << j+2+env_offset << "] = " << * (oop*)(_fp - (i+1)) << endl;
-    ((oop*)_ep)[j+2+env_offset] = * (oop*)(_fp - (i+1));
+  for (int i = 0; i < params; i++) {
+    dbg() << "fp[" << env_offset + i << "] = " << * (oop*)(_fp + i) << endl;
+    ((oop*)fp)[env_offset + i] = * (oop*)(_fp + i);
   }
+  _fp = fp;
 }
 
 bool Process::load_fun(oop recv, oop drecv, oop fun, bool should_allocate) {
   assert(_mmobj->mm_is_function(fun) || _mmobj->mm_is_context(fun));
+
+  dbg() << "Process::load_fun " << fun << endl;
 
   if (_mmobj->mm_function_is_getter(fun)) {
     number idx = _mmobj->mm_function_access_field(fun);
@@ -196,9 +222,12 @@ bool Process::load_fun(oop recv, oop drecv, oop fun, bool should_allocate) {
     return false;
   }
 
+  number num_params = _mmobj->mm_function_get_num_params(fun);
+  number storage_size = _mmobj->mm_function_get_num_locals_or_env(fun);
+  push_frame(recv, drecv, num_params, storage_size);
 
-  push_frame(_mmobj->mm_function_get_num_params(fun),
-             _mmobj->mm_function_get_num_locals_or_env(fun));
+
+  dbg() << "storage: " << _ss << " " << _mmobj->mm_string_cstr(_mmobj->mm_function_get_name(fun)) << endl;
 
   // std::cerr << "line mapping: " << " " << _mmobj->mm_string_cstr(_mmobj->mm_function_get_name(fun)) << endl;
   // oop mapping = _mmobj->mm_function_get_line_mapping(fun);
@@ -220,29 +249,17 @@ bool Process::load_fun(oop recv, oop drecv, oop fun, bool should_allocate) {
   // }
 
   if (_mmobj->mm_is_context(fun)) {
-    _ep = _mmobj->mm_context_get_env(fun);
-    dbg() << "setting up ctx ep: " << _ep << endl;
-    _rp = ((oop*)_ep)[0];
-    _dp = ((oop*)_ep)[1];
-    dbg() << "loaded ep with rp/dp: " << _rp << " " << _dp << endl;
-    copy_params_to_env(_mmobj->mm_function_get_num_params(fun),
-                       _mmobj->mm_function_get_env_offset(fun));
+    restore_fp(_mmobj->mm_context_get_env(fun), num_params, _mmobj->mm_function_get_env_offset(fun));
   } else {
     if (_mmobj->mm_function_uses_env(fun)) {
-      setup_ep(fun, recv, drecv);
-      _rp = NULL; //to remember me to use ep[rp] and dp[rp] if ep exists when executing bytecodes
-      _dp = NULL;
-      dbg() << "look out! we should use ep[dp] and ep[rp]: " << _rp << " " << _dp << endl;
-    } else {
-      _ep = NULL;
-      _rp = recv;
-      _dp = drecv;
+      setup_fp(num_params, storage_size);
     }
   }
 
   _cp = fun;
   _mp = _mmobj->mm_function_get_module(_cp);
   dbg() << "MP for fun load: " << _mp << endl;
+  dbg() << "_cp is " << _cp << endl;
 
   if (_mmobj->mm_function_is_ctor(fun) and should_allocate) {
     basic_new_and_load(recv);
@@ -365,7 +382,7 @@ oop Process::do_call(oop fun, int* exc) {
   assert(_mmobj->mm_is_context(fun)); //since we pass NULL to load_fun
 
 
-  dbg() << "-- begin do_call, sp: " << _sp << ", fp: " << _fp << endl;
+  dbg() << "-- begin do_call fun: " << fun << " sp: " << _sp << ", fp: " << _fp << endl;
   oop stop_at_fp = _fp;
 
   *exc = 0;
@@ -408,7 +425,7 @@ oop Process::do_call(oop fun, oop args, int* exc) {
 void Process::fetch_cycle(void* stop_at_fp) {
   dbg() << "begin fetch_cycle fp:" << _fp <<  " stop_fp:" <<  stop_at_fp
           << " ip: " << _ip << endl;
-  while ((_fp > stop_at_fp) && _ip) { // && ((_ip - start_ip) * sizeof(bytecode))  < _code_size) {
+  while ((_fp != stop_at_fp) && _ip) { // && ((_ip - start_ip) * sizeof(bytecode))  < _code_size) {
     // dbg() << "fp " << _fp << " stop " <<  stop_at_fp << " ip-start " <<  (_ip - start_ip)  << " codesize " <<  _code_size <<
     //   "ip " << _ip << std::endl;
 
@@ -579,7 +596,7 @@ void Process::handle_super_ctor_send(number num_args) {
   // dbg() << " SUPER: " << selector << " -- " << _mmobj->mm_symbol_cstr(selector) << endl;
 
   // lookup starts at the parent of rp's class
-  oop instance = get_dp();
+  oop instance = dp();
   oop klass = _mmobj->mm_object_vt(instance);
   oop pklass = _mmobj->mm_object_delegate(klass);
   oop receiver = _mmobj->mm_object_delegate(instance);
@@ -610,7 +627,7 @@ void Process::handle_super_ctor_send(number num_args) {
     return;
   }
 
-  load_fun(get_rp(), drecv, fun, false);
+  load_fun(rp(), drecv, fun, false);
 }
 
 void Process::handle_call(number num_args) {
@@ -640,12 +657,8 @@ void Process::dispatch(int opcode, int arg) {
     oop val;
     switch(opcode) {
       case PUSH_LOCAL:
-        dbg() << "PUSH_LOCAL " << arg << " " << (oop) *(_fp + arg + 1) << endl;
-        stack_push(*(_fp + arg + 1));
-        break;
-      case PUSH_PARAM:
-        dbg() << "PUSH_PARAM " << arg << " " << (oop) *(_fp - ((number) *_fp - arg)) << endl;
-        stack_push(*(_fp - ((number) *_fp - arg)));
+        dbg() << "PUSH_LOCAL " << arg << " " << (oop) *(_fp + arg) << endl;
+        stack_push(*(_fp + arg));
         break;
       case PUSH_LITERAL:
         dbg() << "PUSH_LITERAL " << arg << " " << _mmobj->mm_function_get_literal_by_index(_cp, arg) << endl;
@@ -656,25 +669,16 @@ void Process::dispatch(int opcode, int arg) {
         stack_push(_mp);
         break;
       case PUSH_FIELD:
-        dbg() << "PUSH_FIELD " << arg << " " << (oop) *(get_dp() + arg + 2) <<  " dp: " << get_dp() << endl;
-        stack_push(*(get_dp() + arg + 2));
+        dbg() << "PUSH_FIELD " << arg << " " << (oop) *(dp() + arg + 2) <<  " dp: " << dp() << endl;
+        stack_push(*(dp() + arg + 2));
         break;
       case PUSH_THIS:
-        if (_ep == NULL) {
-          dbg() << "PUSH_THIS " << arg << " " << get_rp() << endl;
-          stack_push(get_rp());
-        } else {
-          dbg() << "PUSH_THIS [env] " << arg << " " << ((oop*)_ep)[0] << endl;
-          stack_push(((oop*)_ep)[0]);
-        }
+        dbg() << "PUSH_THIS " << rp() << endl;
+        stack_push(rp());
         break;
-      case PUSH_ENV:
-        dbg() << "PUSH_ENV " << arg << " -- " << _ep << " " << (oop*)_ep[arg+2] << endl;//+2: skip dp,rp
-        stack_push(((oop*)_ep)[arg+2]);
-        break;
-      case PUSH_EP:
-        dbg() << "PUSH_EP " << arg << " -- " << _ep << endl;
-        stack_push(_ep);
+      case PUSH_FP:
+        dbg() << "PUSH_FP " << arg << " -- " << _fp << endl;
+        stack_push(_fp);
         break;
 
       case PUSH_CONTEXT:
@@ -691,13 +695,8 @@ void Process::dispatch(int opcode, int arg) {
         handle_return(val);
         break;
       case RETURN_THIS:
-        if (_ep == NULL) {
-          dbg() << "RETURN_THIS " << get_rp() << endl;
-          handle_return(get_rp());
-        } else {
-          dbg() << "RETURN_THIS [env] " << arg << " " << ((oop*)_ep)[0] << endl;
-          handle_return(((oop*)_ep)[0]);
-        }
+        dbg() << "RETURN_THIS " << rp() << endl;
+        handle_return(rp());
         break;
       case POP:
         val =stack_pop();
@@ -705,21 +704,15 @@ void Process::dispatch(int opcode, int arg) {
         break;
       case POP_LOCAL:
         val = stack_pop();
-        dbg() << "POP_LOCAL " << arg << " on " << (oop) (_fp + arg + 1) << " -- "
-                << (oop) *(_fp + arg + 1) << " = " << val << endl;
-        *(_fp + arg + 1) = (word) val;
+        dbg() << "POP_LOCAL " << arg << " on " << (oop) (_fp + arg) << " -- "
+                << (oop) *(_fp + arg) << " = " << val << endl;
+        *(_fp + arg) = (word) val;
         break;
       case POP_FIELD:
         val = stack_pop();
-        dbg() << "POP_FIELD " << arg << " on " << (oop) (get_dp() + arg + 2) << " dp: " << get_dp() << " -- "
-                << (oop) *(get_dp() + arg + 2) << " = " << val << endl; //2: vt, delegate
-        *(get_dp() + arg + 2) = (word) val;
-        break;
-      case POP_ENV:
-        val = stack_pop();
-        dbg() << "POP_ENV " << arg << " ep: " << _ep << " "
-                << (oop) *(_ep + arg + 2) << " = " << val << endl; //+2: rp, dp
-        *(_ep + arg + 2) = (word) val;
+        dbg() << "POP_FIELD " << arg << " on " << (oop) (dp() + arg + 2) << " dp: " << dp() << " -- "
+                << (oop) *(dp() + arg + 2) << " = " << val << endl; //2: vt, delegate
+        *(dp() + arg + 2) = (word) val;
         break;
       case SEND:
         dbg() << "SEND " << arg << endl;
@@ -783,25 +776,25 @@ std::pair<oop, oop> Process::lookup(oop drecv, oop vt, oop selector) {
 oop Process::stack_pop() {
   oop val = * (oop*)_sp;
   _sp--;
-  // dbg() << "     POP " << val << " >> " << _sp << endl;
+  dbg() << "     POP " << val << " >> " << _sp << endl;
   return val;
 }
 
 void Process::stack_push(oop data) {
   _sp++;
-  // dbg() << "     PUSH " << data << " -> " << _sp << endl;
+  dbg() << "     PUSH " << data << " -> " << _sp << endl;
   * (word*) _sp = (word) data;
 }
 
 void Process::stack_push(word data) {
   _sp++;
-  // dbg() << "     PUSH " << data << " -> " << _sp << endl;
+  dbg() << "     PUSH " << (oop) data << " -> " << _sp << endl;
   * (word*) _sp = data;
 }
 
 void Process::stack_push(bytecode* data) {
   _sp++;
-  // dbg() << "     PUSH " << data << " -> " << _sp << endl;
+  dbg() << "     PUSH " << data << " -> " << _sp << endl;
   * (word*) _sp = (word) data;
 }
 
@@ -1017,7 +1010,7 @@ oop Process::bp_at(unsigned int idx) { //backwards 0 is current
 
 std::ostream& Process::dbg() {
   if (!_is_dbg) {
-    debug() << "PROC[target]";
+    //debug() << "PROC[target]";
   } else {
     //debug() << "PROC[debugger]";
   }
