@@ -96,8 +96,8 @@
     init withFrame: fun(text, frame, cmod) {
       <primitive "compiled_function_with_frame">
     }
-    instance_method new_context: fun(ep, module) {
-      return Context.new(this, ep, module);
+    instance_method new_context: fun(fp, module) {
+      return Context.new(this, fp, module);
     }
     instance_method asContextWithVars: fun(imod, vars_dict) {
       <primitive "compiled_function_as_context_with_vars">
@@ -328,7 +328,7 @@
   class_method withFrame: fun(code, frame, imod) {
     var cmod = get_compiled_module(imod);
     var cfn = CompiledFunction.withFrame(code, frame, cmod);
-    return cfn.new_context(frame.ep, imod);
+    return cfn.new_context(frame.fp, imod);
   }
   end
 
@@ -441,10 +441,18 @@ end
   instance_method ip: fun() {
     <primitive "frame_ip">
   }
-  instance_method ep: fun() {
-    <primitive "frame_ep">
+  instance_method fp: fun() {
+    <primitive "frame_fp">
   }
   end
+
+  get_current_process: fun() {
+    <primitive "get_current_process">
+  }
+
+  get_current_frame: fun() {
+    <primitive "get_current_frame">
+  }
 
   get_compiled_module: fun(module) {
     <primitive "get_compiled_module">

@@ -24,8 +24,8 @@ f: fun() {
 
 
 main: fun() {
-  debug();
   var z = 1;
+ debug();
   var f = fun() {
     var y = 1;
     return y;

@@ -311,7 +311,7 @@ static int prim_qapplication_exec(Process* proc) {
 
 static int prim_qapplication_exit(Process* proc) {
   oop data_self =  proc->dp();
-  oop code = *((oop*) proc->fp() - 1);
+  oop code = proc->get_arg(0);
   QApplication* app = (QApplication*) get_qt_instance(proc->mmobj(), data_self);
   app->exit(untag_small_int(code));
   proc->stack_push(proc->rp());
@@ -331,8 +331,8 @@ static int prim_qapplication_focus_widget(Process* proc) {
 
 static int prim_qaction_new(Process* proc) {
   oop data_self =  proc->dp();
-  oop oop_parent = *((oop*) proc->fp() - 1);
-  oop oop_label = *((oop*) proc->fp() - 2);
+  oop oop_label = proc->get_arg(0);
+  oop oop_parent = proc->get_arg(1);
 
   QWidget* parent = (QWidget*) get_qt_instance(proc->mmobj(), oop_parent);
 
@@ -347,8 +347,8 @@ static int prim_qaction_connect(Process* proc) {
   oop data_self =  proc->dp();
   QWidget* w = (QWidget*) get_qt_instance(proc->mmobj(), data_self);
 
-  oop fn = *((oop*) proc->fp() - 1);
-  oop signal = *((oop*) proc->fp() - 2);
+  oop signal = proc->get_arg(0);
+  oop fn = proc->get_arg(1);
 
   QScriptValueList args;
   args << engine->newQObject(w)
@@ -369,7 +369,7 @@ static int prim_qaction_connect(Process* proc) {
 
 static int prim_qaction_set_enabled(Process* proc) {
   oop data_self =  proc->dp();
-  oop val = *((oop*) proc->fp() - 1);
+  oop val = proc->get_arg(0);
   QAction* qtobj = (QAction*) get_qt_instance(proc->mmobj(), data_self);
   qtobj->setEnabled(proc->mmobj()->mm_boolean_cbool(val));
   proc->stack_push(proc->rp());
@@ -378,7 +378,7 @@ static int prim_qaction_set_enabled(Process* proc) {
 
 static int prim_qaction_set_shortcut(Process* proc) {
   oop data_self =  proc->dp();
-  oop shortcut = *((oop*) proc->fp() - 1);
+  oop shortcut = proc->get_arg(0);
   QAction* qtobj = (QAction*) get_qt_instance(proc->mmobj(), data_self);
 
   qtobj->setShortcut(QString(proc->mmobj()->mm_string_cstr(shortcut)));
@@ -388,7 +388,7 @@ static int prim_qaction_set_shortcut(Process* proc) {
 
 static int prim_qaction_set_shortcut_context(Process* proc) {
   oop data_self =  proc->dp();
-  oop ctx = *((oop*) proc->fp() - 1);
+  oop ctx = proc->get_arg(0);
   QAction* qtobj = (QAction*) get_qt_instance(proc->mmobj(), data_self);
 
   qtobj->setShortcutContext((Qt::ShortcutContext) untag_small_int(ctx));
@@ -402,7 +402,7 @@ static int prim_qaction_set_shortcut_context(Process* proc) {
 
 static int prim_qt_qcombobox_new(Process* proc) {
   oop data_self =  proc->dp();
-  oop oop_parent = *((oop*) proc->fp() - 1);
+  oop oop_parent = proc->get_arg(0);
 
   QWidget* parent = (QWidget*) get_qt_instance(proc->mmobj(), oop_parent);
   QComboBox* qtobj = new QComboBox(parent);
@@ -415,7 +415,7 @@ static int prim_qt_qcombobox_new(Process* proc) {
 
 static int prim_qt_qcombobox_add_item(Process* proc) {
   oop data_self =  proc->dp();
-  oop item = *((oop*) proc->fp() - 1);
+  oop item = proc->get_arg(0);
 
   // std::cerr << "add ITEM " << proc->mmobj()->mm_string_cstr(item) << endl;
 
@@ -444,7 +444,7 @@ static int prim_qt_qcombobox_count(Process* proc) {
 
 static int prim_qt_qcombobox_set_current_index(Process* proc) {
   oop data_self =  proc->dp();
-  oop idx = *((oop*) proc->fp() - 1);
+  oop idx = proc->get_arg(0);
 
   QComboBox* qtobj = (QComboBox*) get_qt_instance(proc->mmobj(), data_self);
   qtobj->setCurrentIndex(untag_small_int(idx));
@@ -477,7 +477,7 @@ static int prim_qt_qeventloop_exec(Process* proc) {
 
 static int prim_qt_qeventloop_exit(Process* proc) {
   oop data_self =  proc->dp();
-  oop code = *((oop*) proc->fp() - 1);
+  oop code = proc->get_arg(0);
 
   QEventLoop* qtobj = (QEventLoop*) get_qt_instance(proc->mmobj(), data_self);
   qtobj->exit(untag_small_int(code));
@@ -489,7 +489,7 @@ static int prim_qt_qeventloop_exit(Process* proc) {
 
 static int prim_qt_qhboxlayout_new(Process* proc) {
   oop data_self =  proc->dp();
-  oop oop_parent = *((oop*) proc->fp() - 1);
+  oop oop_parent = proc->get_arg(0);
 
   QWidget* parent = (QWidget*) get_qt_instance(proc->mmobj(), oop_parent);
 
@@ -503,7 +503,7 @@ static int prim_qt_qhboxlayout_new(Process* proc) {
 
 static int prim_qt_qhboxlayout_add_layout(Process* proc) {
   oop data_self =  proc->dp();
-  oop oop_layout = *((oop*) proc->fp() - 1);
+  oop oop_layout = proc->get_arg(0);
 
   QLayout* layout = (QLayout*) get_qt_instance(proc->mmobj(), oop_layout);
   QHBoxLayout* qtobj = (QHBoxLayout*) get_qt_instance(proc->mmobj(), data_self);
@@ -514,7 +514,7 @@ static int prim_qt_qhboxlayout_add_layout(Process* proc) {
 
 static int prim_qt_qhboxlayout_add_widget(Process* proc) {
   oop data_self =  proc->dp();
-  oop oop_widget = *((oop*) proc->fp() - 1);
+  oop oop_widget = proc->get_arg(0);
 
   QWidget* widget = (QWidget*) get_qt_instance(proc->mmobj(), oop_widget);
   QHBoxLayout* qtobj = (QHBoxLayout*) get_qt_instance(proc->mmobj(), data_self);
@@ -525,10 +525,11 @@ static int prim_qt_qhboxlayout_add_widget(Process* proc) {
 
 static int prim_qt_qhboxlayout_set_contents_margins(Process* proc) {
   oop data_self =  proc->dp();
-  oop b = *((oop*) proc->fp() - 1);
-  oop r = *((oop*) proc->fp() - 1);
-  oop t = *((oop*) proc->fp() - 1);
-  oop l = *((oop*) proc->fp() - 1);
+
+  oop l = proc->get_arg(0);
+  oop t = proc->get_arg(1);
+  oop r = proc->get_arg(2);
+  oop b = proc->get_arg(3);
 
   QHBoxLayout* qtobj = (QHBoxLayout*) get_qt_instance(proc->mmobj(), data_self);
   qtobj->setContentsMargins(untag_small_int(l),
@@ -552,7 +553,7 @@ static int prim_qt_qheaderview_hide(Process* proc) {
 
 static int prim_qt_set_stretch_last_section(Process* proc) {
   oop data_self =  proc->dp();
-  oop oop_bool = *((oop*) proc->fp() - 1);
+  oop oop_bool = proc->get_arg(0);
 
   QHeaderView* qtobj = (QHeaderView*) get_qt_instance(proc->mmobj(), data_self);
   qtobj->setStretchLastSection(proc->mmobj()->mm_boolean_cbool(oop_bool));
@@ -565,7 +566,7 @@ static int prim_qt_set_stretch_last_section(Process* proc) {
 
 static int prim_qt_qlabel_new(Process* proc) {
   oop data_self =  proc->dp();
-  oop oop_parent = *((oop*) proc->fp() - 1);
+  oop oop_parent = proc->get_arg(0);
 
   QWidget* parent = (QWidget*) get_qt_instance(proc->mmobj(), oop_parent);
 
@@ -579,7 +580,7 @@ static int prim_qt_qlabel_new(Process* proc) {
 
 static int prim_qt_qlabel_set_text(Process* proc) {
   oop data_self =  proc->dp();
-  oop oop_text = *((oop*) proc->fp() - 1);
+  oop oop_text = proc->get_arg(0);
 
   QLabel* qtobj = (QLabel*) get_qt_instance(proc->mmobj(), data_self);
   qtobj->setText(proc->mmobj()->mm_string_cstr(oop_text));
@@ -592,7 +593,7 @@ static int prim_qt_qlabel_set_text(Process* proc) {
 
 static int prim_qt_qlayout_add_widget(Process* proc) {
   oop data_self =  proc->dp();
-  oop oop_widget = *((oop*) proc->fp() - 1);
+  oop oop_widget = proc->get_arg(0);
 
   QWidget* widget = (QWidget*) get_qt_instance(proc->mmobj(), oop_widget);
   QLayout* qtobj = (QLayout*) get_qt_instance(proc->mmobj(), data_self);
@@ -606,7 +607,7 @@ static int prim_qt_qlayout_add_widget(Process* proc) {
 
 static int prim_qt_qlineedit_new(Process* proc) {
   oop data_self =  proc->dp();
-  oop oop_parent = *((oop*) proc->fp() - 1);
+  oop oop_parent = proc->get_arg(0);
 
   QWidget* parent = (QWidget*) get_qt_instance(proc->mmobj(), oop_parent);
 
@@ -637,7 +638,7 @@ static int prim_qt_qlineedit_selected_text(Process* proc) {
 
 static int prim_qt_qlineedit_set_text(Process* proc) {
   oop data_self =  proc->dp();
-  oop oop_text = *((oop*) proc->fp() - 1);
+  oop oop_text = proc->get_arg(0);
 
   QLineEdit* qtobj = (QLineEdit*) get_qt_instance(proc->mmobj(), data_self);
   qtobj->setText(proc->mmobj()->mm_string_cstr(oop_text));
@@ -655,8 +656,8 @@ static int prim_qt_qlineedit_text(Process* proc) {
 
 static int prim_qt_qlineedit_set_selection(Process* proc) {
   oop data_self =  proc->dp();
-  oop oop_length = *((oop*) proc->fp() - 1);
-  oop oop_start = *((oop*) proc->fp() - 2);
+  oop oop_start = proc->get_arg(0);
+  oop oop_length = proc->get_arg(1);
 
   QLineEdit* qtobj = (QLineEdit*) get_qt_instance(proc->mmobj(), data_self);
   qtobj->setSelection(untag_small_int(oop_start), untag_small_int(oop_length));
@@ -669,7 +670,7 @@ static int prim_qt_qlineedit_set_selection(Process* proc) {
 
 static int prim_qt_qlistwidget_new(Process* proc) {
   oop data_self =  proc->dp();
-  oop oop_parent = *((oop*) proc->fp() - 1);
+  oop oop_parent = proc->get_arg(0);
 
   QWidget* parent = (QWidget*) get_qt_instance(proc->mmobj(), oop_parent);
 
@@ -694,8 +695,8 @@ static int prim_qt_qlistwidget_current_item(Process* proc) {
 
 static int prim_qt_qlistwidgetitem_new(Process* proc) {
   oop data_self =  proc->dp();
-  oop oop_parent = *((oop*) proc->fp() - 1);
-  oop oop_text = *((oop*) proc->fp() - 2);
+  oop oop_text = proc->get_arg(0);
+  oop oop_parent = proc->get_arg(1);
 
   QListWidget* parent = (QListWidget*) get_qt_instance(proc->mmobj(), oop_parent);
 
@@ -738,7 +739,7 @@ private:
 
 static int prim_qt_qmainwindow_new(Process* proc) {
   oop data_self =  proc->dp();
-  oop oop_parent = *((oop*) proc->fp() - 1);
+  oop oop_parent = proc->get_arg(0);
 
   QWidget* parent = (QWidget*) get_qt_instance(proc->mmobj(), oop_parent);
 
@@ -762,7 +763,7 @@ static int prim_qt_qmainwindow_menu_bar(Process* proc) {
 
 static int prim_qt_qmainwindow_set_central_widget(Process* proc) {
   oop data_self =  proc->dp();
-  oop oop_widget = *((oop*) proc->fp() - 1);
+  oop oop_widget = proc->get_arg(0);
 
   QWidget* widget = (QWidget*) get_qt_instance(proc->mmobj(), oop_widget);
   _QMainWindow* qtobj = (_QMainWindow*) get_qt_instance(proc->mmobj(), data_self);
@@ -786,7 +787,7 @@ static int prim_qt_qmainwindow_status_bar(Process* proc) {
 
 static int prim_qt_qmenubar_add_menu(Process* proc) {
   oop data_self =  proc->dp();
-  oop text = *((oop*) proc->fp() - 1);
+  oop text = proc->get_arg(0);
 
   QMenuBar* qtobj = (QMenuBar*) get_qt_instance(proc->mmobj(), data_self);
   int exc;
@@ -799,7 +800,7 @@ static int prim_qt_qmenubar_add_menu(Process* proc) {
 
 static int prim_qt_qplaintextedit_new(Process* proc) {
   oop data_self =  proc->dp();
-  oop oop_parent = *((oop*) proc->fp() - 1);
+  oop oop_parent = proc->get_arg(0);
 
   QWidget* parent = (QWidget*) get_qt_instance(proc->mmobj(), oop_parent);
 
@@ -813,7 +814,7 @@ static int prim_qt_qplaintextedit_new(Process* proc) {
 
 static int prim_qt_qplaintextedit_set_plain_text(Process* proc) {
   oop data_self =  proc->dp();
-  oop oop_text = *((oop*) proc->fp() - 1);
+  oop oop_text = proc->get_arg(0);
 
   QPlainTextEdit* qtobj = (QPlainTextEdit*) get_qt_instance(proc->mmobj(), data_self);
 
@@ -824,7 +825,7 @@ static int prim_qt_qplaintextedit_set_plain_text(Process* proc) {
 
 static int prim_qt_qplaintextedit_set_tabstop_width(Process* proc) {
   oop data_self =  proc->dp();
-  oop oop_width = *((oop*) proc->fp() - 1);
+  oop oop_width = proc->get_arg(0);
 
   QPlainTextEdit* qtobj = (QPlainTextEdit*) get_qt_instance(proc->mmobj(), data_self);
 
@@ -835,7 +836,7 @@ static int prim_qt_qplaintextedit_set_tabstop_width(Process* proc) {
 
 static int prim_qt_qplaintextedit_set_text_cursor(Process* proc) {
   oop data_self =  proc->dp();
-  oop oop_cursor = *((oop*) proc->fp() - 1);
+  oop oop_cursor = proc->get_arg(0);
 
   QTextCursor* cursor = (QTextCursor*) get_qt_instance(proc->mmobj(), oop_cursor);
 
@@ -869,7 +870,7 @@ static int prim_qt_qplaintextedit_to_plain_text(Process* proc) {
 
 static int prim_qt_scintilla_editor_new(Process* proc) {
   oop data_self =  proc->dp();
-  oop oop_parent = *((oop*) proc->fp() - 1);
+  oop oop_parent = proc->get_arg(0);
 
   QWidget* parent = (QWidget*) get_qt_instance(proc->mmobj(), oop_parent);
 
@@ -883,7 +884,7 @@ static int prim_qt_scintilla_editor_new(Process* proc) {
 
 static int prim_qt_scintilla_append(Process* proc) {
   oop data_self =  proc->dp();
-  oop oop_text = *((oop*) proc->fp() - 1);
+  oop oop_text = proc->get_arg(0);
 
   _QScintilla* qtobj = (_QScintilla*) get_qt_instance(proc->mmobj(), data_self);
   qtobj->append(proc->mmobj()->mm_string_cstr(oop_text));
@@ -948,9 +949,9 @@ static int prim_qt_scintilla_get_selection(Process* proc) {
 
 static int prim_qt_scintilla_insert_at(Process* proc) {
   oop data_self =  proc->dp();
-  oop oop_index = *((oop*) proc->fp() - 1);
-  oop oop_line = *((oop*) proc->fp() - 2);
-  oop oop_text = *((oop*) proc->fp() - 3);
+  oop oop_text = proc->get_arg(0);
+  oop oop_line = proc->get_arg(1);
+  oop oop_index = proc->get_arg(2);
 
   _QScintilla* qtobj = (_QScintilla*) get_qt_instance(proc->mmobj(), data_self);
   qtobj->insertAt(proc->mmobj()->mm_string_cstr(oop_text),
@@ -978,10 +979,10 @@ static int prim_qt_scintilla_paste(Process* proc) {
 
 static int prim_qt_scintilla_paused_at_line(Process* proc) {
   oop data_self =  proc->dp();
-  oop oop_end_col = *((oop*) proc->fp() - 1);
-  oop oop_end_line = *((oop*) proc->fp() - 2);
-  oop oop_start_col = *((oop*) proc->fp() - 3);
-  oop oop_start_line = *((oop*) proc->fp() - 4);
+  oop oop_start_line = proc->get_arg(0);
+  oop oop_start_col = proc->get_arg(1);
+  oop oop_end_line = proc->get_arg(2);
+  oop oop_end_col = proc->get_arg(3);
 
   _QScintilla* qtobj = (_QScintilla*) get_qt_instance(proc->mmobj(), data_self);
   qtobj->paused_at_line(untag_small_int(oop_start_line),
@@ -1022,10 +1023,10 @@ static int prim_qt_scintilla_selected_text(Process* proc) {
 
 static int prim_qt_scintilla_set_selection(Process* proc) {
   oop data_self =  proc->dp();
-  oop oop_end_col = *((oop*) proc->fp() - 1);
-  oop oop_end_line = *((oop*) proc->fp() - 2);
-  oop oop_start_col = *((oop*) proc->fp() - 3);
-  oop oop_start_line = *((oop*) proc->fp() - 4);
+  oop oop_start_line = proc->get_arg(0);
+  oop oop_start_col = proc->get_arg(1);
+  oop oop_end_line = proc->get_arg(2);
+  oop oop_end_col = proc->get_arg(3);
 
   _QScintilla* qtobj = (_QScintilla*) get_qt_instance(proc->mmobj(), data_self);
   qtobj->setSelection(untag_small_int(oop_start_line),
@@ -1039,7 +1040,7 @@ static int prim_qt_scintilla_set_selection(Process* proc) {
 
 static int prim_qt_scintilla_set_text(Process* proc) {
   oop data_self =  proc->dp();
-  oop oop_text = *((oop*) proc->fp() - 1);
+  oop oop_text = proc->get_arg(0);
 
   _QScintilla* qtobj = (_QScintilla*) get_qt_instance(proc->mmobj(), data_self);
   qtobj->setText(proc->mmobj()->mm_string_cstr(oop_text));
@@ -1070,7 +1071,7 @@ static int prim_qt_scintilla_undo(Process* proc) {
 
 static int prim_qt_qshortcut_new(Process* proc) {
   oop data_self =  proc->dp();
-  oop oop_parent = *((oop*) proc->fp() - 1);
+  oop oop_parent = proc->get_arg(0);
 
   QWidget* parent = (QWidget*) get_qt_instance(proc->mmobj(), oop_parent);
 
@@ -1083,7 +1084,7 @@ static int prim_qt_qshortcut_new(Process* proc) {
 
 static int prim_qt_qshortcut_set_context(Process* proc) {
   oop data_self =  proc->dp();
-  oop oop_ctx = *((oop*) proc->fp() - 1);
+  oop oop_ctx = proc->get_arg(0);
 
   QShortcut* qtobj = (QShortcut*) get_qt_instance(proc->mmobj(), data_self);
   qtobj->setContext((Qt::ShortcutContext)untag_small_int(oop_ctx));
@@ -1095,7 +1096,7 @@ static int prim_qt_qshortcut_set_context(Process* proc) {
 
 static int prim_qt_qtablewidget_new(Process* proc) {
   oop data_self =  proc->dp();
-  oop oop_parent = *((oop*) proc->fp() - 1);
+  oop oop_parent = proc->get_arg(0);
 
   QWidget* parent = (QWidget*) get_qt_instance(proc->mmobj(), oop_parent);
 
@@ -1140,7 +1141,7 @@ static int prim_qt_qtablewidget_horizontal_header(Process* proc) {
 
 static int prim_qt_qtablewidget_set_column_count(Process* proc) {
   oop data_self =  proc->dp();
-  oop oop_count = *((oop*) proc->fp() - 1);
+  oop oop_count = proc->get_arg(0);
 
   QTableWidget* qtobj = (QTableWidget*) get_qt_instance(proc->mmobj(), data_self);
   qtobj->setColumnCount(untag_small_int(oop_count));
@@ -1150,7 +1151,7 @@ static int prim_qt_qtablewidget_set_column_count(Process* proc) {
 
 static int prim_qt_qtablewidget_set_horizontal_header_labels(Process* proc) {
   oop data_self =  proc->dp();
-  oop oop_labels = *((oop*) proc->fp() - 1);
+  oop oop_labels = proc->get_arg(0);
 
   QTableWidget* qtobj = (QTableWidget*) get_qt_instance(proc->mmobj(), data_self);
   QStringList lst;
@@ -1164,9 +1165,9 @@ static int prim_qt_qtablewidget_set_horizontal_header_labels(Process* proc) {
 
 static int prim_qt_qtablewidget_set_item(Process* proc) {
   oop data_self =  proc->dp();
-  oop oop_item = *((oop*) proc->fp() - 1);
-  oop oop_col = *((oop*) proc->fp() - 2);
-  oop oop_line = *((oop*) proc->fp() - 3);
+  oop oop_line = proc->get_arg(0);
+  oop oop_col = proc->get_arg(1);
+  oop oop_item = proc->get_arg(2);
 
   QTableWidgetItem* item = (QTableWidgetItem*) get_qt_instance(proc->mmobj(), oop_item);
 
@@ -1178,7 +1179,7 @@ static int prim_qt_qtablewidget_set_item(Process* proc) {
 
 static int prim_qt_qtablewidget_set_row_count(Process* proc) {
   oop data_self =  proc->dp();
-  oop oop_count = *((oop*) proc->fp() - 1);
+  oop oop_count = proc->get_arg(0);
 
   QTableWidget* qtobj = (QTableWidget*) get_qt_instance(proc->mmobj(), data_self);
   qtobj->setRowCount(untag_small_int(oop_count));
@@ -1188,7 +1189,7 @@ static int prim_qt_qtablewidget_set_row_count(Process* proc) {
 
 static int prim_qt_qtablewidget_set_selection_mode(Process* proc) {
   oop data_self =  proc->dp();
-  oop oop_mode = *((oop*) proc->fp() - 1);
+  oop oop_mode = proc->get_arg(0);
 
   QTableWidget* qtobj = (QTableWidget*) get_qt_instance(proc->mmobj(), data_self);
   qtobj->setSelectionMode((QAbstractItemView::SelectionMode) untag_small_int(oop_mode));
@@ -1198,7 +1199,7 @@ static int prim_qt_qtablewidget_set_selection_mode(Process* proc) {
 
 static int prim_qt_qtablewidget_set_sorting_enabled(Process* proc) {
   oop data_self =  proc->dp();
-  oop oop_val = *((oop*) proc->fp() - 1);
+  oop oop_val = proc->get_arg(0);
 
   QTableWidget* qtobj = (QTableWidget*) get_qt_instance(proc->mmobj(), data_self);
   qtobj->setSortingEnabled(proc->mmobj()->mm_boolean_cbool(oop_val));
@@ -1233,7 +1234,7 @@ static int prim_qt_qtablewidget_vertical_header(Process* proc) {
 
 static int prim_qt_qtablewidgetitem_new(Process* proc) {
   oop data_self =  proc->dp();
-  oop oop_label = *((oop*) proc->fp() - 1);
+  oop oop_label = proc->get_arg(0);
 
   QTableWidgetItem* qtobj = new QTableWidgetItem(proc->mmobj()->mm_string_cstr(oop_label));
   set_meme_instance(qtobj, proc->rp());
@@ -1244,7 +1245,7 @@ static int prim_qt_qtablewidgetitem_new(Process* proc) {
 
 static int prim_qt_qtablewidgetitem_set_flags(Process* proc) {
   oop data_self =  proc->dp();
-  oop oop_flags = *((oop*) proc->fp() - 1);
+  oop oop_flags = proc->get_arg(0);
 
   QTableWidgetItem* qtobj = (QTableWidgetItem*) get_qt_instance(proc->mmobj(), data_self);
   qtobj->setFlags((Qt::ItemFlags)untag_small_int(oop_flags));
@@ -1257,7 +1258,7 @@ static int prim_qt_qtablewidgetitem_set_flags(Process* proc) {
 
 static int prim_qt_qtextcursor_drag_right(Process* proc) {
   oop data_self =  proc->dp();
-  oop oop_len = *((oop*) proc->fp() - 1);
+  oop oop_len = proc->get_arg(0);
 
   QTextCursor* qtobj = (QTextCursor*) get_qt_instance(proc->mmobj(), data_self);
   bool res = qtobj->movePosition(QTextCursor::Left, QTextCursor::KeepAnchor, untag_small_int(oop_len));
@@ -1267,7 +1268,7 @@ static int prim_qt_qtextcursor_drag_right(Process* proc) {
 
 static int prim_qt_qtextcursor_insert_text(Process* proc) {
   oop data_self =  proc->dp();
-  oop oop_text = *((oop*) proc->fp() - 1);
+  oop oop_text = proc->get_arg(0);
 
   QTextCursor* qtobj = (QTextCursor*) get_qt_instance(proc->mmobj(), data_self);
   qtobj->insertText(proc->mmobj()->mm_string_cstr(oop_text));
@@ -1294,7 +1295,7 @@ static int prim_qt_qtextcursor_selection_end(Process* proc) {
 
 static int prim_qt_qtextcursor_set_position(Process* proc) {
   oop data_self =  proc->dp();
-  oop oop_pos = *((oop*) proc->fp() - 1);
+  oop oop_pos = proc->get_arg(0);
 
   QTextCursor* qtobj = (QTextCursor*) get_qt_instance(proc->mmobj(), data_self);
   qtobj->setPosition(untag_small_int(oop_pos));
@@ -1323,7 +1324,7 @@ static int prim_qt_qurl_has_fragment(Process* proc) {
 
 static int prim_qt_qurl_has_query_item(Process* proc) {
   oop data_self =  proc->dp();
-  oop oop_name = *((oop*) proc->fp() - 1);
+  oop oop_name = proc->get_arg(0);
 
   QUrl* qtobj = (QUrl*) get_qt_instance(proc->mmobj(), data_self);
   proc->stack_push(proc->mmobj()->mm_boolean_new(qtobj->hasQueryItem(proc->mmobj()->mm_string_cstr(oop_name))));
@@ -1340,7 +1341,7 @@ static int prim_qt_qurl_path(Process* proc) {
 
 static int prim_qt_qurl_query_item_value(Process* proc) {
   oop data_self =  proc->dp();
-  oop oop_name = *((oop*) proc->fp() - 1);
+  oop oop_name = proc->get_arg(0);
 
   QUrl* qtobj = (QUrl*) get_qt_instance(proc->mmobj(), data_self);
   QString val = qtobj->queryItemValue(proc->mmobj()->mm_string_cstr(oop_name));
@@ -1362,7 +1363,7 @@ static int prim_qt_qurl_to_string(Process* proc) {
 
 static int prim_qt_qvboxlayout_new(Process* proc) {
   oop data_self =  proc->dp();
-  oop oop_parent = *((oop*) proc->fp() - 1);
+  oop oop_parent = proc->get_arg(0);
 
   QWidget* parent = (QWidget*) get_qt_instance(proc->mmobj(), oop_parent);
 
@@ -1376,7 +1377,7 @@ static int prim_qt_qvboxlayout_new(Process* proc) {
 
 static int prim_qt_qvboxlayout_add_layout(Process* proc) {
   oop data_self =  proc->dp();
-  oop oop_layout = *((oop*) proc->fp() - 1);
+  oop oop_layout = proc->get_arg(0);
 
   QLayout* layout = (QLayout*) get_qt_instance(proc->mmobj(), oop_layout);
   QVBoxLayout* qtobj = (QVBoxLayout*) get_qt_instance(proc->mmobj(), data_self);
@@ -1387,7 +1388,7 @@ static int prim_qt_qvboxlayout_add_layout(Process* proc) {
 
 static int prim_qt_qvboxlayout_add_widget(Process* proc) {
   oop data_self =  proc->dp();
-  oop oop_widget = *((oop*) proc->fp() - 1);
+  oop oop_widget = proc->get_arg(0);
 
   QWidget* widget = (QWidget*) get_qt_instance(proc->mmobj(), oop_widget);
   QVBoxLayout* qtobj = (QVBoxLayout*) get_qt_instance(proc->mmobj(), data_self);
@@ -1400,7 +1401,7 @@ static int prim_qt_qvboxlayout_add_widget(Process* proc) {
 
 static int prim_qt_qwebelement_append_inside(Process* proc) {
   oop data_self =  proc->dp();
-  oop oop_str_or_webel = *((oop*) proc->fp() - 1);
+  oop oop_str_or_webel = proc->get_arg(0);
 
   QWebElement* qtobj = (QWebElement*) get_qt_instance(proc->mmobj(), data_self);
 
@@ -1416,7 +1417,7 @@ static int prim_qt_qwebelement_append_inside(Process* proc) {
 
 static int prim_qt_qwebelement_append_outside(Process* proc) {
   oop data_self =  proc->dp();
-  oop oop_str_or_webel = *((oop*) proc->fp() - 1);
+  oop oop_str_or_webel = proc->get_arg(0);
 
   QWebElement* qtobj = (QWebElement*) get_qt_instance(proc->mmobj(), data_self);
 
@@ -1444,7 +1445,7 @@ static int prim_qt_qwebelement_clone(Process* proc) {
 
 static int prim_qt_qwebelement_find_first(Process* proc) {
   oop data_self =  proc->dp();
-  oop oop_str = *((oop*) proc->fp() - 1);
+  oop oop_str = proc->get_arg(0);
 
   QWebElement* qtobj = (QWebElement*) get_qt_instance(proc->mmobj(), data_self);
   QWebElement* el = new QWebElement(qtobj->findFirst(proc->mmobj()->mm_string_cstr(oop_str)));
@@ -1457,8 +1458,8 @@ static int prim_qt_qwebelement_find_first(Process* proc) {
 
 static int prim_qt_qwebelement_set_attribute(Process* proc) {
   oop data_self =  proc->dp();
-  oop oop_val = *((oop*) proc->fp() - 1);
-  oop oop_name = *((oop*) proc->fp() - 2);
+  oop oop_name = proc->get_arg(0);
+  oop oop_val = proc->get_arg(1);
 
   QWebElement* qtobj = (QWebElement*) get_qt_instance(proc->mmobj(), data_self);
   qtobj->setAttribute(proc->mmobj()->mm_string_cstr(oop_name), proc->mmobj()->mm_string_cstr(oop_val));
@@ -1468,7 +1469,7 @@ static int prim_qt_qwebelement_set_attribute(Process* proc) {
 
 static int prim_qt_qwebelement_set_inner_xml(Process* proc) {
   oop data_self =  proc->dp();
-  oop oop_xml = *((oop*) proc->fp() - 1);
+  oop oop_xml = proc->get_arg(0);
 
   QWebElement* qtobj = (QWebElement*) get_qt_instance(proc->mmobj(), data_self);
   qtobj->setInnerXml(proc->mmobj()->mm_string_cstr(oop_xml));
@@ -1478,7 +1479,7 @@ static int prim_qt_qwebelement_set_inner_xml(Process* proc) {
 
 static int prim_qt_qwebelement_set_plain_text(Process* proc) {
   oop data_self =  proc->dp();
-  oop oop_text = *((oop*) proc->fp() - 1);
+  oop oop_text = proc->get_arg(0);
 
   QWebElement* qtobj = (QWebElement*) get_qt_instance(proc->mmobj(), data_self);
   qtobj->setPlainText(proc->mmobj()->mm_string_cstr(oop_text));
@@ -1488,8 +1489,8 @@ static int prim_qt_qwebelement_set_plain_text(Process* proc) {
 
 static int prim_qt_qwebelement_set_style_property(Process* proc) {
   oop data_self =  proc->dp();
-  oop oop_val = *((oop*) proc->fp() - 1);
-  oop oop_name = *((oop*) proc->fp() - 2);
+  oop oop_name = proc->get_arg(0);
+  oop oop_val = proc->get_arg(1);
 
   QWebElement* qtobj = (QWebElement*) get_qt_instance(proc->mmobj(), data_self);
   qtobj->setStyleProperty(proc->mmobj()->mm_string_cstr(oop_name), proc->mmobj()->mm_string_cstr(oop_val));
@@ -1529,7 +1530,7 @@ static int prim_qt_qwebframe_document_element(Process* proc) {
 
 static int prim_qt_qwebframe_scroll_to_anchor(Process* proc) {
   oop data_self =  proc->dp();
-  oop oop_anchor = *((oop*) proc->fp() - 1);
+  oop oop_anchor = proc->get_arg(0);
 
   QWebFrame* qtobj = (QWebFrame*) get_qt_instance(proc->mmobj(), data_self);
   qtobj->scrollToAnchor(proc->mmobj()->mm_string_cstr(oop_anchor));
@@ -1590,8 +1591,8 @@ public:
 
 static int prim_qt_extra_qwebpage_enable_plugins(Process* proc) {
   oop data_self =  proc->dp();
-  oop oop_fun = *((oop*) proc->fp() - 1);
-  oop oop_name = *((oop*) proc->fp() - 2);
+  oop oop_name = proc->get_arg(0);
+  oop oop_fun = proc->get_arg(1);
 
   WebPluginFactory* factory = new WebPluginFactory(oop_fun, proc, proc->mmobj()->mm_string_cstr(oop_name));
   QWebPage* qtobj = (QWebPage*) get_qt_instance(proc->mmobj(), data_self);
@@ -1615,7 +1616,7 @@ static int prim_qt_qwebpage_main_frame(Process* proc) {
 
 static int prim_qt_qwebpage_set_link_delegation_policy(Process* proc) {
   oop data_self =  proc->dp();
-  oop oop_policy = *((oop*) proc->fp() - 1);
+  oop oop_policy = proc->get_arg(0);
 
   QWebPage* qtobj = (QWebPage*) get_qt_instance(proc->mmobj(), data_self);
   qtobj->setLinkDelegationPolicy((QWebPage::LinkDelegationPolicy) untag_small_int(oop_policy));
@@ -1628,7 +1629,7 @@ static int prim_qt_qwebpage_set_link_delegation_policy(Process* proc) {
 
 static int prim_qt_qwebview_new(Process* proc) {
   oop data_self =  proc->dp();
-  oop oop_parent = *((oop*) proc->fp() - 1);
+  oop oop_parent = proc->get_arg(0);
 
   QWidget* parent = (QWidget*) get_qt_instance(proc->mmobj(), oop_parent);
 
@@ -1652,7 +1653,7 @@ static int prim_qt_qwebview_page(Process* proc) {
 
 static int prim_qt_qwebview_set_html(Process* proc) {
   oop data_self =  proc->dp();
-  oop oop_html = *((oop*) proc->fp() - 1);
+  oop oop_html = proc->get_arg(0);
 
   QWebView* qtobj = (QWebView*) get_qt_instance(proc->mmobj(), data_self);
   qtobj->setHtml(proc->mmobj()->mm_string_cstr(oop_html));
@@ -1662,7 +1663,7 @@ static int prim_qt_qwebview_set_html(Process* proc) {
 
 static int prim_qt_qwebview_set_url(Process* proc) {
   oop data_self =  proc->dp();
-  oop oop_url = *((oop*) proc->fp() - 1);
+  oop oop_url = proc->get_arg(0);
 
   QWebView* qtobj = (QWebView*) get_qt_instance(proc->mmobj(), data_self);
   qtobj->setUrl(QUrl(proc->mmobj()->mm_string_cstr(oop_url)));
@@ -1703,7 +1704,7 @@ static int prim_qt_qwidget_actions(Process* proc) {
 
 static int prim_qt_qwidget_add_action(Process* proc) {
   oop data_self =  proc->dp();
-  oop oop_action = *((oop*) proc->fp() - 1);
+  oop oop_action = proc->get_arg(0);
 
   QWidget* w = (QWidget*) get_qt_instance(proc->mmobj(), data_self);
   QAction* ac = (QAction*)get_qt_instance(proc->mmobj(), oop_action);
@@ -1725,8 +1726,8 @@ static int prim_qt_qwidget_connect(Process* proc) {
   oop data_self =  proc->dp();
   QWidget* w = (QWidget*) get_qt_instance(proc->mmobj(), data_self);
 
-  oop fn = *((oop*) proc->fp() - 1);
-  oop signal = *((oop*) proc->fp() - 2);
+  oop signal = proc->get_arg(0);
+  oop fn = proc->get_arg(1);
 
   QScriptValueList args;
   args << engine->newQObject(w)
@@ -1772,8 +1773,8 @@ static int prim_qt_qwidget_is_visible(Process* proc) {
 
 static int prim_qt_qwidget_resize(Process* proc) {
   oop data_self =  proc->dp();
-  oop oop_h = *((oop*) proc->fp() - 1);
-  oop oop_w = *((oop*) proc->fp() - 2);
+  oop oop_w = proc->get_arg(0);
+  oop oop_h = proc->get_arg(1);
 
   QWidget* w = (QWidget*) get_qt_instance(proc->mmobj(), data_self);
   w->resize(untag_small_int(oop_w), untag_small_int(oop_h));
@@ -1792,7 +1793,7 @@ static int prim_qt_qwidget_set_focus(Process* proc) {
 
 static int prim_qt_qwidget_set_maximum_height(Process* proc) {
   oop data_self =  proc->dp();
-  oop oop_h = *((oop*) proc->fp() - 1);
+  oop oop_h = proc->get_arg(0);
 
   QWidget* w = (QWidget*) get_qt_instance(proc->mmobj(), data_self);
   w->setMaximumHeight(untag_small_int(oop_h));
@@ -1802,7 +1803,7 @@ static int prim_qt_qwidget_set_maximum_height(Process* proc) {
 
 static int prim_qt_qwidget_set_maximum_width(Process* proc) {
   oop data_self =  proc->dp();
-  oop oop_w = *((oop*) proc->fp() - 1);
+  oop oop_w = proc->get_arg(0);
 
   QWidget* w = (QWidget*) get_qt_instance(proc->mmobj(), data_self);
   w->setMaximumWidth(untag_small_int(oop_w));
@@ -1812,8 +1813,8 @@ static int prim_qt_qwidget_set_maximum_width(Process* proc) {
 
 static int prim_qt_qwidget_set_minimum_size(Process* proc) {
   oop data_self =  proc->dp();
-  oop oop_h = *((oop*) proc->fp() - 1);
-  oop oop_w = *((oop*) proc->fp() - 2);
+  oop oop_w = proc->get_arg(0);
+  oop oop_h = proc->get_arg(1);
 
   QWidget* w = (QWidget*) get_qt_instance(proc->mmobj(), data_self);
   w->setMinimumSize(untag_small_int(oop_w), untag_small_int(oop_h));
@@ -1823,7 +1824,7 @@ static int prim_qt_qwidget_set_minimum_size(Process* proc) {
 
 static int prim_qt_qwidget_set_minimum_width(Process* proc) {
   oop data_self =  proc->dp();
-  oop oop_w = *((oop*) proc->fp() - 1);
+  oop oop_w = proc->get_arg(0);
 
   QWidget* w = (QWidget*) get_qt_instance(proc->mmobj(), data_self);
   w->setMinimumWidth(untag_small_int(oop_w));
@@ -1833,7 +1834,7 @@ static int prim_qt_qwidget_set_minimum_width(Process* proc) {
 
 static int prim_qt_qwidget_set_stylesheet(Process* proc) {
   oop data_self =  proc->dp();
-  oop oop_str = *((oop*) proc->fp() - 1);
+  oop oop_str = proc->get_arg(0);
 
   QWidget* w = (QWidget*) get_qt_instance(proc->mmobj(), data_self);
   w->setStyleSheet(proc->mmobj()->mm_string_cstr(oop_str));
@@ -1843,7 +1844,7 @@ static int prim_qt_qwidget_set_stylesheet(Process* proc) {
 
 static int prim_qt_qwidget_set_window_title(Process* proc) {
   oop data_self =  proc->dp();
-  oop oop_str = *((oop*) proc->fp() - 1);
+  oop oop_str = proc->get_arg(0);
 
   QWidget* w = (QWidget*) get_qt_instance(proc->mmobj(), data_self);
   w->setWindowTitle(proc->mmobj()->mm_string_cstr(oop_str));
@@ -1871,7 +1872,7 @@ static int prim_qt_maybe_construct_qapp(Process* proc) {
 
 // static int prim_qpushbutton_new(Process* proc) {
 //   oop data_self =  proc->dp();
-//   oop oop_parent = *((oop*) proc->fp() - 1);
+//   oop oop_parent = proc->get_arg(0);
 //   oop oop_label = *((oop*) proc->fp() - 2);
 //   QWidget* parent = (QWidget*) get_qt_instance(proc->mmobj(), oop_parent);
 //   QPushButton* button = new QPushButton(proc->mmobj()->mm_string_cstr(oop_label), parent);

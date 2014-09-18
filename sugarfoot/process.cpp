@@ -57,7 +57,7 @@ oop Process::set_dp(oop dp) {
 }
 
 oop Process::rp() {
-  dbg() << "Process::rp  fp:" <<  _fp << " _ss:" << _ss << " ==> " << * (oop*) (_fp + _ss) << endl;
+  // dbg() << "Process::rp  fp:" <<  _fp << " _ss:" << _ss << " ==> " << * (oop*) (_fp + _ss) << endl;
   return * (oop*) (_fp + _ss );
 }
 
@@ -424,10 +424,9 @@ oop Process::do_call(oop fun, oop args, int* exc) {
 
 void Process::fetch_cycle(void* stop_at_fp) {
   dbg() << "begin fetch_cycle fp:" << _fp <<  " stop_fp:" <<  stop_at_fp
-          << " ip: " << _ip << endl;
+        << " ip: " << _ip << endl;
   while ((_fp != stop_at_fp) && _ip) { // && ((_ip - start_ip) * sizeof(bytecode))  < _code_size) {
-    // dbg() << "fp " << _fp << " stop " <<  stop_at_fp << " ip-start " <<  (_ip - start_ip)  << " codesize " <<  _code_size <<
-    //   "ip " << _ip << std::endl;
+    // std::cerr << "fp " << _fp << " stop " <<  stop_at_fp << " codesize " <<  _code_size << "ip " << _ip << std::endl;
 
     bytecode code = *_ip;
 
@@ -440,10 +439,10 @@ void Process::fetch_cycle(void* stop_at_fp) {
 
     int opcode = decode_opcode(code);
     int arg = decode_args(code);
-    // if (_state != RUN_STATE) {
-    //   char* name = _mmobj->mm_string_cstr(_mmobj->mm_function_get_name(_cp));
-    //   std::cerr << " [dispatching] " << name << " " << (_ip-1) << " " << opcode << endl;
-    // }
+    if (_state != RUN_STATE) {
+      char* name = _mmobj->mm_string_cstr(_mmobj->mm_function_get_name(_cp));
+      std::cerr << " [dispatching] " << name << " " << (_ip-1) << " " << opcode << endl;
+    }
     dispatch(opcode, arg);
     // dbg() << " [end of dispatch] " << opcode << endl;
   }
@@ -782,19 +781,19 @@ oop Process::stack_pop() {
 
 void Process::stack_push(oop data) {
   _sp++;
-  dbg() << "     PUSH " << data << " -> " << _sp << endl;
+  // dbg() << "     PUSH " << data << " -> " << _sp << endl;
   * (word*) _sp = (word) data;
 }
 
 void Process::stack_push(word data) {
   _sp++;
-  dbg() << "     PUSH " << (oop) data << " -> " << _sp << endl;
+  // dbg() << "     PUSH " << (oop) data << " -> " << _sp << endl;
   * (word*) _sp = data;
 }
 
 void Process::stack_push(bytecode* data) {
   _sp++;
-  dbg() << "     PUSH " << data << " -> " << _sp << endl;
+  // dbg() << "     PUSH " << data << " -> " << _sp << endl;
   * (word*) _sp = (word) data;
 }
 
@@ -1010,9 +1009,9 @@ oop Process::bp_at(unsigned int idx) { //backwards 0 is current
 
 std::ostream& Process::dbg() {
   if (!_is_dbg) {
-    //debug() << "PROC[target]";
+    debug() << "PROC[target]";
   } else {
-    //debug() << "PROC[debugger]";
+    debug() << "PROC[debugger]";
   }
   return debug();
 }

@@ -718,21 +718,21 @@ static int prim_compiled_function_with_frame(Process* proc) {
   oop cmod = proc->get_arg(2);
 
   oop fn = proc->mmobj()->mm_frame_get_cp(frame);
-  // std::cerr << "prim_compiled_function_with_frame: fn: " << fn << endl;
+  std::cerr << "prim_compiled_function_with_frame: associated to fun: " << fn << endl;
   oop env_table = proc->mmobj()->mm_function_env_table(fn);
-  // std::cerr << "prim_compiled_function_with_frame: env_table: " << env_table << endl;
+  std::cerr << "prim_compiled_function_with_frame: env_table: " << env_table << endl;
 
   std::list<std::string> lst = proc->mmobj()->mm_sym_list_to_cstring_list(env_table);
 
   int exc;
   oop cfun = proc->vm()->compile_fun(proc, proc->mmobj()->mm_string_cstr(text), lst, cmod, &exc);
-  // std::cerr << "prim_compiled_function_with_frame: cfun: " << cfun << " " << exc << endl;
+  std::cerr << "prim_compiled_function_with_frame: cfun: " << cfun << " " << exc << endl;
   if (exc != 0) {
     proc->stack_push(cfun);
     return PRIM_RAISED;
   }
 
-  // debug() << "prim_compiled_function_with_env: GOT cfun: " << cfun << " " << *(oop*) cfun << endl;
+  std::cerr << "prim_compiled_function_with_env: GOT cfun: " << cfun << " " << *(oop*) cfun << endl;
   proc->stack_push(cfun);
   return 0;
 }
@@ -815,9 +815,10 @@ static int prim_compiled_function_loc_for_ip(Process* proc) {
   }
 
   bytecode* ip = (bytecode*) proc->get_arg(0);
+  // std::cerr << "loc_for_ip: " << ip << endl;
   bytecode* base_ip = proc->mmobj()->mm_compiled_function_get_code(self);
   word idx = ip - base_ip;
-  // std::cerr << "IDX : " << idx << endl;
+  // std::cerr << "loc_for_ip base: " << base_ip << " idx" << ip - base_ip << endl;
 
   oop mapping = proc->mmobj()->mm_compiled_function_get_loc_mapping(self);
   std::map<oop, oop>::iterator it = proc->mmobj()->mm_dictionary_begin(mapping);
@@ -873,6 +874,16 @@ static int prim_function_get_env(Process* proc) {
 static int prim_get_compiled_module(Process* proc) {
   oop imod = proc->get_arg(0);
   proc->stack_push(proc->mmobj()->mm_module_get_cmod(imod));
+  return 0;
+}
+
+static int prim_get_current_process(Process* proc) {
+  proc->stack_push(proc->mmobj()->mm_process_new(proc));
+  return 0;
+}
+
+static int prim_get_current_frame(Process* proc) {
+  proc->stack_push(proc->mmobj()->mm_frame_new(proc->bp()));
   return 0;
 }
 
@@ -1062,9 +1073,10 @@ static int prim_process_apply(Process* proc) {
 
 static int prim_frame_ip(Process* proc) {
   oop frame = proc->dp();
-  oop bp =   proc->mmobj()->mm_frame_get_bp(frame);
+  oop ip = (oop) proc->mmobj()->mm_frame_get_ip(frame);
+  // oop bp =   proc->mmobj()->mm_frame_get_bp(frame);
   // std::cerr << "prim_frame_ip bp: " << bp << endl;
-  oop ip = *((oop*)(bp - 4));
+  // oop ip = *((oop*)(bp - 2));
   // std::cerr << "prim_frame_ip bp: " << bp << " has ip: " << ip << endl;
   proc->stack_push(ip);
   return 0;
@@ -1080,9 +1092,9 @@ static int prim_frame_cp(Process* proc) {
   return 0;
 }
 
-static int prim_frame_ep(Process* proc) {
+static int prim_frame_fp(Process* proc) {
   oop frame = proc->dp();
-  proc->stack_push(proc->mmobj()->mm_frame_get_ep(frame));
+  proc->stack_push(proc->mmobj()->mm_frame_get_fp(frame));
   return 0;
 }
 
@@ -1192,8 +1204,10 @@ void init_primitives(VM* vm) {
 
   vm->register_primitive("frame_ip", prim_frame_ip);
   vm->register_primitive("frame_cp", prim_frame_cp);
-  vm->register_primitive("frame_ep", prim_frame_ep);
+  vm->register_primitive("frame_fp", prim_frame_fp);
 
+  vm->register_primitive("get_current_process", prim_get_current_process);
+  vm->register_primitive("get_current_frame", prim_get_current_frame);
   vm->register_primitive("get_compiled_module", prim_get_compiled_module);
 
   vm->register_primitive("modules_path", prim_modules_path);

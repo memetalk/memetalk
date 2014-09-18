@@ -38,6 +38,7 @@ public:
   oop fp() { return _fp; }
   oop cp() { return _cp; }
   oop mp() { return _mp; }
+  oop bp() { return _bp; }
   bytecode* ip() { return _ip; }
 
   oop rp();

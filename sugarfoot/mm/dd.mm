@@ -183,7 +183,8 @@ instance_method doIt: fun() {
   try {
     io.print("Eval in frame: " + @frame_index.toString + " -- " + @editor.selectedText());
     var ctx = Context.withFrame(@editor.selectedText(), @process.frames()[@frame_index], thisModule);
-    @process.apply(ctx);
+    //@process.apply(ctx);
+    ctx();
   } catch(ex) {
     this.insertSelectedText(ex.message());
   }
@@ -193,7 +194,8 @@ instance_method printIt: fun() {
   try {
     io.print("Eval in frame: " + @frame_index.toString + " -- " + @editor.selectedText());
     var ctx = Context.withFrame(@editor.selectedText(), @process.frames()[@frame_index], thisModule);
-    var res = @process.apply(ctx);
+    // var res = @process.apply(ctx);
+    var res = ctx();
     this.insertSelectedText(res.toString);
   } catch(ex) {
     this.insertSelectedText(ex.message());

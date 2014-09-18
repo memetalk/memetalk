@@ -38,13 +38,19 @@ oop MMObj::mm_frame_get_bp(oop frame) {
 oop MMObj::mm_frame_get_cp(oop frame) {
   assert( mm_object_vt(frame) == _core_image->get_prime("Frame"));
   oop bp = mm_frame_get_bp(frame);
-  return *((oop*)bp - 5);
+  return *((oop*)bp - 3);
 }
 
-oop MMObj::mm_frame_get_ep(oop frame) {
+oop MMObj::mm_frame_get_fp(oop frame) {
   assert( mm_object_vt(frame) == _core_image->get_prime("Frame"));
   oop bp = mm_frame_get_bp(frame);
-  return *((oop*)bp - 3);
+  return *((oop*)bp - 4);
+}
+
+bytecode* MMObj::mm_frame_get_ip(oop frame) {
+  assert( mm_object_vt(frame) == _core_image->get_prime("Frame"));
+  oop bp = mm_frame_get_bp(frame);
+  return (bytecode*) *((oop*)bp - 2);
 }
 
 oop MMObj::mm_module_new(int num_fields, oop cmod, oop delegate) {
