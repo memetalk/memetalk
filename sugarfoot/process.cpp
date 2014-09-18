@@ -347,10 +347,9 @@ oop Process::do_send(oop recv, oop selector, int num_args, int *exc) {
     return ex;
   }
 
-  oop stop_at_fp = _fp;
   try {
     if (load_fun(recv, drecv, fun, true)) {
-      fetch_cycle(stop_at_fp);
+      fetch_cycle(_bp);
     }
   } catch(mm_rewind e) {
     *exc = 1;
@@ -383,12 +382,11 @@ oop Process::do_call(oop fun, int* exc) {
 
 
   dbg() << "-- begin do_call fun: " << fun << " sp: " << _sp << ", fp: " << _fp << endl;
-  oop stop_at_fp = _fp;
 
   *exc = 0;
   try {
     if (load_fun(NULL, NULL, fun, false)) {
-      fetch_cycle(stop_at_fp);
+      fetch_cycle(_bp);
     }
   } catch(mm_rewind e) {
     *exc = 1;
@@ -422,11 +420,14 @@ oop Process::do_call(oop fun, oop args, int* exc) {
   return do_call(fun, exc);
 }
 
-void Process::fetch_cycle(void* stop_at_fp) {
-  dbg() << "begin fetch_cycle fp:" << _fp <<  " stop_fp:" <<  stop_at_fp
+void Process::fetch_cycle(void* stop_at_bp) {
+  dbg() << "begin fetch_cycle fp:" << _fp <<  " stop_fp:" <<  stop_at_bp
         << " ip: " << _ip << endl;
-  while ((_fp != stop_at_fp) && _ip) { // && ((_ip - start_ip) * sizeof(bytecode))  < _code_size) {
-    // std::cerr << "fp " << _fp << " stop " <<  stop_at_fp << " codesize " <<  _code_size << "ip " << _ip << std::endl;
+
+  assert((_bp >= stop_at_bp) && _ip); //at least one instructionn should be executed.
+
+  while ((_bp >= stop_at_bp) && _ip) { // && ((_ip - start_ip) * sizeof(bytecode))  < _code_size) {
+    // std::cerr << "fp " << _fp << " stop " <<  stop_at_bp << " codesize " <<  _code_size << "ip " << _ip << std::endl;
 
     bytecode code = *_ip;
 
