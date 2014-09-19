@@ -718,21 +718,21 @@ static int prim_compiled_function_with_frame(Process* proc) {
   oop cmod = proc->get_arg(2);
 
   oop fn = proc->mmobj()->mm_frame_get_cp(frame);
-  std::cerr << "prim_compiled_function_with_frame: associated to fun: " << fn << endl;
+  // std::cerr << "prim_compiled_function_with_frame: associated to fun: " << fn << endl;
   oop env_table = proc->mmobj()->mm_function_env_table(fn);
-  std::cerr << "prim_compiled_function_with_frame: env_table: " << env_table << endl;
+  // std::cerr << "prim_compiled_function_with_frame: env_table: " << env_table << endl;
 
   std::list<std::string> lst = proc->mmobj()->mm_sym_list_to_cstring_list(env_table);
 
   int exc;
   oop cfun = proc->vm()->compile_fun(proc, proc->mmobj()->mm_string_cstr(text), lst, cmod, &exc);
-  std::cerr << "prim_compiled_function_with_frame: cfun: " << cfun << " " << exc << endl;
+  // std::cerr << "prim_compiled_function_with_frame: cfun: " << cfun << " " << exc << endl;
   if (exc != 0) {
     proc->stack_push(cfun);
     return PRIM_RAISED;
   }
 
-  std::cerr << "prim_compiled_function_with_env: GOT cfun: " << cfun << " " << *(oop*) cfun << endl;
+  // std::cerr << "prim_compiled_function_with_env: GOT cfun: " << cfun << " " << *(oop*) cfun << endl;
   proc->stack_push(cfun);
   return 0;
 }

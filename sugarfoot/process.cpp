@@ -18,7 +18,7 @@ Process::Process(VM* vm)
   :   _is_dbg(false), _vm(vm), _mmobj(vm->mmobj()), _control(new ProcessControl()), _dbg_handler(NULL, MM_NULL) {
   init();
   _state = RUN_STATE;
-  _step_fp = MM_NULL;
+  _step_bp = MM_NULL;
 }
 
 oop Process::run(oop recv, oop selector_sym) {
@@ -440,10 +440,10 @@ void Process::fetch_cycle(void* stop_at_bp) {
 
     int opcode = decode_opcode(code);
     int arg = decode_args(code);
-    if (_state != RUN_STATE) {
-      char* name = _mmobj->mm_string_cstr(_mmobj->mm_function_get_name(_cp));
-      std::cerr << " [dispatching] " << name << " " << (_ip-1) << " " << opcode << endl;
-    }
+    // if (_state != RUN_STATE) {
+    //   char* name = _mmobj->mm_string_cstr(_mmobj->mm_function_get_name(_cp));
+    //   std::cerr << " [dispatching] " << name << " " << (_ip-1) << " " << opcode << endl;
+    // }
     dispatch(opcode, arg);
     // dbg() << " [end of dispatch] " << opcode << endl;
   }
@@ -477,12 +477,12 @@ void Process::tick() {
         goto do_pause;
       }
     }
-    if (_step_fp == _fp) {
+    if (_step_bp >= _bp) {
       // std::cerr << "BREAK on FP "  << _fp << " " << _ip << " " << decode_opcode(*_ip) << endl;
       goto do_pause;
     }
   } else if (_state == STEP_OUT_STATE) {
-    if (_step_fp == _fp) {
+    if (_step_bp >= _bp) {
       // std::cerr << "BREAK on FP "  << _fp << " " << _ip << " " << decode_opcode(*_ip) << endl;
       goto do_pause;
     }
@@ -503,7 +503,7 @@ void Process::tick() {
     //           << " next opcode" <<  decode_opcode(*_ip) << endl;
     _state = HALT_STATE;
     _volatile_breakpoints.clear();
-    _step_fp = MM_NULL;
+    _step_bp = MM_NULL;
     _control->pause();
     // std::cerr << "Process::tick: resuming..." << endl;
 }
@@ -528,8 +528,8 @@ void Process::step_over() {
     //           << decode_opcode(*next) << endl;
     _volatile_breakpoints.push_back(next);
   }
-  _step_fp = *((oop*)_bp - 6); //previous frame
-  // std::cerr  << "ste_over will br on: " << _step_fp << " " << std::endl;
+  _step_bp = *(oop*)_bp; //previous bp
+  // std::cerr  << "ste_over will br on: " << _step_bp << " " << std::endl;
   _state = STEP_OVER_STATE;
   _control->resume();
 }
@@ -542,16 +542,16 @@ void Process::step_over_line() {
     //           << decode_opcode(*next) << endl;
     _volatile_breakpoints.push_back(next);
   }
-  _step_fp = *((oop*)_bp - 6); //previous frame
-  // std::cerr  << "ste_over_line will br on FP: " << _step_fp << " " << *((oop*)_bp - 6) << std::endl;
+  _step_bp = *(oop*)_bp; //previous frame
+  // std::cerr  << "ste_over_line will br on FP: " << _step_bp << " " << *((oop*)_bp - 6) << std::endl;
   _state = STEP_OVER_STATE;
   _control->resume();
 }
 
 void Process::step_out() {
   // std::cerr << "Process::step_out resuming ..." << endl;
-  _step_fp = *((oop*)_bp - 6); //previous frame
-  // std::cerr  << "ste_out will br on FP: " << _step_fp << " " << std::endl;
+  _step_bp = *(oop*)_bp; //previous bp
+  // std::cerr  << "ste_out will br on FP: " << _step_bp << " " << std::endl;
   _state = STEP_OUT_STATE;
   _control->resume();
 }

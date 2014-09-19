@@ -144,7 +144,7 @@ private:
   unsigned int _stack_depth;
   number _code_size;
   std::list<bytecode*> _volatile_breakpoints;
-  oop _step_fp;
+  oop _step_bp;
 };
 
 #endif
