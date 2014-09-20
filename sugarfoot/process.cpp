@@ -556,6 +556,11 @@ void Process::step_out() {
   _control->resume();
 }
 
+void Process::reload_frame() {
+  _sp = _bp; //restore sp, ignoring frame data. push_frame/pop_frame are always in sync.
+  _ip = _mmobj->mm_function_get_code(_cp);
+}
+
 void Process::handle_send(number num_args) {
   oop selector = stack_pop();
   oop recv = stack_pop(); //(oop) * _sp;

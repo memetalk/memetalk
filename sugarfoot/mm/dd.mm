@@ -138,12 +138,20 @@ init new: fun(proc) {
   action.setShortcutContext(0); //widget context
   execMenu.addAction(action);
 
+  action = qt.QAction.new("Reload frame", this);
+  action.setShortcut("ctrl+r");
+  action.connect("triggered", fun(_) {
+      this.reloadFrame();
+  });
+  action.setShortcutContext(0); //widget context
+  execMenu.addAction(action);
+
   var centralWidget = QWidget.new(this);
   this.setCentralWidget(centralWidget);
   var mainLayout = qt.QVBoxLayout.new(centralWidget);
   @editor = QsciScintilla.new(centralWidget);
   mainLayout.addWidget(@editor);
-  @editor.setText(@process.cp().compiledFunction().text());
+  // @editor.setText(@process.cp().compiledFunction().text());
 
   @frame_index = 0;
   @execFrames = ExecutionFrames.new(@process);
@@ -200,6 +208,11 @@ instance_method printIt: fun() {
   } catch(ex) {
     this.insertSelectedText(ex.message());
   }
+}
+
+instance_method reloadFrame: fun() {
+  @process.reloadFrame();
+  this.updateUI;
 }
 
 instance_method updateUI: fun() {

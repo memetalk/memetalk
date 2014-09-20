@@ -79,6 +79,7 @@ public:
   void step_over();
   void step_over_line();
   void step_out();
+  void reload_frame();
 
   word* stack() { return _stack; };
   unsigned int stack_depth();

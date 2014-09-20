@@ -3,7 +3,7 @@
 .code
 
 g: fun() {
-  Exception.throw("test");
+//  Exception.throw("test");
   var x = 1;
   return x;
 }
@@ -29,11 +29,16 @@ class Z
   init new: fun() {
     @a = 99;
   }
+  instance_method bla: fun() {
+    @a = 100;
+    return @a;
+  }
 end
 
 main: fun() {
   var x = Z.new;
   debug();
+  x.bla;
   var fn = fun() {
     var xx = 1;
     return foo();

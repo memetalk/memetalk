@@ -420,12 +420,16 @@ end
   instance_method stepOut: fun() {
     <primitive "process_step_out">
   }
-  instance_method cp: fun() {
-    <primitive "process_cp">
+  instance_method reloadFrame: fun() {
+    <primitive "process_reload_frame">
   }
-  instance_method ip: fun() {
-    <primitive "process_ip">
-  }
+
+  // instance_method cp: fun() {
+  //   <primitive "process_cp">
+  // }
+  // instance_method ip: fun() {
+  //   <primitive "process_ip">
+  // }
   instance_method frames: fun() {
     <primitive "process_frames">
   }
