@@ -363,19 +363,19 @@ oop Process::do_send(oop recv, oop selector, int num_args, int *exc) {
 }
 
 
-oop Process::do_call_protected(oop fun, int* exc) {
-  int old_state = _state;
+// oop Process::do_call_protected(oop fun, int* exc) {
+//   int old_state = _state;
 
-  _state = RUN_STATE;
-  try {
-    oop res = do_call(fun, exc);
-    _state = old_state;
-    return res;
-  } catch( ... ) {
-    _state = old_state;
-    throw;
-  }
-}
+//   _state = RUN_STATE;
+//   try {
+//     oop res = do_call(fun, exc);
+//     _state = old_state;
+//     return res;
+//   } catch( ... ) {
+//     _state = old_state;
+//     throw;
+//   }
+// }
 
 oop Process::do_call(oop fun, int* exc) {
   assert(_mmobj->mm_is_context(fun)); //since we pass NULL to load_fun
@@ -399,7 +399,7 @@ oop Process::do_call(oop fun, int* exc) {
   return val;
 }
 
-oop Process::do_call(oop fun, oop args, int* exc) {
+oop Process::call(oop fun, oop args, int* exc) {
   assert(_mmobj->mm_is_context(fun)); //since we pass NULL to load_fun
 
   number num_args = _mmobj->mm_list_size(args);

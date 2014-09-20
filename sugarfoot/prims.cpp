@@ -267,6 +267,7 @@ static int prim_list_each(Process* proc) {
   for (int i = 0; i < size; i++) {
     oop next = proc->mmobj()->mm_list_entry(self, i);
     debug() << "list each[" << i << "] = " << next << endl;
+    proc->stack_push(tag_small_int(i));
     proc->stack_push(next);
     int exc;
     oop val = proc->do_call(fun, &exc);
@@ -1056,20 +1057,20 @@ static int prim_process_frames(Process* proc) {
   return 0;
 }
 
-static int prim_process_apply(Process* proc) {
-  oop oop_target_proc = proc->rp();
-  oop fn = proc->get_arg(0);
+// static int prim_process_apply(Process* proc) {
+//   oop oop_target_proc = proc->rp();
+//   oop fn = proc->get_arg(0);
 
-  Process* target_proc = proc->mmobj()->mm_process_get_proc(oop_target_proc);
-  int exc;
-  oop res = target_proc->do_call_protected(fn, &exc);
-  if (exc != 0) {
-    proc->stack_push(res);
-    return PRIM_RAISED;
-  }
-  proc->stack_push(res);
-  return 0;
-}
+//   Process* target_proc = proc->mmobj()->mm_process_get_proc(oop_target_proc);
+//   int exc;
+//   oop res = target_proc->do_call_protected(fn, &exc);
+//   if (exc != 0) {
+//     proc->stack_push(res);
+//     return PRIM_RAISED;
+//   }
+//   proc->stack_push(res);
+//   return 0;
+// }
 
 static int prim_frame_ip(Process* proc) {
   oop frame = proc->dp();
@@ -1095,6 +1096,26 @@ static int prim_frame_cp(Process* proc) {
 static int prim_frame_fp(Process* proc) {
   oop frame = proc->dp();
   proc->stack_push(proc->mmobj()->mm_frame_get_fp(frame));
+  return 0;
+}
+
+static int prim_frame_rp(Process* proc) {
+  oop frame = proc->dp();
+  proc->stack_push(proc->mmobj()->mm_frame_get_rp(frame));
+  return 0;
+}
+
+static int prim_frame_dp(Process* proc) {
+  oop frame = proc->dp();
+  proc->stack_push(proc->mmobj()->mm_frame_get_dp(frame));
+  return 0;
+}
+
+static int prim_frame_get_local_value(Process* proc) {
+  oop frame = proc->dp();
+  number idx = untag_small_int(proc->get_arg(0));
+  oop fp = proc->mmobj()->mm_frame_get_fp(frame);
+  proc->stack_push(*((oop*)fp + idx));
   return 0;
 }
 
@@ -1199,12 +1220,15 @@ void init_primitives(VM* vm) {
   vm->register_primitive("process_cp", prim_process_cp);
   vm->register_primitive("process_ip", prim_process_ip);
   vm->register_primitive("process_frames", prim_process_frames);
-  vm->register_primitive("process_apply", prim_process_apply);
+  // vm->register_primitive("process_apply", prim_process_apply);
   // vm->register_primitive("process_eval_in_frame", prim_process_eval_in_frame);
 
   vm->register_primitive("frame_ip", prim_frame_ip);
   vm->register_primitive("frame_cp", prim_frame_cp);
   vm->register_primitive("frame_fp", prim_frame_fp);
+  vm->register_primitive("frame_rp", prim_frame_rp);
+  vm->register_primitive("frame_dp", prim_frame_dp);
+  vm->register_primitive("frame_get_local_value", prim_frame_get_local_value);
 
   vm->register_primitive("get_current_process", prim_get_current_process);
   vm->register_primitive("get_current_frame", prim_get_current_frame);

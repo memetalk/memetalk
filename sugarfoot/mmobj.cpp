@@ -47,6 +47,26 @@ oop MMObj::mm_frame_get_fp(oop frame) {
   return *((oop*)bp - 4);
 }
 
+number MMObj::mm_frame_get_ss(oop frame) {
+  assert( mm_object_vt(frame) == _core_image->get_prime("Frame"));
+  oop bp = mm_frame_get_bp(frame);
+  return (number) *((oop*)bp - 1);
+}
+
+oop MMObj::mm_frame_get_rp(oop frame) {
+  assert( mm_object_vt(frame) == _core_image->get_prime("Frame"));
+  oop fp = mm_frame_get_fp(frame);
+  number ss = mm_frame_get_ss(frame);
+  return * (oop*) (fp + ss);
+}
+
+oop MMObj::mm_frame_get_dp(oop frame) {
+  assert( mm_object_vt(frame) == _core_image->get_prime("Frame"));
+  oop fp = mm_frame_get_fp(frame);
+  number ss = mm_frame_get_ss(frame);
+  return * (oop*) (fp + ss + 1);
+}
+
 bytecode* MMObj::mm_frame_get_ip(oop frame) {
   assert( mm_object_vt(frame) == _core_image->get_prime("Frame"));
   oop bp = mm_frame_get_bp(frame);

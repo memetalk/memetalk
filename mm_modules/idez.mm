@@ -1921,20 +1921,6 @@ instance_method updateInfo: fun() {
 
 end //idez:StackCombo
 
-class VariableItem < QTableWidgetItem
-fields: obj;
-init new: fun(text, obj) {
-  super.new(text);
-  this.setFlags(33);
-  @obj = obj;
-}
-
-instance_method object: fun() {
-  return @obj;
-}
-
-end //idez:VariableItem
-
 class VariableListWidget < QTableWidget
 fields: target_process;
 init new: fun(process, parent) {

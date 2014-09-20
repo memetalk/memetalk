@@ -19,6 +19,9 @@ public:
   oop mm_frame_get_bp(oop);
   oop mm_frame_get_cp(oop);
   oop mm_frame_get_fp(oop);
+  oop mm_frame_get_rp(oop);
+  oop mm_frame_get_dp(oop);
+  number mm_frame_get_ss(oop);
   bytecode* mm_frame_get_ip(oop);
 
   oop mm_new(oop vt, oop delegate, number payload);

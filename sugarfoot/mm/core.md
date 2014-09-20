@@ -85,10 +85,11 @@
 
   class CompiledFunction
    fields: name, params, is_ctor, is_prim, prim_name, accessor_flags,
-           accessor_field, owner, params, has_env, is_top_level,
+           accessor_field, owner, len_params, has_env, is_top_level,
            outer_cfun, storage_size, env_offset, lit_frame_size,
            literal_frame_addr, bytecode_size, bytecode_addr,
-           exception_frame_addr, env_table, text, line_mappings,
+           exception_frames_len, exception_frame_addr,
+           env_table, text, line_mappings,
            loc_mappings;
     init withEnv: fun(text, scope_names, cmod) {
       <primitive "compiled_function_with_env">
@@ -129,6 +130,9 @@
     }
     instance_method outerCompiledFunction: fun() {
       return @outer_cfun;
+    }
+    instance_method env_table: fun() {
+      return @env_table;
     }
   end
 
@@ -425,9 +429,9 @@ end
   instance_method frames: fun() {
     <primitive "process_frames">
   }
-  instance_method apply: fun(fn) {
-    <primitive "process_apply">
-  }
+  // instance_method apply: fun(fn) {
+  //   <primitive "process_apply">
+  // }
   // instance_method evalInFrame: fun(text, frame_idx) {
   //   <primitive "process_eval_in_frame">
   // }
@@ -443,6 +447,15 @@ end
   }
   instance_method fp: fun() {
     <primitive "frame_fp">
+  }
+  instance_method rp: fun() {
+    <primitive "frame_rp">
+  }
+  instance_method dp: fun() {
+    <primitive "frame_dp">
+  }
+  instance_method get_local_value: fun(idx) {
+    <primitive "frame_get_local_value">
   }
   end
 

@@ -3,9 +3,16 @@
 .code
 
 g: fun() {
-  //Exception.throw("test");
+  Exception.throw("test");
   var x = 1;
   return x;
+}
+
+f: fun() {
+  //return foo();
+  var z = 2;
+  var k = g() + 3 + z;
+  return k + 1;
 }
 
 bar: fun() {
@@ -16,25 +23,22 @@ foo: fun() {
   <primitive "test_catch_exception">
 }
 
-f: fun() {
-  //return foo();
-  var z = 2;
-  return g() + 3;
-}
 
+class Z
+  fields: a;
+  init new: fun() {
+    @a = 99;
+  }
+end
 
 main: fun() {
-  var z = 1;
- debug();
-  var f = fun() {
-    var y = 1;
-    return y;
+  var x = Z.new;
+  debug();
+  var fn = fun() {
+    var xx = 1;
+    return foo();
   };
-  var k = f();
-  var x = 10;
-  io.print(x);
-  x = x + 2;
-  return x + 3 - 4;
+  return fn();
 }
 
 

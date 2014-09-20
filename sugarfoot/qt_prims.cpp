@@ -266,7 +266,7 @@ QScriptValue mm_handle(QScriptContext *ctx, QScriptEngine *engine) {
     }
   }
   int exc;
-  oop res = proc->do_call(mm_closure, mm_args, &exc);
+  oop res = proc->call(mm_closure, mm_args, &exc);
   check_and_print_exception(proc, exc, res);
   return engine->undefinedValue();
 }
@@ -1551,7 +1551,7 @@ public:
               const QStringList & argumentNames, const QStringList & argumentValues) const {
     if (mimeType == "x-pyqt/" + _name) {
       int exc;
-      oop obj = _proc->do_call(_fun, create_args(argumentNames, argumentValues), &exc);
+      oop obj = _proc->call(_fun, create_args(argumentNames, argumentValues), &exc);
       if (!check_and_print_exception(_proc, exc, obj)) {
         return (QObject*) get_qt_instance(_proc->mmobj(), obj);
       }

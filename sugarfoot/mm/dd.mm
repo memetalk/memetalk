@@ -11,7 +11,6 @@ init new: fun(proc) {
 }
 
 instance_method codeFor: fun(i) {
-  io.print("codeFor: " + i.toString);
   var cp = @proc.frames()[i].cp().compiledFunction();
   if (cp.isTopLevel()) {
     return cp.text();
@@ -32,7 +31,6 @@ instance_method frame: fun(i) {
 }
 
 instance_method locationInfoFor: fun(i) {
-  io.print("locationInfofor: " + i.toString);
   var ip = @proc.frames()[i].ip();
   return @proc.frames()[i].cp().compiledFunction().source_location_for_ip(ip);
 }
@@ -48,7 +46,6 @@ instance_method size: fun() {
 }
 
 instance_method topFrame: fun() {
-  io.print("topFrame:" + (this.size()-1).toString);
   return @proc.frames()[this.size()-1];
 }
 
@@ -63,7 +60,6 @@ init new: fun(parent, execframes) {
   // @updating = false;
 
   this.connect("currentIndexChanged(int)", fun(idx) {
-    io.print("StackCombo: currentIndexChanged slot");
     // if (!@updating) {
       @on_update(idx);
     // }
@@ -84,7 +80,7 @@ instance_method updateInfo: fun() {
 end
 
 class Ddd < QMainWindow
-fields: process, editor, stackCombo, execFrames, frame_index;
+fields: process, editor, stackCombo, execFrames, frame_index, localVarList, fieldVarList;
 init new: fun(proc) {
   super.new(null);
   this.setWindowTitle("Debugger");
@@ -152,17 +148,23 @@ init new: fun(proc) {
   @frame_index = 0;
   @execFrames = ExecutionFrames.new(@process);
   @stackCombo = StackCombo.new(centralWidget, @execFrames);
-  mainLayout.addWidget(@stackCombo);
-
   @stackCombo.onUpdate(fun(i) {
-    io.print("stackCombo: onUpdate: " + i.toString);
     @frame_index = i;
     this.updateUI();
   });
+
+  mainLayout.addWidget(@stackCombo);
+
+  var hbox = qt.QHBoxLayout.new(null);
+  @localVarList = VariableListWidget.new(@process, centralWidget);
+  hbox.addWidget(@localVarList);
+
+  @fieldVarList = VariableListWidget.new(@process, centralWidget);
+  hbox.addWidget(@fieldVarList);
+  mainLayout.addLayout(hbox);
 }
 
 instance_method process_paused: fun() { //this is called from the vm
-  io.print("DDD: process_paused");
   @stackCombo.updateInfo();
   //this.updateUI();
 }
@@ -181,7 +183,6 @@ instance_method insertSelectedText: fun(text) {
 
 instance_method doIt: fun() {
   try {
-    io.print("Eval in frame: " + @frame_index.toString + " -- " + @editor.selectedText());
     var ctx = Context.withFrame(@editor.selectedText(), @process.frames()[@frame_index], thisModule);
     //@process.apply(ctx);
     ctx();
@@ -192,7 +193,6 @@ instance_method doIt: fun() {
 
 instance_method printIt: fun() {
   try {
-    io.print("Eval in frame: " + @frame_index.toString + " -- " + @editor.selectedText());
     var ctx = Context.withFrame(@editor.selectedText(), @process.frames()[@frame_index], thisModule);
     // var res = @process.apply(ctx);
     var res = ctx();
@@ -203,16 +203,17 @@ instance_method printIt: fun() {
 }
 
 instance_method updateUI: fun() {
-  io.print("DDD: updateUI " + @frame_index.toString);
   if (@frame_index >= 0) {
     @editor.setText(@execFrames.codeFor(@frame_index));
     // @editor.setFrameIndex(@frame_index);
     var locInfo = @execFrames.locationInfoFor(@frame_index);
     if (locInfo) {
-      io.print(locInfo);
       @editor.pausedAtLine(locInfo[0], locInfo[1], locInfo[2], locInfo[3]);
     }
+    @localVarList.loadFrame(@process.frames[@frame_index]);
+    @fieldVarList.loadReceiver(@process.frames[@frame_index]);
   }
+
   // @editor.setText(@process.cp().compiledFunction().text());
   // var locInfo = @process.cp().compiledFunction().source_location_for_ip(@process.ip);
   // if (locInfo) {
@@ -221,6 +222,88 @@ instance_method updateUI: fun() {
   // //vars
 }
 end
+
+
+class VariableItem < QTableWidgetItem
+fields: obj;
+init new: fun(text, obj) {
+  super.new(text);
+  this.setFlags(33);
+  @obj = obj;
+}
+
+instance_method object: fun() {
+  return @obj;
+}
+
+end //idez:VariableItem
+
+class VariableListWidget < QTableWidget
+fields: target_process;
+init new: fun(process, parent) {
+  super.new(parent);
+  this.verticalHeader().hide();
+  this.setSelectionMode(1);
+  var header = this.horizontalHeader();
+  header.setStretchLastSection(true);
+  this.setSortingEnabled(false);
+  this.setColumnCount(2);
+
+  this.clear();
+  this.setHorizontalHeaderLabels(['Name', 'Value']);
+
+  @target_process = process;
+
+  this.connect("itemDoubleClicked", fun(item) {
+    io.print("Inspector.inspect!")
+    //Inspector.inspect(item.object)
+  });
+}
+
+instance_method loadFrame: fun(frame) {
+  this.clear();
+  this.setHorizontalHeaderLabels(['Name', 'Value']);
+
+  var variables = frame.cp.compiledFunction.env_table;
+  this.setRowCount(variables.size + 2);
+
+  var _this = frame.rp;
+
+  this.setItem(0, 0, VariableItem.new("this", _this));
+  this.setItem(0, 1, VariableItem.new(_this.toString, _this));
+
+  var _dthis = frame.dp;
+  this.setItem(1, 0, VariableItem.new("@this", _dthis));
+  this.setItem(1, 1, VariableItem.new(_dthis.toString, _dthis));
+
+  variables.each(fun(idx, varname) {
+    var entry = frame.get_local_value(idx);
+    this.setItem(idx + 2, 0, VariableItem.new(varname.toString, entry));
+    this.setItem(idx + 2, 1, VariableItem.new(entry.toString, entry));
+  });
+}
+//end idez:VariableListWidget:loadFrame
+
+instance_method loadReceiver: fun(frame) {
+  io.print("load receiver!!");
+  return 1;
+
+  this.clear();
+  this.setHorizontalHeaderLabels(['Name', 'Value']);
+
+  var _dthis = frame.dp;
+  var mirror = Mirror.new(_dthis);
+  var fields = mirror.fields();
+  this.setRowCount(fields.size);
+
+  fields.each(fun(i, name) {
+    this.setItem(i, 0, VariableItem.new(name, mirror.valueFor(name)));
+    this.setItem(i, 1, VariableItem.new(mirror.valueFor(name).toString, mirror.valueFor(name)));
+  });
+}
+
+end //idez:VariableListWidget
+
 
 main: fun(proc) {
   var app = qt.QApplication.new();

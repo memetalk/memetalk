@@ -60,9 +60,9 @@ public:
 
   oop unwind_with_exception(oop);
 
-  oop do_call_protected(oop, int*);
+  // oop do_call_protected(oop, int*);
+  oop call(oop, oop, int*);
   oop do_call(oop, int*);
-  oop do_call(oop, oop, int*);
 
   oop send_0(oop recv, oop selector, int* exc);
   oop send_1(oop recv, oop selector, oop arg, int* exc);
