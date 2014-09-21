@@ -406,6 +406,21 @@ bool MMObj::mm_is_context(oop obj) {
   return *(oop*) obj == _core_image->get_prime("Context");
 }
 
+void MMObj::mm_context_set_cfun(oop ctx, oop cfun) {
+  assert( mm_object_vt(ctx) == _core_image->get_prime("Context"));
+  ((oop*)ctx)[2] = cfun;
+}
+
+void MMObj::mm_context_set_module(oop ctx, oop imod) {
+  assert( mm_object_vt(ctx) == _core_image->get_prime("Context"));
+  ((oop*)ctx)[3] = imod;
+}
+
+void MMObj::mm_context_set_env(oop ctx, oop env) {
+  assert( mm_object_vt(ctx) == _core_image->get_prime("Context"));
+  ((oop*)ctx)[4] = env;
+}
+
 oop MMObj::mm_context_get_env(oop ctx) {
   assert( mm_object_vt(ctx) == _core_image->get_prime("Context"));
   return ((oop*)ctx)[4];
@@ -627,6 +642,11 @@ oop MMObj::mm_compiled_function_get_owner(oop cfun) {
   return ((oop*)cfun)[9];
 }
 
+void MMObj::mm_compiled_function_set_owner(oop cfun, oop owner) {
+  assert( *(oop*) cfun == _core_image->get_prime("CompiledFunction"));
+  ((oop*)cfun)[9] = owner;
+}
+
 number MMObj::mm_compiled_function_get_num_params(oop cfun) {
   assert( *(oop*) cfun == _core_image->get_prime("CompiledFunction"));
   return (number) ((oop*)cfun)[10];
@@ -709,14 +729,14 @@ oop MMObj::mm_compiled_function_get_loc_mapping(oop cfun) {
   return ((oop*)cfun)[25];
 }
 
-oop MMObj::mm_compiled_function_get_cmod(oop cfun) {
-  assert( *(oop*) cfun == _core_image->get_prime("CompiledFunction"));
-  return ((oop*)cfun)[26];
-}
+// oop MMObj::mm_compiled_function_get_cmod(oop cfun) {
+//   assert( *(oop*) cfun == _core_image->get_prime("CompiledFunction"));
+//   return ((oop*)cfun)[26];
+// }
 
 void MMObj::mm_compiled_function_set_cmod(oop cfun, oop cmod) {
   assert( *(oop*) cfun == _core_image->get_prime("CompiledFunction"));
-  ((oop*)cfun)[27] = cmod;
+  ((oop*)cfun)[26] = cmod;
 }
 
 bytecode* MMObj::mm_compiled_function_next_expr(oop cfun, bytecode* ip) {

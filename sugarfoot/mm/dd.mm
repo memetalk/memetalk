@@ -31,13 +31,12 @@ instance_method frame: fun(i) {
 }
 
 instance_method locationInfoFor: fun(i) {
-  var ip = @proc.frames()[i].ip();
-  return @proc.frames()[i].cp().compiledFunction().source_location_for_ip(ip);
+  return @proc.frames()[i].cp().compiledFunction().source_location_for(@proc.frames()[i]);
 }
 
 instance_method names: fun() {
   return @proc.frames().map(fun(frame) {
-    frame.cp.compiledFunction.fullName + ":" + (frame.cp.compiledFunction.lineForInstruction(frame.ip) + 1).toString
+    frame.cp.compiledFunction.fullName + ":" + (frame.cp.compiledFunction.lineFor(frame) + 1).toString
   });
 }
 
@@ -223,16 +222,9 @@ instance_method updateUI: fun() {
     if (locInfo) {
       @editor.pausedAtLine(locInfo[0], locInfo[1], locInfo[2], locInfo[3]);
     }
-    @localVarList.loadFrame(@process.frames[@frame_index]);
-    @fieldVarList.loadReceiver(@process.frames[@frame_index]);
+   @localVarList.loadFrame(@process.frames[@frame_index]);
+   @fieldVarList.loadReceiver(@process.frames[@frame_index]);
   }
-
-  // @editor.setText(@process.cp().compiledFunction().text());
-  // var locInfo = @process.cp().compiledFunction().source_location_for_ip(@process.ip);
-  // if (locInfo) {
-  //   @editor.pausedAtLine(locInfo[0], locInfo[1], locInfo[2], locInfo[3]);
-  // }
-  // //vars
 }
 end
 

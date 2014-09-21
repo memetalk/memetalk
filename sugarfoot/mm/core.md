@@ -98,7 +98,8 @@
       <primitive "compiled_function_with_frame">
     }
     instance_method new_context: fun(fp, module) {
-      return Context.new(this, fp, module);
+      <primitive "compiled_function_new_context">
+      //return Context.new(this, fp, module);
     }
     instance_method asContextWithVars: fun(imod, vars_dict) {
       <primitive "compiled_function_as_context_with_vars">
@@ -112,14 +113,14 @@
     // instance_method loc_mapping: fun() {
     //   <primitive "compiled_function_get_loc_mapping">
     // }
-    instance_method source_location_for_ip: fun(ip) {
-      <primitive "compiled_function_loc_for_ip">
+    instance_method source_location_for: fun(frame) {
+      <primitive "compiled_function_loc_for">
     }
-    instance_method lineForInstruction: fun(ip) {
+    instance_method lineFor: fun(frame) {
       if (@is_prim) {
         return 0;
       } else {
-        return this.source_location_for_ip(ip)[0];
+        return this.source_location_for(frame)[0];
       }
     }
     instance_method fullName: fun() {
@@ -314,9 +315,10 @@
   class Context
   fields: compiled_function, module, env;
   init new: fun(cfun, env, module) {
-    @compiled_function = cfun;
-    @env = env;
-    @module = module;
+    <primitive "context_new">
+    // @compiled_function = cfun;
+    // @module = module;
+    // @env = env;
   }
   instance_method compiledFunction: fun() {
     return @compiled_function;
@@ -330,9 +332,10 @@
     return cfn.asContextWithVars(imod, vars);
   }
   class_method withFrame: fun(code, frame, imod) {
-    var cmod = get_compiled_module(imod);
-    var cfn = CompiledFunction.withFrame(code, frame, cmod);
-    return cfn.new_context(frame.fp, imod);
+    <primitive "context_with_frame">
+    // var cmod = get_compiled_module(imod);
+    // var cfn = CompiledFunction.withFrame(code, frame, cmod);
+    // return cfn.new_context(frame.fp, imod);
   }
   end
 

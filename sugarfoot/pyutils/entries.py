@@ -557,7 +557,7 @@ class CompiledFunction(Entry):
         exception_frames = self.fill_exceptions_frame(vmem)
 
         vmem.append_int(FRAME_TYPE_OBJECT)
-        vmem.append_int(27 * bits.WSIZE)
+        vmem.append_int(26 * bits.WSIZE)
 
         oop = vmem.append_external_ref('CompiledFunction', self.label()) # CompiledFunction vt
         vmem.append_pointer_to(oop_delegate)
@@ -614,7 +614,7 @@ class CompiledFunction(Entry):
         vmem.append_pointer_to(oop_line_mappings)
         vmem.append_pointer_to(oop_loc_mappings)
 
-        vmem.append_label_ref(self.cmod.label())
+        # vmem.append_label_ref(self.cmod.label())
         self.oop = oop
         return oop
 
@@ -971,12 +971,13 @@ class Function(Entry):
         delegate = vmem.append_object_instance()
 
         vmem.append_int(FRAME_TYPE_OBJECT)
-        vmem.append_int(4 * bits.WSIZE)
+        vmem.append_int(5 * bits.WSIZE)
 
         oop = vmem.append_label_ref('Function', self.label())   # vt
         vmem.append_pointer_to(delegate)                        # delegate
         vmem.append_label_ref(self.cfun.label())                # compiled_function
         vmem.append_label_ref(self.imod.label())                # module
+        # 4: env
         self.oop = oop
         return oop
 

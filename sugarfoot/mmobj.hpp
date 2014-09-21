@@ -92,6 +92,9 @@ public:
   bool mm_is_function(oop);
   bool mm_is_context(oop);
 
+  void mm_context_set_cfun(oop, oop);
+  void mm_context_set_env(oop, oop);
+  void mm_context_set_module(oop, oop);
   oop mm_context_get_env(oop);
 
   oop mm_function_from_cfunction(oop cfun, oop imod);
@@ -138,12 +141,13 @@ public:
   bool mm_compiled_function_is_top_level(oop cfun);
   oop mm_compiled_function_outer_cfun(oop cfun);
   oop mm_compiled_function_get_owner(oop cfun);
+  void mm_compiled_function_set_owner(oop cfun, oop owner);
   oop mm_compiled_function_get_name(oop cfun);
 
   oop mm_compiled_function_get_text(oop cfun);
   oop mm_compiled_function_get_line_mapping(oop cfun);
   oop mm_compiled_function_get_loc_mapping(oop cfun);
-  oop mm_compiled_function_get_cmod(oop cfun);
+  // oop mm_compiled_function_get_cmod(oop cfun);
   void mm_compiled_function_set_cmod(oop cfun, oop cmod);
 
   bool mm_compiled_function_loc_mapping_matches_ip(oop, bytecode*);

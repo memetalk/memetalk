@@ -691,6 +691,23 @@ static int prim_module_to_string(Process* proc) {
   return 0;
 }
 
+static int prim_compiled_function_new_context(Process* proc) {
+      //return Context.new(this, fp, module);
+  oop args = proc->mmobj()->mm_list_new();
+  proc->mmobj()->mm_list_append(args, proc->rp());
+  proc->mmobj()->mm_list_append(args, proc->get_arg(0));
+  proc->mmobj()->mm_list_append(args, proc->get_arg(1));
+
+  int exc;
+  oop ctx = proc->send(proc->vm()->get_prime("Context"), proc->vm()->new_symbol("new"), args, &exc);
+  if (exc != 0) {
+    proc->stack_push(ctx);
+    return PRIM_RAISED;
+  }
+  proc->stack_push(ctx);
+  return 0;
+}
+
 static int prim_compiled_function_with_env(Process* proc) {
   // oop self =  proc->dp();
   oop text = proc->get_arg(0);
@@ -807,7 +824,7 @@ static int prim_compiled_function_get_text(Process* proc) {
 //   return 0;
 // }
 
-static int prim_compiled_function_loc_for_ip(Process* proc) {
+static int prim_compiled_function_loc_for(Process* proc) {
   oop self =  proc->dp();
   if (proc->mmobj()->mm_compiled_function_is_prim(self)) {
     debug() << "LOCINFO IS NULL" << endl;
@@ -815,7 +832,8 @@ static int prim_compiled_function_loc_for_ip(Process* proc) {
     return 0;
   }
 
-  bytecode* ip = (bytecode*) proc->get_arg(0);
+  oop frame = proc->get_arg(0);
+  bytecode* ip = proc->mmobj()->mm_frame_get_ip(frame);
   // std::cerr << "loc_for_ip: " << ip << endl;
   bytecode* base_ip = proc->mmobj()->mm_compiled_function_get_code(self);
   word idx = ip - base_ip;
@@ -868,8 +886,57 @@ static int prim_context_get_env(Process* proc) {
   return 0;
 }
 
+static int prim_context_with_frame(Process* proc) {
+  oop code = proc->get_arg(0);
+  oop frame = proc->get_arg(1);
+  oop imod = proc->get_arg(2);
+
+  oop cmod = proc->mmobj()->mm_module_get_cmod(imod);
+
+  oop args = proc->mmobj()->mm_list_new();
+  proc->mmobj()->mm_list_append(args, code);
+  proc->mmobj()->mm_list_append(args, frame);
+  proc->mmobj()->mm_list_append(args, cmod);
+
+
+  int exc;
+  oop cfn = proc->send(proc->vm()->get_prime("CompiledFunction"), proc->vm()->new_symbol("withFrame"), args, &exc);
+  if (exc != 0) {
+    proc->stack_push(cfn);
+    return PRIM_RAISED;
+  }
+
+  oop fp = proc->mmobj()->mm_frame_get_fp(frame);
+
+  args = proc->mmobj()->mm_list_new();
+  proc->mmobj()->mm_list_append(args, fp);
+  proc->mmobj()->mm_list_append(args, imod);
+  oop ctx = proc->send(cfn, proc->vm()->new_symbol("new_context"), args, &exc);
+  if (exc != 0) {
+    proc->stack_push(ctx);
+    return PRIM_RAISED;
+  }
+  proc->stack_push(ctx);
+  return 0;
+}
+
 static int prim_function_get_env(Process* proc) {
   return prim_context_get_env(proc);
+}
+
+
+
+static int prim_context_new(Process* proc) {
+  oop self = proc->dp();
+  oop cfun = proc->get_arg(0);
+  oop env = proc->get_arg(1);
+  oop imod = proc->get_arg(2);
+
+  proc->mmobj()->mm_context_set_cfun(self, cfun);
+  proc->mmobj()->mm_context_set_env(self, env);
+  proc->mmobj()->mm_context_set_module(self, imod);
+  proc->stack_push(proc->rp());
+  return 0;
 }
 
 static int prim_get_compiled_module(Process* proc) {
@@ -1201,6 +1268,7 @@ void init_primitives(VM* vm) {
   vm->register_primitive("mirror_set_value_for", prim_mirror_set_value_for);
 
 
+  vm->register_primitive("compiled_function_new_context", prim_compiled_function_new_context);
   vm->register_primitive("compiled_function_with_env", prim_compiled_function_with_env);
   vm->register_primitive("compiled_function_with_frame", prim_compiled_function_with_frame);
   vm->register_primitive("compiled_function_as_context_with_vars", prim_compiled_function_as_context_with_vars);
@@ -1208,9 +1276,12 @@ void init_primitives(VM* vm) {
   vm->register_primitive("compiled_function_get_text", prim_compiled_function_get_text);
   // vm->register_primitive("compiled_function_get_line_mapping", prim_compiled_function_get_line_mapping);
   // vm->register_primitive("compiled_function_get_loc_mapping", prim_compiled_function_get_loc_mapping);
-  vm->register_primitive("compiled_function_loc_for_ip", prim_compiled_function_loc_for_ip);
+  vm->register_primitive("compiled_function_loc_for", prim_compiled_function_loc_for);
 
+  vm->register_primitive("context_new", prim_context_new);
   vm->register_primitive("context_get_env", prim_context_get_env);
+  vm->register_primitive("context_with_frame", prim_context_with_frame);
+
   vm->register_primitive("function_get_env", prim_function_get_env);
 
 
