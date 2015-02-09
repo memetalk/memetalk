@@ -810,9 +810,15 @@ void Process::stack_push(bytecode* data) {
 
 
 int Process::execute_primitive(std::string name) {
-  int val = _vm->get_primitive(this, name)(this);
-  dbg() << "primitive " << name << " returned " << val << endl;
-  return val;
+  try {
+    int val = _vm->get_primitive(this, name)(this);
+    dbg() << "primitive " << name << " returned " << val << endl;
+    return val;
+  } catch(mm_rewind e) {
+    dbg() << "primitive " << name << " raised " << e.mm_exception << endl;
+    stack_push(e.mm_exception);
+    return PRIM_RAISED;
+  }
 }
 
 
