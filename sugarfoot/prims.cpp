@@ -3,7 +3,6 @@
 #include "report.hpp"
 #include "defs.hpp"
 #include "process.hpp"
-#include <assert.h>
 #include "utils.hpp"
 #include "mmobj.hpp"
 #include "mmc_image.hpp"
@@ -25,7 +24,7 @@ static int prim_io_print(Process* proc) {
     proc->stack_push(res);
     return PRIM_RAISED;
   }
-  std::cout << proc->mmobj()->mm_string_cstr(res) << endl;
+  std::cout << proc->mmobj()->mm_string_cstr(proc, res) << endl;
   proc->stack_push(MM_NULL);
   return 0;
 }
@@ -34,8 +33,8 @@ static int prim_string_append(Process* proc) {
   oop self =  proc->dp();
   oop other = proc->get_arg(0);
 
-  char* str_1 = proc->mmobj()->mm_string_cstr(self);
-  char* str_2 = proc->mmobj()->mm_string_cstr(other);
+  char* str_1 = proc->mmobj()->mm_string_cstr(proc, self);
+  char* str_2 = proc->mmobj()->mm_string_cstr(proc, other);
 
   std::stringstream s;
   s << str_1 << str_2;
@@ -48,8 +47,8 @@ static int prim_string_equal(Process* proc) {
   oop self =  proc->dp();
   oop other = proc->get_arg(0);
 
-  char* str_1 = proc->mmobj()->mm_string_cstr(self);
-  char* str_2 = proc->mmobj()->mm_string_cstr(other);
+  char* str_1 = proc->mmobj()->mm_string_cstr(proc, self);
+  char* str_2 = proc->mmobj()->mm_string_cstr(proc, other);
 
   if (strcmp(str_1, str_2) == 0) {
     proc->stack_push(MM_TRUE);
@@ -61,7 +60,7 @@ static int prim_string_equal(Process* proc) {
 
 static int prim_string_size(Process* proc) {
   oop self =  proc->dp();
-  char* str_1 = proc->mmobj()->mm_string_cstr(self);
+  char* str_1 = proc->mmobj()->mm_string_cstr(proc, self);
   int len = strlen(str_1);
   proc->stack_push(tag_small_int(len));
   return 0;
@@ -71,8 +70,8 @@ static int prim_string_count(Process* proc) {
   oop self =  proc->dp();
   oop other = proc->get_arg(0);
 
-  char* str_1 = proc->mmobj()->mm_string_cstr(self);
-  char* str_2 = proc->mmobj()->mm_string_cstr(other);
+  char* str_1 = proc->mmobj()->mm_string_cstr(proc, self);
+  char* str_2 = proc->mmobj()->mm_string_cstr(proc, other);
   int count = 0;
   char* pos = str_1;
   while ((pos = strstr(pos, str_2)) != NULL) {
@@ -86,8 +85,8 @@ static int prim_string_count(Process* proc) {
 static int prim_string_rindex(Process* proc) {
   oop self =  proc->dp();
   oop arg = proc->get_arg(0);
-  std::string str = proc->mmobj()->mm_string_cstr(self);
-  std::string str_arg = proc->mmobj()->mm_string_cstr(arg);
+  std::string str = proc->mmobj()->mm_string_cstr(proc, self);
+  std::string str_arg = proc->mmobj()->mm_string_cstr(proc, arg);
   std::size_t pos = str.rfind(str_arg);
   if (pos == std::string::npos) {
     proc->stack_push(tag_small_int(-1));
@@ -100,7 +99,7 @@ static int prim_string_rindex(Process* proc) {
 static int prim_string_from(Process* proc) {
   oop self =  proc->dp();
   oop idx = proc->get_arg(0);
-  std::string str = proc->mmobj()->mm_string_cstr(self);
+  std::string str = proc->mmobj()->mm_string_cstr(proc, self);
   std::string sub = str.substr(untag_small_int(idx));
   proc->stack_push(proc->mmobj()->mm_string_new(sub.c_str()));
   return 0;
@@ -112,9 +111,9 @@ static int prim_string_replace_all(Process* proc) {
   oop what = proc->get_arg(0);
   oop val = proc->get_arg(1);
 
-  std::string str = proc->mmobj()->mm_string_cstr(self);
-  std::string _what = proc->mmobj()->mm_string_cstr(what);
-  std::string _val = proc->mmobj()->mm_string_cstr(val);
+  std::string str = proc->mmobj()->mm_string_cstr(proc, self);
+  std::string _what = proc->mmobj()->mm_string_cstr(proc, what);
+  std::string _val = proc->mmobj()->mm_string_cstr(proc, val);
 
   std::string output = boost::replace_all_copy(str, _what, _val);
 
@@ -127,8 +126,13 @@ static int prim_number_sum(Process* proc) {
   oop self =  proc->dp();
   oop other = proc->get_arg(0);
 
-  assert(is_small_int(self));
-  assert(is_small_int(other));
+  if (!(is_small_int(self))) {
+    proc->raise("TypeError", "Expectng small int");
+  }
+
+  if (!(is_small_int(other))) {
+    proc->raise("TypeError", "Expectng small int");
+  }
 
   number res = untag_small_int(self) + untag_small_int(other);
   proc->stack_push((oop) tag_small_int(res)); //TODO: check for overflow
@@ -139,8 +143,13 @@ static int prim_number_sub(Process* proc) {
   oop self =  proc->dp();
   oop other = proc->get_arg(0);
 
-  assert(is_small_int(self));
-  assert(is_small_int(other));
+  if (!(is_small_int(self))) {
+    proc->raise("TypeError", "Expectng small int");
+  }
+
+  if (!(is_small_int(other))) {
+    proc->raise("TypeError", "Expectng small int");
+  }
 
   number res =  untag_small_int(self) - untag_small_int(other);
   debug() << " SUB " << untag_small_int(self) << " - " << untag_small_int(other) << " = " << res << endl;
@@ -152,8 +161,13 @@ static int prim_number_mul(Process* proc) {
   oop self =  proc->dp();
   oop other = proc->get_arg(0);
 
-  assert(is_small_int(self));
-  assert(is_small_int(other));
+  if (!(is_small_int(self))) {
+    proc->raise("TypeError", "Expectng small int");
+  }
+
+  if (!(is_small_int(other))) {
+    proc->raise("TypeError", "Expectng small int");
+  }
 
   number res =  untag_small_int(self) * untag_small_int(other);
   proc->stack_push((oop) tag_small_int(res));  //TODO: check for overflow
@@ -164,8 +178,13 @@ static int prim_number_lt(Process* proc) {
   oop self =  proc->dp();
   oop other = proc->get_arg(0);
 
-  assert(is_small_int(self));
-  assert(is_small_int(other));
+  if (!(is_small_int(self))) {
+    proc->raise("TypeError", "Expectng small int");
+  }
+
+  if (!(is_small_int(other))) {
+    proc->raise("TypeError", "Expectng small int");
+  }
 
   oop res =  (oop) (untag_small_int(self) < untag_small_int(other));
   debug() << " PRIM< " << untag_small_int(self) << " < " << untag_small_int(other) << " = " << (untag_small_int(self) < untag_small_int(other)) << endl;
@@ -177,8 +196,13 @@ static int prim_number_gt(Process* proc) {
   oop self =  proc->dp();
   oop other = proc->get_arg(0);
 
-  assert(is_small_int(self));
-  assert(is_small_int(other));
+  if (!(is_small_int(self))) {
+    proc->raise("TypeError", "Expectng small int");
+  }
+
+  if (!(is_small_int(other))) {
+    proc->raise("TypeError", "Expectng small int");
+  }
 
   oop res =  (oop) (untag_small_int(self) > untag_small_int(other));
   debug() << " PRIM< " << untag_small_int(self) << " > " << untag_small_int(other) << " = " << (untag_small_int(self) < untag_small_int(other)) << endl;
@@ -190,8 +214,13 @@ static int prim_number_gteq(Process* proc) {
   oop self =  proc->dp();
   oop other = proc->get_arg(0);
 
-  assert(is_small_int(self));
-  assert(is_small_int(other));
+  if (!(is_small_int(self))) {
+    proc->raise("TypeError", "Expectng small int");
+  }
+
+  if (!(is_small_int(other))) {
+    proc->raise("TypeError", "Expectng small int");
+  }
 
   oop res =  (oop) (untag_small_int(self) >= untag_small_int(other));
   debug() << " PRIM< " << untag_small_int(self) << " >= " << untag_small_int(other) << " = " << (untag_small_int(self) < untag_small_int(other)) << endl;
@@ -230,7 +259,7 @@ static int prim_list_append(Process* proc) {
   oop self =  proc->dp();
   oop element = proc->get_arg(0);
 
-  proc->mmobj()->mm_list_append(self, element);
+  proc->mmobj()->mm_list_append(proc, self, element);
 
   proc->stack_push(self);
   return 0;
@@ -241,7 +270,7 @@ static int prim_list_prepend(Process* proc) {
   oop element = proc->get_arg(0);
 
   // std::cerr << "LIST: prepend " << element << endl;
-  proc->mmobj()->mm_list_prepend(self, element);
+  proc->mmobj()->mm_list_prepend(proc, self, element);
   proc->stack_push(self);
   return 0;
 }
@@ -251,7 +280,7 @@ static int prim_list_index(Process* proc) {
   oop index_oop = proc->get_arg(0);
   number index = untag_small_int(index_oop);
 
-  oop val = proc->mmobj()->mm_list_entry(self, index);
+  oop val = proc->mmobj()->mm_list_entry(proc, self, index);
   debug() << "list " << self << "[" << index << "] = " << val << endl;
   proc->stack_push(val);
   return 0;
@@ -262,10 +291,10 @@ static int prim_list_each(Process* proc) {
   oop fun = proc->get_arg(0);
 
   // std::cerr << "prim_list_each: closure is: " << fun << endl;
-  number size = proc->mmobj()->mm_list_size(self);
+  number size = proc->mmobj()->mm_list_size(proc, self);
 
   for (int i = 0; i < size; i++) {
-    oop next = proc->mmobj()->mm_list_entry(self, i);
+    oop next = proc->mmobj()->mm_list_entry(proc, self, i);
     debug() << "list each[" << i << "] = " << next << endl;
     proc->stack_push(tag_small_int(i));
     proc->stack_push(next);
@@ -286,10 +315,10 @@ static int prim_list_map(Process* proc) {
   oop self =  proc->dp();
   oop fun = proc->get_arg(0);
 
-  number size = proc->mmobj()->mm_list_size(self);
+  number size = proc->mmobj()->mm_list_size(proc, self);
   oop ret = proc->mmobj()->mm_list_new();
   for (int i = 0; i < size; i++) {
-    oop next = proc->mmobj()->mm_list_entry(self, i);
+    oop next = proc->mmobj()->mm_list_entry(proc, self, i);
     debug() << "list each[" << i << "] = " << next << endl;
     proc->stack_push(next);
     int exc;
@@ -300,7 +329,7 @@ static int prim_list_map(Process* proc) {
       return PRIM_RAISED;
     }
     debug() << "list map[" << i << "] fun returned " << val << endl;
-    proc->mmobj()->mm_list_append(ret, val);
+    proc->mmobj()->mm_list_append(proc, ret, val);
   }
   proc->stack_push(ret);
   return 0;
@@ -308,14 +337,14 @@ static int prim_list_map(Process* proc) {
 
 static int prim_list_size(Process* proc) {
   oop self =  proc->dp();
-  proc->stack_push(tag_small_int(proc->mmobj()->mm_list_size(self)));
+  proc->stack_push(tag_small_int(proc->mmobj()->mm_list_size(proc, self)));
   return 0;
 }
 
 static int prim_list_has(Process* proc) {
   oop self =  proc->dp();
   oop value = proc->get_arg(0);
-  if (proc->mmobj()->mm_list_index_of(self, value) == -1) {
+  if (proc->mmobj()->mm_list_index_of(proc, self, value) == -1) {
     proc->stack_push(MM_FALSE);
   } else {
     proc->stack_push(MM_TRUE);
@@ -328,15 +357,15 @@ static int prim_list_to_string(Process* proc) {
   std::stringstream s;
   s << "[";
   std::string comma = "";
-  for (int i = 0; i < proc->mmobj()->mm_list_size(self); i++) {
+  for (int i = 0; i < proc->mmobj()->mm_list_size(proc, self); i++) {
     int exc;
-    oop res = proc->send_0(proc->mmobj()->mm_list_entry(self, i),
+    oop res = proc->send_0(proc->mmobj()->mm_list_entry(proc, self, i),
                                 proc->vm()->new_symbol("toString"), &exc);
     if (exc != 0) {
       proc->stack_push(res);
       return PRIM_RAISED;
     }
-    s << comma << proc->mmobj()->mm_string_cstr(res);
+    s << comma << proc->mmobj()->mm_string_cstr(proc, res);
     comma = ", ";
   }
   s << "]";
@@ -350,15 +379,15 @@ static int prim_list_to_source(Process* proc) {
   std::stringstream s;
   s << "[";
   std::string comma = "";
-  for (int i = 0; i < proc->mmobj()->mm_list_size(self); i++) {
+  for (int i = 0; i < proc->mmobj()->mm_list_size(proc, self); i++) {
     int exc;
-    oop res = proc->send_0(proc->mmobj()->mm_list_entry(self, i),
+    oop res = proc->send_0(proc->mmobj()->mm_list_entry(proc, self, i),
                                 proc->vm()->new_symbol("toSource"), &exc);
     if (exc != 0) {
       proc->stack_push(res);
       return PRIM_RAISED;
     }
-    s << comma << proc->mmobj()->mm_string_cstr(res);
+    s << comma << proc->mmobj()->mm_string_cstr(proc, res);
     comma = ", ";
   }
   s << "]";
@@ -380,7 +409,7 @@ static int prim_dictionary_set(Process* proc) {
   oop key = proc->get_arg(0);
   oop val = proc->get_arg(1);
 
-  proc->mmobj()->mm_dictionary_set(self, key, val);
+  proc->mmobj()->mm_dictionary_set(proc, self, key, val);
   proc->stack_push(self);
   return 0;
 }
@@ -389,7 +418,7 @@ static int prim_dictionary_index(Process* proc) {
   oop self =  proc->dp();
   oop key = proc->get_arg(0);
 
-  proc->stack_push(proc->mmobj()->mm_dictionary_get(self, key));
+  proc->stack_push(proc->mmobj()->mm_dictionary_get(proc, self, key));
   return 0;
 }
 
@@ -397,8 +426,8 @@ static int prim_dictionary_to_string(Process* proc) {
   oop self =  proc->dp();
   std::stringstream s;
   s << "{";
-  std::map<oop, oop>::iterator it = proc->mmobj()->mm_dictionary_begin(self);
-  std::map<oop, oop>::iterator end = proc->mmobj()->mm_dictionary_end(self);
+  std::map<oop, oop>::iterator it = proc->mmobj()->mm_dictionary_begin(proc, self);
+  std::map<oop, oop>::iterator end = proc->mmobj()->mm_dictionary_end(proc, self);
   std::string comma = "";
   for ( ; it != end; it++) {
     int exc;
@@ -408,7 +437,7 @@ static int prim_dictionary_to_string(Process* proc) {
       proc->stack_push(res);
       return PRIM_RAISED;
     }
-    s << comma << proc->mmobj()->mm_string_cstr(res) << ": ";
+    s << comma << proc->mmobj()->mm_string_cstr(proc, res) << ": ";
 
     res = proc->send_0(it->second,
                                 proc->vm()->new_symbol("toString"), &exc);
@@ -416,7 +445,7 @@ static int prim_dictionary_to_string(Process* proc) {
       proc->stack_push(res);
       return PRIM_RAISED;
     }
-    s << proc->mmobj()->mm_string_cstr(res);
+    s << proc->mmobj()->mm_string_cstr(proc, res);
     comma = ", ";
   }
   s << "}";
@@ -429,8 +458,8 @@ static int prim_dictionary_to_source(Process* proc) {
   oop self =  proc->dp();
   std::stringstream s;
   s << "{";
-  std::map<oop, oop>::iterator it = proc->mmobj()->mm_dictionary_begin(self);
-  std::map<oop, oop>::iterator end = proc->mmobj()->mm_dictionary_end(self);
+  std::map<oop, oop>::iterator it = proc->mmobj()->mm_dictionary_begin(proc, self);
+  std::map<oop, oop>::iterator end = proc->mmobj()->mm_dictionary_end(proc, self);
   std::string comma = "";
   for ( ; it != end; it++) {
     int exc;
@@ -440,7 +469,7 @@ static int prim_dictionary_to_source(Process* proc) {
       proc->stack_push(res);
       return PRIM_RAISED;
     }
-    s << comma << proc->mmobj()->mm_string_cstr(res) << ": ";
+    s << comma << proc->mmobj()->mm_string_cstr(proc, res) << ": ";
 
     res = proc->send_0(it->second,
                                 proc->vm()->new_symbol("toSource"), &exc);
@@ -448,7 +477,7 @@ static int prim_dictionary_to_source(Process* proc) {
       proc->stack_push(res);
       return PRIM_RAISED;
     }
-    s << proc->mmobj()->mm_string_cstr(res);
+    s << proc->mmobj()->mm_string_cstr(proc, res);
     comma = ", ";
   }
   s << "}";
@@ -463,16 +492,16 @@ static int prim_dictionary_plus(Process* proc) {
 
   oop d = proc->mmobj()->mm_dictionary_new();
 
-  std::map<oop, oop>::iterator it = proc->mmobj()->mm_dictionary_begin(self);
-  std::map<oop, oop>::iterator end = proc->mmobj()->mm_dictionary_end(self);
+  std::map<oop, oop>::iterator it = proc->mmobj()->mm_dictionary_begin(proc, self);
+  std::map<oop, oop>::iterator end = proc->mmobj()->mm_dictionary_end(proc, self);
   for ( ; it != end; it++) {
-    proc->mmobj()->mm_dictionary_set(d, it->first, it->second);
+    proc->mmobj()->mm_dictionary_set(proc, d, it->first, it->second);
   }
 
-  it = proc->mmobj()->mm_dictionary_begin(other);
-  end = proc->mmobj()->mm_dictionary_end(other);
+  it = proc->mmobj()->mm_dictionary_begin(proc, other);
+  end = proc->mmobj()->mm_dictionary_end(proc, other);
   for ( ; it != end; it++) {
-    proc->mmobj()->mm_dictionary_set(d, it->first, it->second);
+    proc->mmobj()->mm_dictionary_set(proc, d, it->first, it->second);
   }
   proc->stack_push(d);
   return 0;
@@ -481,7 +510,7 @@ static int prim_dictionary_plus(Process* proc) {
 static int prim_dictionary_has(Process* proc) {
   oop self =  proc->dp();
   oop key = proc->get_arg(0);
-  if (proc->mmobj()->mm_dictionary_has_key(self, key)) {
+  if (proc->mmobj()->mm_dictionary_has_key(proc, self, key)) {
     proc->stack_push(MM_TRUE);
   } else {
     proc->stack_push(MM_FALSE);
@@ -491,13 +520,13 @@ static int prim_dictionary_has(Process* proc) {
 
 static int prim_dictionary_keys(Process* proc) {
   oop self =  proc->dp();
-  proc->stack_push(proc->mmobj()->mm_dictionary_keys(self));
+  proc->stack_push(proc->mmobj()->mm_dictionary_keys(proc, self));
   return 0;
 }
 
 static int prim_dictionary_size(Process* proc) {
   oop self =  proc->dp();
-  proc->stack_push(tag_small_int(proc->mmobj()->mm_dictionary_size(self)));
+  proc->stack_push(tag_small_int(proc->mmobj()->mm_dictionary_size(proc, self)));
   return 0;
 }
 
@@ -513,18 +542,18 @@ static int prim_mirror_entries(Process* proc) {
     return 0;
   } else if (proc->mmobj()->mm_is_list(mirrored)) {
       oop lst = proc->mmobj()->mm_list_new();
-      for (number i = 0; i < proc->mmobj()->mm_list_size(mirrored); i++) {
-        proc->mmobj()->mm_list_append(lst, tag_small_int(i));
+      for (number i = 0; i < proc->mmobj()->mm_list_size(proc, mirrored); i++) {
+        proc->mmobj()->mm_list_append(proc, lst, tag_small_int(i));
       }
       proc->stack_push(lst);
       return 0;
   } else if (proc->mmobj()->mm_is_dictionary(mirrored)) {
       oop lst = proc->mmobj()->mm_list_new();
 
-      std::map<oop, oop>::iterator it = proc->mmobj()->mm_dictionary_begin(mirrored);
-      std::map<oop, oop>::iterator end = proc->mmobj()->mm_dictionary_end(mirrored);
+      std::map<oop, oop>::iterator it = proc->mmobj()->mm_dictionary_begin(proc, mirrored);
+      std::map<oop, oop>::iterator end = proc->mmobj()->mm_dictionary_end(proc, mirrored);
       for ( ; it != end; it++) {
-        proc->mmobj()->mm_list_append(lst, it->first);
+        proc->mmobj()->mm_list_append(proc, lst, it->first);
       }
       proc->stack_push(lst);
       return 0;
@@ -536,8 +565,8 @@ static int prim_mirror_entries(Process* proc) {
     if (proc->mmobj()->delegates_to(mirrored_class, proc->vm()->get_prime("Object"))) {
       // mirrored is a class instance
       debug() << "prim_mirror_entries: mirrored is class instance" << endl;
-      oop cclass = proc->mmobj()->mm_class_get_compiled_class(mirrored_class);
-      proc->stack_push(proc->mmobj()->mm_compiled_class_fields(cclass));
+      oop cclass = proc->mmobj()->mm_class_get_compiled_class(proc, mirrored_class);
+      proc->stack_push(proc->mmobj()->mm_compiled_class_fields(proc, cclass));
       return 0;
     } else { //unknown structure
       debug() << "prim_mirror_entries: mirrored has unknown structure" << endl;
@@ -555,21 +584,25 @@ static int prim_mirror_value_for(Process* proc) {
   oop mirrored = ((oop*)self)[2];
 
   if (proc->mmobj()->mm_is_list(mirrored)) {
-    proc->stack_push(proc->mmobj()->mm_list_entry(mirrored, untag_small_int(entry)));
+    proc->stack_push(proc->mmobj()->mm_list_entry(proc, mirrored, untag_small_int(entry)));
     return 0;
   } else if (proc->mmobj()->mm_is_dictionary(mirrored)) {
-    proc->stack_push(proc->mmobj()->mm_dictionary_get(mirrored, entry));
+    proc->stack_push(proc->mmobj()->mm_dictionary_get(proc, mirrored, entry));
     return 0;
   } else { //generic instance ?
     //assume mirrored is a class instance
     oop mirrored_class = proc->mmobj()->mm_object_vt(mirrored);
-    assert(proc->mmobj()->delegates_to(mirrored_class, proc->vm()->get_prime("Object")));
+    if (!(proc->mmobj()->delegates_to(mirrored_class, proc->vm()->get_prime("Object")))) {
+      proc->raise("TypeError", "Mirrored should be class instance");
+    }
 
-    oop cclass = proc->mmobj()->mm_class_get_compiled_class(mirrored_class);
-    oop fields = proc->mmobj()->mm_compiled_class_fields(cclass);
+    oop cclass = proc->mmobj()->mm_class_get_compiled_class(proc, mirrored_class);
+    oop fields = proc->mmobj()->mm_compiled_class_fields(proc, cclass);
 
-    number idx = proc->mmobj()->mm_list_index_of(fields, entry);
-    assert(idx >= 0);
+    number idx = proc->mmobj()->mm_list_index_of(proc, fields, entry);
+    if (!(idx >= 0)) {
+      proc->raise("TypeError", "invalid index");
+    }
     debug() << "prim_mirror_value_for index of " << idx << endl;
     proc->stack_push(((oop*)mirrored)[2+idx]);
     return 0;
@@ -584,22 +617,26 @@ static int prim_mirror_set_value_for(Process* proc) {
   oop mirrored = ((oop*)self)[2];
 
   if (proc->mmobj()->mm_is_list(mirrored)) {
-    proc->mmobj()->mm_list_set(mirrored, untag_small_int(entry), value);
+    proc->mmobj()->mm_list_set(proc, mirrored, untag_small_int(entry), value);
     proc->stack_push(proc->rp());
     return 0;
   } else if (proc->mmobj()->mm_is_dictionary(mirrored)) {
-    proc->mmobj()->mm_dictionary_set(mirrored, entry, value);
+    proc->mmobj()->mm_dictionary_set(proc, mirrored, entry, value);
     return 0;
   } else { //generic instance ?
     //assume mirrored is a class instance
     oop mirrored_class = proc->mmobj()->mm_object_vt(mirrored);
-    assert(proc->mmobj()->delegates_to(mirrored_class, proc->vm()->get_prime("Object")));
+    if (!(proc->mmobj()->delegates_to(mirrored_class, proc->vm()->get_prime("Object")))) {
+      proc->raise("TypeError", "Mirrored should be class instance");
+    }
 
-    oop cclass = proc->mmobj()->mm_class_get_compiled_class(mirrored_class);
-    oop fields = proc->mmobj()->mm_compiled_class_fields(cclass);
+    oop cclass = proc->mmobj()->mm_class_get_compiled_class(proc, mirrored_class);
+    oop fields = proc->mmobj()->mm_compiled_class_fields(proc, cclass);
 
-    number idx = proc->mmobj()->mm_list_index_of(fields, entry);
-    assert(idx >= 0);
+    number idx = proc->mmobj()->mm_list_index_of(proc, fields, entry);
+    if (!(idx >= 0)) {
+      proc->raise("TypeError", "invalid index");
+    }
     debug() << "prim_mirror_set_value_for index of " << idx << endl;
     ((oop*)mirrored)[2+idx] = value;
     proc->stack_push(proc->rp());
@@ -636,9 +673,9 @@ static int prim_object_not(Process* proc) {
 static int prim_behavior_to_string(Process* proc) {
   oop klass =  proc->rp();
 
-  oop cclass = proc->mmobj()->mm_class_get_compiled_class(klass);
-  oop class_name = proc->mmobj()->mm_compiled_class_name(cclass);
-  char* str_class_name = proc->mmobj()->mm_string_cstr(class_name);
+  oop cclass = proc->mmobj()->mm_class_get_compiled_class(proc, klass);
+  oop class_name = proc->mmobj()->mm_compiled_class_name(proc, cclass);
+  char* str_class_name = proc->mmobj()->mm_string_cstr(proc, class_name);
   std::stringstream s;
   s << "#<" << str_class_name << " class>";
   oop oop_str = proc->mmobj()->mm_string_new(s.str().c_str());
@@ -654,9 +691,9 @@ static int prim_object_to_string(Process* proc) {
   oop self =  proc->rp();
 
   oop klass = proc->mmobj()->mm_object_vt(self);
-  oop cclass = proc->mmobj()->mm_class_get_compiled_class(klass);
-  oop class_name = proc->mmobj()->mm_compiled_class_name(cclass);
-  char* str_class_name = proc->mmobj()->mm_string_cstr(class_name);
+  oop cclass = proc->mmobj()->mm_class_get_compiled_class(proc, klass);
+  oop class_name = proc->mmobj()->mm_compiled_class_name(proc, cclass);
+  char* str_class_name = proc->mmobj()->mm_string_cstr(proc, class_name);
   std::stringstream s;
   s << "#<" << str_class_name << " instance: " << self << ">";
   oop oop_str = proc->mmobj()->mm_string_new(s.str().c_str());
@@ -670,7 +707,7 @@ static int prim_object_to_source(Process* proc) {
 
 static int prim_symbol_to_string(Process* proc) {
   oop self =  proc->dp();
-  char* str = proc->mmobj()->mm_symbol_cstr(self);
+  char* str = proc->mmobj()->mm_symbol_cstr(proc, self);
   debug() << "prim_symbol_to_string: " << self << " str: " << str << endl;
   oop oop_str = proc->mmobj()->mm_string_new(str);
   proc->stack_push(oop_str);
@@ -682,8 +719,8 @@ static int prim_module_to_string(Process* proc) {
 
   oop cmod = proc->mmobj()->mm_module_get_cmod(self);
   // debug() << "prim_module_to_string imod: " << self << " cmod: " << cmod << endl;
-  oop mod_name = proc->mmobj()->mm_compiled_module_name(cmod);
-  char* str_mod_name = proc->mmobj()->mm_string_cstr(mod_name);
+  oop mod_name = proc->mmobj()->mm_compiled_module_name(proc, cmod);
+  char* str_mod_name = proc->mmobj()->mm_string_cstr(proc, mod_name);
   std::stringstream s;
   s << "#<" << str_mod_name << " module instance: " << self << ">";
   oop oop_str = proc->mmobj()->mm_string_new(s.str().c_str());
@@ -694,9 +731,9 @@ static int prim_module_to_string(Process* proc) {
 static int prim_compiled_function_new_context(Process* proc) {
       //return Context.new(this, fp, module);
   oop args = proc->mmobj()->mm_list_new();
-  proc->mmobj()->mm_list_append(args, proc->rp());
-  proc->mmobj()->mm_list_append(args, proc->get_arg(0));
-  proc->mmobj()->mm_list_append(args, proc->get_arg(1));
+  proc->mmobj()->mm_list_append(proc, args, proc->rp());
+  proc->mmobj()->mm_list_append(proc, args, proc->get_arg(0));
+  proc->mmobj()->mm_list_append(proc, args, proc->get_arg(1));
 
   int exc;
   oop ctx = proc->send(proc->vm()->get_prime("Context"), proc->vm()->new_symbol("new"), args, &exc);
@@ -716,10 +753,10 @@ static int prim_compiled_function_with_env(Process* proc) {
 
   // debug() << "prim_compiled_function_with_env " << proc->mmobj()->mm_string_cstr(text) << " -- " << cmod << " " << vars << endl;
 
-  std::list<std::string> lst = proc->mmobj()->mm_sym_list_to_cstring_list(scope_names);
+  std::list<std::string> lst = proc->mmobj()->mm_sym_list_to_cstring_list(proc, scope_names);
 
   int exc;
-  oop cfun = proc->vm()->compile_fun(proc, proc->mmobj()->mm_string_cstr(text), lst, cmod, &exc);
+  oop cfun = proc->vm()->compile_fun(proc, proc->mmobj()->mm_string_cstr(proc, text), lst, cmod, &exc);
   if (exc != 0) {
     proc->stack_push(cfun);
     return PRIM_RAISED;
@@ -735,15 +772,15 @@ static int prim_compiled_function_with_frame(Process* proc) {
   oop frame = proc->get_arg(1);
   oop cmod = proc->get_arg(2);
 
-  oop fn = proc->mmobj()->mm_frame_get_cp(frame);
+  oop fn = proc->mmobj()->mm_frame_get_cp(proc, frame);
   // std::cerr << "prim_compiled_function_with_frame: associated to fun: " << fn << endl;
-  oop env_table = proc->mmobj()->mm_function_env_table(fn);
+  oop env_table = proc->mmobj()->mm_function_env_table(proc, fn);
   // std::cerr << "prim_compiled_function_with_frame: env_table: " << env_table << endl;
 
-  std::list<std::string> lst = proc->mmobj()->mm_sym_list_to_cstring_list(env_table);
+  std::list<std::string> lst = proc->mmobj()->mm_sym_list_to_cstring_list(proc, env_table);
 
   int exc;
-  oop cfun = proc->vm()->compile_fun(proc, proc->mmobj()->mm_string_cstr(text), lst, cmod, &exc);
+  oop cfun = proc->vm()->compile_fun(proc, proc->mmobj()->mm_string_cstr(proc, text), lst, cmod, &exc);
   // std::cerr << "prim_compiled_function_with_frame: cfun: " << cfun << " " << exc << endl;
   if (exc != 0) {
     proc->stack_push(cfun);
@@ -764,29 +801,29 @@ static int prim_compiled_function_as_context_with_vars(Process* proc) {
   oop imod = proc->get_arg(0);
   oop vars = proc->get_arg(1);
 
-  number env_size = proc->mmobj()->mm_compiled_function_get_num_locals_or_env(self);
+  number env_size = proc->mmobj()->mm_compiled_function_get_num_locals_or_env(proc, self);
   oop env = (oop) calloc(sizeof(oop), env_size + 2); //+2: rp, dp
 
   if (vars != MM_NULL) {
-    oop env_table = proc->mmobj()->mm_compiled_function_env_table(self);
-    std::map<oop,oop>::iterator it = proc->mmobj()->mm_dictionary_begin(vars);
-    std::map<oop,oop>::iterator end = proc->mmobj()->mm_dictionary_end(vars);
+    oop env_table = proc->mmobj()->mm_compiled_function_env_table(proc, self);
+    std::map<oop,oop>::iterator it = proc->mmobj()->mm_dictionary_begin(proc, vars);
+    std::map<oop,oop>::iterator end = proc->mmobj()->mm_dictionary_end(proc, vars);
     for ( ; it != end; it++) {
-      std::string name = proc->mmobj()->mm_symbol_cstr(it->first);
+      std::string name = proc->mmobj()->mm_symbol_cstr(proc, it->first);
       if (name == "this") {
         ((oop*)env)[env_size] = it->second; //rp
         ((oop*)env)[env_size+1] = it->second; //ep
       } else {
-        number idx = proc->mmobj()->mm_list_index_of(env_table, it->first);
+        number idx = proc->mmobj()->mm_list_index_of(proc, env_table, it->first);
         ((oop*)env)[idx] = it->second;
       }
     }
   }
 
   oop args = proc->mmobj()->mm_list_new();
-  proc->mmobj()->mm_list_append(args, self);
-  proc->mmobj()->mm_list_append(args, env);
-  proc->mmobj()->mm_list_append(args, imod);
+  proc->mmobj()->mm_list_append(proc, args, self);
+  proc->mmobj()->mm_list_append(proc, args, env);
+  proc->mmobj()->mm_list_append(proc, args, imod);
 
   debug() << "compiled_function_as_context_with_vars: Creating context..." << self << " " << vars << " " << imod << endl;
 
@@ -808,7 +845,7 @@ static int prim_compiled_function_as_context_with_vars(Process* proc) {
 
 static int prim_compiled_function_get_text(Process* proc) {
   oop self =  proc->dp();
-  proc->stack_push(proc->mmobj()->mm_compiled_function_get_text(self));
+  proc->stack_push(proc->mmobj()->mm_compiled_function_get_text(proc, self));
   return 0;
 }
 
@@ -826,22 +863,22 @@ static int prim_compiled_function_get_text(Process* proc) {
 
 static int prim_compiled_function_loc_for(Process* proc) {
   oop self =  proc->dp();
-  if (proc->mmobj()->mm_compiled_function_is_prim(self)) {
+  if (proc->mmobj()->mm_compiled_function_is_prim(proc, self)) {
     debug() << "LOCINFO IS NULL" << endl;
     proc->stack_push(MM_NULL);
     return 0;
   }
 
   oop frame = proc->get_arg(0);
-  bytecode* ip = proc->mmobj()->mm_frame_get_ip(frame);
+  bytecode* ip = proc->mmobj()->mm_frame_get_ip(proc, frame);
   // std::cerr << "loc_for_ip: " << ip << endl;
-  bytecode* base_ip = proc->mmobj()->mm_compiled_function_get_code(self);
+  bytecode* base_ip = proc->mmobj()->mm_compiled_function_get_code(proc, self);
   word idx = ip - base_ip;
   // std::cerr << "loc_for_ip base: " << base_ip << " idx" << ip - base_ip << endl;
 
-  oop mapping = proc->mmobj()->mm_compiled_function_get_loc_mapping(self);
-  std::map<oop, oop>::iterator it = proc->mmobj()->mm_dictionary_begin(mapping);
-  std::map<oop, oop>::iterator end = proc->mmobj()->mm_dictionary_end(mapping);
+  oop mapping = proc->mmobj()->mm_compiled_function_get_loc_mapping(proc, self);
+  std::map<oop, oop>::iterator it = proc->mmobj()->mm_dictionary_begin(proc, mapping);
+  std::map<oop, oop>::iterator end = proc->mmobj()->mm_dictionary_end(proc, mapping);
   oop the_lst = MM_NULL;
   for ( ; it != end; it++) {
     word b_offset = untag_small_int(it->first);
@@ -862,16 +899,16 @@ static int prim_compiled_function_loc_for(Process* proc) {
 static int prim_context_get_env(Process* proc) {
   oop self =  proc->dp();
 
-  oop ctx_env = proc->mmobj()->mm_context_get_env(self);
+  oop ctx_env = proc->mmobj()->mm_context_get_env(proc, self);
 
-  oop env_table = proc->mmobj()->mm_function_env_table(self);
+  oop env_table = proc->mmobj()->mm_function_env_table(proc, self);
 
   oop env_dict = proc->mmobj()->mm_dictionary_new();
 
-  for (number i = 0; i < proc->mmobj()->mm_list_size(env_table); i++) {
-    oop key = proc->mmobj()->mm_list_entry(env_table, i);
+  for (number i = 0; i < proc->mmobj()->mm_list_size(proc, env_table); i++) {
+    oop key = proc->mmobj()->mm_list_entry(proc, env_table, i);
     oop val = ((oop*)ctx_env)[i];
-    proc->mmobj()->mm_dictionary_set(env_dict, key, val);
+    proc->mmobj()->mm_dictionary_set(proc, env_dict, key, val);
   }
 
   // std::map<oop, oop>::iterator it = proc->mmobj()->mm_dictionary_begin(env_table);
@@ -894,9 +931,9 @@ static int prim_context_with_frame(Process* proc) {
   oop cmod = proc->mmobj()->mm_module_get_cmod(imod);
 
   oop args = proc->mmobj()->mm_list_new();
-  proc->mmobj()->mm_list_append(args, code);
-  proc->mmobj()->mm_list_append(args, frame);
-  proc->mmobj()->mm_list_append(args, cmod);
+  proc->mmobj()->mm_list_append(proc, args, code);
+  proc->mmobj()->mm_list_append(proc, args, frame);
+  proc->mmobj()->mm_list_append(proc, args, cmod);
 
 
   int exc;
@@ -906,11 +943,11 @@ static int prim_context_with_frame(Process* proc) {
     return PRIM_RAISED;
   }
 
-  oop fp = proc->mmobj()->mm_frame_get_fp(frame);
+  oop fp = proc->mmobj()->mm_frame_get_fp(proc, frame);
 
   args = proc->mmobj()->mm_list_new();
-  proc->mmobj()->mm_list_append(args, fp);
-  proc->mmobj()->mm_list_append(args, imod);
+  proc->mmobj()->mm_list_append(proc, args, fp);
+  proc->mmobj()->mm_list_append(proc, args, imod);
   oop ctx = proc->send(cfn, proc->vm()->new_symbol("new_context"), args, &exc);
   if (exc != 0) {
     proc->stack_push(ctx);
@@ -932,9 +969,9 @@ static int prim_context_new(Process* proc) {
   oop env = proc->get_arg(1);
   oop imod = proc->get_arg(2);
 
-  proc->mmobj()->mm_context_set_cfun(self, cfun);
-  proc->mmobj()->mm_context_set_env(self, env);
-  proc->mmobj()->mm_context_set_module(self, imod);
+  proc->mmobj()->mm_context_set_cfun(proc, self, cfun);
+  proc->mmobj()->mm_context_set_env(proc, self, env);
+  proc->mmobj()->mm_context_set_module(proc, self, imod);
   proc->stack_push(proc->rp());
   return 0;
 }
@@ -946,12 +983,12 @@ static int prim_get_compiled_module(Process* proc) {
 }
 
 static int prim_get_current_process(Process* proc) {
-  proc->stack_push(proc->mmobj()->mm_process_new(proc));
+  proc->stack_push(proc->mmobj()->mm_process_new(proc, proc));
   return 0;
 }
 
 static int prim_get_current_frame(Process* proc) {
-  proc->stack_push(proc->mmobj()->mm_frame_new(proc->bp()));
+  proc->stack_push(proc->mmobj()->mm_frame_new(proc, proc->bp()));
   return 0;
 }
 
@@ -959,7 +996,7 @@ static int prim_test_import(Process* proc) {
   oop filepath = proc->get_arg(0);
   oop args = proc->get_arg(1);
 
-  char* str_filepath = proc->mmobj()->mm_string_cstr(filepath);
+  char* str_filepath = proc->mmobj()->mm_string_cstr(proc, filepath);
   debug () << str_filepath << endl;
   MMCImage* mmc = new MMCImage(proc, proc->vm()->core(), str_filepath);
   mmc->load();
@@ -1007,7 +1044,7 @@ static int prim_test_files(Process* proc) {
 
   for(std::vector<std::string>::iterator it = ret.begin(); it != ret.end(); it++) {
     oop str = proc->mmobj()->mm_string_new((*it).c_str());
-    proc->mmobj()->mm_list_append(list, str);
+    proc->mmobj()->mm_list_append(proc, list, str);
   }
 
   proc->stack_push(list);
@@ -1116,7 +1153,7 @@ static int prim_process_reload_frame(Process* proc) {
 static int prim_process_frames(Process* proc) {
   oop oop_target_proc = proc->rp();
 
-  Process* target_proc = proc->mmobj()->mm_process_get_proc(oop_target_proc);
+  Process* target_proc = proc->mmobj()->mm_process_get_proc(proc, oop_target_proc);
 
   oop frames = proc->mmobj()->mm_list_new();
   // std::cerr << "prim_process_frames: stack deph: " << target_proc->stack_depth() << endl;
@@ -1124,9 +1161,9 @@ static int prim_process_frames(Process* proc) {
     // std::cerr << "getting bp " << endl;
     oop bp = target_proc->bp_at(i);
     // std::cerr << "prim_process_frames bp: " << bp << endl;
-    oop frame = proc->mmobj()->mm_frame_new(bp);
+    oop frame = proc->mmobj()->mm_frame_new(proc, bp);
     // std::cerr << "appending frame to list " << endl;
-    proc->mmobj()->mm_list_append(frames, frame);
+    proc->mmobj()->mm_list_append(proc, frames, frame);
   }
   proc->stack_push(frames);
   return 0;
@@ -1149,7 +1186,7 @@ static int prim_process_frames(Process* proc) {
 
 static int prim_frame_ip(Process* proc) {
   oop frame = proc->dp();
-  oop ip = (oop) proc->mmobj()->mm_frame_get_ip(frame);
+  oop ip = (oop) proc->mmobj()->mm_frame_get_ip(proc, frame);
   // oop bp =   proc->mmobj()->mm_frame_get_bp(frame);
   // std::cerr << "prim_frame_ip bp: " << bp << endl;
   // oop ip = *((oop*)(bp - 2));
@@ -1164,32 +1201,32 @@ static int prim_frame_cp(Process* proc) {
   // std::cerr << "prim_frame_cp bp: " << bp << endl;
   // oop cp = *((oop*)(bp - 5));
   // std::cerr << "prim_frame_cp bp: " << bp << " has cp: " << cp << endl;
-  proc->stack_push(proc->mmobj()->mm_frame_get_cp(frame));
+  proc->stack_push(proc->mmobj()->mm_frame_get_cp(proc, frame));
   return 0;
 }
 
 static int prim_frame_fp(Process* proc) {
   oop frame = proc->dp();
-  proc->stack_push(proc->mmobj()->mm_frame_get_fp(frame));
+  proc->stack_push(proc->mmobj()->mm_frame_get_fp(proc, frame));
   return 0;
 }
 
 static int prim_frame_rp(Process* proc) {
   oop frame = proc->dp();
-  proc->stack_push(proc->mmobj()->mm_frame_get_rp(frame));
+  proc->stack_push(proc->mmobj()->mm_frame_get_rp(proc, frame));
   return 0;
 }
 
 static int prim_frame_dp(Process* proc) {
   oop frame = proc->dp();
-  proc->stack_push(proc->mmobj()->mm_frame_get_dp(frame));
+  proc->stack_push(proc->mmobj()->mm_frame_get_dp(proc, frame));
   return 0;
 }
 
 static int prim_frame_get_local_value(Process* proc) {
   oop frame = proc->dp();
   number idx = untag_small_int(proc->get_arg(0));
-  oop fp = proc->mmobj()->mm_frame_get_fp(frame);
+  oop fp = proc->mmobj()->mm_frame_get_fp(proc, frame);
   proc->stack_push(*((oop*)fp + idx));
   return 0;
 }

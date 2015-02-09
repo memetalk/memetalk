@@ -6,7 +6,6 @@
 #include "mmobj.hpp"
 #include "vm.hpp"
 #include "process.hpp"
-#include <assert.h>
 
 using namespace std;
 
@@ -49,17 +48,17 @@ void MMCFunction::link_external_references() {
   }
 }
 
-oop MMCFunction::load(/*oop cmod*/) {
+oop MMCFunction::load(Process* proc /*, oop cmod*/) {
   load_header();
   relocate_addresses(_data, _data_size, HEADER_SIZE + _names_size + _ot_size + _er_size + _es_size);
   link_external_references();
   link_symbols(_data, _es_size, HEADER_SIZE + _names_size + _ot_size + _er_size, _vm, _core_image);
 
   oop cfun = (oop) & (_data[_cfun_addr]);
-  debug() << "New cfun outer: " << _mmobj->mm_compiled_function_outer_cfun(cfun)
-          << " is_top: " << _mmobj->mm_compiled_function_is_top_level(cfun)
-          << " env_size: " << _mmobj->mm_compiled_function_get_num_locals_or_env(cfun)
-          << " env_offset: " << _mmobj->mm_compiled_function_get_env_offset(cfun) << endl;
+  debug() << "New cfun outer: " << _mmobj->mm_compiled_function_outer_cfun(proc, cfun)
+          << " is_top: " << _mmobj->mm_compiled_function_is_top_level(proc, cfun)
+          << " env_size: " << _mmobj->mm_compiled_function_get_num_locals_or_env(proc, cfun)
+          << " env_offset: " << _mmobj->mm_compiled_function_get_env_offset(proc, cfun) << endl;
   //TODO:
   // _mmobj->mm_compiled_function_set_owner(cmod);
   return cfun;

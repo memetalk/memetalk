@@ -367,6 +367,25 @@ class ImportError < Exception
   }
 end
 
+class TypeError < Exception
+  instance_method toString: fun() {
+    return "TypeError: " + this.message.toString();
+  }
+end
+
+class IndexError < Exception
+  instance_method toString: fun() {
+    return "IndexError: " + this.message.toString();
+  }
+end
+
+class InternalError < Exception
+  instance_method toString: fun() {
+    return "InternalError: " + this.message.toString();
+  }
+end
+
+
 class DoesNotUnderstand < Exception
   instance_method toString: fun() {
     return "DoesNotUnderstand: " + this.message.toString();

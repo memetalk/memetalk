@@ -6,7 +6,6 @@
 #include "mmobj.hpp"
 #include "prims.hpp"
 #include "report.hpp"
-#include <assert.h>
 #include "utils.hpp"
 #include "mmc_fun.hpp"
 
@@ -19,35 +18,35 @@ MMObj* VM::mmobj() {
   return _mmobj;
 }
 
-void VM::dictionary_dump(oop dict) {
-  number size = _mmobj->mm_dictionary_size(dict);
+// void VM::dictionary_dump(oop dict) {
+//   number size = _mmobj->mm_dictionary_size(dict);
 
-  debug() << "  dict vt: " << _mmobj->mm_object_vt(dict) << endl;
-  debug() << "  dict size: " << size << endl;
-  for (int i = 3; i < (3 + (size*2)); i++) {
-    debug() << "  [" << i << "]: & " << &((oop*)dict)[i];
-    debug() << endl;
-    // debug() << " vt:" << * ((oop**)dict)[i]  << endl;
-  }
-}
+//   debug() << "  dict vt: " << _mmobj->mm_object_vt(dict) << endl;
+//   debug() << "  dict size: " << size << endl;
+//   for (int i = 3; i < (3 + (size*2)); i++) {
+//     debug() << "  [" << i << "]: & " << &((oop*)dict)[i];
+//     debug() << endl;
+//     // debug() << " vt:" << * ((oop**)dict)[i]  << endl;
+//   }
+// }
 
-void VM::dump_prime_info() {
-  std::map<std::string, oop> primes = _core_image->get_primes();
-  std::map<std::string, oop>::iterator it;
-  for (it = primes.begin(); it != primes.end(); it++) {
-    if (it->first == "Behavior" || it->first == "Object_Behavior") continue;
-    oop klass = it->second;
-    debug() << "PRIME " << klass << " name: " << _mmobj->mm_string_cstr(_mmobj->mm_class_name(klass)) << " vt: "
-            << _mmobj->mm_object_vt(klass) << " dict:" << _mmobj->mm_class_dict(klass) << endl;
-    dictionary_dump(_mmobj->mm_class_dict(klass));
-  }
-}
+// void VM::dump_prime_info() {
+//   std::map<std::string, oop> primes = _core_image->get_primes();
+//   std::map<std::string, oop>::iterator it;
+//   for (it = primes.begin(); it != primes.end(); it++) {
+//     if (it->first == "Behavior" || it->first == "Object_Behavior") continue;
+//     oop klass = it->second;
+//     debug() << "PRIME " << klass << " name: " << _mmobj->mm_string_cstr(_mmobj->mm_class_name(klass)) << " vt: "
+//             << _mmobj->mm_object_vt(klass) << " dict:" << _mmobj->mm_class_dict(klass) << endl;
+//     dictionary_dump(_mmobj->mm_class_dict(klass));
+//   }
+// }
 
 void VM::print_retval(Process* proc, oop retval) {
   int exc;
   debug() << " ======== the end ======= " << endl;
   oop retval_str = proc->send_0(retval, new_symbol("toString"), &exc);
-  debug() << "RETVAL: " << retval << " => " << _mmobj->mm_string_cstr(retval_str) << endl;
+  debug() << "RETVAL: " << retval << " => " << _mmobj->mm_string_cstr(proc, retval_str) << endl;
 }
 
 int VM::start() {
@@ -90,7 +89,7 @@ std::pair<Process*, oop> VM::start_debugger(Process* target) {
     // return * (int*) (void*) &(e.mm_exception);
   }
 
-  oop oop_target_proc = _mmobj->mm_process_new(target);
+  oop oop_target_proc = _mmobj->mm_process_new(target, target);
   int exc;
   oop handler = dbg_proc->send_1(imod, new_symbol("debug"), oop_target_proc, &exc);
   if (exc != 0) {
@@ -110,18 +109,22 @@ oop VM::new_symbol(const char* cstr) {
   return _symbols[s];
 }
 
-oop VM::new_symbol(oop str) {
-  assert(_mmobj->mm_object_vt(str) == _core_image->get_prime("String"));
-  return new_symbol(_mmobj->mm_string_cstr(str));
+oop VM::new_symbol(Process* p, oop str) {
+  if (!(_mmobj->mm_object_vt(str) == _core_image->get_prime("String"))) {
+    p->raise("TypeError", "Expecting String");
+  }
+  return new_symbol(_mmobj->mm_string_cstr(p, str));
 }
 
 void VM::register_primitive(std::string name, prim_function_t fun) {
   _primitives[name] = fun;
 }
 
-prim_function_t VM::get_primitive(std::string name) {
+prim_function_t VM::get_primitive(Process* proc, std::string name) {
   debug() << "VM::get_primitive " << name << endl;
-  assert(_primitives.find(name) != _primitives.end());
+  if (!(_primitives.find(name) != _primitives.end())) {
+    proc->raise("InternalError", (std::string("primitive not found: ") + name).c_str());
+  }
   return _primitives[name];
 }
 
@@ -183,8 +186,8 @@ oop VM::compile_fun(Process* proc, const char* text, std::list<std::string> vars
     data.copy(c_data, data.size());
     if (pclose(p) == 0) {
       MMCFunction* mmcf = new MMCFunction(this, _core_image, c_data, data.size());
-      oop cfun = mmcf->load();
-      _mmobj->mm_compiled_function_set_cmod(cfun, cmod);
+      oop cfun = mmcf->load(proc);
+      _mmobj->mm_compiled_function_set_cmod(proc, cfun, cmod);
       return cfun;
     } else {
       *exc = 1;

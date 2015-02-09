@@ -14,7 +14,7 @@ class MMCFunction {
   static word HEADER_SIZE;
 public:
   MMCFunction(VM*, CoreImage*, char* data, int size);
-  oop load();
+  oop load(Process*);
 private:
   // void check_module_arity(oop module_arguments_list);
   // oop instantiate_class(oop, oop, oop, std::map<std::string, oop>&, oop);

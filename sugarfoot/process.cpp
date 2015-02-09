@@ -1,7 +1,6 @@
 #include <stdlib.h>
 #include <string>
 #include <stdlib.h>
-#include <assert.h>
 #include <map>
 #include "process.hpp"
 #include "defs.hpp"
@@ -138,7 +137,7 @@ void Process::pop_frame() {
 
   if (_cp) {// first frame has _cp = null
     // dbg() << "pop_frame: getting module from fun " << _cp << endl;
-    _mp = _mmobj->mm_function_get_module(_cp);
+    _mp = _mmobj->mm_function_get_module(this, _cp);
     dbg() << "MP for fun unloaded: " << _mp << endl;
   } else {
     dbg() << "++ MP for fun unloaded is null!" << endl;
@@ -156,9 +155,9 @@ oop Process::ctor_rdp_for(oop rp, oop cp) {
     bail("no rdp for ctor!");
   }
   oop vt = _mmobj->mm_object_vt(rp);
-  oop cclass = _mmobj->mm_class_get_compiled_class(vt);
+  oop cclass = _mmobj->mm_class_get_compiled_class(this, vt);
 
-  oop other_cclass = _mmobj->mm_function_get_owner(cp);
+  oop other_cclass = _mmobj->mm_function_get_owner(this, cp);
 
   dbg() << "rdp_for_ctor cclass: " << cclass << ", other cclass: " << other_cclass << endl;
 
@@ -170,7 +169,7 @@ oop Process::ctor_rdp_for(oop rp, oop cp) {
 }
 
 void Process::basic_new_and_load(oop klass) {
-  oop rp = _mmobj->alloc_instance(klass);
+  oop rp = _mmobj->alloc_instance(this, klass);
   oop dp = ctor_rdp_for(rp, _cp);
   dbg() << "basic_new: " << rp << " dp: " << dp << endl;
   set_rp(rp);
@@ -209,12 +208,14 @@ void Process::restore_fp(oop fp, number params, number env_offset) {
 }
 
 bool Process::load_fun(oop recv, oop drecv, oop fun, bool should_allocate) {
-  assert(_mmobj->mm_is_function(fun) || _mmobj->mm_is_context(fun));
+  if (!(_mmobj->mm_is_function(fun) || _mmobj->mm_is_context(fun))) {
+    raise("TypeError", "Expecting function or context");
+  }
 
   dbg() << "Process::load_fun " << fun << endl;
 
-  if (_mmobj->mm_function_is_getter(fun)) {
-    number idx = _mmobj->mm_function_access_field(fun);
+  if (_mmobj->mm_function_is_getter(this, fun)) {
+    number idx = _mmobj->mm_function_access_field(this, fun);
     dbg() << "GETTER: idx " << idx << " on " << recv << endl;
     oop val = ((oop*)drecv)[idx];
     dbg() << "GETTER: pushing retval: " << val << endl;
@@ -222,12 +223,12 @@ bool Process::load_fun(oop recv, oop drecv, oop fun, bool should_allocate) {
     return false;
   }
 
-  number num_params = _mmobj->mm_function_get_num_params(fun);
-  number storage_size = _mmobj->mm_function_get_num_locals_or_env(fun);
+  number num_params = _mmobj->mm_function_get_num_params(this, fun);
+  number storage_size = _mmobj->mm_function_get_num_locals_or_env(this, fun);
   push_frame(recv, drecv, num_params, storage_size);
 
 
-  dbg() << "storage: " << _ss << " " << _mmobj->mm_string_cstr(_mmobj->mm_function_get_name(fun)) << endl;
+  dbg() << "storage: " << _ss << " " << _mmobj->mm_string_cstr(this, _mmobj->mm_function_get_name(this, fun)) << endl;
 
   // std::cerr << "line mapping: " << " " << _mmobj->mm_string_cstr(_mmobj->mm_function_get_name(fun)) << endl;
   // oop mapping = _mmobj->mm_function_get_line_mapping(fun);
@@ -249,25 +250,25 @@ bool Process::load_fun(oop recv, oop drecv, oop fun, bool should_allocate) {
   // }
 
   if (_mmobj->mm_is_context(fun)) {
-    restore_fp(_mmobj->mm_context_get_env(fun), num_params, _mmobj->mm_function_get_env_offset(fun));
+    restore_fp(_mmobj->mm_context_get_env(this, fun), num_params, _mmobj->mm_function_get_env_offset(this, fun));
   } else {
-    if (_mmobj->mm_function_uses_env(fun)) {
+    if (_mmobj->mm_function_uses_env(this, fun)) {
       setup_fp(num_params, storage_size);
     }
   }
 
   _cp = fun;
-  _mp = _mmobj->mm_function_get_module(_cp);
+  _mp = _mmobj->mm_function_get_module(this, _cp);
   dbg() << "MP for fun load: " << _mp << endl;
   dbg() << "_cp is " << _cp << endl;
 
-  if (_mmobj->mm_function_is_ctor(fun) and should_allocate) {
+  if (_mmobj->mm_function_is_ctor(this, fun) and should_allocate) {
     basic_new_and_load(recv);
   }
 
-  if (_mmobj->mm_function_is_prim(fun)) {
-    oop prim_name = _mmobj->mm_function_get_prim_name(fun);
-    std::string str_prim_name = _mmobj->mm_string_cstr(prim_name);
+  if (_mmobj->mm_function_is_prim(this, fun)) {
+    oop prim_name = _mmobj->mm_function_get_prim_name(this, fun);
+    std::string str_prim_name = _mmobj->mm_string_cstr(this, prim_name);
     int ret = execute_primitive(str_prim_name);
     if (ret == 0) {
       oop value = stack_pop(); //shit
@@ -293,9 +294,9 @@ bool Process::load_fun(oop recv, oop drecv, oop fun, bool should_allocate) {
 
   // dbg() << "load_fun: module for fun " << fun << " is " << _mp << endl;
   // dbg() << "load_fun: is ctor? " << _mmobj->mm_function_is_ctor(fun) << " alloc? " << should_allocate << endl;
-  _ip = _mmobj->mm_function_get_code(fun);
+  _ip = _mmobj->mm_function_get_code(this, fun);
   // dbg() << "first instruction " << decode_opcode(*_ip) << endl;
-  _code_size = _mmobj->mm_function_get_code_size(fun);
+  _code_size = _mmobj->mm_function_get_code_size(this, fun);
   maybe_tick_call();
   return true;
 }
@@ -310,16 +311,16 @@ oop Process::send_1(oop recv, oop selector, oop arg, int* exc) {
 }
 
 oop Process::send(oop recv, oop selector, oop args, int* exc) {
-  number num_args = _mmobj->mm_list_size(args);
+  number num_args = _mmobj->mm_list_size(this, args);
   for (int i = 0; i < num_args; i++) {
-    stack_push(_mmobj->mm_list_entry(args, i));
+    stack_push(_mmobj->mm_list_entry(this, args, i));
   }
   return do_send(recv, selector, num_args, exc);
 }
 
 oop Process::do_send(oop recv, oop selector, int num_args, int *exc) {
   dbg() << "-- begin do_send, recv: " << recv
-          << ", selector: " << _mmobj->mm_symbol_cstr(selector) << " #args: " << num_args << endl;
+        << ", selector: " << _mmobj->mm_symbol_cstr(this, selector) << " #args: " << num_args << endl;
 
   *exc = 0;
   std::pair<oop, oop> res = lookup(recv, _mmobj->mm_object_vt(recv), selector);
@@ -328,7 +329,7 @@ oop Process::do_send(oop recv, oop selector, int num_args, int *exc) {
   oop fun = res.second;
   if (!fun) {
     std::stringstream s;
-    s << _mmobj->mm_symbol_cstr(selector) << " not found in object " << recv;
+    s << _mmobj->mm_symbol_cstr(this, selector) << " not found in object " << recv;
     dbg() << s << endl;
     *exc = 1;
     oop ex = mm_exception("DoesNotUnderstand", s.str().c_str());
@@ -336,10 +337,10 @@ oop Process::do_send(oop recv, oop selector, int num_args, int *exc) {
     return ex;
   }
 
-  number arity = _mmobj->mm_function_get_num_params(fun);
+  number arity = _mmobj->mm_function_get_num_params(this, fun);
   if (num_args != arity) {
     std::stringstream s;
-    s << _mmobj->mm_symbol_cstr(selector) << ": expects " <<  arity << " but got " << num_args;
+    s << _mmobj->mm_symbol_cstr(this, selector) << ": expects " <<  arity << " but got " << num_args;
     dbg() << s << endl;
     *exc = 1;
     oop ex = mm_exception("ArityError", s.str().c_str());
@@ -378,8 +379,9 @@ oop Process::do_send(oop recv, oop selector, int num_args, int *exc) {
 // }
 
 oop Process::do_call(oop fun, int* exc) {
-  assert(_mmobj->mm_is_context(fun)); //since we pass NULL to load_fun
-
+  if (!(_mmobj->mm_is_context(fun))) { //since we pass NULL to load_fun
+    raise("TypeError", "expecting Context");
+  }
 
   dbg() << "-- begin do_call fun: " << fun << " sp: " << _sp << ", fp: " << _fp << endl;
 
@@ -400,13 +402,14 @@ oop Process::do_call(oop fun, int* exc) {
 }
 
 oop Process::call(oop fun, oop args, int* exc) {
-  assert(_mmobj->mm_is_context(fun)); //since we pass NULL to load_fun
-
-  number num_args = _mmobj->mm_list_size(args);
-  number arity = _mmobj->mm_function_get_num_params(fun);
+  if (!(_mmobj->mm_is_context(fun))) { //since we pass NULL to load_fun
+    raise("TypeError", "expecting Context");
+  }
+  number num_args = _mmobj->mm_list_size(this, args);
+  number arity = _mmobj->mm_function_get_num_params(this, fun);
   if (num_args != arity) {
     std::stringstream s;
-    s << _mmobj->mm_string_cstr(_mmobj->mm_function_get_name(fun)) << ": expects " <<  arity << " but got " << num_args;
+    s << _mmobj->mm_string_cstr(this, _mmobj->mm_function_get_name(this, fun)) << ": expects " <<  arity << " but got " << num_args;
     dbg() << s << endl;
     oop ex = mm_exception("ArityError", s.str().c_str());
     dbg() << "do_call returning exception object " << ex << endl;
@@ -415,7 +418,7 @@ oop Process::call(oop fun, oop args, int* exc) {
   }
 
   for (int i = 0; i < num_args; i++) {
-    stack_push(_mmobj->mm_list_entry(args, i));
+    stack_push(_mmobj->mm_list_entry(this, args, i));
   }
   return do_call(fun, exc);
 }
@@ -424,7 +427,9 @@ void Process::fetch_cycle(void* stop_at_bp) {
   dbg() << "begin fetch_cycle fp:" << _fp <<  " stop_fp:" <<  stop_at_bp
         << " ip: " << _ip << endl;
 
-  assert((_bp >= stop_at_bp) && _ip); //at least one instructionn should be executed.
+  if (!((_bp >= stop_at_bp) && _ip)) { //at least one instructionn should be executed.
+    raise("InternalError", "base pointer and stop_at_bp are wrong");
+  }
 
   while ((_bp >= stop_at_bp) && _ip) { // && ((_ip - start_ip) * sizeof(bytecode))  < _code_size) {
     // std::cerr << "fp " << _fp << " stop " <<  stop_at_bp << " codesize " <<  _code_size << "ip " << _ip << std::endl;
@@ -510,7 +515,7 @@ void Process::tick() {
 
 void Process::step_into() {
   // std::cerr << "Process::step_into..." << endl;
-  bytecode* next = _mmobj->mm_function_next_expr(_cp, _ip);
+  bytecode* next = _mmobj->mm_function_next_expr(this, _cp, _ip);
   if (next) {
     // std::cerr << "step_into: BP on next op: " << next << " "
     //           << decode_opcode(*next) << endl;
@@ -522,7 +527,7 @@ void Process::step_into() {
 
 void Process::step_over() {
   // std::cerr << "Process::step_over resuming ..." << endl;
-  bytecode* next = _mmobj->mm_function_next_expr(_cp, _ip);
+  bytecode* next = _mmobj->mm_function_next_expr(this, _cp, _ip);
   if (next) {
     // std::cerr << "step_over: BP on next op: " << next << " "
     //           << decode_opcode(*next) << endl;
@@ -536,7 +541,7 @@ void Process::step_over() {
 
 void Process::step_over_line() {
   // std::cerr << "Process::step_over_line resuming ..." << endl;
-  bytecode* next = _mmobj->mm_function_next_line_expr(_cp, _ip);
+  bytecode* next = _mmobj->mm_function_next_line_expr(this, _cp, _ip);
   if (next) {
     // std::cerr << "step_over_line: BP on next op: " << next << " "
     //           << decode_opcode(*next) << endl;
@@ -558,14 +563,14 @@ void Process::step_out() {
 
 void Process::reload_frame() {
   _sp = _bp; //restore sp, ignoring frame data. push_frame/pop_frame are always in sync.
-  _ip = _mmobj->mm_function_get_code(_cp);
+  _ip = _mmobj->mm_function_get_code(this, _cp);
 }
 
 void Process::handle_send(number num_args) {
   oop selector = stack_pop();
   oop recv = stack_pop(); //(oop) * _sp;
 
-  dbg() << " SEND " << selector << " name: " << _mmobj->mm_symbol_cstr(selector)
+  dbg() << " SEND " << selector << " name: " << _mmobj->mm_symbol_cstr(this, selector)
           << " " << "recv: " << recv << " vt: " << _mmobj->mm_object_vt(recv) << endl;
 
   std::pair<oop,oop> res = lookup(recv, _mmobj->mm_object_vt(recv), selector);
@@ -575,16 +580,16 @@ void Process::handle_send(number num_args) {
 
   if (!fun) {
     std::stringstream s;
-    s << _mmobj->mm_symbol_cstr(selector) << " not found in object " << recv;
+    s << _mmobj->mm_symbol_cstr(this, selector) << " not found in object " << recv;
     //we rely on compiler generating a pop instruction to bind ex_oop to the catch var
     stack_push(unwind_with_exception(mm_exception("DoesNotUnderstand", s.str().c_str())));
     return;
   }
 
-  number arity = _mmobj->mm_function_get_num_params(fun);
+  number arity = _mmobj->mm_function_get_num_params(this, fun);
   if (num_args != arity) {
     std::stringstream s;
-    s << _mmobj->mm_string_cstr(_mmobj->mm_function_get_name(fun)) << ": expects " <<  arity << " but got " << num_args;
+    s << _mmobj->mm_string_cstr(this, _mmobj->mm_function_get_name(this, fun)) << ": expects " <<  arity << " but got " << num_args;
     dbg() << s << endl;
     oop ex = mm_exception("ArityError", s.str().c_str());
     dbg() << "handle_send: created exception " << ex << endl;
@@ -613,7 +618,7 @@ void Process::handle_super_ctor_send(number num_args) {
   if (!fun) {
     dbg() << "super Lookup failed";
     std::stringstream s;
-    s << _mmobj->mm_symbol_cstr(selector) << " not found in child object " << instance;
+    s << _mmobj->mm_symbol_cstr(this, selector) << " not found in child object " << instance;
     dbg() << s << endl;
     //we rely on compiler generating a pop instruction to bind ex_oop to the catch var
     stack_push(unwind_with_exception(mm_exception("DoesNotUnderstand", s.str().c_str())));
@@ -623,7 +628,7 @@ void Process::handle_super_ctor_send(number num_args) {
   dbg() << "Lookup FOUND " << fun << endl;
 
 
-  number arity = _mmobj->mm_function_get_num_params(fun);
+  number arity = _mmobj->mm_function_get_num_params(this, fun);
   if (num_args != arity) {
     std::stringstream s;
     s << "arity and num_args differ: " << num_args << " != " << arity;
@@ -639,11 +644,11 @@ void Process::handle_call(number num_args) {
   // std::cerr << "handle_call" << endl;
   oop fun = stack_pop();
   // std::cerr << "handle_call: fn " << fun << endl;
-  number arity = _mmobj->mm_function_get_num_params(fun);
+  number arity = _mmobj->mm_function_get_num_params(this, fun);
   // std::cerr << "handle_call: arity " << arity << endl;
   if (num_args != arity) {
     std::stringstream s;
-    s << _mmobj->mm_string_cstr(_mmobj->mm_function_get_name(fun)) << ": expects " <<  arity << " but got " << num_args;
+    s << _mmobj->mm_string_cstr(this, _mmobj->mm_function_get_name(this, fun)) << ": expects " <<  arity << " but got " << num_args;
     dbg() << s << endl;
     stack_push(unwind_with_exception(mm_exception("ArityError", s.str().c_str())));
     return;
@@ -666,8 +671,8 @@ void Process::dispatch(int opcode, int arg) {
         stack_push(*(_fp + arg));
         break;
       case PUSH_LITERAL:
-        dbg() << "PUSH_LITERAL " << arg << " " << _mmobj->mm_function_get_literal_by_index(_cp, arg) << endl;
-        stack_push(_mmobj->mm_function_get_literal_by_index(_cp, arg));
+        dbg() << "PUSH_LITERAL " << arg << " " << _mmobj->mm_function_get_literal_by_index(this, _cp, arg) << endl;
+        stack_push(_mmobj->mm_function_get_literal_by_index(this, _cp, arg));
         break;
       case PUSH_MODULE:
         dbg() << "PUSH_MODULE " << arg << " " << _mp << endl;
@@ -762,10 +767,10 @@ std::pair<oop, oop> Process::lookup(oop drecv, oop vt, oop selector) {
 
   oop dict = _mmobj->mm_behavior_get_dict(vt);
   dbg() << "Process::lookup dict: " << dict
-          << " selector: " << _mmobj->mm_symbol_cstr(selector) << endl;
+          << " selector: " << _mmobj->mm_symbol_cstr(this, selector) << endl;
 
-  if (_mmobj->mm_dictionary_has_key(dict, selector)) {
-    oop fun = _mmobj->mm_dictionary_get(dict, selector);
+  if (_mmobj->mm_dictionary_has_key(this, dict, selector)) {
+    oop fun = _mmobj->mm_dictionary_get(this, dict, selector);
     dbg() << "Lookup of " << selector << " found in " << vt
             << " fun: " << fun << " drecv: " << drecv << endl;
     std::pair<oop,oop> res = std::pair<oop,oop>(drecv, fun);
@@ -805,7 +810,7 @@ void Process::stack_push(bytecode* data) {
 
 
 int Process::execute_primitive(std::string name) {
-  int val = _vm->get_primitive(name)(this);
+  int val = _vm->get_primitive(this, name)(this);
   dbg() << "primitive " << name << " returned " << val << endl;
   return val;
 }
@@ -819,15 +824,15 @@ bool Process::exception_has_handler(oop e, oop bp) {
     return false;
   }
 
-  dbg() << "exception_has_handler: " << _mmobj->mm_string_cstr(_mmobj->mm_function_get_name(cp)) << endl;
+  dbg() << "exception_has_handler: " << _mmobj->mm_string_cstr(this, _mmobj->mm_function_get_name(this, cp)) << endl;
 
-  if (_mmobj->mm_function_is_prim(cp)) {
+  if (_mmobj->mm_function_is_prim(this, cp)) {
     return exception_has_handler(e, *(oop*)bp);
   }
 
-  bytecode* code = _mmobj->mm_function_get_code(cp);
+  bytecode* code = _mmobj->mm_function_get_code(this, cp);
 
-  number exception_frames_count = _mmobj->mm_function_exception_frames_count(cp);
+  number exception_frames_count = _mmobj->mm_function_exception_frames_count(this, cp);
   dbg() << "exception frames: " << exception_frames_count << endl;
   if (exception_frames_count == 0) { //cp is unable to handle
     return exception_has_handler(e, *(oop*)bp);
@@ -835,7 +840,7 @@ bool Process::exception_has_handler(oop e, oop bp) {
 
   //exception frames are lexically ordered,
   //so iterating normally we always reach the innermost frame first
-  oop exception_frames = _mmobj->mm_function_exception_frames(cp);
+  oop exception_frames = _mmobj->mm_function_exception_frames(this, cp);
   for(int i = 0; i < exception_frames_count; i++) {
     oop frame_begin = exception_frames + (4 * i);
 
@@ -848,10 +853,12 @@ bool Process::exception_has_handler(oop e, oop bp) {
       type_oop  = MM_NULL;
     } else {
       dbg() << "fetching exception type for name: " << str_type_oop << endl;
-      oop mp = _mmobj->mm_function_get_module(cp);
+      oop mp = _mmobj->mm_function_get_module(this, cp);
       int exc;
-      type_oop = send_0(mp, _vm->new_symbol(str_type_oop), &exc);
-      assert(exc == 0);
+      type_oop = send_0(mp, _vm->new_symbol(this, str_type_oop), &exc);
+      if (!(exc == 0)) {
+        raise("InternalError", "Unable to create symbol from string");
+      }
       dbg() << "fetching exception type got " << type_oop << endl;;
     }
 
@@ -886,22 +893,24 @@ oop Process::unwind_with_exception(oop e) {
   if (_cp == NULL) {
     int exc;
     oop str = send_0(e, _vm->new_symbol("toString"), &exc);
-    assert(exc == 0);
+    if (!(exc == 0)) {
+        raise("InternalError", "Unable to create symbol from string");
+    }
     std::cerr << "Terminated with exception: \""
-              << _mmobj->mm_string_cstr(str) << "\"" << endl;
+              << _mmobj->mm_string_cstr(this, str) << "\"" << endl;
     bail();
   }
 
-  dbg() << "unwind_with_exception: " << _mmobj->mm_string_cstr(_mmobj->mm_function_get_name(_cp)) << endl;
+  dbg() << "unwind_with_exception: " << _mmobj->mm_string_cstr(this, _mmobj->mm_function_get_name(this, _cp)) << endl;
 
-  if (_mmobj->mm_function_is_prim(_cp)) {
-    dbg() << "->> unwind reached primitive " << _mmobj->mm_string_cstr(_mmobj->mm_function_get_prim_name(_cp)) << endl;
+  if (_mmobj->mm_function_is_prim(this, _cp)) {
+    dbg() << "->> unwind reached primitive " << _mmobj->mm_string_cstr(this, _mmobj->mm_function_get_prim_name(this, _cp)) << endl;
     throw mm_rewind(e);
   }
 
-  bytecode* code = _mmobj->mm_function_get_code(_cp);
+  bytecode* code = _mmobj->mm_function_get_code(this, _cp);
 
-  number exception_frames_count = _mmobj->mm_function_exception_frames_count(_cp);
+  number exception_frames_count = _mmobj->mm_function_exception_frames_count(this, _cp);
   dbg() << "exception frames: " << exception_frames_count << endl;
   if (exception_frames_count == 0) { //_cp is unable to handle
     pop_frame();
@@ -910,7 +919,7 @@ oop Process::unwind_with_exception(oop e) {
 
   //exception frames are lexically ordered,
   //so iterating normally we always reach the innermost frame first
-  oop exception_frames = _mmobj->mm_function_exception_frames(_cp);
+  oop exception_frames = _mmobj->mm_function_exception_frames(this, _cp);
   for(int i = 0; i < exception_frames_count; i++) {
     oop frame_begin = exception_frames + (4 * i);
 
@@ -924,9 +933,11 @@ oop Process::unwind_with_exception(oop e) {
     } else {
       dbg() << "fetching exception type for name: " << str_type_oop << endl;
       int exc;
-      oop mp = _mmobj->mm_function_get_module(_cp);
-      type_oop = send_0(mp, _vm->new_symbol(str_type_oop), &exc);
-      assert(exc == 0);
+      oop mp = _mmobj->mm_function_get_module(this, _cp);
+      type_oop = send_0(mp, _vm->new_symbol(this, str_type_oop), &exc);
+      if (!(exc == 0)) {
+        raise("InternalError", "Unable to create symbol from string");
+      }
       dbg() << "fetching exception type got " << type_oop << endl;;
     }
 
@@ -963,7 +974,9 @@ oop Process::mm_exception(const char* ex_type_name, const char* msg) {
 
   int exc;
   oop exobj = send_1(ex_type, _vm->new_symbol("new"), _mmobj->mm_string_new(msg), &exc);
-  assert(exc == 0);
+  if (!(exc == 0)) {
+    raise("InternalError", "Unable to create symbol from string");
+  }
   dbg() << "mm_exception: returning ex: " << exobj << endl;
   return exobj;
 }

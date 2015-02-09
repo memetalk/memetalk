@@ -25,11 +25,11 @@ public:
 
   int start();
   oop new_symbol(const char*);
-  oop new_symbol(oop);
+  oop new_symbol(Process*, oop);
 
   void register_primitive(std::string, prim_function_t);
 
-  prim_function_t get_primitive(std::string);
+  prim_function_t get_primitive(Process*, std::string);
 
   oop instantiate_module(Process*, const char* name, oop module_args_list);
 
@@ -44,8 +44,8 @@ public:
   std::pair<Process*, oop> start_debugger(Process* target);
 
 private:
-  void dump_prime_info();
-  void dictionary_dump(oop dict);
+  // void dump_prime_info();
+  // void dictionary_dump(oop dict);
   void print_retval(Process*, oop retval);
 
   int _argc;
