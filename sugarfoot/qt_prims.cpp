@@ -270,9 +270,15 @@ QScriptValue mm_handle(QScriptContext *ctx, QScriptEngine *engine) {
       }
     }
   }
-  int exc;
-  oop res = proc->call(mm_closure, mm_args, &exc);
-  check_and_print_exception(proc, exc, res);
+  //if proc is halted, we will screw it bt calling
+  //(this is while we don't have proper multi-process support + debugging)
+  if (!proc->is_running()) {
+    err() << "** woah! don't trigger a slot while its process is not in running state!!! **" << endl;
+  } else {
+    int exc;
+    oop res = proc->call(mm_closure, mm_args, &exc);
+    check_and_print_exception(proc, exc, res);
+  }
   return engine->undefinedValue();
 }
 

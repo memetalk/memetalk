@@ -23,3 +23,7 @@ ostream& debug() {
     return null_stream;
   }
 }
+
+std::ostream& err() {
+  return cerr;
+}

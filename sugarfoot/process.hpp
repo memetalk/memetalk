@@ -33,6 +33,8 @@ public:
 
   oop run(oop, oop);
 
+  bool is_running() { return _state == RUN_STATE; }
+
   VM* vm() { return _vm; }
   oop sp() { return _sp; }
   oop fp() { return _fp; }

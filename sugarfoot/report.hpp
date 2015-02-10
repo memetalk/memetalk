@@ -11,4 +11,5 @@ void bail(const std::string& msg);
 void bail();
 std::ostream& debug();
 
+std::ostream& err();
 #endif
