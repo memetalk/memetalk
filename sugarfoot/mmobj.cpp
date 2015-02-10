@@ -149,7 +149,7 @@ oop MMObj::mm_boolean_new(number val) {
 }
 
 bool MMObj::mm_boolean_cbool(Process* p, oop val) {
-  if (val == MM_TRUE || val == MM_FALSE) {
+  if (!(val == MM_TRUE || val == MM_FALSE)) {
     p->raise("TypeError", "Expecting boolean");
   }
   return val == MM_TRUE;
