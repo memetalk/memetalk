@@ -278,9 +278,7 @@ bool Process::load_fun(oop recv, oop drecv, oop fun, bool should_allocate) {
       oop ex_oop = stack_pop(); //shit
       dbg() << "load_fun: prim returned: RAISED " << ex_oop << endl;
       pop_frame();
-      if (_vm->running_online() && !exception_has_handler(ex_oop, _bp)) {
-        halt_and_debug();
-      }
+      maybe_debug_on_raise(ex_oop);
       //we rely on compiler generating a pop instruction to bind ex_oop to the catch var
       stack_push(unwind_with_exception(ex_oop));
         // dbg() << "load_fun: unwind_with_exception reached primitive. c++ throwing...: " << ex_oop << endl;
@@ -582,7 +580,9 @@ void Process::handle_send(number num_args) {
     std::stringstream s;
     s << _mmobj->mm_symbol_cstr(this, selector) << " not found in object " << recv;
     //we rely on compiler generating a pop instruction to bind ex_oop to the catch var
-    stack_push(unwind_with_exception(mm_exception("DoesNotUnderstand", s.str().c_str())));
+    oop oo_ex = mm_exception("DoesNotUnderstand", s.str().c_str());
+    maybe_debug_on_raise(oo_ex);
+    stack_push(unwind_with_exception(oo_ex));
     return;
   }
 
@@ -593,6 +593,7 @@ void Process::handle_send(number num_args) {
     dbg() << s << endl;
     oop ex = mm_exception("ArityError", s.str().c_str());
     dbg() << "handle_send: created exception " << ex << endl;
+    maybe_debug_on_raise(ex);
     unwind_with_exception(ex);
     dbg() << "handle_send: unwinded ex. returning exception " << ex << endl;
     stack_push(ex);
@@ -621,7 +622,9 @@ void Process::handle_super_ctor_send(number num_args) {
     s << _mmobj->mm_symbol_cstr(this, selector) << " not found in child object " << instance;
     dbg() << s << endl;
     //we rely on compiler generating a pop instruction to bind ex_oop to the catch var
-    stack_push(unwind_with_exception(mm_exception("DoesNotUnderstand", s.str().c_str())));
+    oop oo_ex = mm_exception("DoesNotUnderstand", s.str().c_str());
+    maybe_debug_on_raise(oo_ex);
+    stack_push(unwind_with_exception(oo_ex));
     return;
   }
 
@@ -633,7 +636,9 @@ void Process::handle_super_ctor_send(number num_args) {
     std::stringstream s;
     s << "arity and num_args differ: " << num_args << " != " << arity;
     dbg() << s << endl;
-    stack_push(unwind_with_exception(mm_exception("DoesNotUnderstand", s.str().c_str())));
+    oop oo_ex = mm_exception("DoesNotUnderstand", s.str().c_str());
+    maybe_debug_on_raise(oo_ex);
+    stack_push(unwind_with_exception(oo_ex));
     return;
   }
 
@@ -650,7 +655,9 @@ void Process::handle_call(number num_args) {
     std::stringstream s;
     s << _mmobj->mm_string_cstr(this, _mmobj->mm_function_get_name(this, fun)) << ": expects " <<  arity << " but got " << num_args;
     dbg() << s << endl;
-    stack_push(unwind_with_exception(mm_exception("ArityError", s.str().c_str())));
+    oop oo_ex = mm_exception("ArityError", s.str().c_str());
+    maybe_debug_on_raise(oo_ex);
+    stack_push(unwind_with_exception(oo_ex));
     return;
   }
   load_fun(NULL, NULL, fun, false);
@@ -993,6 +1000,11 @@ void Process::halt_and_debug() {
   pause();
 }
 
+void Process::maybe_debug_on_raise(oop ex_oop) {
+  if (_vm->running_online() && !exception_has_handler(ex_oop, _bp)) {
+    halt_and_debug();
+  }
+}
 
 unsigned int Process::stack_depth() {
   return  _stack_depth;

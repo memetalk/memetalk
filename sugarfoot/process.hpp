@@ -76,6 +76,7 @@ public:
   void raise(const char*, const char*);
   oop mm_exception(const char*, const char*);
 
+  void maybe_debug_on_raise(oop);
   void halt_and_debug();
   void step_into();
   void step_over();
