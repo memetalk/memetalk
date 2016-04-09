@@ -12,6 +12,7 @@
 #include "utils.hpp"
 #include "ctrl.hpp"
 #include <sstream>
+#include <assert.h>
 
 Process::Process(VM* vm)
   :   _is_dbg(false), _vm(vm), _mmobj(vm->mmobj()), _control(new ProcessControl()), _dbg_handler(NULL, MM_NULL) {
@@ -425,9 +426,8 @@ void Process::fetch_cycle(void* stop_at_bp) {
   dbg() << "begin fetch_cycle fp:" << _fp <<  " stop_fp:" <<  stop_at_bp
         << " ip: " << _ip << endl;
 
-  if (!((_bp >= stop_at_bp) && _ip)) { //at least one instructionn should be executed.
-    raise("InternalError", "base pointer and stop_at_bp are wrong");
-  }
+  //at least one instructionn should be executed.
+  assert(!((_bp >= stop_at_bp) && _ip)); //"base pointer and stop_at_bp are wrong"
 
   while ((_bp >= stop_at_bp) && _ip) { // && ((_ip - start_ip) * sizeof(bytecode))  < _code_size) {
     // std::cerr << "fp " << _fp << " stop " <<  stop_at_bp << " codesize " <<  _code_size << "ip " << _ip << std::endl;
@@ -870,7 +870,7 @@ bool Process::exception_has_handler(oop e, oop bp) {
       int exc;
       type_oop = send_0(mp, _vm->new_symbol(this, str_type_oop), &exc);
       if (!(exc == 0)) {
-        raise("InternalError", "Unable to create symbol from string");
+        raise("InternalError", "Unable to get exception type from module");
       }
       dbg() << "fetching exception type got " << type_oop << endl;;
     }
@@ -907,7 +907,7 @@ oop Process::unwind_with_exception(oop e) {
     int exc;
     oop str = send_0(e, _vm->new_symbol("toString"), &exc);
     if (!(exc == 0)) {
-        raise("InternalError", "Unable to create symbol from string");
+        raise("InternalError", "Unable to get string representation from exception");
     }
     std::cerr << "Terminated with exception: \""
               << _mmobj->mm_string_cstr(this, str) << "\"" << endl;
@@ -949,7 +949,7 @@ oop Process::unwind_with_exception(oop e) {
       oop mp = _mmobj->mm_function_get_module(this, _cp);
       type_oop = send_0(mp, _vm->new_symbol(this, str_type_oop), &exc);
       if (!(exc == 0)) {
-        raise("InternalError", "Unable to create symbol from string");
+        raise("InternalError", "Unable to get exception type from module");
       }
       dbg() << "fetching exception type got " << type_oop << endl;;
     }
@@ -988,7 +988,7 @@ oop Process::mm_exception(const char* ex_type_name, const char* msg) {
   int exc;
   oop exobj = send_1(ex_type, _vm->new_symbol("new"), _mmobj->mm_string_new(msg), &exc);
   if (!(exc == 0)) {
-    raise("InternalError", "Unable to create symbol from string");
+    raise("InternalError", "Unable to create exception object to raise");
   }
   dbg() << "mm_exception: returning ex: " << exobj << endl;
   return exobj;
