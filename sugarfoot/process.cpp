@@ -427,7 +427,7 @@ void Process::fetch_cycle(void* stop_at_bp) {
         << " ip: " << _ip << endl;
 
   //at least one instructionn should be executed.
-  assert(!((_bp >= stop_at_bp) && _ip)); //"base pointer and stop_at_bp are wrong"
+  assert(((_bp >= stop_at_bp) && _ip)); //"base pointer and stop_at_bp are wrong"
 
   while ((_bp >= stop_at_bp) && _ip) { // && ((_ip - start_ip) * sizeof(bytecode))  < _code_size) {
     // std::cerr << "fp " << _fp << " stop " <<  stop_at_bp << " codesize " <<  _code_size << "ip " << _ip << std::endl;
