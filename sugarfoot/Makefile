@@ -11,9 +11,12 @@
 
 ############ VM Section ############
 
+# brew install boost155
+LDFLAGS =  -L/usr/local/opt/boost155/lib
+CPPFLAGS = -I/usr/local/opt/boost155/include
 
-LIB_PATHS = -L/usr/local/Cellar/boost/1.54.0/lib
-INC_PATHS = -I/usr/local/Cellar/qscintilla2/2.7.1/include/Qsci
+LIB_PATHS = -L/usr/local/Cellar/boost/1.54.0/lib $(LDFLAGS)
+INC_PATHS = -I/usr/local/Cellar/qscintilla2/2.7.1/include/Qsci $(CPPFLAGS)
 
 CPP_FILES =  mmc_image.cpp core_image.cpp vm.cpp report.cpp utils.cpp mmobj.cpp main.cpp process.cpp prims.cpp mmc_fun.cpp ctrl.cpp qt_prims.cpp qsc.cpp
 
