@@ -426,7 +426,14 @@ void Process::fetch_cycle(void* stop_at_bp) {
   dbg() << "begin fetch_cycle fp:" << _fp <<  " stop_fp:" <<  stop_at_bp
         << " ip: " << _ip << endl;
 
-  //at least one instructionn should be executed.
+  //at least one instructionn should be executed.  stop_at_bp is usually the
+  //top mark of the stack when a function is loaded (_bp). So starting a fetch
+  //cycle when this value is smaller than _bp likely means the bytecodes
+  //executed more POPs than it should. Since the frame has been compromised,
+  //unloading the current function will further mess things up and so on.
+  //Thus, let's just do a hard crash if this happens or if _ip -- which
+  //we use below -- is 0.
+
   assert(((_bp >= stop_at_bp) && _ip)); //"base pointer and stop_at_bp are wrong"
 
   while ((_bp >= stop_at_bp) && _ip) { // && ((_ip - start_ip) * sizeof(bytecode))  < _code_size) {
