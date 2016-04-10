@@ -657,7 +657,7 @@ void Process::handle_super_ctor_send(number num_args) {
     std::stringstream s;
     s << "arity and num_args differ: " << num_args << " != " << arity;
     dbg() << s << endl;
-    oop oo_ex = mm_exception("DoesNotUnderstand", s.str().c_str());
+    oop oo_ex = mm_exception("ArityError", s.str().c_str());
     maybe_debug_on_raise(oo_ex);
     stack_push(unwind_with_exception(oo_ex));
     return;
