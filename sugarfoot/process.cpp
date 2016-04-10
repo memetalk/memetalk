@@ -21,12 +21,11 @@ Process::Process(VM* vm)
   _step_bp = MM_NULL;
 }
 
-oop Process::run(oop recv, oop selector_sym) {
+oop Process::run(oop recv, oop selector_sym, int* exc) {
   //atm, we don't need to check exc
   //since ::unwind_with_exception will terminate the vm
   //if there is no more stack to unwind.
-  int exc;
-  return send_0(recv, selector_sym, &exc);
+  return send_0(recv, selector_sym, exc);
 }
 
 void Process::init() {
@@ -920,20 +919,27 @@ bool Process::exception_has_handler(oop e, oop bp) {
   return exception_has_handler(e, *(oop*)bp);
 }
 
+void Process::fail(oop e) {
+    int exc;
+    oop str = send_0(e, _vm->new_symbol("toString"), &exc);
+    assert(exc == 0);
+    std::cerr << "Terminated with exception: \""
+              << _mmobj->mm_string_cstr(this, str) << "\"" << endl;
+    bail();
+}
+
 oop Process::unwind_with_exception(oop e) {
   dbg() << "** unwind_with_exception e: " << e << " on cp: " << _cp << endl;
 
   maybe_tick_return();
 
   if (_cp == NULL) {
-    int exc;
-    oop str = send_0(e, _vm->new_symbol("toString"), &exc);
-    if (!(exc == 0)) {
-        raise("InternalError", "Unable to get string representation from exception");
-    }
-    std::cerr << "Terminated with exception: \""
-              << _mmobj->mm_string_cstr(this, str) << "\"" << endl;
-    bail();
+    //we are already unwinding exception e.
+    //if we can't get Exception.toString to work, then let's just break
+    // if (!(exc == 0)) {
+    //     raise("InternalError", "Unable to get string representation from exception");
+    // }
+    fail(e);
   }
 
   dbg() << "unwind_with_exception: " << _mmobj->mm_string_cstr(this, _mmobj->mm_function_get_name(this, _cp)) << endl;

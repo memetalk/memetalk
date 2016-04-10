@@ -31,9 +31,11 @@ class Process {
 public:
   Process(VM*);
 
-  oop run(oop, oop);
+  oop run(oop, oop, int*);
 
   bool is_running() { return _state == RUN_STATE; }
+
+  void fail(oop e);
 
   VM* vm() { return _vm; }
   oop sp() { return _sp; }

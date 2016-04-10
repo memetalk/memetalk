@@ -72,8 +72,13 @@ int VM::start() {
     return * (int*) (void*) &(e.mm_exception);
   }
 
-  oop retval = proc->run(imod, new_symbol("main"));
-  print_retval(proc, retval);
+  int exc;
+  oop retval = proc->run(imod, new_symbol("main"), &exc);
+  if (!(exc == 0)) {
+    proc->fail(retval);
+  } else {
+    print_retval(proc, retval);
+  }
   return * (int*) (void*) &retval;
 }
 
