@@ -65,11 +65,23 @@ oop Process::dp() {
   return * (oop*) (_fp + _ss + 1);
 }
 
+oop Process::cp_from_frame(oop bp) {
+  return * ((oop*)bp - 3);
+}
+
+bytecode* Process::ip_from_frame(oop bp) {
+  return (bytecode*) * ((oop*)bp - 2);
+}
+
 void Process::push_frame(oop recv, oop drecv, number arity, number storage_size) {
   // dbg() << "++ Push frame:  " << _sp << " num locals " << num_locals << endl;
 
   // oop curr_sp = _sp;
   _stack_depth++;
+
+  //BEGIN stack frame layout
+  //---- if you change this, change pop_frame() and the frame accessor methods
+  //---- as well!!
 
   oop fp = _fp;
   _fp = _sp - (arity - 1);  // _sp points to the last arg pushed
@@ -89,6 +101,9 @@ void Process::push_frame(oop recv, oop drecv, number arity, number storage_size)
   stack_push(_ip);
   stack_push(_ss); //storage size
   stack_push(_bp);
+
+  //END of frame layout
+
   _bp = _sp;
 
   _ss = storage_size;
@@ -837,7 +852,7 @@ int Process::execute_primitive(std::string name) {
 
 
 bool Process::exception_has_handler(oop e, oop bp) {
-  oop cp = * ((oop*)bp - 5);
+  oop cp = cp_from_frame(bp);
   dbg() << "** exception_has_handler e: " << e << " on cp: " << cp << endl;
 
   if (cp == NULL) {
@@ -882,7 +897,7 @@ bool Process::exception_has_handler(oop e, oop bp) {
       dbg() << "fetching exception type got " << type_oop << endl;;
     }
 
-    bytecode* ip = (bytecode*) * ((oop*)bp - 4);
+    bytecode* ip = ip_from_frame(bp);
 
     unsigned long instr = ip - code;
 

@@ -50,6 +50,8 @@ public:
   oop set_dp(oop);
 
   oop get_arg(number idx);
+  oop cp_from_frame(oop bp);
+  bytecode* ip_from_frame(oop bp);
 
   // oop get_rp() { return _rp; };
   // oop get_dp() { return _dp; };
