@@ -1015,9 +1015,9 @@ oop Process::mm_exception(const char* ex_type_name, const char* msg) {
 
   int exc;
   oop exobj = send_1(ex_type, _vm->new_symbol("new"), _mmobj->mm_string_new(msg), &exc);
-  if (!(exc == 0)) {
-    raise("InternalError", "Unable to create exception object to raise");
-  }
+  //if this fails, can't call raise() because it calls mm_exception again
+  //recursively. So let's just bail.
+  assert(exc == 0);
   dbg() << "mm_exception: returning ex: " << exobj << endl;
   return exobj;
 }
