@@ -6,8 +6,19 @@
 #include "vm.hpp"
 #include "process.hpp"
 #include "utils.hpp"
-
+#include <assert.h>
 #include <map>
+
+
+#define TYPE_CHECK(invalid_condition, ex_type, ex_msg)       \
+  if (invalid_condition) {                                   \
+    if(should_assert) {                                      \
+      assert(!(invalid_condition));                          \
+    } else {                                                 \
+      p->raise(ex_type, ex_msg);                             \
+    }                                                        \
+  }
+
 
 MMObj::MMObj(CoreImage* core)
   : _core_image(core) {
@@ -19,10 +30,9 @@ oop MMObj::mm_process_new(Process* p, Process* proc) {
   return obj;
 }
 
-Process* MMObj::mm_process_get_proc(Process* p, oop proc) {
-  if (!( mm_object_vt(proc) == _core_image->get_prime("Process"))) {
-    p->raise("TypeError", "Expected Process");
-  }
+Process* MMObj::mm_process_get_proc(Process* p, oop proc, bool should_assert) {
+  TYPE_CHECK(!( mm_object_vt(proc) == _core_image->get_prime("Process")),
+             "TypeError", "Expected Process")
   return (Process*) (((oop*)proc)[2]);
 }
 
@@ -32,59 +42,52 @@ oop MMObj::mm_frame_new(Process* p, oop bp) {
   return obj;
 }
 
-oop MMObj::mm_frame_get_bp(Process* p, oop frame) {
-  if (!( mm_object_vt(frame) == _core_image->get_prime("Frame"))) {
-    p->raise("TypeError", "Expected Frame");
-  }
+oop MMObj::mm_frame_get_bp(Process* p, oop frame, bool should_assert) {
+  TYPE_CHECK(!( mm_object_vt(frame) == _core_image->get_prime("Frame")),
+             "TypeError", "Expected Frame")
   return ((oop*)frame)[2];
 }
 
-oop MMObj::mm_frame_get_cp(Process* p, oop frame) {
-  if (!( mm_object_vt(frame) == _core_image->get_prime("Frame"))) {
-    p->raise("TypeError", "Expected Frame");
-  }
+oop MMObj::mm_frame_get_cp(Process* p, oop frame, bool should_assert) {
+  TYPE_CHECK(!( mm_object_vt(frame) == _core_image->get_prime("Frame")),
+             "TypeError","Expected Frame")
   oop bp = mm_frame_get_bp(p, frame);
   return *((oop*)bp - 3);
 }
 
-oop MMObj::mm_frame_get_fp(Process* p, oop frame) {
-  if (!( mm_object_vt(frame) == _core_image->get_prime("Frame"))) {
-    p->raise("TypeError", "Expected Frame");
-  }
+oop MMObj::mm_frame_get_fp(Process* p, oop frame, bool should_assert) {
+  TYPE_CHECK(!( mm_object_vt(frame) == _core_image->get_prime("Frame")),
+             "TypeError","Expected Frame")
   oop bp = mm_frame_get_bp(p, frame);
   return *((oop*)bp - 4);
 }
 
-number MMObj::mm_frame_get_ss(Process* p, oop frame) {
-  if (!( mm_object_vt(frame) == _core_image->get_prime("Frame"))) {
-    p->raise("TypeError", "Expected Frame");
-  }
+number MMObj::mm_frame_get_ss(Process* p, oop frame, bool should_assert) {
+  TYPE_CHECK(!( mm_object_vt(frame) == _core_image->get_prime("Frame")),
+             "TypeError","Expected Frame")
   oop bp = mm_frame_get_bp(p, frame);
   return (number) *((oop*)bp - 1);
 }
 
-oop MMObj::mm_frame_get_rp(Process* p, oop frame) {
-  if (!( mm_object_vt(frame) == _core_image->get_prime("Frame"))) {
-    p->raise("TypeError", "Expected Frame");
-  }
+oop MMObj::mm_frame_get_rp(Process* p, oop frame, bool should_assert) {
+  TYPE_CHECK(!( mm_object_vt(frame) == _core_image->get_prime("Frame")),
+             "TypeError","Expected Frame")
   oop fp = mm_frame_get_fp(p, frame);
   number ss = mm_frame_get_ss(p, frame);
   return * (oop*) (fp + ss);
 }
 
-oop MMObj::mm_frame_get_dp(Process* p, oop frame) {
-  if (!( mm_object_vt(frame) == _core_image->get_prime("Frame"))) {
-    p->raise("TypeError", "Expected Frame");
-  }
+oop MMObj::mm_frame_get_dp(Process* p, oop frame, bool should_assert) {
+  TYPE_CHECK(!( mm_object_vt(frame) == _core_image->get_prime("Frame")),
+             "TypeError","Expected Frame")
   oop fp = mm_frame_get_fp(p, frame);
   number ss = mm_frame_get_ss(p, frame);
   return * (oop*) (fp + ss + 1);
 }
 
-bytecode* MMObj::mm_frame_get_ip(Process* p, oop frame) {
-  if (!( mm_object_vt(frame) == _core_image->get_prime("Frame"))) {
-    p->raise("TypeError", "Expected Frame");
-  }
+bytecode* MMObj::mm_frame_get_ip(Process* p, oop frame, bool should_assert) {
+  TYPE_CHECK(!( mm_object_vt(frame) == _core_image->get_prime("Frame")),
+             "TypeError","Expected Frame")
   oop bp = mm_frame_get_bp(p, frame);
   return (bytecode*) *((oop*)bp - 2);
 }
@@ -99,48 +102,42 @@ oop MMObj::mm_module_new(int num_fields, oop cmod, oop delegate) {
   return imodule;
 }
 
-oop MMObj::mm_compiled_module_name(Process* p, oop cmod) {
-  if (!( mm_object_vt(cmod) == _core_image->get_prime("CompiledModule"))) {
-    p->raise("TypeError", "Expected CompiledModule");
-  }
+oop MMObj::mm_compiled_module_name(Process* p, oop cmod, bool should_assert) {
+  TYPE_CHECK(!( mm_object_vt(cmod) == _core_image->get_prime("CompiledModule")),
+             "TypeError","Expected CompiledModule")
   return (oop) ((word*)cmod)[2];
 }
 
 //license 3
 
-oop MMObj::mm_compiled_module_params(Process* p, oop cmod) {
-  if (!( mm_object_vt(cmod) == _core_image->get_prime("CompiledModule"))) {
-    p->raise("TypeError", "Expected CompiledModule");
-  }
+oop MMObj::mm_compiled_module_params(Process* p, oop cmod, bool should_assert) {
+  TYPE_CHECK(!( mm_object_vt(cmod) == _core_image->get_prime("CompiledModule")),
+             "TypeError","Expected CompiledModule")
   return (oop) ((word*)cmod)[4];
 }
 
 
-oop MMObj::mm_compiled_module_default_params(Process* p, oop cmod) {
-  if (!( mm_object_vt(cmod) == _core_image->get_prime("CompiledModule"))) {
-    p->raise("TypeError", "Expected CompiledModule");
-  }
+oop MMObj::mm_compiled_module_default_params(Process* p, oop cmod, bool should_assert) {
+  TYPE_CHECK(!( mm_object_vt(cmod) == _core_image->get_prime("CompiledModule")),
+             "TypeError","Expected CompiledModule")
   return (oop) ((word*)cmod)[5];
 }
 
-oop MMObj::mm_compiled_module_aliases(Process* p, oop cmod) {
-  if (!( mm_object_vt(cmod) == _core_image->get_prime("CompiledModule"))) {
-    p->raise("TypeError", "Expected CompiledModule");
-  }
+oop MMObj::mm_compiled_module_aliases(Process* p, oop cmod, bool should_assert) {
+  TYPE_CHECK(!( mm_object_vt(cmod) == _core_image->get_prime("CompiledModule")),
+             "TypeError","Expected CompiledModule")
   return (oop) ((word*)cmod)[6];
 }
 
-oop MMObj::mm_compiled_module_functions(Process* p, oop cmod) {
-  if (!( mm_object_vt(cmod) == _core_image->get_prime("CompiledModule"))) {
-    p->raise("TypeError", "Expected CompiledModule");
-  }
+oop MMObj::mm_compiled_module_functions(Process* p, oop cmod, bool should_assert) {
+  TYPE_CHECK(!( mm_object_vt(cmod) == _core_image->get_prime("CompiledModule")),
+             "TypeError","Expected CompiledModule")
   return (oop) ((word*)cmod)[7];
 }
 
-oop MMObj::mm_compiled_module_classes(Process* p, oop cmod) {
-  if (!( mm_object_vt(cmod) == _core_image->get_prime("CompiledModule"))) {
-    p->raise("TypeError", "Expected CompiledModule");
-  }
+oop MMObj::mm_compiled_module_classes(Process* p, oop cmod, bool should_assert) {
+  TYPE_CHECK(!( mm_object_vt(cmod) == _core_image->get_prime("CompiledModule")),
+             "TypeError","Expected CompiledModule")
   return (oop) ((word*)cmod)[8];
 }
 
@@ -148,10 +145,9 @@ oop MMObj::mm_boolean_new(number val) {
   return val ? MM_TRUE : MM_FALSE;
 }
 
-bool MMObj::mm_boolean_cbool(Process* p, oop val) {
-  if (!(val == MM_TRUE || val == MM_FALSE)) {
-    p->raise("TypeError", "Expecting boolean");
-  }
+bool MMObj::mm_boolean_cbool(Process* p, oop val, bool should_assert) {
+  TYPE_CHECK(!(val == MM_TRUE || val == MM_FALSE),
+             "TypeError","Expecting boolean")
   return val == MM_TRUE;
 }
 
@@ -195,26 +191,23 @@ oop MMObj::mm_list_new() {
   return obj;
 }
 
-number MMObj::mm_list_size(Process* p, oop list) {
-  if (!( mm_object_vt(list) == _core_image->get_prime("List"))) {
-    p->raise("TypeError", "Expected List");
-  }
+number MMObj::mm_list_size(Process* p, oop list, bool should_assert) {
+  TYPE_CHECK(!( mm_object_vt(list) == _core_image->get_prime("List")),
+             "TypeError","Expected List")
   std::vector<oop>* elements = mm_list_frame(p, list);
   return elements->size();
 }
 
-oop MMObj::mm_list_entry(Process* p, oop list, number idx) {
-  if (!( mm_object_vt(list) == _core_image->get_prime("List"))) {
-    p->raise("TypeError", "Expected List");
-  }
+oop MMObj::mm_list_entry(Process* p, oop list, number idx, bool should_assert) {
+  TYPE_CHECK(!( mm_object_vt(list) == _core_image->get_prime("List")),
+             "TypeError","Expected List")
   std::vector<oop>* elements = mm_list_frame(p, list);
   return (*elements)[idx];
 }
 
-std::vector<oop>* MMObj::mm_list_frame(Process* p, oop list) {
-  if (!( mm_object_vt(list) == _core_image->get_prime("List"))) {
-    p->raise("TypeError", "Expected List");
-  }
+std::vector<oop>* MMObj::mm_list_frame(Process* p, oop list, bool should_assert) {
+  TYPE_CHECK(!( mm_object_vt(list) == _core_image->get_prime("List")),
+             "TypeError","Expected List")
   number size = (number) ((oop*)list)[2];
   if (size == -1) {
     return (std::vector<oop>*) ((oop*)list)[3];
@@ -230,10 +223,9 @@ std::vector<oop>* MMObj::mm_list_frame(Process* p, oop list) {
   }
 }
 
-number MMObj::mm_list_index_of(Process* p, oop list, oop elem) {
-  if (!( mm_object_vt(list) == _core_image->get_prime("List"))) {
-    p->raise("TypeError", "Expected List");
-  }
+number MMObj::mm_list_index_of(Process* p, oop list, oop elem, bool should_assert) {
+  TYPE_CHECK(!( mm_object_vt(list) == _core_image->get_prime("List")),
+             "TypeError","Expected List")
   std::vector<oop>* elements = mm_list_frame(p, list);
 
 
@@ -252,28 +244,25 @@ number MMObj::mm_list_index_of(Process* p, oop list, oop elem) {
   return -1;
 }
 
-void MMObj::mm_list_set(Process* p, oop list, number idx, oop element) {
-  if (!( mm_object_vt(list) == _core_image->get_prime("List"))) {
-    p->raise("TypeError", "Expected List");
-  }
+void MMObj::mm_list_set(Process* p, oop list, number idx, oop element, bool should_assert) {
+  TYPE_CHECK(!( mm_object_vt(list) == _core_image->get_prime("List")),
+             "TypeError","Expected List")
   std::vector<oop>* elements = mm_list_frame(p, list);
   (*elements)[idx] = element;
 }
 
 
-void MMObj::mm_list_prepend(Process* p, oop list, oop element) {
-  if (!( mm_object_vt(list) == _core_image->get_prime("List"))) {
-    p->raise("TypeError", "Expected List");
-  }
+void MMObj::mm_list_prepend(Process* p, oop list, oop element, bool should_assert) {
+  TYPE_CHECK(!( mm_object_vt(list) == _core_image->get_prime("List")),
+             "TypeError","Expected List")
 
   std::vector<oop>* elements = mm_list_frame(p, list);
   elements->insert(elements->begin(), element);
 }
 
-void MMObj::mm_list_append(Process* p, oop list, oop element) {
-  if (!( mm_object_vt(list) == _core_image->get_prime("List"))) {
-    p->raise("TypeError", "Expected List");
-  }
+void MMObj::mm_list_append(Process* p, oop list, oop element, bool should_assert) {
+  TYPE_CHECK(!( mm_object_vt(list) == _core_image->get_prime("List")),
+             "TypeError","Expected List")
 
   std::vector<oop>* elements = mm_list_frame(p, list);
   elements->push_back(element);
@@ -290,10 +279,9 @@ oop MMObj::mm_dictionary_new() {
   return obj;
 }
 
-std::map<oop, oop>* MMObj::mm_dictionary_frame(Process* p, oop dict) {
-  if (!( mm_object_vt(dict) == _core_image->get_prime("Dictionary"))) {
-    p->raise("TypeError", "Expected Dictionary");
-  }
+std::map<oop, oop>* MMObj::mm_dictionary_frame(Process* p, oop dict, bool should_assert) {
+  TYPE_CHECK(!( mm_object_vt(dict) == _core_image->get_prime("Dictionary")),
+             "TypeError","Expected Dictionary")
 
   number size = (number) ((oop*)dict)[2];
   if (size == -1) {
@@ -310,34 +298,30 @@ std::map<oop, oop>* MMObj::mm_dictionary_frame(Process* p, oop dict) {
   }
 }
 
-std::map<oop,oop>::iterator MMObj::mm_dictionary_begin(Process* p, oop dict) {
-  if (!( mm_object_vt(dict) == _core_image->get_prime("Dictionary"))) {
-    p->raise("TypeError", "Expected Dictionary");
-  }
+std::map<oop,oop>::iterator MMObj::mm_dictionary_begin(Process* p, oop dict, bool should_assert) {
+  TYPE_CHECK(!( mm_object_vt(dict) == _core_image->get_prime("Dictionary")),
+             "TypeError","Expected Dictionary")
   std::map<oop, oop>* elements = mm_dictionary_frame(p, dict);
   return elements->begin();
 }
 
-std::map<oop,oop>::iterator MMObj::mm_dictionary_end(Process* p, oop dict) {
-  if (!( mm_object_vt(dict) == _core_image->get_prime("Dictionary"))) {
-    p->raise("TypeError", "Expected Dictionary");
-  }
+std::map<oop,oop>::iterator MMObj::mm_dictionary_end(Process* p, oop dict, bool should_assert) {
+  TYPE_CHECK(!( mm_object_vt(dict) == _core_image->get_prime("Dictionary")),
+             "TypeError","Expected Dictionary")
   std::map<oop, oop>* elements = mm_dictionary_frame(p, dict);
   return elements->end();
 }
 
-number MMObj::mm_dictionary_size(Process* p, oop dict) {
-  if (!( mm_object_vt(dict) == _core_image->get_prime("Dictionary"))) {
-    p->raise("TypeError", "Expected Dictionary");
-  }
+number MMObj::mm_dictionary_size(Process* p, oop dict, bool should_assert) {
+  TYPE_CHECK(!( mm_object_vt(dict) == _core_image->get_prime("Dictionary")),
+             "TypeError","Expected Dictionary")
   std::map<oop, oop>* elements = mm_dictionary_frame(p, dict);
   return elements->size();
 }
 
-bool MMObj::mm_dictionary_has_key(Process* p, oop dict, oop key) {
-  if (!( mm_object_vt(dict) == _core_image->get_prime("Dictionary"))) {
-    p->raise("TypeError", "Expected Dictionary");
-  }
+bool MMObj::mm_dictionary_has_key(Process* p, oop dict, oop key, bool should_assert) {
+  TYPE_CHECK(!( mm_object_vt(dict) == _core_image->get_prime("Dictionary")),
+             "TypeError","Expected Dictionary")
 
   std::map<oop, oop>* elements = mm_dictionary_frame(p, dict);
   // debug() << dict << "(" << elements->size() << ") has key " << key << " ?" << endl;
@@ -354,10 +338,9 @@ bool MMObj::mm_dictionary_has_key(Process* p, oop dict, oop key) {
   return false;
 }
 
-oop MMObj::mm_dictionary_keys(Process* p, oop dict) {
-  if (!( mm_object_vt(dict) == _core_image->get_prime("Dictionary"))) {
-    p->raise("TypeError", "Expected Dictionary");
-  }
+oop MMObj::mm_dictionary_keys(Process* p, oop dict, bool should_assert) {
+  TYPE_CHECK(!( mm_object_vt(dict) == _core_image->get_prime("Dictionary")),
+             "TypeError","Expected Dictionary")
 
   oop lst = mm_list_new();
   std::map<oop, oop>* elements = mm_dictionary_frame(p, dict);
@@ -367,10 +350,9 @@ oop MMObj::mm_dictionary_keys(Process* p, oop dict) {
   return lst;
 }
 
-oop MMObj::mm_dictionary_get(Process* p, oop dict, oop key) {
-  if (!( mm_object_vt(dict) == _core_image->get_prime("Dictionary"))) {
-    p->raise("TypeError", "Expected Dictionary");
-  }
+oop MMObj::mm_dictionary_get(Process* p, oop dict, oop key, bool should_assert) {
+  TYPE_CHECK(!( mm_object_vt(dict) == _core_image->get_prime("Dictionary")),
+             "TypeError","Expected Dictionary")
 
   std::map<oop, oop>* elements = mm_dictionary_frame(p, dict);
 
@@ -393,20 +375,18 @@ oop MMObj::mm_dictionary_get(Process* p, oop dict, oop key) {
 }
 
 
-void MMObj::mm_dictionary_set(Process* p, oop dict, oop key, oop value) {
-  if (!( mm_object_vt(dict) == _core_image->get_prime("Dictionary"))) {
-    p->raise("TypeError", "Expected Dictionary");
-  }
+void MMObj::mm_dictionary_set(Process* p, oop dict, oop key, oop value, bool should_assert) {
+  TYPE_CHECK(!( mm_object_vt(dict) == _core_image->get_prime("Dictionary")),
+             "TypeError","Expected Dictionary")
 
   std::map<oop, oop>* elements = mm_dictionary_frame(p, dict);
   (*elements)[key] = value;
 }
 
 
-void MMObj::mm_module_set_dictionary(Process* p, oop imodule, oop imod_dict) {
-  if (!( mm_object_vt(imod_dict) == _core_image->get_prime("Dictionary"))) {
-    p->raise("TypeError", "Expected Dictionary");
-  }
+void MMObj::mm_module_set_dictionary(Process* p, oop imodule, oop imod_dict, bool should_assert) {
+  TYPE_CHECK(!( mm_object_vt(imod_dict) == _core_image->get_prime("Dictionary")),
+             "TypeError","Expected Dictionary")
   ((word**) imodule)[2] = imod_dict;
 }
 
@@ -451,10 +431,9 @@ oop MMObj::mm_string_new(const char* str) {
   return oop_str;
 }
 
-char* MMObj::mm_string_cstr(Process* p, oop str) {
-  if (!( mm_object_vt(str) == _core_image->get_prime("String"))) {
-    p->raise("TypeError", "Expected String");
-  }
+char* MMObj::mm_string_cstr(Process* p, oop str, bool should_assert) {
+  TYPE_CHECK(!( mm_object_vt(str) == _core_image->get_prime("String")),
+             "TypeError","Expected String")
   //0: vt
   //1: delegate
   //2: size
@@ -470,48 +449,42 @@ bool MMObj::mm_is_context(oop obj) {
   return *(oop*) obj == _core_image->get_prime("Context");
 }
 
-void MMObj::mm_context_set_cfun(Process* p, oop ctx, oop cfun) {
-  if (!( mm_object_vt(ctx) == _core_image->get_prime("Context"))) {
-    p->raise("TypeError", "Expected Context");
-  }
+void MMObj::mm_context_set_cfun(Process* p, oop ctx, oop cfun, bool should_assert) {
+  TYPE_CHECK(!( mm_object_vt(ctx) == _core_image->get_prime("Context")),
+             "TypeError","Expected Context")
   ((oop*)ctx)[2] = cfun;
 }
 
-void MMObj::mm_context_set_module(Process* p, oop ctx, oop imod) {
-  if (!( mm_object_vt(ctx) == _core_image->get_prime("Context"))) {
-    p->raise("TypeError", "Expected Context");
-  }
+void MMObj::mm_context_set_module(Process* p, oop ctx, oop imod, bool should_assert) {
+  TYPE_CHECK(!( mm_object_vt(ctx) == _core_image->get_prime("Context")),
+             "TypeError","Expected Context")
   ((oop*)ctx)[3] = imod;
 }
 
-void MMObj::mm_context_set_env(Process* p, oop ctx, oop env) {
-  if (!( mm_object_vt(ctx) == _core_image->get_prime("Context"))) {
-    p->raise("TypeError", "Expected Context");
-  }
+void MMObj::mm_context_set_env(Process* p, oop ctx, oop env, bool should_assert) {
+  TYPE_CHECK(!( mm_object_vt(ctx) == _core_image->get_prime("Context")),
+             "TypeError","Expected Context")
   ((oop*)ctx)[4] = env;
 }
 
-oop MMObj::mm_context_get_env(Process* p, oop ctx) {
-  if (!( mm_object_vt(ctx) == _core_image->get_prime("Context"))) {
-    p->raise("TypeError", "Expected Context");
-  }
+oop MMObj::mm_context_get_env(Process* p, oop ctx, bool should_assert) {
+  TYPE_CHECK(!( mm_object_vt(ctx) == _core_image->get_prime("Context")),
+             "TypeError","Expected Context")
   return ((oop*)ctx)[4];
 }
 
 
-bool MMObj::mm_function_uses_env(Process* p, oop fun) {
-  if (!( mm_object_vt(fun) == _core_image->get_prime("Function") ||
-         mm_object_vt(fun) == _core_image->get_prime("Context"))) {
-    p->raise("TypeError", "Expected Function or Context");
-  }
+bool MMObj::mm_function_uses_env(Process* p, oop fun, bool should_assert) {
+  TYPE_CHECK(!( mm_object_vt(fun) == _core_image->get_prime("Function") ||
+                mm_object_vt(fun) == _core_image->get_prime("Context")),
+             "TypeError","Expected Function or Context")
   oop cfun = mm_function_get_cfun(p, fun);
   return mm_compiled_function_uses_env(p, cfun);
 }
 
-oop MMObj::mm_function_from_cfunction(Process* p, oop cfun, oop imod) {
-  if (!( mm_object_vt(cfun) == _core_image->get_prime("CompiledFunction"))) {
-    p->raise("TypeError", "Expected CompiledFunction");
-  }
+oop MMObj::mm_function_from_cfunction(Process* p, oop cfun, oop imod, bool should_assert) {
+  TYPE_CHECK(!( mm_object_vt(cfun) == _core_image->get_prime("CompiledFunction")),
+             "TypeError","Expected CompiledFunction")
 
   oop fun = (oop) malloc(sizeof(word) * 4); //vt, delegate, cfun, module
 
@@ -522,322 +495,284 @@ oop MMObj::mm_function_from_cfunction(Process* p, oop cfun, oop imod) {
   return fun;
 }
 
-oop MMObj::mm_function_get_module(Process* p, oop fun) {
-  if (!( mm_object_vt(fun) == _core_image->get_prime("Function") ||
-         mm_object_vt(fun) == _core_image->get_prime("Context")))  {
-    p->raise("TypeError", "Expected Function or Context");
-  }
+oop MMObj::mm_function_get_module(Process* p, oop fun, bool should_assert) {
+  TYPE_CHECK(!(mm_object_vt(fun) == _core_image->get_prime("Function") ||
+               mm_object_vt(fun) == _core_image->get_prime("Context")),
+             "TypeError", "Expected Function or Context")
+
   return (oop) ((oop*)fun)[3];
 }
 
-oop MMObj::mm_function_get_cfun(Process* p, oop fun) {
-  if (!( mm_object_vt(fun) == _core_image->get_prime("Function") ||
-         mm_object_vt(fun) == _core_image->get_prime("Context")))  {
-    p->raise("TypeError", "Expected Function or Context");
-  }
+oop MMObj::mm_function_get_cfun(Process* p, oop fun, bool should_assert) {
+  TYPE_CHECK(!( mm_object_vt(fun) == _core_image->get_prime("Function") ||
+                mm_object_vt(fun) == _core_image->get_prime("Context")),
+             "TypeError","Expected Function or Context")
   return (oop) ((oop*)fun)[2];
 }
 
-bool MMObj::mm_function_is_prim(Process* p, oop fun) {
-  if (!( mm_object_vt(fun) == _core_image->get_prime("Function") ||
-         mm_object_vt(fun) == _core_image->get_prime("Context")))  {
-    p->raise("TypeError", "Expected Function or Context");
-  }
+bool MMObj::mm_function_is_prim(Process* p, oop fun, bool should_assert) {
+  TYPE_CHECK(!( mm_object_vt(fun) == _core_image->get_prime("Function") ||
+                mm_object_vt(fun) == _core_image->get_prime("Context")),
+             "TypeError","Expected Function or Context")
   oop cfun = mm_function_get_cfun(p, fun);
   return mm_compiled_function_is_prim(p, cfun);
 }
 
-oop MMObj::mm_function_get_name(Process* p, oop fun) {
-  if (!( mm_object_vt(fun) == _core_image->get_prime("Function") ||
-         mm_object_vt(fun) == _core_image->get_prime("Context")))  {
-    p->raise("TypeError", "Expected Function or Context");
-  }
+oop MMObj::mm_function_get_name(Process* p, oop fun, bool should_assert) {
+  TYPE_CHECK(!( mm_object_vt(fun) == _core_image->get_prime("Function") ||
+                mm_object_vt(fun) == _core_image->get_prime("Context")),
+             "TypeError","Expected Function or Context")
   oop cfun = mm_function_get_cfun(p, fun);
   return mm_compiled_function_get_name(p, cfun);
 }
 
-oop MMObj::mm_function_get_prim_name(Process* p, oop fun) {
-  if (!( mm_object_vt(fun) == _core_image->get_prime("Function") ||
-         mm_object_vt(fun) == _core_image->get_prime("Context")))  {
-    p->raise("TypeError", "Expected Function or Context");
-  }
+oop MMObj::mm_function_get_prim_name(Process* p, oop fun, bool should_assert) {
+  TYPE_CHECK(!( mm_object_vt(fun) == _core_image->get_prime("Function") ||
+                mm_object_vt(fun) == _core_image->get_prime("Context")),
+             "TypeError","Expected Function or Context")
   oop cfun = mm_function_get_cfun(p, fun);
   return mm_compiled_function_get_prim_name(p, cfun);
 }
 
 
-bytecode* MMObj::mm_function_get_code(Process* p, oop fun) {
-  if (!( mm_object_vt(fun) == _core_image->get_prime("Function") ||
-         mm_object_vt(fun) == _core_image->get_prime("Context")))  {
-    p->raise("TypeError", "Expected Function or Context");
-  }
+bytecode* MMObj::mm_function_get_code(Process* p, oop fun, bool should_assert) {
+  TYPE_CHECK(!( mm_object_vt(fun) == _core_image->get_prime("Function") ||
+                mm_object_vt(fun) == _core_image->get_prime("Context")),
+             "TypeError","Expected Function or Context")
   oop cfun = mm_function_get_cfun(p, fun);
   return mm_compiled_function_get_code(p, cfun);
 }
 
-number MMObj::mm_function_get_code_size(Process* p, oop fun) {
-  if (!( mm_object_vt(fun) == _core_image->get_prime("Function") ||
-         mm_object_vt(fun) == _core_image->get_prime("Context")))  {
-    p->raise("TypeError", "Expected Function or Context");
-  }
+number MMObj::mm_function_get_code_size(Process* p, oop fun, bool should_assert) {
+  TYPE_CHECK(!( mm_object_vt(fun) == _core_image->get_prime("Function") ||
+                mm_object_vt(fun) == _core_image->get_prime("Context")),
+             "TypeError","Expected Function or Context")
   oop cfun = mm_function_get_cfun(p, fun);
   return mm_compiled_function_get_code_size(p, cfun);
 }
 
-oop MMObj::mm_function_get_literal_by_index(Process* p, oop fun, int idx) {
-  if (!( mm_object_vt(fun) == _core_image->get_prime("Function") ||
-         mm_object_vt(fun) == _core_image->get_prime("Context")))  {
-    p->raise("TypeError", "Expected Function or Context");
-  }
+oop MMObj::mm_function_get_literal_by_index(Process* p, oop fun, int idx, bool should_assert) {
+  TYPE_CHECK(!( mm_object_vt(fun) == _core_image->get_prime("Function") ||
+                mm_object_vt(fun) == _core_image->get_prime("Context")),
+             "TypeError","Expected Function or Context")
   oop cfun = mm_function_get_cfun(p, fun);
   return mm_compiled_function_get_literal_by_index(p, cfun, idx);
 }
 
-number MMObj::mm_function_get_num_params(Process* p, oop fun) {
-  if (!( mm_object_vt(fun) == _core_image->get_prime("Function") ||
-         mm_object_vt(fun) == _core_image->get_prime("Context")))  {
-    p->raise("TypeError", "Expected Function or Context");
-  }
+number MMObj::mm_function_get_num_params(Process* p, oop fun, bool should_assert) {
+  TYPE_CHECK(!( mm_object_vt(fun) == _core_image->get_prime("Function") ||
+                mm_object_vt(fun) == _core_image->get_prime("Context")),
+             "TypeError","Expected Function or Context")
   oop cfun = mm_function_get_cfun(p, fun);
   return mm_compiled_function_get_num_params(p, cfun);
 }
 
-number MMObj::mm_function_get_num_locals_or_env(Process* p, oop fun) {
-  if (!( mm_object_vt(fun) == _core_image->get_prime("Function") ||
-         mm_object_vt(fun) == _core_image->get_prime("Context")))  {
-    p->raise("TypeError", "Expected Function or Context");
-  }
+number MMObj::mm_function_get_num_locals_or_env(Process* p, oop fun, bool should_assert) {
+  TYPE_CHECK(!( mm_object_vt(fun) == _core_image->get_prime("Function") ||
+                mm_object_vt(fun) == _core_image->get_prime("Context")),
+             "TypeError","Expected Function or Context")
   oop cfun = mm_function_get_cfun(p, fun);
   return mm_compiled_function_get_num_locals_or_env(p, cfun);
 }
 
-number MMObj::mm_function_get_env_offset(Process* p, oop fun) {
-  if (!( mm_object_vt(fun) == _core_image->get_prime("Function") ||
-         mm_object_vt(fun) == _core_image->get_prime("Context")))  {
-    p->raise("TypeError", "Expected Function or Context");
-  }
+number MMObj::mm_function_get_env_offset(Process* p, oop fun, bool should_assert) {
+  TYPE_CHECK(!( mm_object_vt(fun) == _core_image->get_prime("Function") ||
+                mm_object_vt(fun) == _core_image->get_prime("Context")),
+             "TypeError","Expected Function or Context")
   oop cfun = mm_function_get_cfun(p, fun);
   return mm_compiled_function_get_env_offset(p, cfun);
 }
 
-bool MMObj::mm_function_is_getter(Process* p, oop fun) {
-  if (!( mm_object_vt(fun) == _core_image->get_prime("Function") ||
-         mm_object_vt(fun) == _core_image->get_prime("Context")))  {
-    p->raise("TypeError", "Expected Function or Context");
-  }
+bool MMObj::mm_function_is_getter(Process* p, oop fun, bool should_assert) {
+  TYPE_CHECK(!( mm_object_vt(fun) == _core_image->get_prime("Function") ||
+                mm_object_vt(fun) == _core_image->get_prime("Context")),
+             "TypeError","Expected Function or Context")
   oop cfun = mm_function_get_cfun(p, fun);
   return mm_compiled_function_is_getter(p, cfun);
 }
 
-number MMObj::mm_function_access_field(Process* p, oop fun) {
-  if (!( mm_object_vt(fun) == _core_image->get_prime("Function") ||
-         mm_object_vt(fun) == _core_image->get_prime("Context")))  {
-    p->raise("TypeError", "Expected Function or Context");
-  }
+number MMObj::mm_function_access_field(Process* p, oop fun, bool should_assert) {
+  TYPE_CHECK(!( mm_object_vt(fun) == _core_image->get_prime("Function") ||
+                mm_object_vt(fun) == _core_image->get_prime("Context")),
+             "TypeError","Expected Function or Context")
   oop cfun = mm_function_get_cfun(p, fun);
   return mm_compiled_function_access_field(p, cfun);
 }
 
-oop MMObj::mm_function_get_owner(Process* p, oop fun) {
-  if (!( mm_object_vt(fun) == _core_image->get_prime("Function") ||
-         mm_object_vt(fun) == _core_image->get_prime("Context")))  {
-    p->raise("TypeError", "Expected Function or Context");
-  }
+oop MMObj::mm_function_get_owner(Process* p, oop fun, bool should_assert) {
+  TYPE_CHECK(!( mm_object_vt(fun) == _core_image->get_prime("Function") ||
+                mm_object_vt(fun) == _core_image->get_prime("Context")),
+             "TypeError","Expected Function or Context")
   oop cfun = mm_function_get_cfun(p, fun);
   return mm_compiled_function_get_owner(p, cfun);
 }
 
-bool MMObj::mm_function_is_ctor(Process* p, oop fun) {
-  if (!( mm_object_vt(fun) == _core_image->get_prime("Function") ||
-         mm_object_vt(fun) == _core_image->get_prime("Context")))  {
-    p->raise("TypeError", "Expected Function or Context");
-  }
+bool MMObj::mm_function_is_ctor(Process* p, oop fun, bool should_assert) {
+  TYPE_CHECK(!( mm_object_vt(fun) == _core_image->get_prime("Function") ||
+                mm_object_vt(fun) == _core_image->get_prime("Context")),
+             "TypeError","Expected Function or Context")
   oop cfun = mm_function_get_cfun(p, fun);
   return mm_compiled_function_is_ctor(p, cfun);
 }
 
-number MMObj::mm_function_exception_frames_count(Process* p, oop fun) {
-  if (!( mm_object_vt(fun) == _core_image->get_prime("Function") ||
-         mm_object_vt(fun) == _core_image->get_prime("Context")))  {
-    p->raise("TypeError", "Expected Function or Context");
-  }
+number MMObj::mm_function_exception_frames_count(Process* p, oop fun, bool should_assert) {
+  TYPE_CHECK(!( mm_object_vt(fun) == _core_image->get_prime("Function") ||
+                mm_object_vt(fun) == _core_image->get_prime("Context")),
+             "TypeError","Expected Function or Context")
   oop cfun = mm_function_get_cfun(p, fun);
   return mm_compiled_function_exception_frames_count(p, cfun);
 }
 
-oop MMObj::mm_function_exception_frames(Process* p, oop fun) {
-  if (!( mm_object_vt(fun) == _core_image->get_prime("Function") ||
-         mm_object_vt(fun) == _core_image->get_prime("Context")))  {
-    p->raise("TypeError", "Expected Function or Context");
-  }
+oop MMObj::mm_function_exception_frames(Process* p, oop fun, bool should_assert) {
+  TYPE_CHECK(!( mm_object_vt(fun) == _core_image->get_prime("Function") ||
+                mm_object_vt(fun) == _core_image->get_prime("Context")),
+             "TypeError","Expected Function or Context")
   oop cfun = mm_function_get_cfun(p, fun);
   return mm_compiled_function_exception_frames(p, cfun);
 }
 
-oop MMObj::mm_function_env_table(Process* p, oop fun) {
-  if (!( mm_object_vt(fun) == _core_image->get_prime("Function") ||
-         mm_object_vt(fun) == _core_image->get_prime("Context")))  {
-    p->raise("TypeError", "Expected Function or Context");
-  }
+oop MMObj::mm_function_env_table(Process* p, oop fun, bool should_assert) {
+  TYPE_CHECK(!( mm_object_vt(fun) == _core_image->get_prime("Function") ||
+                mm_object_vt(fun) == _core_image->get_prime("Context")),
+             "TypeError","Expected Function or Context")
   oop cfun = mm_function_get_cfun(p, fun);
   return mm_compiled_function_env_table(p, cfun);
 }
 
-oop MMObj::mm_function_get_text(Process* p, oop fun) {
-  if (!( mm_object_vt(fun) == _core_image->get_prime("Function") ||
-         mm_object_vt(fun) == _core_image->get_prime("Context")))  {
-    p->raise("TypeError", "Expected Function or Context");
-  }
+oop MMObj::mm_function_get_text(Process* p, oop fun, bool should_assert) {
+  TYPE_CHECK(!( mm_object_vt(fun) == _core_image->get_prime("Function") ||
+                mm_object_vt(fun) == _core_image->get_prime("Context")),
+             "TypeError","Expected Function or Context")
   oop cfun = mm_function_get_cfun(p, fun);
   return mm_compiled_function_get_text(p, cfun);
 }
 
-oop MMObj::mm_function_get_line_mapping(Process* p, oop fun) {
-  if (!( mm_object_vt(fun) == _core_image->get_prime("Function") ||
-         mm_object_vt(fun) == _core_image->get_prime("Context")))  {
-    p->raise("TypeError", "Expected Function or Context");
-  }
+oop MMObj::mm_function_get_line_mapping(Process* p, oop fun, bool should_assert) {
+  TYPE_CHECK(!( mm_object_vt(fun) == _core_image->get_prime("Function") ||
+                mm_object_vt(fun) == _core_image->get_prime("Context")),
+             "TypeError","Expected Function or Context")
   oop cfun = mm_function_get_cfun(p, fun);
   return mm_compiled_function_get_line_mapping(p, cfun);
 }
 
-oop MMObj::mm_function_get_loc_mapping(Process* p, oop fun) {
-  if (!( mm_object_vt(fun) == _core_image->get_prime("Function") ||
-         mm_object_vt(fun) == _core_image->get_prime("Context")))  {
-    p->raise("TypeError", "Expected Function or Context");
-  }
+oop MMObj::mm_function_get_loc_mapping(Process* p, oop fun, bool should_assert) {
+  TYPE_CHECK(!( mm_object_vt(fun) == _core_image->get_prime("Function") ||
+                mm_object_vt(fun) == _core_image->get_prime("Context")),
+             "TypeError","Expected Function or Context")
   oop cfun = mm_function_get_cfun(p, fun);
   return mm_compiled_function_get_loc_mapping(p, cfun);
 }
 
-bytecode* MMObj::mm_function_next_expr(Process* p, oop fun, bytecode* ip) {
-  if (!( mm_object_vt(fun) == _core_image->get_prime("Function") ||
-         mm_object_vt(fun) == _core_image->get_prime("Context")))  {
-    p->raise("TypeError", "Expected Function or Context");
-  }
+bytecode* MMObj::mm_function_next_expr(Process* p, oop fun, bytecode* ip, bool should_assert) {
+  TYPE_CHECK(!( mm_object_vt(fun) == _core_image->get_prime("Function") ||
+                mm_object_vt(fun) == _core_image->get_prime("Context")),
+             "TypeError","Expected Function or Context")
   oop cfun = mm_function_get_cfun(p, fun);
   return mm_compiled_function_next_expr(p, cfun, ip);
 }
 
-bytecode* MMObj::mm_function_next_line_expr(Process* p, oop fun, bytecode* ip) {
-  if (!( mm_object_vt(fun) == _core_image->get_prime("Function") ||
-         mm_object_vt(fun) == _core_image->get_prime("Context")))  {
-    p->raise("TypeError", "Expected Function or Context");
-  }
+bytecode* MMObj::mm_function_next_line_expr(Process* p, oop fun, bytecode* ip, bool should_assert) {
+  TYPE_CHECK(!( mm_object_vt(fun) == _core_image->get_prime("Function") ||
+                mm_object_vt(fun) == _core_image->get_prime("Context")),
+             "TypeError","Expected Function or Context")
   oop cfun = mm_function_get_cfun(p, fun);
   return mm_compiled_function_next_line_expr(p, cfun, ip);
 }
 
 
-bool MMObj::mm_compiled_function_is_ctor(Process* p, oop cfun) {
-  if (!( mm_object_vt(cfun) == _core_image->get_prime("CompiledFunction"))) {
-    p->raise("TypeError", "Expected CompiledFunction");
-  }
+bool MMObj::mm_compiled_function_is_ctor(Process* p, oop cfun, bool should_assert) {
+  TYPE_CHECK(!( mm_object_vt(cfun) == _core_image->get_prime("CompiledFunction")),
+             "TypeError","Expected CompiledFunction")
   return ((oop*)cfun)[4];
 }
 
-bool MMObj::mm_compiled_function_is_prim(Process* p, oop cfun) {
-  if (!( *(oop*) cfun == _core_image->get_prime("CompiledFunction"))) {
-    p->raise("TypeError", "Expected CompiledFunction");
-  }
+bool MMObj::mm_compiled_function_is_prim(Process* p, oop cfun, bool should_assert) {
+  TYPE_CHECK(!( *(oop*) cfun == _core_image->get_prime("CompiledFunction")),
+             "TypeError","Expected CompiledFunction")
   return ((oop*)cfun)[5];
 }
 
-oop MMObj::mm_compiled_function_get_prim_name(Process* p, oop cfun) {
-  if (!( *(oop*) cfun == _core_image->get_prime("CompiledFunction"))) {
-    p->raise("TypeError", "Expected CompiledFunction");
-  }
+oop MMObj::mm_compiled_function_get_prim_name(Process* p, oop cfun, bool should_assert) {
+  TYPE_CHECK(!( *(oop*) cfun == _core_image->get_prime("CompiledFunction")),
+             "TypeError","Expected CompiledFunction")
   return (oop) ((oop*)cfun)[6];
 }
 
-oop MMObj::mm_compiled_function_get_name(Process* p, oop cfun) {
-  if (!( *(oop*) cfun == _core_image->get_prime("CompiledFunction"))) {
-    p->raise("TypeError", "Expected CompiledFunction");
-  }
+oop MMObj::mm_compiled_function_get_name(Process* p, oop cfun, bool should_assert) {
+  TYPE_CHECK(!( *(oop*) cfun == _core_image->get_prime("CompiledFunction")),
+             "TypeError","Expected CompiledFunction")
   return (oop) ((oop*)cfun)[2];
 }
 
-bool MMObj::mm_compiled_function_is_getter(Process* p, oop cfun) {
-  if (!( *(oop*) cfun == _core_image->get_prime("CompiledFunction"))) {
-    p->raise("TypeError", "Expected CompiledFunction");
-  }
+bool MMObj::mm_compiled_function_is_getter(Process* p, oop cfun, bool should_assert) {
+  TYPE_CHECK(!( *(oop*) cfun == _core_image->get_prime("CompiledFunction")),
+             "TypeError","Expected CompiledFunction")
   return ((number) ((oop*)cfun)[7]) == 1;
 }
 
-number MMObj::mm_compiled_function_access_field(Process* p, oop cfun) {
-  if (!( *(oop*) cfun == _core_image->get_prime("CompiledFunction"))) {
-    p->raise("TypeError", "Expected CompiledFunction");
-  }
+number MMObj::mm_compiled_function_access_field(Process* p, oop cfun, bool should_assert) {
+  TYPE_CHECK(!( *(oop*) cfun == _core_image->get_prime("CompiledFunction")),
+             "TypeError","Expected CompiledFunction")
   return (number) ((oop*)cfun)[8];
 }
 
-oop MMObj::mm_compiled_function_get_owner(Process* p, oop cfun) {
-  if (!( *(oop*) cfun == _core_image->get_prime("CompiledFunction"))) {
-    p->raise("TypeError", "Expected CompiledFunction");
-  }
+oop MMObj::mm_compiled_function_get_owner(Process* p, oop cfun, bool should_assert) {
+  TYPE_CHECK(!( *(oop*) cfun == _core_image->get_prime("CompiledFunction")),
+             "TypeError","Expected CompiledFunction")
   return ((oop*)cfun)[9];
 }
 
-void MMObj::mm_compiled_function_set_owner(Process* p, oop cfun, oop owner) {
-  if (!( *(oop*) cfun == _core_image->get_prime("CompiledFunction"))) {
-    p->raise("TypeError", "Expected CompiledFunction");
-  }
+void MMObj::mm_compiled_function_set_owner(Process* p, oop cfun, oop owner, bool should_assert) {
+  TYPE_CHECK(!( *(oop*) cfun == _core_image->get_prime("CompiledFunction")),
+             "TypeError","Expected CompiledFunction")
   ((oop*)cfun)[9] = owner;
 }
 
-number MMObj::mm_compiled_function_get_num_params(Process* p, oop cfun) {
-  if (!( *(oop*) cfun == _core_image->get_prime("CompiledFunction"))) {
-    p->raise("TypeError", "Expected CompiledFunction");
-  }
+number MMObj::mm_compiled_function_get_num_params(Process* p, oop cfun, bool should_assert) {
+  TYPE_CHECK(!( *(oop*) cfun == _core_image->get_prime("CompiledFunction")),
+             "TypeError","Expected CompiledFunction")
   return (number) ((oop*)cfun)[10];
 }
 
-bool MMObj::mm_compiled_function_uses_env(Process* p, oop cfun) {
-  if (!( *(oop*) cfun == _core_image->get_prime("CompiledFunction"))) {
-    p->raise("TypeError", "Expected CompiledFunction");
-  }
+bool MMObj::mm_compiled_function_uses_env(Process* p, oop cfun, bool should_assert) {
+  TYPE_CHECK(!( *(oop*) cfun == _core_image->get_prime("CompiledFunction")),
+             "TypeError","Expected CompiledFunction")
   return (bool) ((oop*)cfun)[11];
 }
 
-bool MMObj::mm_compiled_function_is_top_level(Process* p, oop cfun) {
-  if (!( *(oop*) cfun == _core_image->get_prime("CompiledFunction"))) {
-    p->raise("TypeError", "Expected CompiledFunction");
-  }
+bool MMObj::mm_compiled_function_is_top_level(Process* p, oop cfun, bool should_assert) {
+  TYPE_CHECK(!( *(oop*) cfun == _core_image->get_prime("CompiledFunction")),
+             "TypeError","Expected CompiledFunction")
   return (bool) ((oop*)cfun)[12];
 }
 
-oop MMObj::mm_compiled_function_outer_cfun(Process* p, oop cfun) {
-  if (!( *(oop*) cfun == _core_image->get_prime("CompiledFunction"))) {
-    p->raise("TypeError", "Expected CompiledFunction");
-  }
+oop MMObj::mm_compiled_function_outer_cfun(Process* p, oop cfun, bool should_assert) {
+  TYPE_CHECK(!( *(oop*) cfun == _core_image->get_prime("CompiledFunction")),
+             "TypeError","Expected CompiledFunction")
   return ((oop*)cfun)[13];
 }
 
-number MMObj::mm_compiled_function_get_num_locals_or_env(Process* p, oop cfun) {
-  if (!( *(oop*) cfun == _core_image->get_prime("CompiledFunction"))) {
-    p->raise("TypeError", "Expected CompiledFunction");
-  }
+number MMObj::mm_compiled_function_get_num_locals_or_env(Process* p, oop cfun, bool should_assert) {
+  TYPE_CHECK(!( *(oop*) cfun == _core_image->get_prime("CompiledFunction")),
+             "TypeError","Expected CompiledFunction")
   return (number) ((oop*)cfun)[14];
 }
 
-number MMObj::mm_compiled_function_get_env_offset(Process* p, oop cfun) {
-  if (!( *(oop*) cfun == _core_image->get_prime("CompiledFunction"))) {
-    p->raise("TypeError", "Expected CompiledFunction");
-  }
+number MMObj::mm_compiled_function_get_env_offset(Process* p, oop cfun, bool should_assert) {
+  TYPE_CHECK(!( *(oop*) cfun == _core_image->get_prime("CompiledFunction")),
+             "TypeError","Expected CompiledFunction")
   return (number) ((oop*)cfun)[15];
 }
 
-number MMObj::mm_compiled_function_get_literal_frame_size(Process* p, oop cfun) {
-  if (!( *(oop*) cfun == _core_image->get_prime("CompiledFunction"))) {
-    p->raise("TypeError", "Expected CompiledFunction");
-  }
+number MMObj::mm_compiled_function_get_literal_frame_size(Process* p, oop cfun, bool should_assert) {
+  TYPE_CHECK(!( *(oop*) cfun == _core_image->get_prime("CompiledFunction")),
+             "TypeError","Expected CompiledFunction")
   return (number) ((oop*)cfun)[16];
 }
 
-oop MMObj::mm_compiled_function_get_literal_by_index(Process* p, oop cfun, int idx) {
-  if (!( *(oop*) cfun == _core_image->get_prime("CompiledFunction"))) {
-    p->raise("TypeError", "Expected CompiledFunction");
-  }
+oop MMObj::mm_compiled_function_get_literal_by_index(Process* p, oop cfun, int idx, bool should_assert) {
+  TYPE_CHECK(!( *(oop*) cfun == _core_image->get_prime("CompiledFunction")),
+             "TypeError","Expected CompiledFunction")
   oop* literal_frame =  ((oop**)cfun)[17];
   if (!( (idx * WSIZE) < mm_compiled_function_get_literal_frame_size(p, cfun))) {
     p->raise("IndexError", "index of out range");
@@ -845,80 +780,70 @@ oop MMObj::mm_compiled_function_get_literal_by_index(Process* p, oop cfun, int i
   return (oop) literal_frame[idx];
 }
 
-number MMObj::mm_compiled_function_get_code_size(Process* p, oop cfun) {
-  if (!( *(oop*) cfun == _core_image->get_prime("CompiledFunction"))) {
-    p->raise("TypeError", "Expected CompiledFunction");
-  }
+number MMObj::mm_compiled_function_get_code_size(Process* p, oop cfun, bool should_assert) {
+  TYPE_CHECK(!( *(oop*) cfun == _core_image->get_prime("CompiledFunction")),
+             "TypeError","Expected CompiledFunction")
   return (number) ((oop*)cfun)[18];
 }
 
-bytecode* MMObj::mm_compiled_function_get_code(Process* p, oop cfun) {
-  if (!( *(oop*) cfun == _core_image->get_prime("CompiledFunction"))) {
-    p->raise("TypeError", "Expected CompiledFunction");
-  }
+bytecode* MMObj::mm_compiled_function_get_code(Process* p, oop cfun, bool should_assert) {
+  TYPE_CHECK(!( *(oop*) cfun == _core_image->get_prime("CompiledFunction")),
+             "TypeError","Expected CompiledFunction")
   return (bytecode*) ((oop*)cfun)[19];
 }
 
-number MMObj::mm_compiled_function_exception_frames_count(Process* p, oop cfun) {
-  if (!( *(oop*) cfun == _core_image->get_prime("CompiledFunction"))) {
-    p->raise("TypeError", "Expected CompiledFunction");
-  }
+number MMObj::mm_compiled_function_exception_frames_count(Process* p, oop cfun, bool should_assert) {
+  TYPE_CHECK(!( *(oop*) cfun == _core_image->get_prime("CompiledFunction")),
+             "TypeError","Expected CompiledFunction")
   return (number) ((oop*)cfun)[20];
 }
 
-oop MMObj::mm_compiled_function_exception_frames(Process* p, oop cfun) {
-  if (!( *(oop*) cfun == _core_image->get_prime("CompiledFunction"))) {
-    p->raise("TypeError", "Expected CompiledFunction");
-  }
+oop MMObj::mm_compiled_function_exception_frames(Process* p, oop cfun, bool should_assert) {
+  TYPE_CHECK(!( *(oop*) cfun == _core_image->get_prime("CompiledFunction")),
+             "TypeError","Expected CompiledFunction")
   return ((oop*)cfun)[21];
 }
 
-oop MMObj::mm_compiled_function_env_table(Process* p, oop cfun) {
-  if (!( *(oop*) cfun == _core_image->get_prime("CompiledFunction"))) {
-    p->raise("TypeError", "Expected CompiledFunction");
-  }
+oop MMObj::mm_compiled_function_env_table(Process* p, oop cfun, bool should_assert) {
+  TYPE_CHECK(!( *(oop*) cfun == _core_image->get_prime("CompiledFunction")),
+             "TypeError","Expected CompiledFunction")
   return ((oop*)cfun)[22];
 }
 
-oop MMObj::mm_compiled_function_get_text(Process* p, oop cfun) {
-  if (!( *(oop*) cfun == _core_image->get_prime("CompiledFunction"))) {
-    p->raise("TypeError", "Expected CompiledFunction");
-  }
+oop MMObj::mm_compiled_function_get_text(Process* p, oop cfun, bool should_assert) {
+  TYPE_CHECK(!( *(oop*) cfun == _core_image->get_prime("CompiledFunction")),
+             "TypeError","Expected CompiledFunction")
   return ((oop*)cfun)[23];
 }
 
-oop MMObj::mm_compiled_function_get_line_mapping(Process* p, oop cfun) {
-  if (!( *(oop*) cfun == _core_image->get_prime("CompiledFunction"))) {
-    p->raise("TypeError", "Expected CompiledFunction");
-  }
+oop MMObj::mm_compiled_function_get_line_mapping(Process* p, oop cfun, bool should_assert) {
+  TYPE_CHECK(!( *(oop*) cfun == _core_image->get_prime("CompiledFunction")),
+             "TypeError","Expected CompiledFunction")
   return ((oop*)cfun)[24];
 }
 
-oop MMObj::mm_compiled_function_get_loc_mapping(Process* p, oop cfun) {
-  if (!( *(oop*) cfun == _core_image->get_prime("CompiledFunction"))) {
-    p->raise("TypeError", "Expected CompiledFunction");
-  }
+oop MMObj::mm_compiled_function_get_loc_mapping(Process* p, oop cfun, bool should_assert) {
+  TYPE_CHECK(!( *(oop*) cfun == _core_image->get_prime("CompiledFunction")),
+             "TypeError","Expected CompiledFunction")
   return ((oop*)cfun)[25];
 }
 
-// oop MMObj::mm_compiled_function_get_cmod(Process* p, oop cfun) {
+// oop MMObj::mm_compiled_function_get_cmod(Process* p, oop cfun, bool should_assert) {
 //   if (!( *(oop*) cfun == _core_image->get_prime("CompiledFunction"))) {
 //      p->raise("TypeError", "Expected CompiledFunction");
 //   }
 //   return ((oop*)cfun)[26];
 // }
 
-void MMObj::mm_compiled_function_set_cmod(Process* p, oop cfun, oop cmod) {
-  if (!( *(oop*) cfun == _core_image->get_prime("CompiledFunction"))) {
-    p->raise("TypeError", "Expected CompiledFunction");
-  }
+void MMObj::mm_compiled_function_set_cmod(Process* p, oop cfun, oop cmod, bool should_assert) {
+  TYPE_CHECK(!( *(oop*) cfun == _core_image->get_prime("CompiledFunction")),
+             "TypeError","Expected CompiledFunction")
   ((oop*)cfun)[26] = cmod;
 }
 
-bytecode* MMObj::mm_compiled_function_next_expr(Process* p, oop cfun, bytecode* ip) {
-  if (!( *(oop*) cfun == _core_image->get_prime("CompiledFunction"))) {
-    p->raise("TypeError", "Expected CompiledFunction");
-  }
+bytecode* MMObj::mm_compiled_function_next_expr(Process* p, oop cfun, bytecode* ip, bool should_assert) {
+  TYPE_CHECK(!( *(oop*) cfun == _core_image->get_prime("CompiledFunction")),
+             "TypeError","Expected CompiledFunction")
 
   bytecode* base_ip = mm_compiled_function_get_code(p, cfun);
   word idx = ip - base_ip;
@@ -941,10 +866,9 @@ bytecode* MMObj::mm_compiled_function_next_expr(Process* p, oop cfun, bytecode* 
   }
 }
 
-bytecode* MMObj::mm_compiled_function_next_line_expr(Process* p, oop cfun, bytecode* ip) {
-  if (!( *(oop*) cfun == _core_image->get_prime("CompiledFunction"))) {
-    p->raise("TypeError", "Expected CompiledFunction");
-  }
+bytecode* MMObj::mm_compiled_function_next_line_expr(Process* p, oop cfun, bytecode* ip, bool should_assert) {
+  TYPE_CHECK(!( *(oop*) cfun == _core_image->get_prime("CompiledFunction")),
+             "TypeError","Expected CompiledFunction")
 
   bytecode* base_ip = mm_compiled_function_get_code(p, cfun);
   word idx = ip - base_ip;
@@ -986,7 +910,7 @@ bytecode* MMObj::mm_compiled_function_next_line_expr(Process* p, oop cfun, bytec
   }
 }
 
-// bool MMObj::mm_compiled_function_loc_mapping_matches_ip(oop cfun, bytecode* ip) {
+// bool MMObj::mm_compiled_function_loc_mapping_matches_ip(oop cfun, bytecode* ip, bool should_assert) {
 //   if (!( *(oop*) cfun == _core_image->get_prime("CompiledFunction"))) {
 //     p->raise("TypeError", "Expected CompiledFunction");
 //   }
@@ -1014,53 +938,46 @@ bytecode* MMObj::mm_compiled_function_next_line_expr(Process* p, oop cfun, bytec
 
 
 
-oop MMObj::mm_compiled_class_name(Process* p, oop cclass) {
-  if (!( *(oop*) cclass == _core_image->get_prime("CompiledClass"))) {
-    p->raise("TypeError", "Expected CompiledClass");
-  }
+oop MMObj::mm_compiled_class_name(Process* p, oop cclass, bool should_assert) {
+  TYPE_CHECK(!( *(oop*) cclass == _core_image->get_prime("CompiledClass")),
+             "TypeError","Expected CompiledClass")
   return ((oop*)cclass)[2];
 }
 
-oop MMObj::mm_compiled_class_super_name(Process* p, oop cclass) {
-  if (!( *(oop*) cclass == _core_image->get_prime("CompiledClass"))) {
-    p->raise("TypeError", "Expected CompiledClass");
-  }
+oop MMObj::mm_compiled_class_super_name(Process* p, oop cclass, bool should_assert) {
+  TYPE_CHECK(!( *(oop*) cclass == _core_image->get_prime("CompiledClass")),
+             "TypeError","Expected CompiledClass")
   return ((oop*)cclass)[3];
 }
 
-oop MMObj::mm_compiled_class_fields(Process* p, oop cclass) {
-  if (!( *(oop*) cclass == _core_image->get_prime("CompiledClass"))) {
-    p->raise("TypeError", "Expected CompiledClass");
-  }
+oop MMObj::mm_compiled_class_fields(Process* p, oop cclass, bool should_assert) {
+  TYPE_CHECK(!( *(oop*) cclass == _core_image->get_prime("CompiledClass")),
+             "TypeError","Expected CompiledClass")
   return ((oop*)cclass)[4];
 }
 
-oop MMObj::mm_compiled_class_methods(Process* p, oop cclass) {
-  if (!( *(oop*) cclass == _core_image->get_prime("CompiledClass"))) {
-    p->raise("TypeError", "Expected CompiledClass");
-  }
+oop MMObj::mm_compiled_class_methods(Process* p, oop cclass, bool should_assert) {
+  TYPE_CHECK(!( *(oop*) cclass == _core_image->get_prime("CompiledClass")),
+             "TypeError","Expected CompiledClass")
   return ((oop*)cclass)[5];
 }
 
-oop MMObj::mm_compiled_class_own_methods(Process* p, oop cclass) {
-  if (!( *(oop*) cclass == _core_image->get_prime("CompiledClass"))) {
-    p->raise("TypeError", "Expected CompiledClass");
-  }
+oop MMObj::mm_compiled_class_own_methods(Process* p, oop cclass, bool should_assert) {
+  TYPE_CHECK(!( *(oop*) cclass == _core_image->get_prime("CompiledClass")),
+             "TypeError","Expected CompiledClass")
   return ((oop*)cclass)[6];
 }
 
-number MMObj::mm_compiled_class_num_fields(Process* p, oop cclass) {
-  if (!( *(oop*) cclass == _core_image->get_prime("CompiledClass"))) {
-    p->raise("TypeError", "Expected CompiledClass");
-  }
+number MMObj::mm_compiled_class_num_fields(Process* p, oop cclass, bool should_assert) {
+  TYPE_CHECK(!( *(oop*) cclass == _core_image->get_prime("CompiledClass")),
+             "TypeError","Expected CompiledClass")
   oop fields_list = ((oop*)cclass)[4];
   return mm_list_size(p, fields_list);
 }
 
-oop MMObj::mm_cfuns_to_funs_dict(Process* p, oop cfuns_dict, oop imod) {
-  if (!( *(oop*) cfuns_dict == _core_image->get_prime("Dictionary"))) {
-    p->raise("TypeError", "Expected Dictionary");
-  }
+oop MMObj::mm_cfuns_to_funs_dict(Process* p, oop cfuns_dict, oop imod, bool should_assert) {
+  TYPE_CHECK(!( *(oop*) cfuns_dict == _core_image->get_prime("Dictionary")),
+             "TypeError","Expected Dictionary")
 
   // number size = mm_dictionary_size(cfuns_dict);
   oop funs_dict = mm_dictionary_new();
@@ -1075,10 +992,9 @@ oop MMObj::mm_cfuns_to_funs_dict(Process* p, oop cfuns_dict, oop imod) {
   return funs_dict;
 }
 
-oop MMObj::mm_class_behavior_new(Process* p, oop super_class, oop funs_dict) {
-  if (!( *(oop*) funs_dict == _core_image->get_prime("Dictionary"))) {
-    p->raise("TypeError", "Expected Dictionary");
-  }
+oop MMObj::mm_class_behavior_new(Process* p, oop super_class, oop funs_dict, bool should_assert) {
+  TYPE_CHECK(!( *(oop*) funs_dict == _core_image->get_prime("Dictionary")),
+             "TypeError","Expected Dictionary")
   //vt: Behavior
   //delegate:
   //dict
@@ -1091,13 +1007,11 @@ oop MMObj::mm_class_behavior_new(Process* p, oop super_class, oop funs_dict) {
 }
 
 
-oop MMObj::mm_class_new(Process* p, oop class_behavior, oop super_class, oop dict, oop compiled_class, number payload) {
-  if (!( *(oop*) dict == _core_image->get_prime("Dictionary"))) {
-    p->raise("TypeError", "Expected Dictionary");
-  }
-  if (!( *(oop*) compiled_class == _core_image->get_prime("CompiledClass"))) {
-    p->raise("TypeError", "Expected CompiledClass");
-  }
+oop MMObj::mm_class_new(Process* p, oop class_behavior, oop super_class, oop dict, oop compiled_class, number payload, bool should_assert) {
+  TYPE_CHECK(!( *(oop*) dict == _core_image->get_prime("Dictionary")),
+             "TypeError","Expected Dictionary")
+  TYPE_CHECK(!( *(oop*) compiled_class == _core_image->get_prime("CompiledClass")),
+             "TypeError","Expected CompiledClass")
 
   oop klass = (oop) malloc(sizeof(word) * 5);
   * (oop*) klass = class_behavior;
@@ -1117,21 +1031,19 @@ oop MMObj::mm_class_dict(oop klass) {
   return ((oop*)klass)[2];
 }
 
-oop MMObj::mm_class_get_compiled_class(Process* p, oop klass) {
-  if (!( *(oop*) klass != _core_image->get_prime("Behavior"))) {
-    p->raise("TypeError", "Expected Behavior");
-  }
+oop MMObj::mm_class_get_compiled_class(Process* p, oop klass, bool should_assert) {
+  TYPE_CHECK(!( *(oop*) klass != _core_image->get_prime("Behavior")),
+             "TypeError","Expected Behavior")
   return ((oop*)klass)[4];
 }
 
 
-oop MMObj::mm_new_slot_getter(Process* p, oop imodule, oop owner, oop name, int idx) {
+oop MMObj::mm_new_slot_getter(Process* p, oop imodule, oop owner, oop name, int idx, bool should_assert) {
 //    if (!( *(oop*) cclass == _core_image->get_prime("CompiledClass"))) {
 //     p->raise("TypeError", "Expected CompiledClass");
 //   }
-  if (!( *(oop*) name == _core_image->get_prime("String"))) {
-    p->raise("TypeError", "Expected String");
-  }
+  TYPE_CHECK(!( *(oop*) name == _core_image->get_prime("String")),
+             "TypeError","Expected String")
 
   oop cfun_getter = (oop) calloc(sizeof(word), 17);
 
@@ -1164,10 +1076,9 @@ bool MMObj::mm_is_symbol(oop sym) {
   return *(oop*) sym == _core_image->get_prime("Symbol");
 }
 
-char* MMObj::mm_symbol_cstr(Process* p, oop sym) {
-  if (!( *(oop*) sym == _core_image->get_prime("Symbol"))) {
-    p->raise("TypeError", "Expected Symbol");
-  }
+char* MMObj::mm_symbol_cstr(Process* p, oop sym, bool should_assert) {
+  TYPE_CHECK(!( *(oop*) sym == _core_image->get_prime("Symbol")),
+             "TypeError","Expected Symbol")
   //0: vt
   //1: delegate
   //2: size
@@ -1175,10 +1086,9 @@ char* MMObj::mm_symbol_cstr(Process* p, oop sym) {
   return (char*) &(sym[3]);
 }
 
-oop MMObj::mm_symbol_to_string(Process* p, oop sym) {
-  if (!( *(oop*) sym == _core_image->get_prime("Symbol"))) {
-    p->raise("TypeError", "Expected Symbol");
-  }
+oop MMObj::mm_symbol_to_string(Process* p, oop sym, bool should_assert) {
+  TYPE_CHECK(!( *(oop*) sym == _core_image->get_prime("Symbol")),
+             "TypeError","Expected Symbol")
   return mm_string_new(mm_symbol_cstr(p, sym));
 }
 
@@ -1190,10 +1100,9 @@ oop MMObj::mm_behavior_get_dict(oop behavior) {
   return (oop) ((oop*)behavior)[2];
 }
 
-number MMObj::mm_behavior_size(Process* p, oop behavior) {
-  if (!( **(oop**) behavior == _core_image->get_prime("Behavior"))) {
-    p->raise("TypeError", "Expected Behavior");
-  }
+number MMObj::mm_behavior_size(Process* p, oop behavior, bool should_assert) {
+  TYPE_CHECK(!( **(oop**) behavior == _core_image->get_prime("Behavior")),
+             "TypeError","Expected Behavior")
   oop num = ((oop*)behavior)[3];
   if (is_small_int(num)) {
     debug() << "WARNING: behavior size is tagged and I will untag it" << endl;
@@ -1263,10 +1172,9 @@ bool MMObj::mm_is_dictionary(oop obj) {
 }
 
 
-std::list<std::string> MMObj::mm_sym_list_to_cstring_list(Process* p, oop lst) {
-  if (!( *(oop*) lst == _core_image->get_prime("List"))) {
-    p->raise("TypeError", "Expected List");
-  }
+std::list<std::string> MMObj::mm_sym_list_to_cstring_list(Process* p, oop lst, bool should_assert) {
+  TYPE_CHECK(!( *(oop*) lst == _core_image->get_prime("List")),
+             "TypeError","Expected List")
 
   std::list<std::string> res;
   for (int i = 0; i < mm_list_size(p, lst); i++) {
