@@ -923,7 +923,7 @@ void Process::fail(oop e) {
     int exc;
     oop str = send_0(e, _vm->new_symbol("toString"), &exc);
     assert(exc == 0);
-    std::cerr << "Terminated with exception: \""
+    std::cerr << "Uncaugh exception: \""
               << _mmobj->mm_string_cstr(this, str, true) << "\"" << endl;
     bail();
 }
