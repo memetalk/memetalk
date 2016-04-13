@@ -2,6 +2,7 @@
 #define MMC_LOADER
 
 #include "defs.hpp"
+#include "log.hpp"
 #include <map>
 #include <string>
 
@@ -30,6 +31,7 @@ private:
 
   void  create_param_getters(oop imodule, oop imod_dict, oop params_list);
 
+  MMLog _log;
   Process* _proc;
   MMObj* _mmobj;
   CoreImage* _core_image;

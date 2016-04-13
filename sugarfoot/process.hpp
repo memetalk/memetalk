@@ -7,6 +7,7 @@
 #include <fstream>
 
 #include "defs.hpp"
+#include "log.hpp"
 
 class VM;
 class MMObj;
@@ -29,7 +30,7 @@ class Process {
     HALT_STATE
   };
 public:
-  Process(VM*);
+  Process(VM*, bool is_debugger = false);
 
   oop run(oop, oop, int*);
 
@@ -92,9 +93,11 @@ public:
   unsigned int stack_depth();
   oop bp_at(unsigned int);
 
-  void is_debugger(bool t) { _is_dbg = t; }; //to help filter logs
+  void bail(const std::string& msg);
+  void bail();
+
 private:
-  std::ostream&  dbg();
+  MMLog&  dbg();
   void pause() { _state = HALT_STATE; };
 
   void init();
@@ -129,6 +132,7 @@ private:
   void maybe_tick_call();
   void maybe_tick_return();
 
+  MMLog _log;
   bool _is_dbg;
   VM* _vm;
   MMObj* _mmobj;

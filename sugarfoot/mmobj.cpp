@@ -2,7 +2,6 @@
 #include "defs.hpp"
 #include "core_image.hpp"
 #include <cstdlib>
-#include "report.hpp"
 #include "vm.hpp"
 #include "process.hpp"
 #include "utils.hpp"
@@ -21,7 +20,7 @@
 
 
 MMObj::MMObj(CoreImage* core)
-  : _core_image(core) {
+: _log(LOG_MMOBJ), _core_image(core) {
 }
 
 oop MMObj::mm_process_new(Process* p, Process* proc) {
@@ -235,7 +234,7 @@ number MMObj::mm_list_index_of(Process* p, oop list, oop elem, bool should_asser
       return pos;
     //some temporary hack while we don't have a self-host compiler doing Object.==
     } else if (mm_is_string(elem) && mm_is_string(*it)) {
-      debug() << mm_string_cstr(p, elem) << " <cmp> " << mm_string_cstr(p, *it) << endl;
+      _log << mm_string_cstr(p, elem) << " <cmp> " << mm_string_cstr(p, *it) << endl;
       if (strcmp(mm_string_cstr(p, elem), mm_string_cstr(p, *it)) == 0) {
         return pos;
       }
@@ -324,12 +323,12 @@ bool MMObj::mm_dictionary_has_key(Process* p, oop dict, oop key, bool should_ass
              "TypeError","Expected Dictionary")
 
   std::map<oop, oop>* elements = mm_dictionary_frame(p, dict);
-  // debug() << dict << "(" << elements->size() << ") has key " << key << " ?" << endl;
+  // _log << dict << "(" << elements->size() << ") has key " << key << " ?" << endl;
   for (std::map<oop, oop>::iterator it = elements->begin(); it != elements->end(); it++) {
     if (it->first == key) {
       return true;
     } else if (mm_is_string(key) && mm_is_string(it->first)) {
-      // debug() << dict << "(" << elements->size() << ") has key " << mm_string_cstr(key) << " ?=" << mm_string_cstr(it->first) << endl;
+      // _log << dict << "(" << elements->size() << ") has key " << mm_string_cstr(key) << " ?=" << mm_string_cstr(it->first) << endl;
       if (strcmp(mm_string_cstr(p, key), mm_string_cstr(p, it->first)) == 0) {
         return true;
       }
@@ -356,15 +355,15 @@ oop MMObj::mm_dictionary_get(Process* p, oop dict, oop key, bool should_assert) 
 
   std::map<oop, oop>* elements = mm_dictionary_frame(p, dict);
 
-  debug() << dict << "(" << elements->size() << ") get " << key << endl;
+  _log << dict << "(" << elements->size() << ") get " << key << endl;
   for (std::map<oop, oop>::iterator it = elements->begin(); it != elements->end(); it++) {
-    // debug() << dict << "(" << elements->size() << ") get direct? " << (it->first == key) << endl;
+    // _log << dict << "(" << elements->size() << ") get direct? " << (it->first == key) << endl;
     if (it->first == key) {
       return it->second;
     } else {
-      // debug() << dict << "(" << elements->size() << ") get string? " << (mm_is_string(key) && mm_is_string(it->first)) << endl;
+      // _log << dict << "(" << elements->size() << ") get string? " << (mm_is_string(key) && mm_is_string(it->first)) << endl;
       if (mm_is_string(key) && mm_is_string(it->first)) {
-        // debug() << dict << "(" << elements->size() << ") get: " << mm_is_string(key) << " =?= " << mm_string_cstr(it->first) << endl;
+        // _log << dict << "(" << elements->size() << ") get: " << mm_is_string(key) << " =?= " << mm_string_cstr(it->first) << endl;
         if (strcmp(mm_string_cstr(p, key), mm_string_cstr(p, it->first)) == 0) {
           return it->second;
         }
@@ -859,7 +858,7 @@ bytecode* MMObj::mm_compiled_function_next_expr(Process* p, oop cfun, bytecode* 
     }
   }
   if (next_offset == INT_MAX) {
-    std::cerr << "WARNING: next_expr for " << idx << " is NULL" << endl;
+    MMLog::warning() << "next_expr for " << idx << " is NULL" << endl;
     return NULL;
   } else {
     return base_ip + next_offset;
@@ -880,10 +879,10 @@ bytecode* MMObj::mm_compiled_function_next_line_expr(Process* p, oop cfun, bytec
   for ( ; it != end; it++) {
     word b_offset = untag_small_int(it->first);
     word line = untag_small_int(it->second);
-    // std::cerr << " SEARCH CURR LINE "
+    // _log << " SEARCH CURR LINE "
     //           << idx << " " << b_offset << " " << line << endl;
     if ((idx >= b_offset) && (current_line < line)) {
-      // std::cerr << "GOT LINE " << line << endl;
+      // _log << "GOT LINE " << line << endl;
       current_line = line;
     }
   }
@@ -893,7 +892,7 @@ bytecode* MMObj::mm_compiled_function_next_line_expr(Process* p, oop cfun, bytec
   word next_offset = 0;
   for ( ; it != end; it++) {
     word line = untag_small_int(it->second);
-    // std::cerr << "line: " << line << " " << current_line << " " << next_line << endl;
+    // _log << "line: " << line << " " << current_line << " " << next_line << endl;
     if (line > current_line && next_line > line) {
       next_line = line;
       next_offset = untag_small_int(it->first);
@@ -901,10 +900,10 @@ bytecode* MMObj::mm_compiled_function_next_line_expr(Process* p, oop cfun, bytec
   }
 
   if (next_line == INT_MAX) {
-    std::cerr << "WARNING: next_line for " << idx << " is NULL" << endl;
+    MMLog::warning() << "next_line for " << idx << " is NULL" << endl;
     return NULL;
   } else {
-    // std::cerr << " CURR LINE " << current_line << " NEXT: " << next_line
+    // _log << " CURR LINE " << current_line << " NEXT: " << next_line
     //           << " offset: " << next_offset << endl;
     return base_ip + next_offset;
   }
@@ -917,14 +916,14 @@ bytecode* MMObj::mm_compiled_function_next_line_expr(Process* p, oop cfun, bytec
 
 //   bytecode* base_ip = mm_compiled_function_get_code(cfun);
 //   word idx = ip - base_ip;
-//   // std::cerr << "MMOBJ IDX : " << idx << endl;
+//   // _log << "MMOBJ IDX : " << idx << endl;
 
 //   oop mapping = mm_compiled_function_get_loc_mapping(cfun);
 //   std::map<oop, oop>::iterator it = mm_dictionary_begin(mapping);
 //   std::map<oop, oop>::iterator end = mm_dictionary_end(mapping);
 //   for ( ; it != end; it++) {
 //     word b_offset = untag_small_int(it->first);
-//     // std::cerr << "LOC_MATCHES_IP? -- " << b_offset << " " <<  idx << std::endl;
+//     // _log << "LOC_MATCHES_IP? -- " << b_offset << " " <<  idx << std::endl;
 //     if (idx == b_offset) {
 //       return true;
 //     }
@@ -932,7 +931,7 @@ bytecode* MMObj::mm_compiled_function_next_line_expr(Process* p, oop cfun, bytec
 //       break;
 //     }
 //   }
-//   // std::cerr << "LOC_MATCHES_IP? RET FALSE: " << idx << std::endl;
+//   // _log << "LOC_MATCHES_IP? RET FALSE: " << idx << std::endl;
 //   return false;
 // }
 
@@ -1105,7 +1104,7 @@ number MMObj::mm_behavior_size(Process* p, oop behavior, bool should_assert) {
              "TypeError","Expected Behavior")
   oop num = ((oop*)behavior)[3];
   if (is_small_int(num)) {
-    debug() << "WARNING: behavior size is tagged and I will untag it" << endl;
+    _log << "WARNING: behavior size is tagged and I will untag it" << endl;
     return untag_small_int(num);
   } else {
     return (number) num;
@@ -1113,7 +1112,7 @@ number MMObj::mm_behavior_size(Process* p, oop behavior, bool should_assert) {
 }
 
 bool MMObj::delegates_to(oop sub_type, oop super_type) {
-  debug() << "delegates_to? " << sub_type << " " << super_type << endl;
+  _log << "delegates_to? " << sub_type << " " << super_type << endl;
   if (sub_type == NULL) {
     return false;
   }
@@ -1135,22 +1134,20 @@ oop MMObj::mm_new(oop vt, oop delegate, number payload) {
 
 oop MMObj::alloc_instance(Process* p, oop klass) {
   if (klass == NULL) {
-    debug() << "alloc_instance: klass is null" << endl;
+    _log << "alloc_instance: klass is null" << endl;
     return NULL;
   }
 
-  debug() << "alloc_instance for klass " << klass << endl;
-  debug() << "alloc_instance: class name: " << mm_string_cstr(p, mm_class_name(p, klass)) << endl;
+  _log << "alloc_instance for klass " << klass << endl;
+  _log << "alloc_instance: class name: " << mm_string_cstr(p, mm_class_name(p, klass)) << endl;
 
   number payload = mm_behavior_size(p, klass);
-  if (payload == INVALID_PAYLOAD) {
-    bail("new_delegate: Received flagged/behavior payload");
-  }
+  assert(payload != INVALID_PAYLOAD);
 
-  debug() << "alloc_instance: payload " << payload << endl;
+  _log << "alloc_instance: payload " << payload << endl;
 
   oop instance = (oop) calloc(sizeof(word), payload + 2); //2: vt, delegate
-  debug() << "new instance [size: " << payload << "]: "
+  _log << "new instance [size: " << payload << "]: "
           << mm_string_cstr(p, mm_class_name(p, klass)) << " = " << instance << endl;
 
   oop klass_parent =  mm_object_delegate(klass);
@@ -1158,7 +1155,7 @@ oop MMObj::alloc_instance(Process* p, oop klass) {
   ((oop*)instance)[0] = klass;
   ((oop*) instance)[1] = alloc_instance(p, klass_parent);
 
-  debug() << "Created recursive delegate " << instance << endl;
+  _log << "Created recursive delegate " << instance << endl;
   return instance;
 }
 

@@ -5,6 +5,7 @@
 #include <string>
 #include <map>
 #include "defs.hpp"
+#include "log.hpp"
 
 class VM;
 
@@ -26,6 +27,7 @@ private:
   bool is_prime(const char*);
   bool is_core_instance(const char*);
 
+  MMLog _log;
   VM* _vm;
   const char* _filepath;
   int _data_size;

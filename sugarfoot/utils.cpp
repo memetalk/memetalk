@@ -1,19 +1,22 @@
 #include "utils.hpp"
-#include "report.hpp"
 #include <fstream>
 #include <sstream>
 #include "vm.hpp"
 #include "process.hpp"
 #include "mmobj.hpp"
 #include "core_image.hpp"
+#include "log.hpp"
+#include <stdexcept>
 
 using namespace std;
+
+static MMLog _log(LOG_UTILS);
 
 static char* read_file(fstream& file, int* file_size) {
   string contents(static_cast<stringstream const&>(stringstream() << file.rdbuf()).str());
   *file_size = file.tellg();
 
-  debug() << "file size: "<< *file_size << endl;
+  _log << "file size: "<< *file_size << endl;
 
   file.close();
   const char* str = contents.c_str();
@@ -26,7 +29,7 @@ char* read_mmc_file(const std::string& name_or_path, int* file_size) {
 
   std::string filepath = name_or_path;
 
-  debug() << "read_mmc_file: " << filepath << endl;
+  _log << "read_mmc_file: " << filepath << endl;
   if (filepath[0] == '.' || filepath[0] == '/') { //relative or absolute path
     file.open(filepath.c_str(), fstream::in | fstream::binary);
   } else { //filename
@@ -38,17 +41,17 @@ char* read_mmc_file(const std::string& name_or_path, int* file_size) {
     if (!file.good()) {
       char* mmpath = getenv("MEME_PATH");
       std::string base = mmpath == NULL ? "" : mmpath;
-      debug() << "failed to open " << name_or_path <<
+      _log << "failed to open " << name_or_path <<
         " trying " << (base + filepath) << endl;
       file.open((base + filepath).c_str(), fstream::in | fstream::binary);
       if (!file.good()) {
-        bail(std::string("Unable to open file: ") + filepath);
+        throw std::invalid_argument(string("Unable to open file: ") + filepath);
       }
     }
   }
 
   if (!file.is_open()) {
-    bail(string("file not found: ") + filepath);
+    throw std::invalid_argument(string("file not found: ") + filepath);
   }
   return read_file(file, file_size);
 }
@@ -65,7 +68,7 @@ void relocate_addresses(char* data, int data_size, int start_reloc_table) {
   for (int i = start_reloc_table; i < data_size; i += WSIZE) {
     word target = unpack_word(data,  i);
     word local_ptr = unpack_word(data,  target);
-    // debug() << (oop) target << "->" << (oop) (base + local_ptr) << endl;
+    // _log << (oop) target << "->" << (oop) (base + local_ptr) << endl;
     // write_word(data, target, (word) (base + local_ptr));
     * (word*) &(data[target]) = (word) (base + local_ptr);
   }
@@ -80,9 +83,9 @@ void link_symbols(char* data, int es_size, int start_external_symbols, VM* vm, C
     char* name = (char*) (base + name_offset);
     word obj_offset = unpack_word(data, start_external_symbols + i + WSIZE);
     word* obj = (word*) (base + obj_offset);
-    debug() << "Symbol: " << (oop) obj_offset << " - " << (oop) *obj << " [" << name << "] " << endl;
+    _log << "Symbol: " << (oop) obj_offset << " - " << (oop) *obj << " [" << name << "] " << endl;
     * obj = (word) vm->new_symbol(name);
-    // debug() << "offset: " << (oop) obj_offset << " - obj: " << (oop) *obj
+    // _log << "offset: " << (oop) obj_offset << " - obj: " << (oop) *obj
     //         << " [" << name << "] -> " << " vt: " << * (oop*) *obj << " == " << core->get_prime("Symbol") << endl;
   }
 }

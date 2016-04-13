@@ -2,12 +2,15 @@
 #define MMOBJ_HPP
 
 #include "defs.hpp"
+#include "log.hpp"
 #include <vector>
 #include <map>
 #include <list>
 
 class CoreImage;
 class VM;
+
+typedef struct {} InternalError;
 
 class MMObj {
 public:
@@ -182,6 +185,7 @@ public:
   CoreImage* core() { return _core_image; };
 
 private:
+  MMLog _log;
   // VM* _vm;
   CoreImage* _core_image;
 };

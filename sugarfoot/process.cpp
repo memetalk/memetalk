@@ -7,15 +7,18 @@
 #include "vm.hpp"
 #include "core_image.hpp"
 #include "mmc_image.hpp"
-#include "report.hpp"
 #include "mmobj.hpp"
 #include "utils.hpp"
 #include "ctrl.hpp"
 #include <sstream>
 #include <assert.h>
 
-Process::Process(VM* vm)
-  :   _is_dbg(false), _vm(vm), _mmobj(vm->mmobj()), _control(new ProcessControl()), _dbg_handler(NULL, MM_NULL) {
+
+#define DBG() _log << _log.cyan << (_is_dbg? "[DBGProc|" : "[Target|") << __FUNCTION__ << "()]" << _log.normal
+
+
+Process::Process(VM* vm, bool is_debugger)
+  : _log(is_debugger?LOG_DBG_PROC:LOG_TARGET_PROC), _is_dbg(is_debugger), _vm(vm), _mmobj(vm->mmobj()), _control(new ProcessControl()), _dbg_handler(NULL, MM_NULL) {
   init();
   _state = RUN_STATE;
   _step_bp = MM_NULL;
@@ -30,7 +33,7 @@ oop Process::run(oop recv, oop selector_sym, int* exc) {
 
 void Process::init() {
   _stack = (word*) malloc(DEFAULT_STACK_SIZE);
-  // dbg() << " Initial stack " << _stack << endl;
+  // DBG() << " Initial stack " << _stack << endl;
   _stack_depth = 0;
   _state = INVALID_STATE;
   _sp = _stack; //stack
@@ -43,7 +46,7 @@ void Process::init() {
 }
 
 oop Process::get_arg(number idx) {
-  // std::cerr << "Process::get_arg " << idx << " fp: " << _fp << " *:" << * ((oop*)_fp + idx) << endl;
+  // DBG() << "Process::get_arg " << idx << " fp: " << _fp << " *:" << * ((oop*)_fp + idx) << endl;
   return * ((oop*)_fp + idx);
 };
 
@@ -56,7 +59,7 @@ oop Process::set_dp(oop dp) {
 }
 
 oop Process::rp() {
-  // dbg() << "Process::rp  fp:" <<  _fp << " _ss:" << _ss << " ==> " << * (oop*) (_fp + _ss) << endl;
+  // DBG() << "Process::rp  fp:" <<  _fp << " _ss:" << _ss << " ==> " << * (oop*) (_fp + _ss) << endl;
   return * (oop*) (_fp + _ss );
 }
 
@@ -73,7 +76,7 @@ bytecode* Process::ip_from_frame(oop bp) {
 }
 
 void Process::push_frame(oop recv, oop drecv, number arity, number storage_size) {
-  // dbg() << "++ Push frame:  " << _sp << " num locals " << num_locals << endl;
+  // DBG() << "++ Push frame:  " << _sp << " num locals " << num_locals << endl;
 
   // oop curr_sp = _sp;
   _stack_depth++;
@@ -85,7 +88,7 @@ void Process::push_frame(oop recv, oop drecv, number arity, number storage_size)
   oop fp = _fp;
   _fp = _sp - (arity - 1);  // _sp points to the last arg pushed
 
-  dbg() << "push_frame before -- sp: " << _sp << " old fp: " << fp << " new fp:" << _fp << endl;
+  DBG() << "push_frame before -- sp: " << _sp << " old fp: " << fp << " new fp:" << _fp << endl;
 
   for (int i = 0; i < storage_size - arity; i++) {
     stack_push(MM_NULL);
@@ -107,7 +110,7 @@ void Process::push_frame(oop recv, oop drecv, number arity, number storage_size)
 
   _ss = storage_size;
 
-  dbg() << "push_frame result: arity: " << arity << " storage: " << storage_size
+  DBG() << "push_frame result: arity: " << arity << " storage: " << storage_size
         << " fp: " << _fp << " bp: " << _bp << " cp: " << _cp << " ip: " << _ip
         << " mp: " << _mp << endl;
 
@@ -116,21 +119,21 @@ void Process::push_frame(oop recv, oop drecv, number arity, number storage_size)
   //   if (_cp) {
   //     oop name = _mmobj->mm_function_get_name(_cp);
   //     char* str_name = _mmobj->mm_string_cstr(name);
-  //     std::cerr << "FRAME: " << str_name << " FP" << _fp << " BP:" << _bp
+  //     DBG() << "FRAME: " << str_name << " FP" << _fp << " BP:" << _bp
   //               << " CP: " << _cp << " IP: " << _ip << endl;
   //   } else {
-  //     std::cerr << "FRAME FP:" << _fp << " BP:" << _bp
+  //     DBG() << "FRAME FP:" << _fp << " BP:" << _bp
   //               << " CP: " << _cp << " IP: " << _ip << endl;
   //   }
   // }
 
-  // dbg() << " push frame SP is: " << _sp << endl;
+  // DBG() << " push frame SP is: " << _sp << endl;
 }
 
 void Process::pop_frame() {
   number storage_size = _ss;
 
-  // dbg() << "pop_frame begin SP: " << _sp << endl;
+  // DBG() << "pop_frame begin SP: " << _sp << endl;
 
   _stack_depth--;
 
@@ -142,20 +145,20 @@ void Process::pop_frame() {
   _cp = stack_pop();
   _fp = stack_pop();
 
-  dbg() << "pop_frame: fp: " << _fp << endl;
+  DBG() << "pop_frame: fp: " << _fp << endl;
 
   _sp = _sp - (storage_size + 2); //2: fp, dp
 
-  dbg() << "pop_frame [fm:" << _stack_depth << " storage_size: " << _ss
+  DBG() << "pop_frame [fm:" << _stack_depth << " storage_size: " << _ss
         << " sp: " << _sp << " fp: " << _fp << " bp: " << _bp << " cp: " << _cp << " ip: " << _ip
         << " mp (before): " << _mp << endl;
 
   if (_cp) {// first frame has _cp = null
-    // dbg() << "pop_frame: getting module from fun " << _cp << endl;
+    // DBG() << "pop_frame: getting module from fun " << _cp << endl;
     _mp = _mmobj->mm_function_get_module(this, _cp, true);
-    dbg() << "MP for fun unloaded: " << _mp << endl;
+    DBG() << "MP for fun unloaded: " << _mp << endl;
   } else {
-    dbg() << "++ MP for fun unloaded is null!" << endl;
+    DBG() << "++ MP for fun unloaded is null!" << endl;
   }
 }
 
@@ -165,16 +168,16 @@ void Process::unload_fun_and_return(oop retval) {
 }
 
 oop Process::ctor_rdp_for(oop rp, oop cp) {
-  dbg() << "ctor_rdp_for rp: " << rp << ", cp: " << cp << endl;
+  DBG() << "ctor_rdp_for rp: " << rp << ", cp: " << cp << endl;
   if (!rp) {
-    bail("no rdp for ctor!");
+    _vm->bail("no rdp for ctor!");
   }
   oop vt = _mmobj->mm_object_vt(rp);
   oop cclass = _mmobj->mm_class_get_compiled_class(this, vt, true);
 
   oop other_cclass = _mmobj->mm_function_get_owner(this, cp, true);
 
-  dbg() << "rdp_for_ctor cclass: " << cclass << ", other cclass: " << other_cclass << endl;
+  DBG() << "rdp_for_ctor cclass: " << cclass << ", other cclass: " << other_cclass << endl;
 
   if (cclass == other_cclass) {
     return rp;
@@ -186,7 +189,7 @@ oop Process::ctor_rdp_for(oop rp, oop cp) {
 void Process::basic_new_and_load(oop klass) {
   oop rp = _mmobj->alloc_instance(this, klass);
   oop dp = ctor_rdp_for(rp, _cp);
-  dbg() << "basic_new: " << rp << " dp: " << dp << endl;
+  DBG() << "basic_new: " << rp << " dp: " << dp << endl;
   set_rp(rp);
   set_dp(dp);
 }
@@ -194,11 +197,11 @@ void Process::basic_new_and_load(oop klass) {
 void Process::setup_fp(number params, number storage_size) {
   //ideally this should be a calloc followed by memcpy
   oop fp = (oop) calloc(sizeof(oop), storage_size + 2); //+2: space for rp, dp
-  dbg() << "Process::setup_fp allocated fp: " << fp << " - " << " params: " << params
+  DBG() << "Process::setup_fp allocated fp: " << fp << " - " << " params: " << params
         << " storage_size: " << storage_size << endl;
 
   for (int i = 0; i < storage_size + 2; i++) {
-    dbg() << "Process::setup_fp new_fp[" << i << " - " << (oop*)fp << "]  " << *((oop*)_fp + i) << endl;
+    DBG() << "Process::setup_fp new_fp[" << i << " - " << (oop*)fp << "]  " << *((oop*)_fp + i) << endl;
     ((oop*)fp)[i] = *((oop*)_fp + i);
   }
 
@@ -213,10 +216,10 @@ void Process::setup_fp(number params, number storage_size) {
 }
 
 void Process::restore_fp(oop fp, number params, number env_offset) {
-  dbg() << "Process::restore_fp " << fp << " " << params << " " << env_offset << endl;
+  DBG() << "Process::restore_fp " << fp << " " << params << " " << env_offset << endl;
 
   for (int i = 0; i < params; i++) {
-    dbg() << "fp[" << env_offset + i << "] = " << * (oop*)(_fp + i) << endl;
+    DBG() << "fp[" << env_offset + i << "] = " << * (oop*)(_fp + i) << endl;
     ((oop*)fp)[env_offset + i] = * (oop*)(_fp + i);
   }
   _fp = fp;
@@ -227,13 +230,13 @@ bool Process::load_fun(oop recv, oop drecv, oop fun, bool should_allocate) {
     raise("TypeError", "Expecting function or context");
   }
 
-  dbg() << "Process::load_fun " << fun << endl;
+  DBG() << "Process::load_fun " << fun << endl;
 
   if (_mmobj->mm_function_is_getter(this, fun, true)) {
     number idx = _mmobj->mm_function_access_field(this, fun, true);
-    dbg() << "GETTER: idx " << idx << " on " << recv << endl;
+    DBG() << "GETTER: idx " << idx << " on " << recv << endl;
     oop val = ((oop*)drecv)[idx];
-    dbg() << "GETTER: pushing retval: " << val << endl;
+    DBG() << "GETTER: pushing retval: " << val << endl;
     stack_push(val);
     return false;
   }
@@ -243,25 +246,25 @@ bool Process::load_fun(oop recv, oop drecv, oop fun, bool should_allocate) {
   push_frame(recv, drecv, num_params, storage_size);
 
 
-  dbg() << "storage: " << _ss << " " << _mmobj->mm_string_cstr(this, _mmobj->mm_function_get_name(this, fun, true), true) << endl;
+  DBG() << "storage: " << _ss << " " << _mmobj->mm_string_cstr(this, _mmobj->mm_function_get_name(this, fun, true), true) << endl;
 
-  // std::cerr << "line mapping: " << " " << _mmobj->mm_string_cstr(_mmobj->mm_function_get_name(fun)) << endl;
+  // DBG() << "line mapping: " << " " << _mmobj->mm_string_cstr(_mmobj->mm_function_get_name(fun)) << endl;
   // oop mapping = _mmobj->mm_function_get_line_mapping(fun);
   // std::map<oop, oop>::iterator it = _mmobj->mm_dictionary_begin(mapping);
   // std::map<oop, oop>::iterator end = _mmobj->mm_dictionary_end(mapping);
   // for ( ; it != end; it++) {
-  //   std::cerr << untag_small_int(it->first) << " => " << untag_small_int(it->second) << endl;
+  //   DBG() << untag_small_int(it->first) << " => " << untag_small_int(it->second) << endl;
   // }
-  // std::cerr << "loc mapping: " << endl;
+  // DBG() << "loc mapping: " << endl;
   // mapping = _mmobj->mm_function_get_loc_mapping(fun);
   // it = _mmobj->mm_dictionary_begin(mapping);
   // end = _mmobj->mm_dictionary_end(mapping);
   // for ( ; it != end; it++) {
-  //   std::cerr << untag_small_int(it->first) << " => [" << _mmobj->mm_list_size(it->second) << "] " ;
+  //   DBG() << untag_small_int(it->first) << " => [" << _mmobj->mm_list_size(it->second) << "] " ;
   //   for(int i = 0; i < _mmobj->mm_list_size(it->second); i++) {
-  //     std::cerr << " " << untag_small_int(_mmobj->mm_list_entry(it->second, i));
+  //     DBG() << " " << untag_small_int(_mmobj->mm_list_entry(it->second, i));
   //   }
-  //   std::cerr << endl;
+  //   DBG() << endl;
   // }
 
   if (_mmobj->mm_is_context(fun)) {
@@ -274,8 +277,8 @@ bool Process::load_fun(oop recv, oop drecv, oop fun, bool should_allocate) {
 
   _cp = fun;
   _mp = _mmobj->mm_function_get_module(this, _cp, true);
-  dbg() << "MP for fun load: " << _mp << endl;
-  dbg() << "_cp is " << _cp << endl;
+  DBG() << "MP for fun load: " << _mp << endl;
+  DBG() << "_cp is " << _cp << endl;
 
   if (_mmobj->mm_function_is_ctor(this, fun, true) and should_allocate) {
     basic_new_and_load(recv);
@@ -291,13 +294,13 @@ bool Process::load_fun(oop recv, oop drecv, oop fun, bool should_allocate) {
       return false;
     } else if (ret == PRIM_RAISED) {
       oop ex_oop = stack_pop(); //shit
-      dbg() << "load_fun: prim returned: RAISED " << ex_oop << endl;
+      DBG() << "load_fun: prim returned: RAISED " << ex_oop << endl;
       pop_frame();
       maybe_debug_on_raise(ex_oop);
       //we rely on compiler generating a pop instruction to bind ex_oop to the catch var
       stack_push(unwind_with_exception(ex_oop));
-        // dbg() << "load_fun: unwind_with_exception reached primitive. c++ throwing...: " << ex_oop << endl;
-      dbg() << "load_fun: unwind_with_exception rached catch block for " << ex_oop << endl;
+        // DBG() << "load_fun: unwind_with_exception reached primitive. c++ throwing...: " << ex_oop << endl;
+      DBG() << "load_fun: unwind_with_exception rached catch block for " << ex_oop << endl;
       // oop value = stack_pop(); //shit
       // unload_fun_and_return(value);
       return false;
@@ -305,10 +308,10 @@ bool Process::load_fun(oop recv, oop drecv, oop fun, bool should_allocate) {
   }
 
 
-  // dbg() << "load_fun: module for fun " << fun << " is " << _mp << endl;
-  // dbg() << "load_fun: is ctor? " << _mmobj->mm_function_is_ctor(fun) << " alloc? " << should_allocate << endl;
+  // DBG() << "load_fun: module for fun " << fun << " is " << _mp << endl;
+  // DBG() << "load_fun: is ctor? " << _mmobj->mm_function_is_ctor(fun) << " alloc? " << should_allocate << endl;
   _ip = _mmobj->mm_function_get_code(this, fun, true);
-  // dbg() << "first instruction " << decode_opcode(*_ip) << endl;
+  // DBG() << "first instruction " << decode_opcode(*_ip) << endl;
   _code_size = _mmobj->mm_function_get_code_size(this, fun);
   maybe_tick_call();
   return true;
@@ -332,7 +335,7 @@ oop Process::send(oop recv, oop selector, oop args, int* exc) {
 }
 
 oop Process::do_send(oop recv, oop selector, int num_args, int *exc) {
-  dbg() << "-- begin do_send, recv: " << recv
+  DBG() << "-- begin do_send, recv: " << recv
         << ", selector: " << _mmobj->mm_symbol_cstr(this, selector, true) << " #args: " << num_args << endl;
 
   *exc = 0;
@@ -343,10 +346,10 @@ oop Process::do_send(oop recv, oop selector, int num_args, int *exc) {
   if (!fun) {
     std::stringstream s;
     s << _mmobj->mm_symbol_cstr(this, selector, true) << " not found in object " << recv;
-    dbg() << s << endl;
+    DBG() << s << endl;
     *exc = 1;
     oop ex = mm_exception("DoesNotUnderstand", s.str().c_str());
-    dbg() << "-- end do_send returning exception object " << ex << endl;
+    DBG() << "-- end do_send returning exception object " << ex << endl;
     return ex;
   }
 
@@ -354,10 +357,10 @@ oop Process::do_send(oop recv, oop selector, int num_args, int *exc) {
   if (num_args != arity) {
     std::stringstream s;
     s << _mmobj->mm_symbol_cstr(this, selector, true) << ": expects " <<  arity << " but got " << num_args;
-    dbg() << s << endl;
+    DBG() << s << endl;
     *exc = 1;
     oop ex = mm_exception("ArityError", s.str().c_str());
-    dbg() << "-- end do_send returning exception object " << ex << endl;
+    DBG() << "-- end do_send returning exception object " << ex << endl;
     return ex;
   }
 
@@ -367,12 +370,12 @@ oop Process::do_send(oop recv, oop selector, int num_args, int *exc) {
     }
   } catch(mm_rewind e) {
     *exc = 1;
-    dbg() << "-- end do_send with excepton: " << e.mm_exception << endl;
+    DBG() << "-- end do_send with excepton: " << e.mm_exception << endl;
     return e.mm_exception;
   }
 
   oop val = stack_pop();
-  dbg() << "-- end do_send, val: " << val << endl;
+  DBG() << "-- end do_send, val: " << val << endl;
   return val;
 }
 
@@ -396,7 +399,7 @@ oop Process::do_call(oop fun, int* exc) {
     raise("TypeError", "expecting Context");
   }
 
-  dbg() << "-- begin do_call fun: " << fun << " sp: " << _sp << ", fp: " << _fp << endl;
+  DBG() << "-- begin do_call fun: " << fun << " sp: " << _sp << ", fp: " << _fp << endl;
 
   *exc = 0;
   try {
@@ -405,12 +408,12 @@ oop Process::do_call(oop fun, int* exc) {
     }
   } catch(mm_rewind e) {
     *exc = 1;
-    dbg() << "-- end do_call with excepton: " << e.mm_exception << endl;
+    DBG() << "-- end do_call with excepton: " << e.mm_exception << endl;
     return e.mm_exception;
   }
 
   oop val = stack_pop();
-  dbg() << "-- end call: " << val << " sp: " << _sp << ", fp: " << _fp << endl;
+  DBG() << "-- end call: " << val << " sp: " << _sp << ", fp: " << _fp << endl;
   return val;
 }
 
@@ -423,9 +426,9 @@ oop Process::call(oop fun, oop args, int* exc) {
   if (num_args != arity) {
     std::stringstream s;
     s << _mmobj->mm_string_cstr(this, _mmobj->mm_function_get_name(this, fun)) << ": expects " <<  arity << " but got " << num_args;
-    dbg() << s << endl;
+    DBG() << s << endl;
     oop ex = mm_exception("ArityError", s.str().c_str());
-    dbg() << "do_call returning exception object " << ex << endl;
+    DBG() << "do_call returning exception object " << ex << endl;
     *exc = 1;
     return ex;
   }
@@ -437,7 +440,7 @@ oop Process::call(oop fun, oop args, int* exc) {
 }
 
 void Process::fetch_cycle(void* stop_at_bp) {
-  dbg() << "begin fetch_cycle fp:" << _fp <<  " stop_fp:" <<  stop_at_bp
+  DBG() << "begin fetch_cycle fp:" << _fp <<  " stop_fp:" <<  stop_at_bp
         << " ip: " << _ip << endl;
 
   //at least one instructionn should be executed.  stop_at_bp is usually the
@@ -451,7 +454,7 @@ void Process::fetch_cycle(void* stop_at_bp) {
   assert(((_bp >= stop_at_bp) && _ip)); //"base pointer and stop_at_bp are wrong"
 
   while ((_bp >= stop_at_bp) && _ip) { // && ((_ip - start_ip) * sizeof(bytecode))  < _code_size) {
-    // std::cerr << "fp " << _fp << " stop " <<  stop_at_bp << " codesize " <<  _code_size << "ip " << _ip << std::endl;
+    // DBG() << "fp " << _fp << " stop " <<  stop_at_bp << " codesize " <<  _code_size << "ip " << _ip << std::endl;
 
     bytecode code = *_ip;
 
@@ -466,19 +469,19 @@ void Process::fetch_cycle(void* stop_at_bp) {
     int arg = decode_args(code);
     // if (_state != RUN_STATE) {
     //   char* name = _mmobj->mm_string_cstr(_mmobj->mm_function_get_name(_cp));
-    //   std::cerr << " [dispatching] " << name << " " << (_ip-1) << " " << opcode << endl;
+    //   DBG() << " [dispatching] " << name << " " << (_ip-1) << " " << opcode << endl;
     // }
     dispatch(opcode, arg);
-    // dbg() << " [end of dispatch] " << opcode << endl;
+    // DBG() << " [end of dispatch] " << opcode << endl;
   }
-  dbg() << "end fetch_cycle" << endl;
+  DBG() << "end fetch_cycle" << endl;
 }
 
 void Process::maybe_tick_return() {
   if (_state == STEP_INTO_STATE) {
     _volatile_breakpoints.push_back(_ip);
   }
-  // std::cerr << "maybe_tick_return: " << _step_fp << " " << _fp << endl;
+  // DBG() << "maybe_tick_return: " << _step_fp << " " << _fp << endl;
 }
 
 void Process::maybe_tick_call() {
@@ -492,51 +495,51 @@ void Process::tick() {
 
   if (_state == RUN_STATE || _state == STEP_INTO_STATE || _state == STEP_OVER_STATE) {
     for(std::list<bytecode*>::iterator it = _volatile_breakpoints.begin(); it != _volatile_breakpoints.end(); it++) {
-      // std::cerr << "tick: looking for breakpoint "
+      // DBG() << "tick: looking for breakpoint "
       //           << *it << " =?= " << _ip
       //           << " -- opcode: " << decode_opcode(*_ip) << endl;
       if (*it == _ip) {
-        // std::cerr << "BREAK on "  << _ip << " " << decode_opcode(*_ip) << endl;
+        // DBG() << "BREAK on "  << _ip << " " << decode_opcode(*_ip) << endl;
         _volatile_breakpoints.erase(it);
         goto do_pause;
       }
     }
     if (_step_bp >= _bp) {
-      // std::cerr << "BREAK on FP "  << _fp << " " << _ip << " " << decode_opcode(*_ip) << endl;
+      // DBG() << "BREAK on FP "  << _fp << " " << _ip << " " << decode_opcode(*_ip) << endl;
       goto do_pause;
     }
   } else if (_state == STEP_OUT_STATE) {
     if (_step_bp >= _bp) {
-      // std::cerr << "BREAK on FP "  << _fp << " " << _ip << " " << decode_opcode(*_ip) << endl;
+      // DBG() << "BREAK on FP "  << _fp << " " << _ip << " " << decode_opcode(*_ip) << endl;
       goto do_pause;
     }
   } else if (_state == HALT_STATE) {
-    // std::cerr << "tick:HALT state. goto pause " << endl;
+    // DBG() << "tick:HALT state. goto pause " << endl;
     goto do_pause;
   }
   return;
 
   do_pause:
-    // std::cerr << "tick: do_pause " << endl;
+    // DBG() << "tick: do_pause " << endl;
     int exc;
     oop retval = _dbg_handler.first->send_0(_dbg_handler.second,
                                             _vm->new_symbol("process_paused"), &exc);
     check_and_print_exception(_dbg_handler.first, exc, retval);
-    // std::cerr << "tick:HALT "
+    // DBG() << "tick:HALT "
     //           << _mmobj->mm_string_cstr(_mmobj->mm_function_get_name(_cp))
     //           << " next opcode" <<  decode_opcode(*_ip) << endl;
     _state = HALT_STATE;
     _volatile_breakpoints.clear();
     _step_bp = MM_NULL;
     _control->pause();
-    // std::cerr << "Process::tick: resuming..." << endl;
+    // DBG() << "Process::tick: resuming..." << endl;
 }
 
 void Process::step_into() {
-  // std::cerr << "Process::step_into..." << endl;
+  // DBG() << "Process::step_into..." << endl;
   bytecode* next = _mmobj->mm_function_next_expr(this, _cp, _ip, true);
   if (next) {
-    // std::cerr << "step_into: BP on next op: " << next << " "
+    // DBG() << "step_into: BP on next op: " << next << " "
     //           << decode_opcode(*next) << endl;
     _volatile_breakpoints.push_back(next);
   }
@@ -545,37 +548,37 @@ void Process::step_into() {
 }
 
 void Process::step_over() {
-  // std::cerr << "Process::step_over resuming ..." << endl;
+  // DBG() << "Process::step_over resuming ..." << endl;
   bytecode* next = _mmobj->mm_function_next_expr(this, _cp, _ip, true);
   if (next) {
-    // std::cerr << "step_over: BP on next op: " << next << " "
+    // DBG() << "step_over: BP on next op: " << next << " "
     //           << decode_opcode(*next) << endl;
     _volatile_breakpoints.push_back(next);
   }
   _step_bp = *(oop*)_bp; //previous bp
-  // std::cerr  << "ste_over will br on: " << _step_bp << " " << std::endl;
+  // DBG()  << "ste_over will br on: " << _step_bp << " " << std::endl;
   _state = STEP_OVER_STATE;
   _control->resume();
 }
 
 void Process::step_over_line() {
-  // std::cerr << "Process::step_over_line resuming ..." << endl;
+  // DBG() << "Process::step_over_line resuming ..." << endl;
   bytecode* next = _mmobj->mm_function_next_line_expr(this, _cp, _ip, true);
   if (next) {
-    // std::cerr << "step_over_line: BP on next op: " << next << " "
+    // DBG() << "step_over_line: BP on next op: " << next << " "
     //           << decode_opcode(*next) << endl;
     _volatile_breakpoints.push_back(next);
   }
   _step_bp = *(oop*)_bp; //previous frame
-  // std::cerr  << "ste_over_line will br on FP: " << _step_bp << " " << *((oop*)_bp - 6) << std::endl;
+  // DBG()  << "ste_over_line will br on FP: " << _step_bp << " " << *((oop*)_bp - 6) << std::endl;
   _state = STEP_OVER_STATE;
   _control->resume();
 }
 
 void Process::step_out() {
-  // std::cerr << "Process::step_out resuming ..." << endl;
+  // DBG() << "Process::step_out resuming ..." << endl;
   _step_bp = *(oop*)_bp; //previous bp
-  // std::cerr  << "ste_out will br on FP: " << _step_bp << " " << std::endl;
+  // DBG()  << "ste_out will br on FP: " << _step_bp << " " << std::endl;
   _state = STEP_OUT_STATE;
   _control->resume();
 }
@@ -589,13 +592,13 @@ void Process::handle_send(number num_args) {
   oop selector = stack_pop();
   oop recv = stack_pop(); //(oop) * _sp;
 
-  dbg() << " SEND " << selector << " name: " << _mmobj->mm_symbol_cstr(this, selector)
+  DBG() << " SEND " << selector << " name: " << _mmobj->mm_symbol_cstr(this, selector)
           << " " << "recv: " << recv << " vt: " << _mmobj->mm_object_vt(recv) << endl;
 
   std::pair<oop,oop> res = lookup(recv, _mmobj->mm_object_vt(recv), selector);
   oop drecv = res.first;
   oop fun = res.second;
-  dbg() << "Lookup FOUND " << fun << endl;
+  DBG() << "Lookup FOUND " << fun << endl;
 
   if (!fun) {
     std::stringstream s;
@@ -611,12 +614,12 @@ void Process::handle_send(number num_args) {
   if (num_args != arity) {
     std::stringstream s;
     s << _mmobj->mm_string_cstr(this, _mmobj->mm_function_get_name(this, fun)) << ": expects " <<  arity << " but got " << num_args;
-    dbg() << s << endl;
+    DBG() << s << endl;
     oop ex = mm_exception("ArityError", s.str().c_str());
-    dbg() << "handle_send: created exception " << ex << endl;
+    DBG() << "handle_send: created exception " << ex << endl;
     maybe_debug_on_raise(ex);
     unwind_with_exception(ex);
-    dbg() << "handle_send: unwinded ex. returning exception " << ex << endl;
+    DBG() << "handle_send: unwinded ex. returning exception " << ex << endl;
     stack_push(ex);
     return;
   }
@@ -625,7 +628,7 @@ void Process::handle_send(number num_args) {
 
 void Process::handle_super_ctor_send(number num_args) {
   oop selector = stack_pop();
-  // dbg() << " SUPER: " << selector << " -- " << _mmobj->mm_symbol_cstr(selector) << endl;
+  // DBG() << " SUPER: " << selector << " -- " << _mmobj->mm_symbol_cstr(selector) << endl;
 
   // lookup starts at the parent of rp's class
   oop instance = dp();
@@ -638,10 +641,10 @@ void Process::handle_super_ctor_send(number num_args) {
   oop fun = res.second;
 
   if (!fun) {
-    dbg() << "super Lookup failed";
+    DBG() << "super Lookup failed";
     std::stringstream s;
     s << _mmobj->mm_symbol_cstr(this, selector) << " not found in child object " << instance;
-    dbg() << s << endl;
+    DBG() << s << endl;
     //we rely on compiler generating a pop instruction to bind ex_oop to the catch var
     oop oo_ex = mm_exception("DoesNotUnderstand", s.str().c_str());
     maybe_debug_on_raise(oo_ex);
@@ -649,14 +652,14 @@ void Process::handle_super_ctor_send(number num_args) {
     return;
   }
 
-  dbg() << "Lookup FOUND " << fun << endl;
+  DBG() << "Lookup FOUND " << fun << endl;
 
 
   number arity = _mmobj->mm_function_get_num_params(this, fun);
   if (num_args != arity) {
     std::stringstream s;
     s << "arity and num_args differ: " << num_args << " != " << arity;
-    dbg() << s << endl;
+    DBG() << s << endl;
     oop oo_ex = mm_exception("ArityError", s.str().c_str());
     maybe_debug_on_raise(oo_ex);
     stack_push(unwind_with_exception(oo_ex));
@@ -667,15 +670,15 @@ void Process::handle_super_ctor_send(number num_args) {
 }
 
 void Process::handle_call(number num_args) {
-  // std::cerr << "handle_call" << endl;
+  // DBG() << "handle_call" << endl;
   oop fun = stack_pop();
-  // std::cerr << "handle_call: fn " << fun << endl;
+  // DBG() << "handle_call: fn " << fun << endl;
   number arity = _mmobj->mm_function_get_num_params(this, fun);
-  // std::cerr << "handle_call: arity " << arity << endl;
+  // DBG() << "handle_call: arity " << arity << endl;
   if (num_args != arity) {
     std::stringstream s;
     s << _mmobj->mm_string_cstr(this, _mmobj->mm_function_get_name(this, fun)) << ": expects " <<  arity << " but got " << num_args;
-    dbg() << s << endl;
+    DBG() << s << endl;
     oop oo_ex = mm_exception("ArityError", s.str().c_str());
     maybe_debug_on_raise(oo_ex);
     stack_push(unwind_with_exception(oo_ex));
@@ -691,85 +694,85 @@ void Process::handle_return(oop val) {
 }
 
 void Process::dispatch(int opcode, int arg) {
-    // dbg() << " executing " << opcode << " " << arg << endl;
+    // DBG() << " executing " << opcode << " " << arg << endl;
     oop val;
     switch(opcode) {
       case PUSH_LOCAL:
-        dbg() << "PUSH_LOCAL " << arg << " " << (oop) *(_fp + arg) << endl;
+        DBG() << "PUSH_LOCAL " << arg << " " << (oop) *(_fp + arg) << endl;
         stack_push(*(_fp + arg));
         break;
       case PUSH_LITERAL:
-        dbg() << "PUSH_LITERAL " << arg << " " << _mmobj->mm_function_get_literal_by_index(this, _cp, arg) << endl;
+        DBG() << "PUSH_LITERAL " << arg << " " << _mmobj->mm_function_get_literal_by_index(this, _cp, arg) << endl;
         stack_push(_mmobj->mm_function_get_literal_by_index(this, _cp, arg));
         break;
       case PUSH_MODULE:
-        dbg() << "PUSH_MODULE " << arg << " " << _mp << endl;
+        DBG() << "PUSH_MODULE " << arg << " " << _mp << endl;
         stack_push(_mp);
         break;
       case PUSH_FIELD:
-        dbg() << "PUSH_FIELD " << arg << " " << (oop) *(dp() + arg + 2) <<  " dp: " << dp() << endl;
+        DBG() << "PUSH_FIELD " << arg << " " << (oop) *(dp() + arg + 2) <<  " dp: " << dp() << endl;
         stack_push(*(dp() + arg + 2));
         break;
       case PUSH_THIS:
-        dbg() << "PUSH_THIS " << rp() << endl;
+        DBG() << "PUSH_THIS " << rp() << endl;
         stack_push(rp());
         break;
       case PUSH_FP:
-        dbg() << "PUSH_FP " << arg << " -- " << _fp << endl;
+        DBG() << "PUSH_FP " << arg << " -- " << _fp << endl;
         stack_push(_fp);
         break;
 
       case PUSH_CONTEXT:
-        dbg() << "PUSH_CONTEXT " << arg << endl;
+        DBG() << "PUSH_CONTEXT " << arg << endl;
         stack_push(_cp);
         break;
       case PUSH_BIN:
-        dbg() << "PUSH_BIN " << arg << endl;
+        DBG() << "PUSH_BIN " << arg << endl;
         stack_push(arg);
         break;
       case RETURN_TOP:
         val = stack_pop();
-        dbg() << "RETURN_TOP " << arg << " " << val << endl;
+        DBG() << "RETURN_TOP " << arg << " " << val << endl;
         handle_return(val);
         break;
       case RETURN_THIS:
-        dbg() << "RETURN_THIS " << rp() << endl;
+        DBG() << "RETURN_THIS " << rp() << endl;
         handle_return(rp());
         break;
       case POP:
         val =stack_pop();
-        dbg() << "POP " << arg << " = " << val << endl;
+        DBG() << "POP " << arg << " = " << val << endl;
         break;
       case POP_LOCAL:
         val = stack_pop();
-        dbg() << "POP_LOCAL " << arg << " on " << (oop) (_fp + arg) << " -- "
+        DBG() << "POP_LOCAL " << arg << " on " << (oop) (_fp + arg) << " -- "
                 << (oop) *(_fp + arg) << " = " << val << endl;
         *(_fp + arg) = (word) val;
         break;
       case POP_FIELD:
         val = stack_pop();
-        dbg() << "POP_FIELD " << arg << " on " << (oop) (dp() + arg + 2) << " dp: " << dp() << " -- "
+        DBG() << "POP_FIELD " << arg << " on " << (oop) (dp() + arg + 2) << " dp: " << dp() << " -- "
                 << (oop) *(dp() + arg + 2) << " = " << val << endl; //2: vt, delegate
         *(dp() + arg + 2) = (word) val;
         break;
       case SEND:
-        dbg() << "SEND " << arg << endl;
+        DBG() << "SEND " << arg << endl;
         handle_send(arg);
         break;
       case SUPER_CTOR_SEND:
         handle_super_ctor_send(arg);
         break;
       case CALL:
-        dbg() << "CALL " << arg << endl;
+        DBG() << "CALL " << arg << endl;
         handle_call(arg);
         break;
       case JMP:
-        dbg() << "JMP " << arg << " " << endl;
+        DBG() << "JMP " << arg << " " << endl;
         _ip += (arg -1); //_ip already suffered a ++ in dispatch
         break;
       case JZ:
         val = stack_pop();
-        dbg() << "JZ " << arg << " " << val << endl;
+        DBG() << "JZ " << arg << " " << val << endl;
         if ((val == MM_FALSE) || (val == MM_NULL)) {
           _ip += (arg -1); //_ip already suffered a ++ in dispatch
         }
@@ -780,8 +783,8 @@ void Process::dispatch(int opcode, int arg) {
       // case RETURN_THIS:
       //   break;
       default:
-        dbg() << "Unknown opcode " << opcode << endl;
-        bail("opcode not implemented");
+        DBG() << "Unknown opcode " << opcode << endl;
+        _vm->bail("opcode not implemented");
     }
 }
 
@@ -791,20 +794,20 @@ std::pair<oop, oop> Process::lookup(oop drecv, oop vt, oop selector) {
     return std::pair<oop, oop>(MM_NULL, MM_NULL);
   }
 
-  // dbg() << "lookup selector on vt: " << vt << " whose vt is " << _mmobj->mm_object_vt(*(oop*)vt) << endl;
+  // DBG() << "lookup selector on vt: " << vt << " whose vt is " << _mmobj->mm_object_vt(*(oop*)vt) << endl;
 
   oop dict = _mmobj->mm_behavior_get_dict(vt);
-  dbg() << "Process::lookup dict: " << dict
+  DBG() << "Process::lookup dict: " << dict
         << " selector: " << _mmobj->mm_symbol_cstr(this, selector, true) << endl;
 
   if (_mmobj->mm_dictionary_has_key(this, dict, selector, true)) {
     oop fun = _mmobj->mm_dictionary_get(this, dict, selector, true);
-    dbg() << "Lookup of " << selector << " found in " << vt
+    DBG() << "Lookup of " << selector << " found in " << vt
             << " fun: " << fun << " drecv: " << drecv << endl;
     std::pair<oop,oop> res = std::pair<oop,oop>(drecv, fun);
     return res;
   } else {
-    dbg() << "Lookup of " << selector << " NOT found in " << vt << ", recursively looking up..." << endl;
+    DBG() << "Lookup of " << selector << " NOT found in " << vt << ", recursively looking up..." << endl;
     oop pklass = _mmobj->mm_object_delegate(vt);
     oop delegate = _mmobj->mm_object_delegate(drecv);
     return lookup(delegate, pklass, selector);
@@ -814,25 +817,25 @@ std::pair<oop, oop> Process::lookup(oop drecv, oop vt, oop selector) {
 oop Process::stack_pop() {
   oop val = * (oop*)_sp;
   _sp--;
-  dbg() << "     POP " << val << " >> " << _sp << endl;
+  DBG() << "     POP " << val << " >> " << _sp << endl;
   return val;
 }
 
 void Process::stack_push(oop data) {
   _sp++;
-  // dbg() << "     PUSH " << data << " -> " << _sp << endl;
+  // DBG() << "     PUSH " << data << " -> " << _sp << endl;
   * (word*) _sp = (word) data;
 }
 
 void Process::stack_push(word data) {
   _sp++;
-  // dbg() << "     PUSH " << (oop) data << " -> " << _sp << endl;
+  // DBG() << "     PUSH " << (oop) data << " -> " << _sp << endl;
   * (word*) _sp = data;
 }
 
 void Process::stack_push(bytecode* data) {
   _sp++;
-  // dbg() << "     PUSH " << data << " -> " << _sp << endl;
+  // DBG() << "     PUSH " << data << " -> " << _sp << endl;
   * (word*) _sp = (word) data;
 }
 
@@ -840,10 +843,10 @@ void Process::stack_push(bytecode* data) {
 int Process::execute_primitive(std::string name) {
   try {
     int val = _vm->get_primitive(this, name)(this);
-    dbg() << "primitive " << name << " returned " << val << endl;
+    DBG() << "primitive " << name << " returned " << val << endl;
     return val;
   } catch(mm_rewind e) {
-    dbg() << "primitive " << name << " raised " << e.mm_exception << endl;
+    DBG() << "primitive " << name << " raised " << e.mm_exception << endl;
     stack_push(e.mm_exception);
     return PRIM_RAISED;
   }
@@ -852,13 +855,13 @@ int Process::execute_primitive(std::string name) {
 
 bool Process::exception_has_handler(oop e, oop bp) {
   oop cp = cp_from_frame(bp);
-  dbg() << "** exception_has_handler e: " << e << " on cp: " << cp << endl;
+  DBG() << "** exception_has_handler e: " << e << " on cp: " << cp << endl;
 
   if (cp == NULL) {
     return false;
   }
 
-  dbg() << "exception_has_handler: " << _mmobj->mm_string_cstr(this, _mmobj->mm_function_get_name(this, cp, true), true) << endl;
+  DBG() << "exception_has_handler: " << _mmobj->mm_string_cstr(this, _mmobj->mm_function_get_name(this, cp, true), true) << endl;
 
   if (_mmobj->mm_function_is_prim(this, cp, true)) {
     return exception_has_handler(e, *(oop*)bp);
@@ -867,7 +870,7 @@ bool Process::exception_has_handler(oop e, oop bp) {
   bytecode* code = _mmobj->mm_function_get_code(this, cp, true);
 
   number exception_frames_count = _mmobj->mm_function_exception_frames_count(this, cp, true);
-  dbg() << "exception frames: " << exception_frames_count << endl;
+  DBG() << "exception frames: " << exception_frames_count << endl;
   if (exception_frames_count == 0) { //cp is unable to handle
     return exception_has_handler(e, *(oop*)bp);
   }
@@ -886,32 +889,32 @@ bool Process::exception_has_handler(oop e, oop bp) {
     if (str_type_oop == MM_NULL) {
       type_oop  = MM_NULL;
     } else {
-      dbg() << "fetching exception type for name: " << str_type_oop << endl;
+      DBG() << "fetching exception type for name: " << str_type_oop << endl;
       oop mp = _mmobj->mm_function_get_module(this, cp, true);
       int exc;
       type_oop = send_0(mp, _vm->new_symbol(this, str_type_oop), &exc);
       if (!(exc == 0)) {
         raise("InternalError", "Unable to get exception type from module");
       }
-      dbg() << "fetching exception type got " << type_oop << endl;;
+      DBG() << "fetching exception type got " << type_oop << endl;;
     }
 
     bytecode* ip = ip_from_frame(bp);
 
     unsigned long instr = ip - code;
 
-    dbg() << "RAISE instr: " << instr << " try: " << try_block
+    DBG() << "RAISE instr: " << instr << " try: " << try_block
             << " catch: " << catch_block << " type: " << type_oop << endl;
 
     bool delegates_to = _mmobj->delegates_to(_mmobj->mm_object_vt(e), type_oop);
-    dbg() << "delegates_to == " << delegates_to  << endl;
+    DBG() << "delegates_to == " << delegates_to  << endl;
 
-    dbg() << "::" <<  (instr >= try_block) << " " << (instr < catch_block)
+    DBG() << "::" <<  (instr >= try_block) << " " << (instr < catch_block)
             << " " << (type_oop == MM_NULL) << " " << delegates_to << endl;
 
     if (instr >= try_block && instr < catch_block &&
         (type_oop == MM_NULL || delegates_to)) {
-      dbg() << "CAUGHT " << endl;
+      DBG() << "CAUGHT " << endl;
       return true;
     }
   }
@@ -923,13 +926,13 @@ void Process::fail(oop e) {
     int exc;
     oop str = send_0(e, _vm->new_symbol("toString"), &exc);
     assert(exc == 0);
-    std::cerr << "Uncaugh exception: \""
+    DBG() << "Uncaugh exception: \""
               << _mmobj->mm_string_cstr(this, str, true) << "\"" << endl;
-    bail();
+    _vm->bail();
 }
 
 oop Process::unwind_with_exception(oop e) {
-  dbg() << "** unwind_with_exception e: " << e << " on cp: " << _cp << endl;
+  DBG() << "** unwind_with_exception e: " << e << " on cp: " << _cp << endl;
 
   maybe_tick_return();
 
@@ -942,17 +945,17 @@ oop Process::unwind_with_exception(oop e) {
     fail(e);
   }
 
-  dbg() << "unwind_with_exception: " << _mmobj->mm_string_cstr(this, _mmobj->mm_function_get_name(this, _cp, true), true) << endl;
+  DBG() << "unwind_with_exception: " << _mmobj->mm_string_cstr(this, _mmobj->mm_function_get_name(this, _cp, true), true) << endl;
 
   if (_mmobj->mm_function_is_prim(this, _cp, true)) {
-    dbg() << "->> unwind reached primitive " << _mmobj->mm_string_cstr(this, _mmobj->mm_function_get_prim_name(this, _cp, true), true) << endl;
+    DBG() << "->> unwind reached primitive " << _mmobj->mm_string_cstr(this, _mmobj->mm_function_get_prim_name(this, _cp, true), true) << endl;
     throw mm_rewind(e);
   }
 
   bytecode* code = _mmobj->mm_function_get_code(this, _cp, true);
 
   number exception_frames_count = _mmobj->mm_function_exception_frames_count(this, _cp, true);
-  dbg() << "exception frames: " << exception_frames_count << endl;
+  DBG() << "exception frames: " << exception_frames_count << endl;
   if (exception_frames_count == 0) { //_cp is unable to handle
     pop_frame();
     return unwind_with_exception(e);
@@ -972,26 +975,26 @@ oop Process::unwind_with_exception(oop e) {
     if (str_type_oop == MM_NULL) {
       type_oop  = MM_NULL;
     } else {
-      dbg() << "fetching exception type for name: " << str_type_oop << endl;
+      DBG() << "fetching exception type for name: " << str_type_oop << endl;
       int exc;
       oop mp = _mmobj->mm_function_get_module(this, _cp, true);
       type_oop = send_0(mp, _vm->new_symbol(this, str_type_oop), &exc);
       if (!(exc == 0)) {
         raise("InternalError", "Unable to get exception type from module");
       }
-      dbg() << "fetching exception type got " << type_oop << endl;;
+      DBG() << "fetching exception type got " << type_oop << endl;;
     }
 
     word instr = _ip - code;
 
-    dbg() << "RAISE instr: " << instr << " try: " << try_block
+    DBG() << "RAISE instr: " << instr << " try: " << try_block
             << " catch: " << catch_block << " type: " << type_oop << endl;
 
     bool delegates_to = _mmobj->delegates_to(_mmobj->mm_object_vt(e), type_oop);
-    dbg() << "delegates_to == " << delegates_to  << endl;
+    DBG() << "delegates_to == " << delegates_to  << endl;
     if (instr >= try_block && instr < catch_block &&
         (type_oop == MM_NULL || delegates_to)) {
-      dbg() << "CAUGHT " << endl;
+      DBG() << "CAUGHT " << endl;
       _ip = code + catch_block;
       return e;
     }
@@ -1003,14 +1006,14 @@ oop Process::unwind_with_exception(oop e) {
 
 
 void Process::raise(const char* ex_type_name, const char* msg) {
-  dbg() << "Process::raise " << ex_type_name << " -- " << msg << endl;
+  DBG() << "Process::raise " << ex_type_name << " -- " << msg << endl;
   //TODO: this is used by mmc_image. I think we should just return the
   // exception and let that class deal with it.
   throw mm_rewind(mm_exception(ex_type_name, msg));
 }
 
 oop Process::mm_exception(const char* ex_type_name, const char* msg) {
-  dbg() << "mm_exception: " << ex_type_name << " -- " << msg << endl;
+  DBG() << "mm_exception: " << ex_type_name << " -- " << msg << endl;
   oop ex_type = _vm->get_prime(ex_type_name);
 
   int exc;
@@ -1018,12 +1021,12 @@ oop Process::mm_exception(const char* ex_type_name, const char* msg) {
   //if this fails, can't call raise() because it calls mm_exception again
   //recursively. So let's just bail.
   assert(exc == 0);
-  dbg() << "mm_exception: returning ex: " << exobj << endl;
+  DBG() << "mm_exception: returning ex: " << exobj << endl;
   return exobj;
 }
 
 void Process::halt_and_debug() {
-  // std::cerr << "Process::halt_and_debug" << endl;
+  // DBG() << "Process::halt_and_debug" << endl;
   _dbg_handler = _vm->start_debugger(this);
   pause();
 }
@@ -1040,15 +1043,15 @@ unsigned int Process::stack_depth() {
 
 oop Process::bp_at(unsigned int idx) { //backwards 0 is current
   if (idx == 0) {
-    // std::cerr << "Process::bp_at BP[" << idx << "] ret&: " << &_bp << endl;
+    // DBG() << "Process::bp_at BP[" << idx << "] ret&: " << &_bp << endl;
     return (oop) &_bp;
   }
   oop bp = _bp;
   for (unsigned int i = 0; i < idx-1; i++) {
     bp = *(oop*) bp;
-    // std::cerr << "Process::bp_at " << i << " = " << bp << endl;
+    // DBG() << "Process::bp_at " << i << " = " << bp << endl;
   }
-  // std::cerr << "Process::bp_at BP[" << idx << "] ret: " << bp << endl;
+  // DBG() << "Process::bp_at BP[" << idx << "] ret: " << bp << endl;
   return bp;
 }
 
@@ -1072,11 +1075,19 @@ oop Process::bp_at(unsigned int idx) { //backwards 0 is current
 // }
 
 
-std::ostream& Process::dbg() {
+MMLog& Process::dbg() {
   if (!_is_dbg) {
-    debug() << "PROC[target]";
+    _log << "TARGET: ";
   } else {
-    debug() << "PROC[debugger]";
+    _log << _log.magenta << "DBG: ";
   }
-  return debug();
+  return _log;
+}
+
+void Process::bail(const std::string& msg) {
+  _vm->bail(msg);
+}
+
+void Process::bail() {
+  _vm->bail();
 }

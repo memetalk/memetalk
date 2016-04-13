@@ -2,6 +2,7 @@
 #define VM_HPP
 
 #include "defs.hpp"
+#include "log.hpp"
 #include <map>
 #include <string>
 #include <list>
@@ -43,11 +44,15 @@ public:
 
   std::pair<Process*, oop> start_debugger(Process* target);
 
+  void bail(const std::string& msg);
+  void bail();
+
 private:
   // void dump_prime_info();
   // void dictionary_dump(oop dict);
   void print_retval(Process*, oop retval);
 
+  MMLog _log;
   int _argc;
   char** _argv;
   bool _online;

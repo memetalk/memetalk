@@ -1,6 +1,5 @@
 #include <stdlib.h>
 #include "core_image.hpp"
-#include "report.hpp"
 #include "utils.hpp"
 #include "vm.hpp"
 
@@ -39,13 +38,13 @@ int CoreImage::TOTAL_PRIMES = 25;
 
 
 CoreImage::CoreImage(VM* vm, const char* filepath)
-  : _vm(vm), _filepath(filepath) {
+  : _log(LOG_CORE),_vm(vm), _filepath(filepath) {
 }
 
 
 bool CoreImage::is_prime(const char* name) {
   for (int i = 0; i < TOTAL_PRIMES; i++) {
-    // debug() << name << " =?= " <<  PRIMES_NAMES[i] << endl;
+    _log << name << " =?= " <<  PRIMES_NAMES[i] << endl;
     if (strcmp(name, PRIMES_NAMES[i]) == 0) {
       return true;
     }
@@ -70,10 +69,10 @@ void CoreImage::load_header() {
   _names_size = unpack_word(_data, 1 * WSIZE);
   _es_size = unpack_word(_data,  2 * WSIZE);
   _ot_size = unpack_word(_data,  3 * WSIZE);
-  debug() << "Header:entries: " << _num_entries << endl;
-  debug() << "Header:names_size: " << _names_size << endl;
-  debug() << "Header:es_size: " << _es_size << endl;
-  debug() << "Header:ot_size: " << _ot_size << endl;
+  _log << "Header:entries: " << _num_entries << endl;
+  _log << "Header:names_size: " << _names_size << endl;
+  _log << "Header:es_size: " << _es_size << endl;
+  _log << "Header:ot_size: " << _ot_size << endl;
 }
 
 void CoreImage::load_prime_objects_table() {
@@ -87,13 +86,12 @@ void CoreImage::load_prime_objects_table() {
       word obj_offset = unpack_word(_data, start_index + ((i+1) * WSIZE));
       oop prime_oop = (oop) (base + obj_offset);
       _primes[prime_name] = prime_oop;
-      debug() << "found prime " << prime_name << ":" << (oop) obj_offset << " (" << _primes[prime_name] << ")" << endl;
+      _log << "found prime " << prime_name << ":" << (oop) obj_offset << " (" << _primes[prime_name] << ")" << endl;
     } else if (is_core_instance(prime_name)) {
       word obj_offset = unpack_word(_data, start_index + ((i+1) * WSIZE));
       oop prime_oop = (oop) (base + obj_offset);
       _core_imod = prime_oop;
-      debug() << "found core instance " << prime_name << ":" << (oop) obj_offset << " (" << _core_imod << ")" << endl;
-
+      _log << "found core instance " << prime_name << ":" << (oop) obj_offset << " (" << _core_imod << ")" << endl;
     }
   }
 }
@@ -101,7 +99,7 @@ void CoreImage::load_prime_objects_table() {
 oop CoreImage::get_prime(const char* name) {
   // debug() << "getting prime [" << name << "]" << endl;
   if (!is_prime(name)) {
-    std::cerr << "ERROR: we will crash: " << name << " is not prime" << endl;
+    MMLog::error() << "We will crash: " << name << " is not prime" << endl;
   }
   return _primes.at(name);
 }

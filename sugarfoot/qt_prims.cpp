@@ -4,7 +4,7 @@ Q_DECLARE_METATYPE (Process*);
 
 #include "qt_prims.hpp"
 #include "vm.hpp"
-#include "report.hpp"
+#include "log.hpp"
 #include "mmobj.hpp"
 #include "utils.hpp"
 #include "core_image.hpp"
@@ -41,6 +41,8 @@ Q_DECLARE_METATYPE (QListWidgetItem*);
 
 static
 QScriptEngine *engine;
+
+static MMLog _log(LOG_QTPRIMS);
 
 static
 oop lookup_bottom_qt_instance(MMObj* mmobj, oop obj) {
@@ -244,12 +246,12 @@ QScriptValue mm_handle(QScriptContext *ctx, QScriptEngine *engine) {
     } else if (arg.isNumber()) {
       proc->mmobj()->mm_list_append(proc, mm_args, tag_small_int(arg.toVariant().toInt()));
     } else if (arg.isQObject()) {
-      bail("TODO: arg.toQObject");
+      proc->bail("TODO: arg.toQObject");
     } else {
       QVariant v = arg.toVariant();
       if (!v.isValid()) {
-        debug() << "mm_handle: unknown arg" << arg.scriptClass() << endl;
-        bail("TODO: unknown arg");
+        _log << "mm_handle: unknown arg" << arg.scriptClass() << endl;
+        proc->bail("TODO: unknown arg");
       } else {
         if (QString(v.typeName()) == "QListWidgetItem*") {
           QListWidgetItem* p = v.value<QListWidgetItem*>();
@@ -273,7 +275,7 @@ QScriptValue mm_handle(QScriptContext *ctx, QScriptEngine *engine) {
   //if proc is halted, we will screw it bt calling
   //(this is while we don't have proper multi-process support + debugging)
   if (!proc->is_running()) {
-    err() << "** woah! don't trigger a slot while its process is not in running state!!! **" << endl;
+    MMLog::error() << "** woah! don't trigger a slot while its process is not in running state!!! **" << endl;
   } else {
     int exc;
     oop res = proc->call(mm_closure, mm_args, &exc);
@@ -305,7 +307,7 @@ static int prim_qapplication_new(Process* proc) {
     _app = new QApplication(proc->vm()->argc(), proc->vm()->argv());
   }
   set_meme_instance(_app, proc->rp());
-  // debug() << "QT: QApplication " << app << endl;
+  // _log << "QT: QApplication " << app << endl;
   init_qt_stuff();
   set_qt_instance(proc->mmobj(), data_self, _app);
   proc->stack_push(proc->rp());
@@ -371,8 +373,8 @@ static int prim_qaction_connect(Process* proc) {
   QScriptValue bridge = globalObject.property("qt_bind_connect");
   bridge.call(globalObject, args);
   if (engine->hasUncaughtException()) {
-    std::cerr << "QT: exception: " << qPrintable(engine->uncaughtException().toString()) << endl;
-    bail();
+    _log << "QT: exception: " << qPrintable(engine->uncaughtException().toString()) << endl;
+    proc->bail();
   }
   proc->stack_push(proc->rp());
   return 0;
@@ -1576,7 +1578,7 @@ public:
     oop dict = _proc->mmobj()->mm_dictionary_new();
     for (int i = 0; i < names.length(); i++) {
       oop key = _proc->vm()->new_symbol(names[i].toLocal8Bit().data());
-      debug() << "FACTORY args: " << names[i].toLocal8Bit().data() << endl;
+      _log << "FACTORY args: " << names[i].toLocal8Bit().data() << endl;
       oop val = _proc->mmobj()->mm_string_new(vals[i].toLocal8Bit().data());
       _proc->mmobj()->mm_dictionary_set(_proc, dict, key, val);
     }
@@ -1721,7 +1723,7 @@ static int prim_qt_qwidget_add_action(Process* proc) {
 
   QWidget* w = (QWidget*) get_qt_instance(proc->mmobj(), data_self);
   QAction* ac = (QAction*)get_qt_instance(proc->mmobj(), oop_action);
-  debug() << "prim_qt_qwidget_add_action -- " << ac << endl;
+  _log << "prim_qt_qwidget_add_action -- " << ac << endl;
   w->addAction(ac);
   proc->stack_push(proc->rp());
   return 0;
@@ -1752,8 +1754,8 @@ static int prim_qt_qwidget_connect(Process* proc) {
   QScriptValue bridge = globalObject.property("qt_bind_connect");
   bridge.call(globalObject, args);
   if (engine->hasUncaughtException()) {
-    debug() << "QT: exception: " << qPrintable(engine->uncaughtException().toString()) << endl;
-    bail();
+    _log << "QT: exception: " << qPrintable(engine->uncaughtException().toString()) << endl;
+    proc->bail();
   }
   proc->stack_push(proc->rp());
   return 0;

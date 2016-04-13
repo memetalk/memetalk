@@ -2,6 +2,7 @@
 #define MMC_FUN
 
 #include "defs.hpp"
+#include "log.hpp"
 #include <map>
 #include <string>
 
@@ -29,6 +30,7 @@ private:
 
   // void  create_param_getters(oop imodule, oop imod_dict, oop params_list);
 
+  MMLog _log;
   VM* _vm;
   MMObj* _mmobj;
   CoreImage* _core_image;
