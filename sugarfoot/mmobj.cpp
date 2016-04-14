@@ -862,7 +862,7 @@ bytecode* MMObj::mm_compiled_function_next_expr(Process* p, oop cfun, bytecode* 
     }
   }
   if (next_offset == INT_MAX) {
-    MMLog::warning() << "next_expr for " << idx << " is NULL" << endl;
+    DBG() << "next_expr for " << idx << " is NULL" << endl;
     return NULL;
   } else {
     return base_ip + next_offset;
@@ -904,7 +904,7 @@ bytecode* MMObj::mm_compiled_function_next_line_expr(Process* p, oop cfun, bytec
   }
 
   if (next_line == INT_MAX) {
-    MMLog::warning() << "next_line for " << idx << " is NULL" << endl;
+    DBG() << "next_line for " << idx << " is NULL" << endl;
     return NULL;
   } else {
     // DBG() << " CURR LINE " << current_line << " NEXT: " << next_line
