@@ -97,7 +97,6 @@ public:
   void bail();
 
 private:
-  MMLog&  dbg();
   void pause() { _state = HALT_STATE; };
 
   void init();

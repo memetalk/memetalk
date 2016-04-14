@@ -8,6 +8,10 @@
 #include <assert.h>
 #include <map>
 
+#define DBG() _log << _log.yellow + _log.bold + "[MMOBJ|" << __FUNCTION__ << "] " << _log.normal
+#define WARNING() MMLog::warning() << "[MMOBJ|" << __FUNCTION__ << "] " << _log.normal
+#define ERROR() MMLog::error() << "[MMOBJ|" << __FUNCTION__ << "] " << _log.normal
+
 
 #define TYPE_CHECK(invalid_condition, ex_type, ex_msg)       \
   if (invalid_condition) {                                   \
@@ -234,7 +238,7 @@ number MMObj::mm_list_index_of(Process* p, oop list, oop elem, bool should_asser
       return pos;
     //some temporary hack while we don't have a self-host compiler doing Object.==
     } else if (mm_is_string(elem) && mm_is_string(*it)) {
-      _log << mm_string_cstr(p, elem) << " <cmp> " << mm_string_cstr(p, *it) << endl;
+      DBG() << mm_string_cstr(p, elem) << " <cmp> " << mm_string_cstr(p, *it) << endl;
       if (strcmp(mm_string_cstr(p, elem), mm_string_cstr(p, *it)) == 0) {
         return pos;
       }
@@ -323,12 +327,12 @@ bool MMObj::mm_dictionary_has_key(Process* p, oop dict, oop key, bool should_ass
              "TypeError","Expected Dictionary")
 
   std::map<oop, oop>* elements = mm_dictionary_frame(p, dict);
-  // _log << dict << "(" << elements->size() << ") has key " << key << " ?" << endl;
+  // DBG() << dict << "(" << elements->size() << ") has key " << key << " ?" << endl;
   for (std::map<oop, oop>::iterator it = elements->begin(); it != elements->end(); it++) {
     if (it->first == key) {
       return true;
     } else if (mm_is_string(key) && mm_is_string(it->first)) {
-      // _log << dict << "(" << elements->size() << ") has key " << mm_string_cstr(key) << " ?=" << mm_string_cstr(it->first) << endl;
+      // DBG() << dict << "(" << elements->size() << ") has key " << mm_string_cstr(key) << " ?=" << mm_string_cstr(it->first) << endl;
       if (strcmp(mm_string_cstr(p, key), mm_string_cstr(p, it->first)) == 0) {
         return true;
       }
@@ -355,15 +359,15 @@ oop MMObj::mm_dictionary_get(Process* p, oop dict, oop key, bool should_assert) 
 
   std::map<oop, oop>* elements = mm_dictionary_frame(p, dict);
 
-  _log << dict << "(" << elements->size() << ") get " << key << endl;
+  DBG() << dict << "(" << elements->size() << ") get " << key << endl;
   for (std::map<oop, oop>::iterator it = elements->begin(); it != elements->end(); it++) {
-    // _log << dict << "(" << elements->size() << ") get direct? " << (it->first == key) << endl;
+    // DBG() << dict << "(" << elements->size() << ") get direct? " << (it->first == key) << endl;
     if (it->first == key) {
       return it->second;
     } else {
-      // _log << dict << "(" << elements->size() << ") get string? " << (mm_is_string(key) && mm_is_string(it->first)) << endl;
+      // DBG() << dict << "(" << elements->size() << ") get string? " << (mm_is_string(key) && mm_is_string(it->first)) << endl;
       if (mm_is_string(key) && mm_is_string(it->first)) {
-        // _log << dict << "(" << elements->size() << ") get: " << mm_is_string(key) << " =?= " << mm_string_cstr(it->first) << endl;
+        // DBG() << dict << "(" << elements->size() << ") get: " << mm_is_string(key) << " =?= " << mm_string_cstr(it->first) << endl;
         if (strcmp(mm_string_cstr(p, key), mm_string_cstr(p, it->first)) == 0) {
           return it->second;
         }
@@ -879,10 +883,10 @@ bytecode* MMObj::mm_compiled_function_next_line_expr(Process* p, oop cfun, bytec
   for ( ; it != end; it++) {
     word b_offset = untag_small_int(it->first);
     word line = untag_small_int(it->second);
-    // _log << " SEARCH CURR LINE "
+    // DBG() << " SEARCH CURR LINE "
     //           << idx << " " << b_offset << " " << line << endl;
     if ((idx >= b_offset) && (current_line < line)) {
-      // _log << "GOT LINE " << line << endl;
+      // DBG() << "GOT LINE " << line << endl;
       current_line = line;
     }
   }
@@ -892,7 +896,7 @@ bytecode* MMObj::mm_compiled_function_next_line_expr(Process* p, oop cfun, bytec
   word next_offset = 0;
   for ( ; it != end; it++) {
     word line = untag_small_int(it->second);
-    // _log << "line: " << line << " " << current_line << " " << next_line << endl;
+    // DBG() << "line: " << line << " " << current_line << " " << next_line << endl;
     if (line > current_line && next_line > line) {
       next_line = line;
       next_offset = untag_small_int(it->first);
@@ -903,7 +907,7 @@ bytecode* MMObj::mm_compiled_function_next_line_expr(Process* p, oop cfun, bytec
     MMLog::warning() << "next_line for " << idx << " is NULL" << endl;
     return NULL;
   } else {
-    // _log << " CURR LINE " << current_line << " NEXT: " << next_line
+    // DBG() << " CURR LINE " << current_line << " NEXT: " << next_line
     //           << " offset: " << next_offset << endl;
     return base_ip + next_offset;
   }
@@ -916,14 +920,14 @@ bytecode* MMObj::mm_compiled_function_next_line_expr(Process* p, oop cfun, bytec
 
 //   bytecode* base_ip = mm_compiled_function_get_code(cfun);
 //   word idx = ip - base_ip;
-//   // _log << "MMOBJ IDX : " << idx << endl;
+//   // DBG() << "MMOBJ IDX : " << idx << endl;
 
 //   oop mapping = mm_compiled_function_get_loc_mapping(cfun);
 //   std::map<oop, oop>::iterator it = mm_dictionary_begin(mapping);
 //   std::map<oop, oop>::iterator end = mm_dictionary_end(mapping);
 //   for ( ; it != end; it++) {
 //     word b_offset = untag_small_int(it->first);
-//     // _log << "LOC_MATCHES_IP? -- " << b_offset << " " <<  idx << std::endl;
+//     // DBG() << "LOC_MATCHES_IP? -- " << b_offset << " " <<  idx << std::endl;
 //     if (idx == b_offset) {
 //       return true;
 //     }
@@ -931,7 +935,7 @@ bytecode* MMObj::mm_compiled_function_next_line_expr(Process* p, oop cfun, bytec
 //       break;
 //     }
 //   }
-//   // _log << "LOC_MATCHES_IP? RET FALSE: " << idx << std::endl;
+//   // DBG() << "LOC_MATCHES_IP? RET FALSE: " << idx << std::endl;
 //   return false;
 // }
 
@@ -1104,7 +1108,7 @@ number MMObj::mm_behavior_size(Process* p, oop behavior, bool should_assert) {
              "TypeError","Expected Behavior")
   oop num = ((oop*)behavior)[3];
   if (is_small_int(num)) {
-    _log << "WARNING: behavior size is tagged and I will untag it" << endl;
+    DBG() << "behavior size is tagged and I will untag it" << endl;
     return untag_small_int(num);
   } else {
     return (number) num;
@@ -1112,7 +1116,7 @@ number MMObj::mm_behavior_size(Process* p, oop behavior, bool should_assert) {
 }
 
 bool MMObj::delegates_to(oop sub_type, oop super_type) {
-  _log << "delegates_to? " << sub_type << " " << super_type << endl;
+  DBG() << "delegates_to? " << sub_type << " " << super_type << endl;
   if (sub_type == NULL) {
     return false;
   }
@@ -1134,20 +1138,20 @@ oop MMObj::mm_new(oop vt, oop delegate, number payload) {
 
 oop MMObj::alloc_instance(Process* p, oop klass) {
   if (klass == NULL) {
-    _log << "alloc_instance: klass is null" << endl;
+    DBG() << "alloc_instance: klass is null" << endl;
     return NULL;
   }
 
-  _log << "alloc_instance for klass " << klass << endl;
-  _log << "alloc_instance: class name: " << mm_string_cstr(p, mm_class_name(p, klass)) << endl;
+  DBG() << "alloc_instance for klass " << klass << endl;
+  DBG() << "alloc_instance: class name: " << mm_string_cstr(p, mm_class_name(p, klass)) << endl;
 
   number payload = mm_behavior_size(p, klass);
   assert(payload != INVALID_PAYLOAD);
 
-  _log << "alloc_instance: payload " << payload << endl;
+  DBG() << "alloc_instance: payload " << payload << endl;
 
   oop instance = (oop) calloc(sizeof(word), payload + 2); //2: vt, delegate
-  _log << "new instance [size: " << payload << "]: "
+  DBG() << "new instance [size: " << payload << "]: "
           << mm_string_cstr(p, mm_class_name(p, klass)) << " = " << instance << endl;
 
   oop klass_parent =  mm_object_delegate(klass);
@@ -1155,7 +1159,7 @@ oop MMObj::alloc_instance(Process* p, oop klass) {
   ((oop*)instance)[0] = klass;
   ((oop*) instance)[1] = alloc_instance(p, klass_parent);
 
-  _log << "Created recursive delegate " << instance << endl;
+  DBG() << "Created recursive delegate " << instance << endl;
   return instance;
 }
 

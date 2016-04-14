@@ -18,7 +18,7 @@
 #define LOG_CTRL "ct"
 #define LOG_UTILS "ut"
 #define LOG_TARGET_PROC "tp"
-#define LOG_DBG_PROC "db"
+#define LOG_DBG_PROC "dp"
 #define LOG_TARGET_MMT "mt"
 #define LOG_DBG_MMT "md"
 

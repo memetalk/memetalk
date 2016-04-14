@@ -9,6 +9,11 @@
 #include "mmc_fun.hpp"
 #include <cstdlib>
 
+#define DBG() _log << _log.magenta + _log.bold + "[VM|" << __FUNCTION__ << "] " << _log.normal
+#define WARNING() MMLog::warning() << "[VM|" << __FUNCTION__ << "] " << _log.normal
+#define ERROR() MMLog::error() << "[VM|" << __FUNCTION__ << "] " << _log.normal
+
+
 VM::VM(int argc, char** argv, bool online, const char* core_img_filepath)
   : _log(LOG_VM), _argc(argc), _argv(argv), _online(online),
     _core_image(new CoreImage(this, core_img_filepath)), _mmobj(new MMObj(_core_image)) {
@@ -21,12 +26,12 @@ MMObj* VM::mmobj() {
 // void VM::dictionary_dump(oop dict) {
 //   number size = _mmobj->mm_dictionary_size(dict);
 
-//   _log << "  dict vt: " << _mmobj->mm_object_vt(dict) << endl;
-//   _log << "  dict size: " << size << endl;
+//   DBG() << "  dict vt: " << _mmobj->mm_object_vt(dict) << endl;
+//   DBG() << "  dict size: " << size << endl;
 //   for (int i = 3; i < (3 + (size*2)); i++) {
-//     _log << "  [" << i << "]: & " << &((oop*)dict)[i];
-//     _log << endl;
-//     // _log << " vt:" << * ((oop**)dict)[i]  << endl;
+//     DBG() << "  [" << i << "]: & " << &((oop*)dict)[i];
+//     DBG() << endl;
+//     // DBG() << " vt:" << * ((oop**)dict)[i]  << endl;
 //   }
 // }
 
@@ -36,7 +41,7 @@ MMObj* VM::mmobj() {
 //   for (it = primes.begin(); it != primes.end(); it++) {
 //     if (it->first == "Behavior" || it->first == "Object_Behavior") continue;
 //     oop klass = it->second;
-//     _log << "PRIME " << klass << " name: " << _mmobj->mm_string_cstr(_mmobj->mm_class_name(klass)) << " vt: "
+//     DBG() << "PRIME " << klass << " name: " << _mmobj->mm_string_cstr(_mmobj->mm_class_name(klass)) << " vt: "
 //             << _mmobj->mm_object_vt(klass) << " dict:" << _mmobj->mm_class_dict(klass) << endl;
 //     dictionary_dump(_mmobj->mm_class_dict(klass));
 //   }
@@ -44,9 +49,9 @@ MMObj* VM::mmobj() {
 
 void VM::print_retval(Process* proc, oop retval) {
   int exc;
-  _log << " ======== the end ======= " << endl;
+  DBG() << " ======== the end ======= " << endl;
   oop retval_str = proc->send_0(retval, new_symbol("toString"), &exc);
-  _log << "RETVAL: " << retval << " => " << _mmobj->mm_string_cstr(proc, retval_str) << endl;
+  DBG() << "RETVAL: " << retval << " => " << _mmobj->mm_string_cstr(proc, retval_str) << endl;
 }
 
 int VM::start() {
@@ -88,7 +93,8 @@ std::pair<Process*, oop> VM::start_debugger(Process* target) {
   try {
     imod = instantiate_module(dbg_proc, "idez", _mmobj->mm_list_new());
   } catch(mm_rewind e) {
-    bail("VM::start_debugger raised");
+    ERROR() << "uncaught exception while instantiating debugger module :(" << endl;
+    dbg_proc->fail(e.mm_exception);
     // print_retval(e.mm_exception);
     // return * (int*) (void*) &(e.mm_exception);
   }
@@ -97,7 +103,7 @@ std::pair<Process*, oop> VM::start_debugger(Process* target) {
   int exc;
   oop handler = dbg_proc->send_1(imod, new_symbol("debug"), oop_target_proc, &exc);
   if (exc != 0) {
-    bail("VM::start_debugger: _log raised");
+    dbg_proc->fail(handler);
   }
   return std::pair<Process*, oop>(dbg_proc, handler);
 }
@@ -106,15 +112,16 @@ oop VM::new_symbol(const char* cstr) {
   std::string s = cstr;
   if (_symbols.find(s) == _symbols.end()) {
     _symbols[s] = _mmobj->mm_symbol_new(cstr);
-    _log << "new_symbol: Creating new symbol " << cstr << " = " << _symbols[s] << endl;
+    DBG() << "Creating new symbol " << cstr << " = " << _symbols[s] << endl;
   } else {
-    _log << "new_symbol: returning existing symbol " << cstr << " = " << _symbols[s] << endl;
+    DBG() << "returning existing symbol " << cstr << " = " << _symbols[s] << endl;
   }
   return _symbols[s];
 }
 
 oop VM::new_symbol(Process* p, oop str) {
   if (!(_mmobj->mm_object_vt(str) == _core_image->get_prime("String"))) {
+    WARNING() << " expected String object, got:" << str << endl;
     p->raise("TypeError", "Expecting String");
   }
   return new_symbol(_mmobj->mm_string_cstr(p, str));
@@ -125,8 +132,9 @@ void VM::register_primitive(std::string name, prim_function_t fun) {
 }
 
 prim_function_t VM::get_primitive(Process* proc, std::string name) {
-  _log << "VM::get_primitive " << name << endl;
+  DBG() << "VM::get_primitive " << name << endl;
   if (!(_primitives.find(name) != _primitives.end())) {
+    ERROR() << "did not find primitive with name:" << name << endl;
     proc->raise("InternalError", (std::string("primitive not found: ") + name).c_str());
   }
   return _primitives[name];
@@ -176,7 +184,7 @@ oop VM::compile_fun(Process* proc, const char* text, std::list<std::string> vars
   std::string json = get_compile_fun_json(text, vars);
 
   s << "python -m pycompiler.compiler -o '" << json << "'";
-  _log << "Executing python compiler: " << s.str() << endl;
+  DBG() << "Executing python compiler: " << s.str() << endl;
 
   *exc = 0;
   if (FILE* p = popen(s.str().c_str(), "r")) {
@@ -199,6 +207,7 @@ oop VM::compile_fun(Process* proc, const char* text, std::list<std::string> vars
     }
   }
   *exc = 1;
+  ERROR() << "Could not call python compiler :(" << endl;
   return proc->mm_exception("CompileError", "pipe error: Unable to call compiler");
 }
 

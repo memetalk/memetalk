@@ -13,8 +13,9 @@
 #include <sstream>
 #include <assert.h>
 
-
-#define DBG() _log << _log.cyan << (_is_dbg? "[DBGProc|" : "[Target|") << __FUNCTION__ << "()]" << _log.normal
+#define DBG() _log << (_is_dbg? _log.bold + _log.cyan + "[DBGProc|" : _log.bold + _log.green + "[Target|") << __FUNCTION__ << "] " << _log.normal
+#define WARNING() MMLog::warning() << (_is_dbg? "[DBGProc|" : "[Target|") << __FUNCTION__ << "] " << _log.normal
+#define ERROR() MMLog::error() << (_is_dbg? "[DBGProc|" : "[Target|") << __FUNCTION__ << "] " << _log.normal
 
 
 Process::Process(VM* vm, bool is_debugger)
@@ -88,7 +89,7 @@ void Process::push_frame(oop recv, oop drecv, number arity, number storage_size)
   oop fp = _fp;
   _fp = _sp - (arity - 1);  // _sp points to the last arg pushed
 
-  DBG() << "push_frame before -- sp: " << _sp << " old fp: " << fp << " new fp:" << _fp << endl;
+  DBG() << "before -- sp: " << _sp << " old fp: " << fp << " new fp:" << _fp << endl;
 
   for (int i = 0; i < storage_size - arity; i++) {
     stack_push(MM_NULL);
@@ -110,7 +111,7 @@ void Process::push_frame(oop recv, oop drecv, number arity, number storage_size)
 
   _ss = storage_size;
 
-  DBG() << "push_frame result: arity: " << arity << " storage: " << storage_size
+  DBG() << "result: arity: " << arity << " storage: " << storage_size
         << " fp: " << _fp << " bp: " << _bp << " cp: " << _cp << " ip: " << _ip
         << " mp: " << _mp << endl;
 
@@ -145,11 +146,11 @@ void Process::pop_frame() {
   _cp = stack_pop();
   _fp = stack_pop();
 
-  DBG() << "pop_frame: fp: " << _fp << endl;
+  DBG() << "fp: " << _fp << endl;
 
   _sp = _sp - (storage_size + 2); //2: fp, dp
 
-  DBG() << "pop_frame [fm:" << _stack_depth << " storage_size: " << _ss
+  DBG() << "[fm:" << _stack_depth << " storage_size: " << _ss
         << " sp: " << _sp << " fp: " << _fp << " bp: " << _bp << " cp: " << _cp << " ip: " << _ip
         << " mp (before): " << _mp << endl;
 
@@ -177,7 +178,7 @@ oop Process::ctor_rdp_for(oop rp, oop cp) {
 
   oop other_cclass = _mmobj->mm_function_get_owner(this, cp, true);
 
-  DBG() << "rdp_for_ctor cclass: " << cclass << ", other cclass: " << other_cclass << endl;
+  DBG() << "cclass: " << cclass << ", other cclass: " << other_cclass << endl;
 
   if (cclass == other_cclass) {
     return rp;
@@ -189,7 +190,7 @@ oop Process::ctor_rdp_for(oop rp, oop cp) {
 void Process::basic_new_and_load(oop klass) {
   oop rp = _mmobj->alloc_instance(this, klass);
   oop dp = ctor_rdp_for(rp, _cp);
-  DBG() << "basic_new: " << rp << " dp: " << dp << endl;
+  DBG() << rp << " dp: " << dp << endl;
   set_rp(rp);
   set_dp(dp);
 }
@@ -197,11 +198,11 @@ void Process::basic_new_and_load(oop klass) {
 void Process::setup_fp(number params, number storage_size) {
   //ideally this should be a calloc followed by memcpy
   oop fp = (oop) calloc(sizeof(oop), storage_size + 2); //+2: space for rp, dp
-  DBG() << "Process::setup_fp allocated fp: " << fp << " - " << " params: " << params
+  DBG() << "allocated fp: " << fp << " - " << " params: " << params
         << " storage_size: " << storage_size << endl;
 
   for (int i = 0; i < storage_size + 2; i++) {
-    DBG() << "Process::setup_fp new_fp[" << i << " - " << (oop*)fp << "]  " << *((oop*)_fp + i) << endl;
+    DBG() << "new_fp[" << i << " - " << (oop*)fp << "]  " << *((oop*)_fp + i) << endl;
     ((oop*)fp)[i] = *((oop*)_fp + i);
   }
 
@@ -216,7 +217,7 @@ void Process::setup_fp(number params, number storage_size) {
 }
 
 void Process::restore_fp(oop fp, number params, number env_offset) {
-  DBG() << "Process::restore_fp " << fp << " " << params << " " << env_offset << endl;
+  DBG() << fp << " " << params << " " << env_offset << endl;
 
   for (int i = 0; i < params; i++) {
     DBG() << "fp[" << env_offset + i << "] = " << * (oop*)(_fp + i) << endl;
@@ -227,6 +228,7 @@ void Process::restore_fp(oop fp, number params, number env_offset) {
 
 bool Process::load_fun(oop recv, oop drecv, oop fun, bool should_allocate) {
   if (!(_mmobj->mm_is_function(fun) || _mmobj->mm_is_context(fun))) {
+    WARNING() << "Will raise TypeError: Expecting function or context" << endl;
     raise("TypeError", "Expecting function or context");
   }
 
@@ -294,13 +296,13 @@ bool Process::load_fun(oop recv, oop drecv, oop fun, bool should_allocate) {
       return false;
     } else if (ret == PRIM_RAISED) {
       oop ex_oop = stack_pop(); //shit
-      DBG() << "load_fun: prim returned: RAISED " << ex_oop << endl;
+      DBG() << "prim returned: RAISED " << ex_oop << endl;
       pop_frame();
       maybe_debug_on_raise(ex_oop);
       //we rely on compiler generating a pop instruction to bind ex_oop to the catch var
       stack_push(unwind_with_exception(ex_oop));
         // DBG() << "load_fun: unwind_with_exception reached primitive. c++ throwing...: " << ex_oop << endl;
-      DBG() << "load_fun: unwind_with_exception rached catch block for " << ex_oop << endl;
+      DBG() << "unwind_with_exception rached catch block for " << ex_oop << endl;
       // oop value = stack_pop(); //shit
       // unload_fun_and_return(value);
       return false;
@@ -396,10 +398,11 @@ oop Process::do_send(oop recv, oop selector, int num_args, int *exc) {
 
 oop Process::do_call(oop fun, int* exc) {
   if (!(_mmobj->mm_is_context(fun))) { //since we pass NULL to load_fun
-    raise("TypeError", "expecting Context");
+    WARNING() << "Will raise TypeError: Expecting Context" << endl;
+    raise("TypeError", "Expecting Context");
   }
 
-  DBG() << "-- begin do_call fun: " << fun << " sp: " << _sp << ", fp: " << _fp << endl;
+  DBG() << "-- begin: fun: " << fun << " sp: " << _sp << ", fp: " << _fp << endl;
 
   *exc = 0;
   try {
@@ -419,6 +422,7 @@ oop Process::do_call(oop fun, int* exc) {
 
 oop Process::call(oop fun, oop args, int* exc) {
   if (!(_mmobj->mm_is_context(fun))) { //since we pass NULL to load_fun
+    WARNING() << "Will raise TypeError: Expecting Context" << endl;
     raise("TypeError", "expecting Context");
   }
   number num_args = _mmobj->mm_list_size(this, args);
@@ -428,7 +432,7 @@ oop Process::call(oop fun, oop args, int* exc) {
     s << _mmobj->mm_string_cstr(this, _mmobj->mm_function_get_name(this, fun)) << ": expects " <<  arity << " but got " << num_args;
     DBG() << s << endl;
     oop ex = mm_exception("ArityError", s.str().c_str());
-    DBG() << "do_call returning exception object " << ex << endl;
+    DBG() << "returning ArityError exception object " << ex << endl;
     *exc = 1;
     return ex;
   }
@@ -440,7 +444,7 @@ oop Process::call(oop fun, oop args, int* exc) {
 }
 
 void Process::fetch_cycle(void* stop_at_bp) {
-  DBG() << "begin fetch_cycle fp:" << _fp <<  " stop_fp:" <<  stop_at_bp
+  DBG() << "begin fp:" << _fp <<  " stop_fp:" <<  stop_at_bp
         << " ip: " << _ip << endl;
 
   //at least one instructionn should be executed.  stop_at_bp is usually the
@@ -474,7 +478,7 @@ void Process::fetch_cycle(void* stop_at_bp) {
     dispatch(opcode, arg);
     // DBG() << " [end of dispatch] " << opcode << endl;
   }
-  DBG() << "end fetch_cycle" << endl;
+  DBG() << "end" << endl;
 }
 
 void Process::maybe_tick_return() {
@@ -604,6 +608,7 @@ void Process::handle_send(number num_args) {
     std::stringstream s;
     s << _mmobj->mm_symbol_cstr(this, selector) << " not found in object " << recv;
     //we rely on compiler generating a pop instruction to bind ex_oop to the catch var
+    DBG() << "will raise DoesNotUnderstand: " << s.str() << endl;
     oop oo_ex = mm_exception("DoesNotUnderstand", s.str().c_str());
     maybe_debug_on_raise(oo_ex);
     stack_push(unwind_with_exception(oo_ex));
@@ -616,10 +621,10 @@ void Process::handle_send(number num_args) {
     s << _mmobj->mm_string_cstr(this, _mmobj->mm_function_get_name(this, fun)) << ": expects " <<  arity << " but got " << num_args;
     DBG() << s << endl;
     oop ex = mm_exception("ArityError", s.str().c_str());
-    DBG() << "handle_send: created exception " << ex << endl;
+    DBG() << "created exception " << ex << endl;
     maybe_debug_on_raise(ex);
     unwind_with_exception(ex);
-    DBG() << "handle_send: unwinded ex. returning exception " << ex << endl;
+    DBG() << "unwinded ex. returning exception " << ex << endl;
     stack_push(ex);
     return;
   }
@@ -783,7 +788,7 @@ void Process::dispatch(int opcode, int arg) {
       // case RETURN_THIS:
       //   break;
       default:
-        DBG() << "Unknown opcode " << opcode << endl;
+        ERROR() << "Unknown opcode " << opcode << endl;
         _vm->bail("opcode not implemented");
     }
 }
@@ -797,7 +802,7 @@ std::pair<oop, oop> Process::lookup(oop drecv, oop vt, oop selector) {
   // DBG() << "lookup selector on vt: " << vt << " whose vt is " << _mmobj->mm_object_vt(*(oop*)vt) << endl;
 
   oop dict = _mmobj->mm_behavior_get_dict(vt);
-  DBG() << "Process::lookup dict: " << dict
+  DBG() << "dict: " << dict
         << " selector: " << _mmobj->mm_symbol_cstr(this, selector, true) << endl;
 
   if (_mmobj->mm_dictionary_has_key(this, dict, selector, true)) {
@@ -894,6 +899,7 @@ bool Process::exception_has_handler(oop e, oop bp) {
       int exc;
       type_oop = send_0(mp, _vm->new_symbol(this, str_type_oop), &exc);
       if (!(exc == 0)) {
+        ERROR() << "raising InternalError: Unable to get exception type from module" << endl;
         raise("InternalError", "Unable to get exception type from module");
       }
       DBG() << "fetching exception type got " << type_oop << endl;;
@@ -926,7 +932,7 @@ void Process::fail(oop e) {
     int exc;
     oop str = send_0(e, _vm->new_symbol("toString"), &exc);
     assert(exc == 0);
-    DBG() << "Uncaugh exception: \""
+    ERROR() << "Uncaugh exception: \""
               << _mmobj->mm_string_cstr(this, str, true) << "\"" << endl;
     _vm->bail();
 }
@@ -980,6 +986,7 @@ oop Process::unwind_with_exception(oop e) {
       oop mp = _mmobj->mm_function_get_module(this, _cp, true);
       type_oop = send_0(mp, _vm->new_symbol(this, str_type_oop), &exc);
       if (!(exc == 0)) {
+        ERROR() << "Will raise InternalError: Unable to get exception type from module" << endl;
         raise("InternalError", "Unable to get exception type from module");
       }
       DBG() << "fetching exception type got " << type_oop << endl;;
@@ -1006,14 +1013,14 @@ oop Process::unwind_with_exception(oop e) {
 
 
 void Process::raise(const char* ex_type_name, const char* msg) {
-  DBG() << "Process::raise " << ex_type_name << " -- " << msg << endl;
+  DBG() << ex_type_name << " -- " << msg << endl;
   //TODO: this is used by mmc_image. I think we should just return the
   // exception and let that class deal with it.
   throw mm_rewind(mm_exception(ex_type_name, msg));
 }
 
 oop Process::mm_exception(const char* ex_type_name, const char* msg) {
-  DBG() << "mm_exception: " << ex_type_name << " -- " << msg << endl;
+  DBG() << ex_type_name << " -- " << msg << endl;
   oop ex_type = _vm->get_prime(ex_type_name);
 
   int exc;
@@ -1021,7 +1028,7 @@ oop Process::mm_exception(const char* ex_type_name, const char* msg) {
   //if this fails, can't call raise() because it calls mm_exception again
   //recursively. So let's just bail.
   assert(exc == 0);
-  DBG() << "mm_exception: returning ex: " << exobj << endl;
+  DBG() << "returning ex: " << exobj << endl;
   return exobj;
 }
 
@@ -1074,15 +1081,6 @@ oop Process::bp_at(unsigned int idx) { //backwards 0 is current
 //   // }
 // }
 
-
-MMLog& Process::dbg() {
-  if (!_is_dbg) {
-    _log << "TARGET: ";
-  } else {
-    _log << _log.magenta << "DBG: ";
-  }
-  return _log;
-}
 
 void Process::bail(const std::string& msg) {
   _vm->bail(msg);
