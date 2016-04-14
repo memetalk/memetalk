@@ -13,10 +13,27 @@
 #include <sstream>
 #include <assert.h>
 
-#define DBG() _log << (_is_dbg? _log.bold + _log.cyan + "[DBGProc|" : _log.bold + _log.green + "[Target|") << __FUNCTION__ << "] " << _log.normal
-#define WARNING() MMLog::warning() << (_is_dbg? "[DBGProc|" : "[Target|") << __FUNCTION__ << "] " << _log.normal
-#define ERROR() MMLog::error() << (_is_dbg? "[DBGProc|" : "[Target|") << __FUNCTION__ << "] " << _log.normal
+#define BCOLOR (_log.normal + (_is_dbg? _log.bold + _log.cyan : _log.bold + _log.green))
+#define COLOR (_log.normal + (_is_dbg?  _log.cyan : _log.green))
+#define DBG() _log << COLOR << "[" << (_is_dbg? "DBGProc" : "Target")  \
+                   << "|" << BCOLOR + meme_curr_fname() << COLOR << "." << __FUNCTION__ << "] " << _log.normal
+#define WARNING() MMLog::warning() << COLOR << "[" << (_is_dbg? "DBGProc" : "Target") \
+                                   << "|" << BCOLOR + meme_curr_fname() << COLOR << "." << __FUNCTION__ << "] " << _log.normal
+#define ERROR() MMLog::error() << COLOR << "[" << (_is_dbg? "DBGProc" : "Target") \
+                                   << "|" << BCOLOR + meme_curr_fname() << COLOR << "." << __FUNCTION__ << "] " << _log.normal
 
+#define LOG_REGISTERS() DBG() << "registers: " << endl  \
+                              << _log.yellow << "         SP: " << _sp << endl \
+                              << _log.yellow << "         FP: " << _fp << endl \
+                              << _log.yellow << "         BP: " << _bp << endl \
+                              << _log.yellow << "         IP: " << _ip << endl \
+                              << _log.yellow << "         MP: " << _mp << endl \
+                              << _log.yellow << "         CP: " << _cp << endl
+
+#define LOG_STACK_TOP() DBG() << "stack_depth: " << _stack_depth << ", stack:" << endl \
+                              << _log.yellow << dump_stack_top() << endl
+
+#define LOG_STATE() LOG_REGISTERS(); LOG_STACK_TOP();
 
 Process::Process(VM* vm, bool is_debugger)
   : _log(is_debugger?LOG_DBG_PROC:LOG_TARGET_PROC), _is_dbg(is_debugger), _vm(vm), _mmobj(vm->mmobj()), _control(new ProcessControl()), _dbg_handler(NULL, MM_NULL) {
@@ -24,6 +41,24 @@ Process::Process(VM* vm, bool is_debugger)
   _state = RUN_STATE;
   _step_bp = MM_NULL;
 }
+
+std::string Process::dump_stack_top() {
+  std::stringstream s;
+  s << "[";
+  std::string comma = "";
+
+  word* sp = _sp - 10;
+  while (sp <= _sp) {
+    if (sp >= _stack) {
+      s << comma << sp << "\n";
+      comma = ", ";
+    }
+    sp++;
+  }
+  s << "]";
+  return s.str();
+}
+
 
 oop Process::run(oop recv, oop selector_sym, int* exc) {
   //atm, we don't need to check exc
@@ -34,7 +69,6 @@ oop Process::run(oop recv, oop selector_sym, int* exc) {
 
 void Process::init() {
   _stack = (word*) malloc(DEFAULT_STACK_SIZE);
-  // DBG() << " Initial stack " << _stack << endl;
   _stack_depth = 0;
   _state = INVALID_STATE;
   _sp = _stack; //stack
@@ -44,10 +78,10 @@ void Process::init() {
   _mp = NULL; //module
   _cp = NULL; //context
   _ss = 0; //local storage
+  LOG_STATE();
 }
 
 oop Process::get_arg(number idx) {
-  // DBG() << "Process::get_arg " << idx << " fp: " << _fp << " *:" << * ((oop*)_fp + idx) << endl;
   return * ((oop*)_fp + idx);
 };
 
@@ -60,7 +94,6 @@ oop Process::set_dp(oop dp) {
 }
 
 oop Process::rp() {
-  // DBG() << "Process::rp  fp:" <<  _fp << " _ss:" << _ss << " ==> " << * (oop*) (_fp + _ss) << endl;
   return * (oop*) (_fp + _ss );
 }
 
@@ -77,7 +110,7 @@ bytecode* Process::ip_from_frame(oop bp) {
 }
 
 void Process::push_frame(oop recv, oop drecv, number arity, number storage_size) {
-  // DBG() << "++ Push frame:  " << _sp << " num locals " << num_locals << endl;
+  DBG() << " recv: " << recv << ", drecv: " << drecv << ", arity: " << arity << ", storage_size: " << storage_size << endl;
 
   // oop curr_sp = _sp;
   _stack_depth++;
@@ -111,24 +144,7 @@ void Process::push_frame(oop recv, oop drecv, number arity, number storage_size)
 
   _ss = storage_size;
 
-  DBG() << "result: arity: " << arity << " storage: " << storage_size
-        << " fp: " << _fp << " bp: " << _bp << " cp: " << _cp << " ip: " << _ip
-        << " mp: " << _mp << endl;
-
-  // //logging
-  // if (!_is_dbg) {
-  //   if (_cp) {
-  //     oop name = _mmobj->mm_function_get_name(_cp);
-  //     char* str_name = _mmobj->mm_string_cstr(name);
-  //     DBG() << "FRAME: " << str_name << " FP" << _fp << " BP:" << _bp
-  //               << " CP: " << _cp << " IP: " << _ip << endl;
-  //   } else {
-  //     DBG() << "FRAME FP:" << _fp << " BP:" << _bp
-  //               << " CP: " << _cp << " IP: " << _ip << endl;
-  //   }
-  // }
-
-  // DBG() << " push frame SP is: " << _sp << endl;
+  LOG_STATE();
 }
 
 void Process::pop_frame() {
@@ -146,21 +162,14 @@ void Process::pop_frame() {
   _cp = stack_pop();
   _fp = stack_pop();
 
-  DBG() << "fp: " << _fp << endl;
-
   _sp = _sp - (storage_size + 2); //2: fp, dp
 
-  DBG() << "[fm:" << _stack_depth << " storage_size: " << _ss
-        << " sp: " << _sp << " fp: " << _fp << " bp: " << _bp << " cp: " << _cp << " ip: " << _ip
-        << " mp (before): " << _mp << endl;
-
   if (_cp) {// first frame has _cp = null
-    // DBG() << "pop_frame: getting module from fun " << _cp << endl;
     _mp = _mmobj->mm_function_get_module(this, _cp, true);
-    DBG() << "MP for fun unloaded: " << _mp << endl;
   } else {
-    DBG() << "++ MP for fun unloaded is null!" << endl;
+    DBG() << "MP unloaded is null! we should be in the first stack frame!" << endl;
   }
+  LOG_STATE();
 }
 
 void Process::unload_fun_and_return(oop retval) {
@@ -232,7 +241,7 @@ bool Process::load_fun(oop recv, oop drecv, oop fun, bool should_allocate) {
     raise("TypeError", "Expecting function or context");
   }
 
-  DBG() << "Process::load_fun " << fun << endl;
+  DBG() << fun << endl;
 
   if (_mmobj->mm_function_is_getter(this, fun, true)) {
     number idx = _mmobj->mm_function_access_field(this, fun, true);
@@ -465,12 +474,16 @@ void Process::fetch_cycle(void* stop_at_bp) {
     tick();
 
     // if (_ip != 0) { // the bottommost frame has ip = 0
-      _ip++; //this can't be done after dispatch, where an ip for a different fun may be set
              //(thus, doing so would skip the first instruction)
     // }
 
     int opcode = decode_opcode(code);
     int arg = decode_args(code);
+
+    DBG() << "IP: " << _ip << " with code: " << code << " decoded as opcode " << opcode << ", arg: " << arg << endl;
+
+    _ip++; //this can't be done after dispatch, where an ip for a different fun may be set
+
     // if (_state != RUN_STATE) {
     //   char* name = _mmobj->mm_string_cstr(_mmobj->mm_function_get_name(_cp));
     //   DBG() << " [dispatching] " << name << " " << (_ip-1) << " " << opcode << endl;
@@ -536,12 +549,13 @@ void Process::tick() {
     _volatile_breakpoints.clear();
     _step_bp = MM_NULL;
     _control->pause();
+    LOG_STATE();
     // DBG() << "Process::tick: resuming..." << endl;
 }
 
 void Process::step_into() {
-  // DBG() << "Process::step_into..." << endl;
   bytecode* next = _mmobj->mm_function_next_expr(this, _cp, _ip, true);
+  DBG() << "step into next instruction: " << next << endl;
   if (next) {
     // DBG() << "step_into: BP on next op: " << next << " "
     //           << decode_opcode(*next) << endl;
@@ -552,8 +566,8 @@ void Process::step_into() {
 }
 
 void Process::step_over() {
-  // DBG() << "Process::step_over resuming ..." << endl;
   bytecode* next = _mmobj->mm_function_next_expr(this, _cp, _ip, true);
+  DBG() << "step over next instruction: " << next << endl;
   if (next) {
     // DBG() << "step_over: BP on next op: " << next << " "
     //           << decode_opcode(*next) << endl;
@@ -566,8 +580,8 @@ void Process::step_over() {
 }
 
 void Process::step_over_line() {
-  // DBG() << "Process::step_over_line resuming ..." << endl;
   bytecode* next = _mmobj->mm_function_next_line_expr(this, _cp, _ip, true);
+  DBG() << "step over line next instruction: " << next << endl;
   if (next) {
     // DBG() << "step_over_line: BP on next op: " << next << " "
     //           << decode_opcode(*next) << endl;
@@ -590,6 +604,10 @@ void Process::step_out() {
 void Process::reload_frame() {
   _sp = _bp; //restore sp, ignoring frame data. push_frame/pop_frame are always in sync.
   _ip = _mmobj->mm_function_get_code(this, _cp, true);
+
+  DBG() << " reloading frame back to " << _bp << ", IP: " << _ip << endl;
+
+  LOG_STATE();
 }
 
 void Process::handle_send(number num_args) {
@@ -822,25 +840,25 @@ std::pair<oop, oop> Process::lookup(oop drecv, oop vt, oop selector) {
 oop Process::stack_pop() {
   oop val = * (oop*)_sp;
   _sp--;
-  DBG() << "     POP " << val << " >> " << _sp << endl;
+  DBG() << "POP " << val << " >> " << _sp << endl;
   return val;
 }
 
 void Process::stack_push(oop data) {
   _sp++;
-  // DBG() << "     PUSH " << data << " -> " << _sp << endl;
+  DBG() << "PUSH " << data << " -> " << _sp << endl;
   * (word*) _sp = (word) data;
 }
 
 void Process::stack_push(word data) {
   _sp++;
-  // DBG() << "     PUSH " << (oop) data << " -> " << _sp << endl;
+  DBG() << "PUSH " << (oop) data << " -> " << _sp << endl;
   * (word*) _sp = data;
 }
 
 void Process::stack_push(bytecode* data) {
   _sp++;
-  // DBG() << "     PUSH " << data << " -> " << _sp << endl;
+  DBG() << "PUSH " << data << " -> " << _sp << endl;
   * (word*) _sp = (word) data;
 }
 
@@ -1088,4 +1106,12 @@ void Process::bail(const std::string& msg) {
 
 void Process::bail() {
   _vm->bail();
+}
+
+const char* Process::meme_curr_fname() {
+  if (_cp) {
+    return _mmobj->mm_string_cstr(this, _mmobj->mm_function_get_name(this, _cp));
+  } else {
+    return "?";
+  }
 }

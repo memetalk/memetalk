@@ -97,6 +97,8 @@ public:
   void bail();
 
 private:
+  std::string dump_stack_top();
+  const char* meme_curr_fname();
   void pause() { _state = HALT_STATE; };
 
   void init();
