@@ -467,15 +467,15 @@ void Process::fetch_cycle(void* stop_at_bp) {
   assert(((_bp >= stop_at_bp) && _ip)); //"base pointer and stop_at_bp are wrong"
 
   while ((_bp >= stop_at_bp) && _ip) { // && ((_ip - start_ip) * sizeof(bytecode))  < _code_size) {
-    // DBG() << "fp " << _fp << " stop " <<  stop_at_bp << " codesize " <<  _code_size << "ip " << _ip << std::endl;
+
+    //at tick we may pause for debugging interactions.
+    //Because debugger may interfere with _ip,
+    //we must take the code from _ip, decode and dispatch
+    //*after* the tick()
+    tick();
 
     bytecode code = *_ip;
 
-    tick();
-
-    // if (_ip != 0) { // the bottommost frame has ip = 0
-             //(thus, doing so would skip the first instruction)
-    // }
 
     int opcode = decode_opcode(code);
     int arg = decode_args(code);
