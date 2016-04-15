@@ -153,6 +153,14 @@ init new: fun(proc) {
   action.setShortcutContext(0); //widget context
   execMenu.addAction(action);
 
+  action = qt.QAction.new("Return", this);
+  action.setShortcut("ctrl+t");
+  action.connect("triggered", fun(_) {
+      this.returnWithValue();
+  });
+  action.setShortcutContext(0); //widget context
+  execMenu.addAction(action);
+
 
   var centralWidget = QWidget.new(this);
   this.setCentralWidget(centralWidget);
@@ -226,6 +234,18 @@ instance_method reloadFrame: fun() {
 instance_method recompileCurrentFunction: fun() {
   @process.recompileCurrentFunction(@editor.text);
   @process.reloadFrame();
+  this.updateUI;
+}
+
+instance_method returnWithValue: fun() {
+  try {
+    var ctx = Context.withFrame(@editor.selectedText(), @process.frames()[@frame_index], thisModule);
+    var res = ctx();
+    @process.returnFromFrame(res);
+    @stackCombo.updateInfo();
+  } catch(ex) {
+    this.insertSelectedText(ex.message());
+  }
   this.updateUI;
 }
 

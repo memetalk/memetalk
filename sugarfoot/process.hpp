@@ -96,6 +96,8 @@ public:
   void bail(const std::string& msg);
   void bail();
 
+  void unload_fun_and_return(oop retval);
+
 private:
   std::string dump_stack_top();
   const char* meme_curr_fname();
@@ -105,7 +107,6 @@ private:
 
   bool load_fun(oop, oop, oop, bool);
 
-  void unload_fun_and_return(oop retval);
 
   oop stack_pop();
   int execute_primitive(std::string);

@@ -451,6 +451,10 @@ end
   instance_method recompileCurrentFunction: fun(text) {
     this.cp.compiledFunction.recompile(text);
   }
+  instance_method returnFromFrame: fun(val) {
+    <primitive "process_return_from_frame">
+  }
+
   instance_method cp: fun() {
      <primitive "process_cp">
   }
