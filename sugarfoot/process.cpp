@@ -39,6 +39,7 @@ Process::Process(VM* vm, bool is_debugger)
   : _log(is_debugger?LOG_DBG_PROC:LOG_TARGET_PROC), _is_dbg(is_debugger), _vm(vm), _mmobj(vm->mmobj()), _control(new ProcessControl()), _dbg_handler(NULL, MM_NULL) {
   init();
   _state = RUN_STATE;
+  _unwinding_exception = false;
   _step_bp = MM_NULL;
 }
 
@@ -177,6 +178,10 @@ void Process::unload_fun_and_return(oop retval) {
   stack_push(retval);
 }
 
+void Process::clear_exception_state() {
+    _unwinding_exception = false;
+}
+
 oop Process::ctor_rdp_for(oop rp, oop cp) {
   DBG() << "ctor_rdp_for rp: " << rp << ", cp: " << cp << endl;
   if (!rp) {
@@ -309,7 +314,10 @@ bool Process::load_fun(oop recv, oop drecv, oop fun, bool should_allocate) {
       pop_frame();
       maybe_debug_on_raise(ex_oop);
       //we rely on compiler generating a pop instruction to bind ex_oop to the catch var
-      stack_push(unwind_with_exception(ex_oop));
+      oop exc_unwind = unwind_with_exception(ex_oop);
+      if (exc_unwind != MM_NULL) {
+        stack_push(exc_unwind);
+      }
         // DBG() << "load_fun: unwind_with_exception reached primitive. c++ throwing...: " << ex_oop << endl;
       DBG() << "unwind_with_exception rached catch block for " << ex_oop << endl;
       // oop value = stack_pop(); //shit
@@ -636,7 +644,10 @@ void Process::handle_send(number num_args) {
     DBG() << "will raise DoesNotUnderstand: " << s.str() << endl;
     oop oo_ex = mm_exception("DoesNotUnderstand", s.str().c_str());
     maybe_debug_on_raise(oo_ex);
-    stack_push(unwind_with_exception(oo_ex));
+    oop unwind_exc = unwind_with_exception(oo_ex);
+    if (unwind_exc != MM_NULL) {
+      stack_push(unwind_exc);
+    }
     return;
   }
 
@@ -648,9 +659,11 @@ void Process::handle_send(number num_args) {
     oop ex = mm_exception("ArityError", s.str().c_str());
     DBG() << "created exception " << ex << endl;
     maybe_debug_on_raise(ex);
-    unwind_with_exception(ex);
-    DBG() << "unwinded ex. returning exception " << ex << endl;
-    stack_push(ex);
+    oop unwind_exc = unwind_with_exception(ex);
+    if (unwind_exc) {
+      DBG() << "unwinded ex. returning exception " << ex << endl;
+      stack_push(unwind_exc);
+    }
     return;
   }
   load_fun(recv, drecv, fun, true);
@@ -678,7 +691,10 @@ void Process::handle_super_ctor_send(number num_args) {
     //we rely on compiler generating a pop instruction to bind ex_oop to the catch var
     oop oo_ex = mm_exception("DoesNotUnderstand", s.str().c_str());
     maybe_debug_on_raise(oo_ex);
-    stack_push(unwind_with_exception(oo_ex));
+    oop unwind_exc = unwind_with_exception(oo_ex);
+    if (unwind_exc != MM_NULL) {
+      stack_push(unwind_exc);
+    }
     return;
   }
 
@@ -692,7 +708,10 @@ void Process::handle_super_ctor_send(number num_args) {
     DBG() << s << endl;
     oop oo_ex = mm_exception("ArityError", s.str().c_str());
     maybe_debug_on_raise(oo_ex);
-    stack_push(unwind_with_exception(oo_ex));
+    oop unwind_exc = unwind_with_exception(oo_ex);
+    if (unwind_exc != MM_NULL) {
+      stack_push(unwind_exc);
+    }
     return;
   }
 
@@ -711,7 +730,10 @@ void Process::handle_call(number num_args) {
     DBG() << s << endl;
     oop oo_ex = mm_exception("ArityError", s.str().c_str());
     maybe_debug_on_raise(oo_ex);
-    stack_push(unwind_with_exception(oo_ex));
+    oop unwind_exc = unwind_with_exception(oo_ex);
+    if (unwind_exc != MM_NULL) {
+      stack_push(unwind_exc);
+    }
     return;
   }
   load_fun(NULL, NULL, fun, false);
@@ -963,6 +985,7 @@ void Process::fail(oop e) {
 }
 
 oop Process::unwind_with_exception(oop e) {
+  _unwinding_exception = true;
   DBG() << "** unwind_with_exception e: " << e << " on cp: " << _cp << endl;
 
   maybe_break_on_exception();//  maybe_break_on_return();
@@ -990,7 +1013,11 @@ oop Process::unwind_with_exception(oop e) {
   if (exception_frames_count == 0) { //_cp is unable to handle
     pop_frame();
     tick();
-    return unwind_with_exception(e);
+    if (_unwinding_exception) {
+      return unwind_with_exception(e);
+    } else {
+      return MM_NULL;
+    }
   }
 
   //exception frames are lexically ordered,

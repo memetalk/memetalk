@@ -99,6 +99,9 @@ public:
   void unload_fun_and_return(oop retval);
 
   bool has_debugger_attached();
+
+  void clear_exception_state();
+
 private:
   std::string dump_stack_top();
   const char* meme_curr_fname();
@@ -142,6 +145,7 @@ private:
   MMObj* _mmobj;
 
   int _state;
+  bool _unwinding_exception;
   ProcessControl* _control;
   std::pair<Process*, oop> _dbg_handler;
 

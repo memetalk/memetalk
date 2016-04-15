@@ -1163,6 +1163,7 @@ static int prim_process_return_from_frame(Process* proc) {
 
   Process* target_proc = (Process*) (((oop*)oop_target_proc)[2]);
   target_proc->unload_fun_and_return(retval);
+  target_proc->clear_exception_state();
   proc->stack_push(proc->rp());
   return 0;
 }
