@@ -98,6 +98,7 @@ public:
 
   void unload_fun_and_return(oop retval);
 
+  bool has_debugger_attached();
 private:
   std::string dump_stack_top();
   const char* meme_curr_fname();

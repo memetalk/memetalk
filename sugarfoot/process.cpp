@@ -1050,6 +1050,10 @@ oop Process::mm_exception(const char* ex_type_name, const char* msg) {
   return exobj;
 }
 
+bool Process::has_debugger_attached() {
+  return _dbg_handler.first != NULL;
+}
+
 void Process::halt_and_debug() {
   // DBG() << "Process::halt_and_debug" << endl;
   _dbg_handler = _vm->start_debugger(this);
@@ -1057,7 +1061,10 @@ void Process::halt_and_debug() {
 }
 
 void Process::maybe_debug_on_raise(oop ex_oop) {
-  if (_vm->running_online() && !exception_has_handler(ex_oop, _bp)) {
+  if (has_debugger_attached()) {
+    pause();
+  } else if (_vm->running_online() &&
+             !exception_has_handler(ex_oop, _bp)) {
     halt_and_debug();
   }
 }
