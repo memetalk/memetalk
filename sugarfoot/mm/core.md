@@ -135,6 +135,9 @@
     instance_method env_table: fun() {
       return @env_table;
     }
+    instance_method recompile: fun(text) {
+      <primitive "compiled_function_recompile">
+    }
   end
 
   class CompiledModule
@@ -445,10 +448,12 @@ end
   instance_method reloadFrame: fun() {
     <primitive "process_reload_frame">
   }
-
-  // instance_method cp: fun() {
-  //   <primitive "process_cp">
-  // }
+  instance_method recompileCurrentFunction: fun(text) {
+    this.cp.compiledFunction.recompile(text);
+  }
+  instance_method cp: fun() {
+     <primitive "process_cp">
+  }
   // instance_method ip: fun() {
   //   <primitive "process_ip">
   // }

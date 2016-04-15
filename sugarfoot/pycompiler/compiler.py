@@ -4,12 +4,9 @@ from pyparsers.astbuilder import *
 import pyutils
 from pyutils import bits
 from pyutils import entries
-from pprint import pprint as P
 import traceback
-from pdb import set_trace as br
 import os
 import sys
-import getopt
 import ejson
 from . import comp_vmemory
 
@@ -224,10 +221,10 @@ class Compiler(ASTBuilder):
         self.cmodule = entries.CompiledModule(module_name)
         return self.cmodule
 
-    def do_parse(self, parser, rule):
+    def do_parse(self, parser, rule, *args):
         try:
             parser.has_fun_literal = pyutils.Flag() # pymeta uses eval() which disables assignment. This works around it
-            return parser.apply(rule)
+            return parser.apply(rule, *args)
         except Exception as err:
             if hasattr(err,'formatError'):
                 print err.formatError(''.join(parser.input.data))
@@ -253,7 +250,7 @@ class Compiler(ASTBuilder):
         mmc = MMC(self.cmodule)
         mmc.dump(filepath)
 
-    def compile_function(self, text, env_names):
+    def compile_lambda(self, text, env_names):
         self.filepath = '<eval>'
         self.line_offset = 0
 
@@ -277,20 +274,47 @@ class Compiler(ASTBuilder):
         mmc = MMC_Fun(cmod, cfun)
         mmc.dump()
 
+    def recompile_function(self, text):
+        self.filepath = '<???>'
+        self.line_offset = 0
 
-def main():
-    opts, nonopts = getopt.getopt(sys.argv[1:], 'f:o:')
-    if len(opts) == 0:
-        for path in sys.argv[1:]:
-            Compiler().compile(path)
-    else:
-        # python -m pycompiler.compiler -o '{"text":"fun() {X.z}","env_names":""}'
-        # python -m pycompiler.compiler -o '{"text":"fun() {a}","env_names":["a"]}'
+        self.parser = MemeParser(text)
+        self.parser.i = self
 
-        dopts = dict(opts)
-        js = ejson.loads(dopts['-o'])
-        Compiler().compile_function(js['text'], js['env_names'])
+        ast = self.do_parse(self.parser, 'fun_rest', 'random_name')[0]
+        # print ast
 
-main()
-# import cProfile
-# cProfile.run('main()')
+        # cmod = entries.CompiledModule('dummy_module')
+        # cfun = cmod.new_function('<????????>', [])
+
+        cmod = self.new_module()
+        self.parser = MemeTr([cmod, ast])
+        self.parser.i = self
+
+        self.do_parse(self.parser, 'function_definition')
+
+        cfun = cmod.functions['random_name']
+        cfun.uses_env(False)
+        mmc = MMC_Fun(cmod, cfun)
+        mmc.dump()
+
+
+def main(*paths):
+    for path in paths:
+        Compiler().compile(path)
+
+def compile_lambda(js):
+    # python -m pycompiler.compiler compile-lambda '{"text":"fun() {X.z}","env_names":""}'
+    # python -m pycompiler.compiler compile-lambbd '{"text":"fun() {a}","env_names":["a"]}'
+    js = ejson.loads(js)
+    Compiler().compile_lambda(js['text'], js['env_names'])
+
+def recompile_fun(js):
+    # python -m pycompiler.compiler recompile-fun '{"text":"fun() {X.z}"}'
+    js = ejson.loads(js)
+    Compiler().recompile_function(js['text'])
+
+if __name__ == '__main__':
+    from clime import Program
+    prog = Program(debug=True, default='main')
+    prog.main()

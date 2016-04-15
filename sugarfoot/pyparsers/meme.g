@@ -85,30 +85,24 @@ top_level_fn = spaces alpha_name:name token(":") !(self.input.position):begin
 
 top_level_fun = spaces !(self.has_fun_literal(False))
                 alpha_name:name token(":")
-                spaces !(self.input.position):begin
+                spaces fun_rest(name)
+
+fun_rest :name = !(self.input.position):begin
                 token("fun")  fparams:p token("{")
                   top_fun_body:body !(self.input.position):end
                 token("}")
                   -> self.i.ast(begin,['fun', name, ["params", p], self.has_fun_literal(),
                                               ['body', self.i.sint_ast(end, body + [self.i.sint_ast(end,['end-body'])])]])
 
+
 instance_method_decl = spaces !(self.has_fun_literal(False))
                        token("instance_method") alpha_name:name token(":")
-                       spaces !(self.input.position):begin
-                         token("fun") fparams:p token("{")
-                           top_fun_body:body !(self.input.position):end
-                         token("}")
-                      -> self.i.ast(begin,['fun', name, ["params", p], self.has_fun_literal(),
-                         ['body', self.i.sint_ast(end, body + [self.i.sint_ast(end,['end-body'])])]])
+                       spaces fun_rest(name)
+
 
 class_method_decl = spaces !(self.has_fun_literal(False))
                     token("class_method") alpha_name:name token(":")
-                    spaces !(self.input.position):begin
-                      token("fun") fparams:p token("{")
-                        top_fun_body:body !(self.input.position):end
-                      token("}")
-                    -> self.i.ast(begin,['fun', name, ["params", p], self.has_fun_literal(),
-                       ['body', self.i.sint_ast(end, body + [self.i.sint_ast(end,['end-body'])])]])
+                    spaces fun_rest(name)
 
 params = token("(") idlist:xs token(")") -> xs
 

@@ -130,6 +130,7 @@ public:
   bytecode* mm_function_next_expr(Process*, oop fun, bytecode* ip, bool should_assert = false);
   bytecode* mm_function_next_line_expr(Process*, oop fun, bytecode* ip, bool should_assert = false);
 
+  void mm_overwrite_compiled_function(Process*, oop target_cfun, oop origin_cfun, bool should_assert = false);
   bytecode* mm_compiled_function_get_code(Process*, oop cfun, bool should_assert = false);
   number mm_compiled_function_get_code_size(Process*, oop cfun, bool should_assert = false);
   number mm_compiled_function_get_num_locals_or_env(Process*, oop cfun, bool should_assert = false);

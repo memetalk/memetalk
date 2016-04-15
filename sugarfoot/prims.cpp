@@ -902,6 +902,23 @@ static int prim_compiled_function_loc_for(Process* proc) {
   return 0;
 }
 
+static int prim_compiled_function_recompile(Process* proc) {
+  oop text = proc->get_arg(0);
+  oop self = proc->dp();
+  int exc;
+  oop cfun = proc->vm()->recompile_fun(proc, self, proc->mmobj()->mm_string_cstr(proc, text), &exc);
+  DBG() << "cfun: " << cfun << " " << exc << endl;
+  if (exc != 0) {
+    proc->stack_push(cfun);
+    return PRIM_RAISED;
+  }
+
+  // DBG() << "prim_compiled_function_with_env: GOT cfun: " << cfun << " " << *(oop*) cfun << endl;
+  proc->stack_push(cfun);
+  return 0;
+
+}
+
 static int prim_context_get_env(Process* proc) {
   oop self =  proc->dp();
 
@@ -1140,13 +1157,13 @@ static int prim_process_reload_frame(Process* proc) {
   return 0;
 }
 
-// static int prim_process_cp(Process* proc) {
-//   oop oop_target_proc = proc->rp();
+static int prim_process_cp(Process* proc) {
+  oop oop_target_proc = proc->rp();
 
-//   Process* target_proc = (Process*) (((oop*)oop_target_proc)[2]);
-//   proc->stack_push(target_proc->cp());
-//   return 0;
-// }
+  Process* target_proc = (Process*) (((oop*)oop_target_proc)[2]);
+  proc->stack_push(target_proc->cp());
+  return 0;
+}
 
 // static int prim_process_ip(Process* proc) {
 //   oop oop_target_proc = proc->rp();
@@ -1320,6 +1337,7 @@ void init_primitives(VM* vm) {
   // vm->register_primitive("compiled_function_get_line_mapping", prim_compiled_function_get_line_mapping);
   // vm->register_primitive("compiled_function_get_loc_mapping", prim_compiled_function_get_loc_mapping);
   vm->register_primitive("compiled_function_loc_for", prim_compiled_function_loc_for);
+  vm->register_primitive("compiled_function_recompile", prim_compiled_function_recompile);
 
   vm->register_primitive("context_new", prim_context_new);
   vm->register_primitive("context_get_env", prim_context_get_env);
@@ -1340,7 +1358,7 @@ void init_primitives(VM* vm) {
   vm->register_primitive("process_step_over_line", prim_process_step_over_line);
   vm->register_primitive("process_step_out", prim_process_step_out);
   vm->register_primitive("process_reload_frame", prim_process_reload_frame);
-  // vm->register_primitive("process_cp", prim_process_cp);
+  vm->register_primitive("process_cp", prim_process_cp);
   // vm->register_primitive("process_ip", prim_process_ip);
   vm->register_primitive("process_frames", prim_process_frames);
   // vm->register_primitive("process_apply", prim_process_apply);

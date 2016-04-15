@@ -683,6 +683,37 @@ bytecode* MMObj::mm_function_next_line_expr(Process* p, oop fun, bytecode* ip, b
 }
 
 
+void MMObj::mm_overwrite_compiled_function(Process* p, oop target_cfun, oop origin_cfun, bool should_assert) {
+  TYPE_CHECK(!(mm_object_vt(target_cfun) == _core_image->get_prime("CompiledFunction") ||
+               mm_object_vt(origin_cfun) == _core_image->get_prime("CompiledFunction")),
+             "TypeError","Expected CompiledFunction")
+
+    int fields[] = {3, //params
+                    5, //is_prim -
+                    6, //prim_name
+                    10, //num_params
+                    11, //has_env
+                    14, //local_size
+                    15, //env_offset
+                    16, //lit_frame_size
+                    17, //lit_frame
+                    18, //bytecode_size
+                    19, //bytecode
+                    20, //exc_frames_count
+                    21, //exc_frames
+                    22, //env_table
+                    23, //text
+                    24, //line_mapping
+                    25, //loc_mapping
+                    0};
+
+  int i = 0;
+  while (fields[i]) {
+    ((oop*)target_cfun)[fields[i]] = ((oop*)origin_cfun)[fields[i]];
+    i++;
+  }
+}
+
 bool MMObj::mm_compiled_function_is_ctor(Process* p, oop cfun, bool should_assert) {
   TYPE_CHECK(!( mm_object_vt(cfun) == _core_image->get_prime("CompiledFunction")),
              "TypeError","Expected CompiledFunction")

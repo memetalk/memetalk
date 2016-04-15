@@ -138,12 +138,21 @@ init new: fun(proc) {
   execMenu.addAction(action);
 
   action = qt.QAction.new("Reload frame", this);
-  action.setShortcut("ctrl+r");
+  action.setShortcut("ctrl+f");
   action.connect("triggered", fun(_) {
       this.reloadFrame();
   });
   action.setShortcutContext(0); //widget context
   execMenu.addAction(action);
+
+  action = qt.QAction.new("Recompile", this);
+  action.setShortcut("ctrl+r");
+  action.connect("triggered", fun(_) {
+      this.recompileCurrentFunction();
+  });
+  action.setShortcutContext(0); //widget context
+  execMenu.addAction(action);
+
 
   var centralWidget = QWidget.new(this);
   this.setCentralWidget(centralWidget);
@@ -210,6 +219,12 @@ instance_method printIt: fun() {
 }
 
 instance_method reloadFrame: fun() {
+  @process.reloadFrame();
+  this.updateUI;
+}
+
+instance_method recompileCurrentFunction: fun() {
+  @process.recompileCurrentFunction(@editor.text);
   @process.reloadFrame();
   this.updateUI;
 }

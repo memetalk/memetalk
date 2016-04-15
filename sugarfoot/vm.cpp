@@ -179,11 +179,45 @@ std::string get_compile_fun_json(const char* text, std::list<std::string> vars) 
   return buf.str();
 }
 
+oop VM::recompile_fun(Process* proc, oop cfun, const char* text, int* exc) {
+  std::list<std::string> vars;
+  std::stringstream s;
+  std::string json = get_compile_fun_json(text, vars);
+
+  s << "python -m pycompiler.compiler recompile-fun '" << json << "'";
+  DBG() << "Executing python compiler: " << s.str() << endl;
+  *exc = 0;
+  if (FILE* p = popen(s.str().c_str(), "r")) {
+    boost::iostreams::file_descriptor_source d(fileno(p), boost::iostreams::close_handle);
+    boost::iostreams::stream_buffer<boost::iostreams::file_descriptor_source> pstream(d);
+    std::stringstream out;
+    out << &pstream;
+    std::string data = out.str();
+
+    char* c_data = (char*) calloc(sizeof(char), data.size());
+    data.copy(c_data, data.size());
+
+    DBG() << "Done executing python compiler" << endl;
+    if (pclose(p) == 0) {
+      MMCFunction* mmcf = new MMCFunction(this, _core_image, c_data, data.size());
+      oop new_cfun = mmcf->load(proc);
+      _mmobj->mm_overwrite_compiled_function(proc, cfun, new_cfun);
+      return cfun;
+    } else {
+      *exc = 1;
+      return proc->mm_exception("CompileError", c_data);
+    }
+  }
+  *exc = 1;
+  ERROR() << "Could not call python compiler :(" << endl;
+  return proc->mm_exception("CompileError", "pipe error: Unable to call compiler");
+}
+
 oop VM::compile_fun(Process* proc, const char* text, std::list<std::string> vars, oop cmod, int* exc) {
   std::stringstream s;
   std::string json = get_compile_fun_json(text, vars);
 
-  s << "python -m pycompiler.compiler -o '" << json << "'";
+  s << "python -m pycompiler.compiler compile-lambda '" << json << "'";
   DBG() << "Executing python compiler: " << s.str() << endl;
 
   *exc = 0;

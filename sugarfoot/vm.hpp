@@ -41,6 +41,7 @@ public:
   // Process* process() { return _process; };
 
   oop compile_fun(Process*, const char* text, std::list<std::string>, oop cmod, int*);
+  oop recompile_fun(Process*, oop cfun, const char* text, int* exc);
 
   std::pair<Process*, oop> start_debugger(Process* target);
 
