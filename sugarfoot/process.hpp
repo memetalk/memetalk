@@ -131,8 +131,8 @@ private:
   bool exception_has_handler(oop e, oop bp);
 
   void tick();
-  void maybe_tick_call();
-  void maybe_tick_return();
+  void maybe_break_on_call();
+  void maybe_break_on_return();
 
   MMLog _log;
   bool _is_dbg;

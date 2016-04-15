@@ -324,7 +324,7 @@ bool Process::load_fun(oop recv, oop drecv, oop fun, bool should_allocate) {
   _ip = _mmobj->mm_function_get_code(this, fun, true);
   // DBG() << "first instruction " << decode_opcode(*_ip) << endl;
   _code_size = _mmobj->mm_function_get_code_size(this, fun);
-  maybe_tick_call();
+  maybe_break_on_call();
   return true;
 }
 
@@ -494,14 +494,14 @@ void Process::fetch_cycle(void* stop_at_bp) {
   DBG() << "end" << endl;
 }
 
-void Process::maybe_tick_return() {
+void Process::maybe_break_on_return() {
   if (_state == STEP_INTO_STATE) {
     _volatile_breakpoints.push_back(_ip);
   }
   // DBG() << "maybe_tick_return: " << _step_fp << " " << _fp << endl;
 }
 
-void Process::maybe_tick_call() {
+void Process::maybe_break_on_call() {
   if (_state == STEP_INTO_STATE) {
     _volatile_breakpoints.push_back(_ip);
   }
@@ -713,7 +713,7 @@ void Process::handle_call(number num_args) {
 
 void Process::handle_return(oop val) {
   unload_fun_and_return(val);
-  maybe_tick_return();
+  maybe_break_on_return();
 }
 
 void Process::dispatch(int opcode, int arg) {
@@ -958,7 +958,7 @@ void Process::fail(oop e) {
 oop Process::unwind_with_exception(oop e) {
   DBG() << "** unwind_with_exception e: " << e << " on cp: " << _cp << endl;
 
-  maybe_tick_return();
+  maybe_break_on_return();
 
   if (_cp == NULL) {
     //we are already unwinding exception e.
