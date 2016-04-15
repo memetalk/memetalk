@@ -507,6 +507,13 @@ void Process::maybe_break_on_call() {
   }
 }
 
+void Process::maybe_break_on_exception() {
+  if (_state == STEP_INTO_STATE || _state == STEP_OVER_STATE) {
+    _state = HALT_STATE;
+  }
+  // DBG() << "maybe_tick_return: " << _step_fp << " " << _fp << endl;
+}
+
 void Process::tick() {
   if (!_ip) return;
 
@@ -958,7 +965,7 @@ void Process::fail(oop e) {
 oop Process::unwind_with_exception(oop e) {
   DBG() << "** unwind_with_exception e: " << e << " on cp: " << _cp << endl;
 
-  maybe_break_on_return();
+  maybe_break_on_exception();//  maybe_break_on_return();
 
   if (_cp == NULL) {
     //we are already unwinding exception e.
@@ -982,6 +989,7 @@ oop Process::unwind_with_exception(oop e) {
   DBG() << "exception frames: " << exception_frames_count << endl;
   if (exception_frames_count == 0) { //_cp is unable to handle
     pop_frame();
+    tick();
     return unwind_with_exception(e);
   }
 

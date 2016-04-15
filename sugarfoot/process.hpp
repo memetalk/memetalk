@@ -134,6 +134,7 @@ private:
   void tick();
   void maybe_break_on_call();
   void maybe_break_on_return();
+  void maybe_break_on_exception();
 
   MMLog _log;
   bool _is_dbg;
