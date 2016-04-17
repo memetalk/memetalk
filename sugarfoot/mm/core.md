@@ -135,6 +135,9 @@
     instance_method env_table: fun() {
       return @env_table;
     }
+    instance_method bytecode_addr: fun() {
+      return @bytecode_addr;
+    }
     instance_method recompile: fun(text) {
       <primitive "compiled_function_recompile">
     }
@@ -262,6 +265,9 @@
   }
   instance_method has: fun(value) {
     <primitive "list_has">
+  }
+  instance_method last: fun() {
+    <primitive "list_last">
   }
   instance_method toString: fun() {
     <primitive "list_to_string">
@@ -445,16 +451,27 @@ end
   instance_method stepOut: fun() {
     <primitive "process_step_out">
   }
+  instance_method resume: fun() {
+    <primitive "process_resume">
+  }
   instance_method reloadFrame: fun() {
     <primitive "process_reload_frame">
-  }
-  instance_method recompileCurrentFunction: fun(text) {
-    this.cp.compiledFunction.recompile(text);
   }
   instance_method returnFromFrame: fun(val) {
     <primitive "process_return_from_frame">
   }
-
+  instance_method breakAtAddr: fun(fn) {
+    <primitive "process_break_at_addr">
+  }
+  instance_method rewindAndContinue: fun(frame) {
+    <primitive "process_rewind_and_continue">
+  }
+  instance_method currentException: fun() {
+    <primitive "process_current_exception">
+  }
+  instance_method fp: fun() {
+     <primitive "process_fp">
+  }
   instance_method cp: fun() {
      <primitive "process_cp">
   }

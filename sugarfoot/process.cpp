@@ -41,6 +41,7 @@ Process::Process(VM* vm, bool is_debugger)
   _state = RUN_STATE;
   _unwinding_exception = false;
   _step_bp = MM_NULL;
+  _current_exception = MM_NULL;
 }
 
 std::string Process::dump_stack_top() {
@@ -180,6 +181,7 @@ void Process::unload_fun_and_return(oop retval) {
 
 void Process::clear_exception_state() {
     _unwinding_exception = false;
+    _current_exception = MM_NULL;
 }
 
 oop Process::ctor_rdp_for(oop rp, oop cp) {
@@ -383,18 +385,29 @@ oop Process::do_send(oop recv, oop selector, int num_args, int *exc) {
     return ex;
   }
 
+  return protected_fetch_cycle(recv, drecv, fun, exc, true);
+}
+
+oop Process::protected_fetch_cycle(oop recv, oop drecv, oop fun, int* exc, bool should_allocate) {
   try {
-    if (load_fun(recv, drecv, fun, true)) {
-      fetch_cycle(_bp);
+    try {
+      if (load_fun(recv, drecv, fun, should_allocate)) {
+        fetch_cycle(_bp);
+      }
+    } catch(mm_frame_rewind e) {
+      //Check if wether we should pop_frame() or throw (if there's a primitive call
+      //or something.
+      unwind_with_frame(e.mm_frame);
+      fetch_cycle(_bp); //resume
     }
-  } catch(mm_rewind e) {
+  } catch(mm_exception_rewind e) {
     *exc = 1;
-    DBG() << "-- end do_send with excepton: " << e.mm_exception << endl;
+    DBG() << "-- end fetch cycle with excepton: " << e.mm_exception << endl;
     return e.mm_exception;
   }
 
   oop val = stack_pop();
-  DBG() << "-- end do_send, val: " << val << endl;
+  DBG() << "-- end fetch cycle with val: " << val << endl;
   return val;
 }
 
@@ -422,19 +435,7 @@ oop Process::do_call(oop fun, int* exc) {
   DBG() << "-- begin: fun: " << fun << " sp: " << _sp << ", fp: " << _fp << endl;
 
   *exc = 0;
-  try {
-    if (load_fun(NULL, NULL, fun, false)) {
-      fetch_cycle(_bp);
-    }
-  } catch(mm_rewind e) {
-    *exc = 1;
-    DBG() << "-- end do_call with excepton: " << e.mm_exception << endl;
-    return e.mm_exception;
-  }
-
-  oop val = stack_pop();
-  DBG() << "-- end call: " << val << " sp: " << _sp << ", fp: " << _fp << endl;
-  return val;
+  return protected_fetch_cycle(NULL, NULL, fun, exc, false);
 }
 
 oop Process::call(oop fun, oop args, int* exc) {
@@ -565,6 +566,10 @@ void Process::tick() {
     _step_bp = MM_NULL;
     _control->pause();
     LOG_STATE();
+    DBG() << "resuming! state == rewind? " << (_state == REWIND_STATE) << endl;
+    if (_state == REWIND_STATE) {
+      throw mm_frame_rewind(_unwind_to_frame);
+    }
     // DBG() << "Process::tick: resuming..." << endl;
 }
 
@@ -613,6 +618,11 @@ void Process::step_out() {
   _step_bp = *(oop*)_bp; //previous bp
   // DBG()  << "ste_out will br on FP: " << _step_bp << " " << std::endl;
   _state = STEP_OUT_STATE;
+  _control->resume();
+}
+
+void Process::resume() {
+  _state = RUN_STATE;
   _control->resume();
 }
 
@@ -897,7 +907,7 @@ int Process::execute_primitive(std::string name) {
     int val = _vm->get_primitive(this, name)(this);
     DBG() << "primitive " << name << " returned " << val << endl;
     return val;
-  } catch(mm_rewind e) {
+  } catch(mm_exception_rewind e) {
     DBG() << "primitive " << name << " raised " << e.mm_exception << endl;
     stack_push(e.mm_exception);
     return PRIM_RAISED;
@@ -985,10 +995,20 @@ void Process::fail(oop e) {
 }
 
 oop Process::unwind_with_exception(oop e) {
+  //This function either:
+  //-Terminates the VM unwinding all the stack due to lack of catch blocks
+  //-returns true in case a catcher was found (_ip is set to the block)
+  // the catcher expects e to be on the stack
+  //  (maybe I should put the stack_push(e) here, instead of
+  //   spreading if(exc_state) stack_push(e)
+  //   and also change the signature to return bool instead of oop
+  //-returns false, in case execution should resume normally.
   _unwinding_exception = true;
   DBG() << "** unwind_with_exception e: " << e << " on cp: " << _cp << endl;
 
   maybe_break_on_exception();//  maybe_break_on_return();
+
+  tick();
 
   if (_cp == NULL) {
     //we are already unwinding exception e.
@@ -1003,7 +1023,7 @@ oop Process::unwind_with_exception(oop e) {
 
   if (_mmobj->mm_function_is_prim(this, _cp, true)) {
     DBG() << "->> unwind reached primitive " << _mmobj->mm_string_cstr(this, _mmobj->mm_function_get_prim_name(this, _cp, true), true) << endl;
-    throw mm_rewind(e);
+    throw mm_exception_rewind(e);
   }
 
   bytecode* code = _mmobj->mm_function_get_code(this, _cp, true);
@@ -1056,6 +1076,7 @@ oop Process::unwind_with_exception(oop e) {
         (type_oop == MM_NULL || delegates_to)) {
       DBG() << "CAUGHT " << endl;
       _ip = code + catch_block;
+      clear_exception_state();
       return e;
     }
   }
@@ -1069,7 +1090,7 @@ void Process::raise(const char* ex_type_name, const char* msg) {
   DBG() << ex_type_name << " -- " << msg << endl;
   //TODO: this is used by mmc_image. I think we should just return the
   // exception and let that class deal with it.
-  throw mm_rewind(mm_exception(ex_type_name, msg));
+  throw mm_exception_rewind(mm_exception(ex_type_name, msg));
 }
 
 oop Process::mm_exception(const char* ex_type_name, const char* msg) {
@@ -1090,8 +1111,10 @@ bool Process::has_debugger_attached() {
 }
 
 void Process::halt_and_debug() {
-  // DBG() << "Process::halt_and_debug" << endl;
-  _dbg_handler = _vm->start_debugger(this);
+  DBG() << "starting new debugger? "" << has_debugger_attached()" << endl;
+  if (!has_debugger_attached()) {
+    _dbg_handler = _vm->start_debugger(this);
+  }
   pause();
 }
 
@@ -1100,6 +1123,7 @@ void Process::maybe_debug_on_raise(oop ex_oop) {
     pause();
   } else if (_vm->running_online() &&
              !exception_has_handler(ex_oop, _bp)) {
+    _current_exception = ex_oop;
     halt_and_debug();
   }
 }
@@ -1155,5 +1179,36 @@ const char* Process::meme_curr_fname() {
     return _mmobj->mm_string_cstr(this, _mmobj->mm_function_get_name(this, _cp));
   } else {
     return "?";
+  }
+}
+
+void Process::break_at_addr(bytecode* addr) {
+  DBG() << "break_at_addr: " << addr << endl;
+  _volatile_breakpoints.push_back(addr);
+}
+
+void Process::rewind_to_frame_and_continue(oop frame) {
+  DBG() << "rewind to frame: " << frame << endl;
+  _state = REWIND_STATE;
+  _unwind_to_frame = frame;
+  _control->resume();
+}
+
+// oop Process::unwind_to_frame(oop frame) {
+//   _state = REWIND_STATE;
+//   _unwind_to_frame = frame;
+//   _control->resume();
+// }
+
+void Process::unwind_with_frame(oop frame) {
+  DBG() << "unwind from fp:" << _fp << " to frame: " <<  frame << endl;
+  if (_fp == frame) {
+    reload_frame();
+    return;
+  } else if (_mmobj->mm_function_is_prim(this, _cp, true)) {
+      throw mm_frame_rewind(frame);
+  } else {
+    pop_frame();
+    unwind_with_frame(frame);
   }
 }

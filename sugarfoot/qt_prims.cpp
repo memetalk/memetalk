@@ -791,6 +791,9 @@ static int prim_qt_qmainwindow_status_bar(Process* proc) {
 
   _QMainWindow* qtobj = (_QMainWindow*) get_qt_instance(proc->mmobj(), data_self);
   int exc;
+  QStatusBar* bar = qtobj->statusBar();
+  bar->showMessage("default");
+  _log << "statusBar: " << bar << endl;
   proc->stack_push(meme_instance(proc, qtobj->statusBar(), &exc));
   return exc;
 }
@@ -1875,6 +1878,14 @@ static int prim_qt_qwidget_show(Process* proc) {
   return 0;
 }
 
+static int prim_qt_status_bar_show_message(Process* proc) {
+  oop data_self =  proc->dp();
+  QStatusBar* w = (QStatusBar*) get_qt_instance(proc->mmobj(), data_self);
+  _log << "status bar recovered: " << w << endl;
+  w->showMessage("Exception");
+  proc->stack_push(proc->rp());
+  return 0;
+}
 
 static int prim_qt_maybe_construct_qapp(Process* proc) {
   if (!_app) {
@@ -2052,6 +2063,8 @@ void qt_init_primitives(VM* vm) {
   vm->register_primitive("qt_qwidget_set_stylesheet", prim_qt_qwidget_set_stylesheet);
   vm->register_primitive("qt_qwidget_set_window_title", prim_qt_qwidget_set_window_title);
   vm->register_primitive("qt_qwidget_show", prim_qt_qwidget_show);
+
+  vm->register_primitive("qt_status_bar_show_message", prim_qt_status_bar_show_message);
 
   vm->register_primitive("qt_maybe_construct_qapp", prim_qt_maybe_construct_qapp);
 

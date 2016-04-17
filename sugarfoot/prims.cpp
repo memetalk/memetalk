@@ -358,6 +358,22 @@ static int prim_list_has(Process* proc) {
   return 0;
 }
 
+static int prim_list_last(Process* proc) {
+  oop self =  proc->dp();
+
+  number size = proc->mmobj()->mm_list_size(proc, self);
+  DBG() << "size of list: " << size << endl;
+  if (size > 0) {
+    oop entry = proc->mmobj()->mm_list_entry(proc, self, size-1);
+    proc->stack_push(entry);
+  } else {
+    proc->raise("IndexError", "List overflow");
+    assert(0); //unreachable
+  }
+  return 0;
+}
+
+
 static int prim_list_to_string(Process* proc) {
   oop self =  proc->dp();
   std::stringstream s;
@@ -1148,6 +1164,16 @@ static int prim_process_step_out(Process* proc) {
   return 0;
 }
 
+static int prim_process_resume(Process* proc) {
+  oop oop_target_proc = proc->rp();
+
+  Process* target_proc = (Process*) (((oop*)oop_target_proc)[2]);
+  target_proc->resume();
+
+  proc->stack_push(proc->rp());
+  return 0;
+}
+
 static int prim_process_reload_frame(Process* proc) {
   oop oop_target_proc = proc->rp();
 
@@ -1168,11 +1194,41 @@ static int prim_process_return_from_frame(Process* proc) {
   return 0;
 }
 
+
+static int prim_process_break_at_addr(Process* proc) {
+  oop oop_target_proc = proc->rp();
+  bytecode* addr = (bytecode*) proc->get_arg(0);
+
+  Process* target_proc = (Process*) (((oop*)oop_target_proc)[2]);
+  target_proc->break_at_addr(addr);
+  proc->stack_push(proc->rp());
+  return 0;
+}
+
+static int prim_process_rewind_and_continue(Process* proc) {
+  oop oop_target_proc = proc->rp();
+  oop frame = proc->get_arg(0);
+
+  DBG() << "rewiding to frame: " << frame << endl;
+  Process* target_proc = (Process*) (((oop*)oop_target_proc)[2]);
+  target_proc->rewind_to_frame_and_continue(frame);
+  proc->stack_push(proc->rp());
+  return 0;
+}
+
 static int prim_process_cp(Process* proc) {
   oop oop_target_proc = proc->rp();
 
   Process* target_proc = (Process*) (((oop*)oop_target_proc)[2]);
   proc->stack_push(target_proc->cp());
+  return 0;
+}
+
+static int prim_process_fp(Process* proc) {
+  oop oop_target_proc = proc->rp();
+
+  Process* target_proc = (Process*) (((oop*)oop_target_proc)[2]);
+  proc->stack_push(target_proc->fp());
   return 0;
 }
 
@@ -1200,6 +1256,14 @@ static int prim_process_frames(Process* proc) {
     proc->mmobj()->mm_list_append(proc, frames, frame);
   }
   proc->stack_push(frames);
+  return 0;
+}
+
+static int prim_process_current_exception(Process* proc) {
+  oop oop_target_proc = proc->rp();
+
+  Process* target_proc = proc->mmobj()->mm_process_get_proc(proc, oop_target_proc);
+  proc->stack_push(target_proc->current_exception());
   return 0;
 }
 
@@ -1311,6 +1375,7 @@ void init_primitives(VM* vm) {
   vm->register_primitive("list_each", prim_list_each);
   vm->register_primitive("list_map", prim_list_map);
   vm->register_primitive("list_has", prim_list_has);
+  vm->register_primitive("list_last", prim_list_last);
   vm->register_primitive("list_to_string", prim_list_to_string);
   vm->register_primitive("list_to_source", prim_list_to_source);
   vm->register_primitive("list_size", prim_list_size);
@@ -1368,10 +1433,14 @@ void init_primitives(VM* vm) {
   vm->register_primitive("process_step_over", prim_process_step_over);
   vm->register_primitive("process_step_over_line", prim_process_step_over_line);
   vm->register_primitive("process_step_out", prim_process_step_out);
+  vm->register_primitive("process_resume", prim_process_resume);
   vm->register_primitive("process_reload_frame", prim_process_reload_frame);
   vm->register_primitive("process_return_from_frame", prim_process_return_from_frame);
-
+  vm->register_primitive("process_break_at_addr", prim_process_break_at_addr);
+  vm->register_primitive("process_rewind_and_continue", prim_process_rewind_and_continue);
+  vm->register_primitive("process_current_exception", prim_process_current_exception);
   vm->register_primitive("process_cp", prim_process_cp);
+  vm->register_primitive("process_fp", prim_process_fp);
   // vm->register_primitive("process_ip", prim_process_ip);
   vm->register_primitive("process_frames", prim_process_frames);
   // vm->register_primitive("process_apply", prim_process_apply);

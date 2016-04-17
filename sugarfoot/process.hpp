@@ -13,10 +13,16 @@ class VM;
 class MMObj;
 class ProcessControl;
 
-class mm_rewind {
+class mm_exception_rewind {
 public:
-  mm_rewind(oop ex) : mm_exception(ex) {}
+  mm_exception_rewind(oop ex) : mm_exception(ex) {}
   oop mm_exception;
+};
+
+class mm_frame_rewind {
+public:
+  mm_frame_rewind(oop fp) : mm_frame(fp) {}
+  oop mm_frame;
 };
 
 
@@ -27,8 +33,11 @@ class Process {
     STEP_INTO_STATE,
     STEP_OVER_STATE,
     STEP_OUT_STATE,
+    REWIND_STATE,
     HALT_STATE
   };
+
+
 public:
   Process(VM*, bool is_debugger = false);
 
@@ -65,6 +74,8 @@ public:
   void stack_push(word);
   void stack_push(bytecode*);
 
+  oop current_exception() { return _current_exception; }
+
   oop unwind_with_exception(oop);
 
   // oop do_call_protected(oop, int*);
@@ -87,6 +98,7 @@ public:
   void step_over();
   void step_over_line();
   void step_out();
+  void resume();
   void reload_frame();
 
   word* stack() { return _stack; };
@@ -101,6 +113,12 @@ public:
   bool has_debugger_attached();
 
   void clear_exception_state();
+
+  void break_at_addr(bytecode*);
+  void rewind_to_frame_and_continue(oop frame);
+
+  oop protected_fetch_cycle(oop recv, oop drecv, oop fun, int* exc, bool should_allocate);
+  void unwind_with_frame(oop frame);
 
 private:
   std::string dump_stack_top();
@@ -165,6 +183,8 @@ private:
   number _code_size;
   std::list<bytecode*> _volatile_breakpoints;
   oop _step_bp;
+  oop _unwind_to_frame;
+  oop _current_exception;
 };
 
 #endif

@@ -121,6 +121,14 @@ init new: fun(proc) {
   action.setShortcutContext(0); //widget context
   execMenu.addAction(action);
 
+  action = qt.QAction.new("Continue", this);
+  action.setShortcut("ctrl+c");
+  action.connect("triggered", fun(_) {
+      @process.resume();
+  });
+  action.setShortcutContext(0); //widget context
+  execMenu.addAction(action);
+
   action = qt.QAction.new("Do it", this);
   action.setShortcut("ctrl+d");
   action.connect("triggered", fun(_) {
@@ -157,6 +165,14 @@ init new: fun(proc) {
   action.setShortcut("ctrl+t");
   action.connect("triggered", fun(_) {
       this.returnWithValue();
+  });
+  action.setShortcutContext(0); //widget context
+  execMenu.addAction(action);
+
+  action = qt.QAction.new("Rewind and go", this);
+  action.setShortcut("ctrl+w");
+  action.connect("triggered", fun(_) {
+      this.rewindTo();
   });
   action.setShortcutContext(0); //widget context
   execMenu.addAction(action);
@@ -237,6 +253,19 @@ instance_method recompileCurrentFunction: fun() {
   this.updateUI;
 }
 
+instance_method rewindTo: fun() {
+  //1- recompile frame[i] function
+  //2- reset fp to load it to it's beginning
+  //3- set breakpoint to frame[-1]
+  //4- continue.
+  var selected_frame = @process.frames()[@frame_index];
+  var top_frame = @process.frames().last;
+  var fn = selected_frame.cp;
+  fn.compiledFunction.recompile(@editor.text);
+  @process.breakAtAddr(top_frame.cp.compiledFunction.bytecode_addr);
+  @process.rewindAndContinue(selected_frame.fp);
+}
+
 instance_method returnWithValue: fun() {
   try {
     var ctx = Context.withFrame(@editor.selectedText(), @process.frames()[@frame_index], thisModule);
@@ -259,6 +288,12 @@ instance_method updateUI: fun() {
     }
    @localVarList.loadFrame(@process.frames[@frame_index]);
    @fieldVarList.loadReceiver(@process.frames[@frame_index]);
+  }
+  var exc = @process.currentException;
+  if (exc) {
+    this.statusBar.showMessage(exc.toString);
+  } else {
+    this.statusBar.showMessage("");
   }
 }
 end

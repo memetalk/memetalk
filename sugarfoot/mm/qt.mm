@@ -629,6 +629,10 @@ instance_method show: fun() {
 end //qt:QWidget
 
 class QStatusBar < QWidget
+fields: self;
+instance_method showMessage: fun(text) {
+  <primitive "qt_status_bar_show_message">
+}
 end
 
 .end

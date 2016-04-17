@@ -72,7 +72,7 @@ int VM::start() {
   oop imod;
   try {
     imod = instantiate_module(proc, filepath, _mmobj->mm_list_new());
-  } catch(mm_rewind e) {
+  } catch(mm_exception_rewind e) {
     print_retval(proc, e.mm_exception);
     return * (int*) (void*) &(e.mm_exception);
   }
@@ -92,7 +92,7 @@ std::pair<Process*, oop> VM::start_debugger(Process* target) {
   Process* dbg_proc = new Process(this, true);
   try {
     imod = instantiate_module(dbg_proc, "idez", _mmobj->mm_list_new());
-  } catch(mm_rewind e) {
+  } catch(mm_exception_rewind e) {
     ERROR() << "uncaught exception while instantiating debugger module :(" << endl;
     dbg_proc->fail(e.mm_exception);
     // print_retval(e.mm_exception);
@@ -112,9 +112,9 @@ oop VM::new_symbol(const char* cstr) {
   std::string s = cstr;
   if (_symbols.find(s) == _symbols.end()) {
     _symbols[s] = _mmobj->mm_symbol_new(cstr);
-    DBG() << "Creating new symbol " << cstr << " = " << _symbols[s] << endl;
+    // DBG() << "Creating new symbol " << cstr << " = " << _symbols[s] << endl;
   } else {
-    DBG() << "returning existing symbol " << cstr << " = " << _symbols[s] << endl;
+    // DBG() << "returning existing symbol " << cstr << " = " << _symbols[s] << endl;
   }
   return _symbols[s];
 }
