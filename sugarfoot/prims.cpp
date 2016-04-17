@@ -13,9 +13,9 @@
 
 namespace fs = ::boost::filesystem;
 
-#define DBG() _log << _log.yellow + _log.bold + "[MMOBJ|" << __FUNCTION__ << "] " << _log.normal
-#define WARNING() MMLog::warning() << "[MMOBJ|" << __FUNCTION__ << "] " << _log.normal
-#define ERROR() MMLog::error() << "[MMOBJ|" << __FUNCTION__ << "] " << _log.normal
+#define DBG() _log << _log.yellow + _log.bold + "[prim|" << __FUNCTION__ << "] " << _log.normal
+#define WARNING() MMLog::warning() << "[prim|" << __FUNCTION__ << "] " << _log.normal
+#define ERROR() MMLog::error() << "[prim|" << __FUNCTION__ << "] " << _log.normal
 
 
 static MMLog _log(LOG_PRIMS);
