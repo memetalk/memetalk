@@ -17,7 +17,7 @@ and use it, you will need:
  * boost
 
 
-* `$ brew install python pyqt qscintilla2`
+* `$ brew install boost python pyqt qscintilla2`
 
 Also, you will need:
 
@@ -35,10 +35,10 @@ compiler is written in python at the moment. To compile source code, run the
 following from the `memetalk/sugarfoot` directory:
 
 ```
-$  python -m pycompiler.compiler mm/hello_world.mm
+$  python -m pycompiler.compiler mm/hello_world.mm mm/io.mm
 ```
 
-A compiled `.mmc` file should have been generated on `mm` directory.
+Compiled `.mmc` files should have been generated on `mm` directory.
 
 
 ## Running
