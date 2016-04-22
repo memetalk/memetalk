@@ -259,11 +259,12 @@ instance_method rewindTo: fun() {
   //3- set breakpoint to frame[-1]
   //4- continue.
   var selected_frame = @process.frames()[@frame_index];
-  var top_frame = @process.frames().last;
+  var top_frame = @process.frames()[0];
   var fn = selected_frame.cp;
   fn.compiledFunction.recompile(@editor.text);
   @process.breakAtAddr(top_frame.cp.compiledFunction.bytecode_addr);
   @process.rewindAndContinue(selected_frame.fp);
+  this.close();
 }
 
 instance_method returnWithValue: fun() {
@@ -279,6 +280,7 @@ instance_method returnWithValue: fun() {
 }
 
 instance_method updateUI: fun() {
+  this.show();
   if (@frame_index >= 0) {
     @editor.setText(@execFrames.codeFor(@frame_index));
     // @editor.setFrameIndex(@frame_index);

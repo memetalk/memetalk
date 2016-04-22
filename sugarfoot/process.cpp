@@ -398,6 +398,8 @@ oop Process::protected_fetch_cycle(oop recv, oop drecv, oop fun, int* exc, bool 
       //Check if wether we should pop_frame() or throw (if there's a primitive call
       //or something.
       unwind_with_frame(e.mm_frame);
+      _state = RUN_STATE;
+      clear_exception_state();
       fetch_cycle(_bp); //resume
     }
   } catch(mm_exception_rewind e) {
@@ -526,13 +528,15 @@ void Process::maybe_break_on_exception() {
 void Process::tick() {
   if (!_ip) return;
 
+  DBG() << "breakpoints " << _volatile_breakpoints.size() << " state: " << _state << endl;
+
   if (_state == RUN_STATE || _state == STEP_INTO_STATE || _state == STEP_OVER_STATE) {
     for(std::list<bytecode*>::iterator it = _volatile_breakpoints.begin(); it != _volatile_breakpoints.end(); it++) {
-      // DBG() << "tick: looking for breakpoint "
-      //           << *it << " =?= " << _ip
-      //           << " -- opcode: " << decode_opcode(*_ip) << endl;
+      DBG() << "tick: looking for breakpoint "
+                << *it << " =?= " << _ip
+                << " -- opcode: " << decode_opcode(*_ip) << endl;
       if (*it == _ip) {
-        // DBG() << "BREAK on "  << _ip << " " << decode_opcode(*_ip) << endl;
+        DBG() << "BREAK on "  << _ip << " " << decode_opcode(*_ip) << endl;
         _volatile_breakpoints.erase(it);
         goto do_pause;
       }
@@ -553,7 +557,7 @@ void Process::tick() {
   return;
 
   do_pause:
-    // DBG() << "tick: do_pause " << endl;
+    DBG() << "do_pause" << endl;
     int exc;
     oop retval = _dbg_handler.first->send_0(_dbg_handler.second,
                                             _vm->new_symbol("process_paused"), &exc);
@@ -623,6 +627,7 @@ void Process::step_out() {
 
 void Process::resume() {
   _state = RUN_STATE;
+  clear_exception_state();
   _control->resume();
 }
 

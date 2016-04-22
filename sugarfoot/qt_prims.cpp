@@ -1880,9 +1880,9 @@ static int prim_qt_qwidget_show(Process* proc) {
 
 static int prim_qt_status_bar_show_message(Process* proc) {
   oop data_self =  proc->dp();
+  oop oop_str = proc->get_arg(0);
   QStatusBar* w = (QStatusBar*) get_qt_instance(proc->mmobj(), data_self);
-  _log << "status bar recovered: " << w << endl;
-  w->showMessage("Exception");
+  w->showMessage(proc->mmobj()->mm_string_cstr(proc, oop_str));
   proc->stack_push(proc->rp());
   return 0;
 }
