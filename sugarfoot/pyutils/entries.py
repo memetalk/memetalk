@@ -634,8 +634,8 @@ class CompiledFunction(Entry):
             'local_pos': var_idx})
 
 
-    def current_label(self):
-        return self.bytecodes.new_label(current=True)
+    def current_label(self, current=True):
+        return self.bytecodes.new_label(current)
 
     # def identifier_is_param(self, name):
     #     return name in self.params
@@ -817,14 +817,19 @@ class CompiledFunction(Entry):
         self.bytecodes.append('push_literal', idx)
         self.bytecodes.append('send', 0)
 
-    def emit_jz(self):
-        lb = self.bytecodes.new_label()
+    def emit_jz(self, lb=None):
+        lb = lb or self.bytecodes.new_label()
         self.bytecodes.append('jz', lb)
         return lb
 
-    def emit_jmp(self):
-        lb = self.bytecodes.new_label()
+    def emit_jmp(self, lb=None):
+        lb = lb or self.bytecodes.new_label()
         self.bytecodes.append('jmp', lb)
+        return lb
+
+    def emit_jmp_back(self, lb=None):
+        lb = lb or self.bytecodes.new_label()
+        self.bytecodes.append('jmpb', lb)
         return lb
 
     @emitter

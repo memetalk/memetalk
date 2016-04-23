@@ -54,6 +54,7 @@ opcode_mapping = {
     # jumps
     "jz": 50,
     "jmp": 51,
+    "jmpb": 52,
     # ...
     "exit": 60
     }
@@ -74,6 +75,7 @@ class Label(object):
 
     def as_current(self):
         self.pos = len(self.bytecodes) - self.start
+        return self
 
     def __call__(self):
         return self.pos

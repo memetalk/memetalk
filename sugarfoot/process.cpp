@@ -837,6 +837,11 @@ void Process::dispatch(int opcode, int arg) {
         DBG() << "JMP " << arg << " " << endl;
         _ip += (arg -1); //_ip already suffered a ++ in dispatch
         break;
+      case JMPB:
+        DBG() << "JMPB " << arg << " " << endl;
+        _ip -= (arg+1); //_ip already suffered a ++ in dispatch
+        break;
+
       case JZ:
         val = stack_pop();
         DBG() << "JZ " << arg << " " << val << endl;

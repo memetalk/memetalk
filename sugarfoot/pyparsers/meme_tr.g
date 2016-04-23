@@ -111,6 +111,9 @@ foo :fnobj :ast = 'var-def' :id expr(fnobj) ->  fnobj.emit_var_decl(ast, id)
                   !(fnobj.emit_jz()):lb1 [expr(fnobj)*]
                   !(fnobj.emit_jmp()):lb2 !(lb1.as_current())
                   [expr(fnobj)*] -> lb2.as_current()
+               | 'while' !(fnobj.current_label(False)):lbcond
+                   expr(fnobj)
+                   !(fnobj.emit_jz()):lbend [expr(fnobj)*] !(fnobj.emit_jmp_back(lbcond.as_current())) -> lbend.as_current()
                | 'try'
                   !(fnobj.current_label()):label_begin_try
                     [expr(fnobj)*]

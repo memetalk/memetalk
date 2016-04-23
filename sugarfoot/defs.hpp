@@ -53,3 +53,4 @@ typedef int (*prim_function_t) (Process*);
 
 #define JZ 50
 #define JMP 51
+#define JMPB 52
