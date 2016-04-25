@@ -54,26 +54,42 @@ void VM::print_retval(Process* proc, oop retval) {
   DBG() << "RETVAL: " << retval << " => " << _mmobj->mm_string_cstr(proc, retval_str) << endl;
 }
 
+void VM::print_error(Process* proc, oop retval) {
+  int exc;
+  oop retval_str = proc->send_0(retval, new_symbol("toString"), &exc);
+  ERROR() << "uncaught exception: " << retval << " => " << _mmobj->mm_string_cstr(proc, retval_str) << endl;
+}
+
+Process* VM::init() {
+  Process* proc = new Process(this);
+  init_primitives(this); //module initialization could execute primitives
+  _core_image->load();
+  return proc;
+}
+
+int VM::remote_repl() {
+  Process* proc = init();
+  return proc->read_eval_loop();
+}
+
+
 int VM::start() {
   if (_argc != 2) {
     bail("usage: sf-vm <file.mmc>");
   }
 
-  Process* proc = new Process(this);
-
-  init_primitives(this); //module initialization could execute primitives
+  Process* proc = init();
 
   char* filepath = _argv[1];
 
 
-  _core_image->load();
   // dump_prime_info();
 
   oop imod;
   try {
     imod = instantiate_module(proc, filepath, _mmobj->mm_list_new());
   } catch(mm_exception_rewind e) {
-    print_retval(proc, e.mm_exception);
+    print_error(proc, e.mm_exception);
     return * (int*) (void*) &(e.mm_exception);
   }
 

@@ -55,4 +55,46 @@
   (setq mode-name "memetalk")
   (run-hooks 'memetalk-mode-hook))
 
+;;;;;;; socket
+
+(defun memetalk-repl-connect ()
+  (interactive)
+  (setq mm-repl-socket nil)
+  (condition-case nil
+    (setq mm-repl-socket (open-network-stream "mm-repl"
+                                             "*mm-repl*" "localhost" 4200))
+    (error nil))
+  mm-repl-socket)
+
+(defun memetalk-repl-is-open ()
+  (and (process-status "mm-repl") t))
+
+(defun memetalk-trim-r (string)
+  (when (string-match "[ \t\n]*$" string)
+    (replace-match "" nil nil string)))
+
+(defun memetalk-repl-last-cmd ()
+  (if (memetalk-repl-is-open)
+      (with-current-buffer "*mm-repl*"
+        (trim-r (thing-at-point 'line)))
+    nil))
+
+(defun memetalk-repl-send (cmd)
+  (if (memetalk-repl-is-open)
+      (progn
+        (process-send-string "*mm-repl*" cmd)
+        t)
+    nil))
+
+
+;;; operations
+
+(defun memetalk-instantiate-module ()
+  (interactive)
+  (if (memetalk-repl-is-open)
+      (let ((module-name (when (string-match ".mm" (buffer-name))
+                           (replace-match "" nil nil (buffer-name)))))
+        (memetalk-repl-send (concat "load " module-name  "\n")))))
+
 (provide 'memetalk-mode)
+(provide 'memetalk-instantiate-module)

@@ -43,6 +43,8 @@ public:
 
   oop run(oop, oop, int*);
 
+  int read_eval_loop();
+
   bool is_running() { return _state == RUN_STATE; }
 
   void fail(oop e);

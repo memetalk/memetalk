@@ -18,9 +18,9 @@ CPPFLAGS = -I/usr/local/opt/boost155/include
 LIB_PATHS = -L/usr/local/Cellar/boost/1.54.0/lib $(LDFLAGS)
 INC_PATHS = -I/usr/local/Cellar/qscintilla2/2.7.1/include/Qsci $(CPPFLAGS)
 
-CPP_FILES =  mmc_image.cpp core_image.cpp vm.cpp log.cpp utils.cpp mmobj.cpp main.cpp process.cpp prims.cpp mmc_fun.cpp ctrl.cpp qt_prims.cpp qsc.cpp
+CPP_FILES =  mmc_image.cpp core_image.cpp vm.cpp log.cpp utils.cpp mmobj.cpp main.cpp process.cpp prims.cpp mmc_fun.cpp ctrl.cpp qt_prims.cpp qsc.cpp remote_repl.cpp
 
-HPP_FILES = mmc_image.hpp core_image.hpp vm.hpp log.hpp utils.hpp defs.hpp mmobj.hpp process.hpp prims.hpp mmc_fun.hpp ctrl.hpp qt_prims.hpp qsc.hpp
+HPP_FILES = mmc_image.hpp core_image.hpp vm.hpp log.hpp utils.hpp defs.hpp mmobj.hpp process.hpp prims.hpp mmc_fun.hpp ctrl.hpp qt_prims.hpp qsc.hpp remote_repl.hpp
 
 LIBS = -lboost_system-mt -lboost_iostreams-mt -lboost_filesystem-mt -lqscintilla2
 

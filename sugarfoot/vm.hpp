@@ -24,6 +24,8 @@ public:
 
   MMObj* mmobj();
 
+  int remote_repl();
+
   int start();
   oop new_symbol(const char*);
   oop new_symbol(Process*, oop);
@@ -48,10 +50,13 @@ public:
   void bail(const std::string& msg);
   void bail();
 
+  void print_error(Process* proc, oop retval);
+
 private:
   // void dump_prime_info();
   // void dictionary_dump(oop dict);
   void print_retval(Process*, oop retval);
+  Process* init();
 
   MMLog _log;
   int _argc;

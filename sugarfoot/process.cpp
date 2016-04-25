@@ -12,6 +12,8 @@
 #include "ctrl.hpp"
 #include <sstream>
 #include <assert.h>
+#include "remote_repl.hpp"
+
 
 #define BCOLOR (_log.normal + (_is_dbg? _log.bold + _log.cyan : _log.bold + _log.green))
 #define COLOR (_log.normal + (_is_dbg?  _log.cyan : _log.green))
@@ -61,6 +63,11 @@ std::string Process::dump_stack_top() {
   return s.str();
 }
 
+int Process::read_eval_loop() {
+  Repl repl(this);
+  repl.start_read_eval_loop();
+  return 0;
+}
 
 oop Process::run(oop recv, oop selector_sym, int* exc) {
   //atm, we don't need to check exc
