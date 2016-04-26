@@ -53,16 +53,36 @@
   ;; (set (make-local-variable 'indent-line-function) 'memetalk-indent-line)
   (setq major-mode 'memetalk-mode)
   (setq mode-name "memetalk")
+  (memetalk-repl-setup-reconnection)
   (run-hooks 'memetalk-mode-hook))
 
 ;;;;;;; socket
+
+(defvar memetalk-repl-recon-timer nil)
+
+(defun memetalk-repl-setup-reconnection ()
+  (unless memetalk-repl-recon-timer
+    (setq memetalk-repl-recon-timer (run-at-time "1 second" 1 'memetalk-repl-connect))))
+
+(defun memetalk-repl-detect-disconnect (process event)
+  (message (format "memetalk repl: %s %s" process event))
+  (memetalk-repl-setup-reconnection))
 
 (defun memetalk-repl-connect ()
   (interactive)
   (setq mm-repl-socket nil)
   (condition-case nil
-    (setq mm-repl-socket (open-network-stream "mm-repl"
-                                             "*mm-repl*" "localhost" 4200))
+      (progn
+        (setq mm-repl-socket (open-network-stream "mm-repl"
+                                                  "*mm-repl*" "localhost" 4200))
+        (set-process-sentinel mm-repl-socket 'memetalk-repl-detect-disconnect)
+        (cancel-timer memetalk-repl-recon-timer)
+        (setq memetalk-repl-recon-timer nil)
+        (if memetalk-current-module
+            (progn
+              (memetalk-repl-send (concat "load " memetalk-current-module "\n"))
+              (message (format "memetalk repl connected and %s loaded" memetalk-current-module)))
+          (message "memetalk repl connected")))
     (error nil))
   mm-repl-socket)
 
@@ -73,10 +93,10 @@
   (when (string-match "[ \t\n]*$" string)
     (replace-match "" nil nil string)))
 
-(defun memetalk-repl-last-cmd ()
+(defun memetalk-repl-last-response ()
   (if (memetalk-repl-is-open)
       (with-current-buffer "*mm-repl*"
-        (trim-r (thing-at-point 'line)))
+        (memetalk-trim-r (thing-at-point 'line)))
     nil))
 
 (defun memetalk-repl-send (cmd)
@@ -87,6 +107,8 @@
     nil))
 
 
+(defvar memetalk-current-module nil)
+
 ;;; operations
 
 (defun memetalk-instantiate-module ()
@@ -94,7 +116,9 @@
   (if (memetalk-repl-is-open)
       (let ((module-name (when (string-match ".mm" (buffer-name))
                            (replace-match "" nil nil (buffer-name)))))
-        (memetalk-repl-send (concat "load " module-name  "\n")))))
+        (setq memetalk-current-module module-name)
+        (memetalk-repl-send (concat "load " module-name  "\n"))
+        (message "memetalk repl: %s" (memetalk-repl-last-response)))))
 
 (provide 'memetalk-mode)
 (provide 'memetalk-instantiate-module)

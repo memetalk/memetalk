@@ -10,7 +10,7 @@ public:
   void start_read_eval_loop();
 private:
   char* readline(int client_sock);
-  void dispatch(std::string msg);
+  void dispatch(int socket, std::string msg);
 
   Process* _proc;
   oop _current_imod;
