@@ -36,8 +36,10 @@ const char* CoreImage::PRIMES_NAMES[] = {"Behavior",
                                          "CompileError",
                                          "Process",
                                          "Frame",
-                                         "Null"};
-int CoreImage::TOTAL_PRIMES = 25;
+                                         "Null",
+                                         "Mirror",
+                                         "NonLocalReturn"};
+int CoreImage::TOTAL_PRIMES = 27;
 
 
 CoreImage::CoreImage(VM* vm, const char* filepath)

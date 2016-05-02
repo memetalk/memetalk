@@ -380,7 +380,7 @@ class VariableStorage(object):
         return self._flat(self.variables.values())
 
 class CompiledFunction(Entry):
-    def __init__(self, cmod, owner, name, params, ctor=False, env_storage=None, is_top_level=True, outer_cfun=None):
+    def __init__(self, cmod, owner, name, params, ctor=False, env_storage=None, is_top_level=True, outer_cfun=None, top_level_cfun=None):
         super(CompiledFunction, self).__init__()
         self.cmod = cmod
 
@@ -392,6 +392,7 @@ class CompiledFunction(Entry):
         self.owner = owner
         self.is_top_level = is_top_level
         self.outer_cfun = outer_cfun
+        self.top_level_cfun = top_level_cfun
         self.text = ''
         self.start_line = -1
         self.line_mapping = {}
@@ -411,6 +412,8 @@ class CompiledFunction(Entry):
 
         self.accessor_flag = 0
         self.accessor_field = 0
+
+        self.should_wrap_catch_for_non_local_return = False
 
         self._label = None
 
@@ -542,7 +545,29 @@ class CompiledFunction(Entry):
 
         return len(self.exceptions_frame)
 
+    def wrap_catch_for_non_local_return(self):
+        lb_begin_try = opcode.Label(self.bytecodes, pos=0)
+        lb_begin_catch = self.current_label()
+        catch_type = "NonLocalReturn"
+        catch_name = "%non_local_ret_var"
+
+        if self.identifier_in_scope(self, catch_name):
+            raise Exception("Why there are two %non_local_ret_var declard?")
+
+        self.declare_var(catch_name)
+        idx = self.var_declarations.index(self, catch_name)
+        ## taking out the value from exception object -- it is on top of stack
+        idx_val = self.create_and_register_symbol_literal("value")
+        self.bytecodes.append("push_literal", idx_val)
+        self.bytecodes.append("send", 0)
+        self.bytecodes.append("ret_top",0)
+        self.add_exception_entry(lb_begin_try, lb_begin_catch, catch_type, idx)
+
+
     def fill(self, vmem):
+        if self.should_wrap_catch_for_non_local_return:
+            self.wrap_catch_for_non_local_return()
+
         oop_delegate = vmem.append_object_instance()
         oop_name = vmem.append_string_instance(self.name)
         oop_params = vmem.append_list_of_strings(self.params)
@@ -622,9 +647,15 @@ class CompiledFunction(Entry):
 
     def new_closure(self, params):
         self.has_env = True
+        if self.is_top_level:
+            top_level_cfun = self
+        else:
+            top_level_cfun = self.top_level_cfun
+
         return CompiledFunction(self.cmod, self.owner, closure_name(), params,
                                 env_storage=self.var_declarations,
-                                is_top_level=False, outer_cfun=self)
+                                is_top_level=False, outer_cfun=self,
+                                top_level_cfun=top_level_cfun)
 
     def add_exception_entry(self, label_begin_try, label_begin_catch, catch_type, var_idx):
         self.exceptions_frame.append({
@@ -717,6 +748,18 @@ class CompiledFunction(Entry):
     @emitter
     def emit_return_top(self, _):
         self.bytecodes.append("ret_top",0)
+
+    @emitter
+    def emit_non_local_return(self, _):
+        idx_class = self.create_and_register_symbol_literal("NonLocalReturn")
+        idx_throw = self.create_and_register_symbol_literal("throw")
+        self.bytecodes.append("push_module",0)
+        self.bytecodes.append('push_literal', idx_class)
+        self.bytecodes.append('send', 0)
+        self.bytecodes.append('push_literal', idx_throw)
+        self.bytecodes.append('send', 1)
+        self.top_level_cfun.should_wrap_catch_for_non_local_return = True
+
 
     @emitter
     def emit_return_null(self, _):
@@ -893,7 +936,7 @@ class CompiledFunction(Entry):
         self.emit_local_assignment(None, name)
 
     def emit_catch_jump(self):
-        self.bytecodes.append("jmp", 0)
+        self.bytecodes.append("jmp", 0) # arg 0 will be substituted later
         # hack
         return len(self.bytecodes) - 1
 

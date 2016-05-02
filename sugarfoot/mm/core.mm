@@ -409,6 +409,22 @@ class Exception
   }
 end
 
+class NonLocalReturn
+  fields: value;
+  init new: fun(value) {
+    @value = value;
+  }
+  instance_method throw: fun() {
+    <primitive "exception_throw">
+  }
+  instance_method value: fun() {
+    return @value;
+  }
+  class_method throw: fun(value) {
+    this.new(value).throw;
+  }
+end
+
 class ImportError < Exception
   instance_method toString: fun() {
     return "ImportError: " + this.message.toString();
