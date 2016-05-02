@@ -18,6 +18,8 @@ typedef int (*prim_function_t) (Process*);
 
 #define DEFAULT_STACK_SIZE sizeof(word) * 1024 * 10
 
+#define EXCEPTION_FRAME_SIZE 3
+
 #define INVALID_PAYLOAD 256
 
 #define PRIM_RAISED 1

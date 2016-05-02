@@ -519,6 +519,7 @@ class CompiledFunction(Entry):
         return len(self.bytecodes) * opcode.WORD_SIZE
 
     def fill_exceptions_frame(self, vmem):
+        EXCEPTION_FRAME_SIZE = 3
         if len(self.exceptions_frame) == 0:
             return 0
 
@@ -530,14 +531,13 @@ class CompiledFunction(Entry):
                 type_oops.append(vmem.append_string_instance(entry['type']))
 
         vmem.append_int(FRAME_TYPE_EXCEPTIONS_FRAME)
-        vmem.append_int(len(self.exceptions_frame) * 4 * bits.WSIZE)
+        vmem.append_int(len(self.exceptions_frame) * EXCEPTION_FRAME_SIZE * bits.WSIZE)
 
         vmem.label_current(self.exceptions_frame_label())
 
         for idx, entry in enumerate(self.exceptions_frame):
             vmem.append_int(entry['start'])
             vmem.append_int(entry['catch'])
-            vmem.append_int(entry['local_pos']()) # lifted from VariableStorage
             if type_oops[idx] is None:
                 vmem.append_null()
             else:
@@ -549,19 +549,13 @@ class CompiledFunction(Entry):
         lb_begin_try = opcode.Label(self.bytecodes, pos=0)
         lb_begin_catch = self.current_label()
         catch_type = "NonLocalReturn"
-        catch_name = "%non_local_ret_var"
 
-        if self.identifier_in_scope(self, catch_name):
-            raise Exception("Why there are two %non_local_ret_var declard?")
-
-        self.declare_var(catch_name)
-        idx = self.var_declarations.index(self, catch_name)
         ## taking out the value from exception object -- it is on top of stack
         idx_val = self.create_and_register_symbol_literal("value")
         self.bytecodes.append("push_literal", idx_val)
         self.bytecodes.append("send", 0)
         self.bytecodes.append("ret_top",0)
-        self.add_exception_entry(lb_begin_try, lb_begin_catch, catch_type, idx)
+        self.add_exception_entry(lb_begin_try, lb_begin_catch, catch_type)
 
 
     def fill(self, vmem):
@@ -657,12 +651,11 @@ class CompiledFunction(Entry):
                                 is_top_level=False, outer_cfun=self,
                                 top_level_cfun=top_level_cfun)
 
-    def add_exception_entry(self, label_begin_try, label_begin_catch, catch_type, var_idx):
+    def add_exception_entry(self, label_begin_try, label_begin_catch, catch_type):
         self.exceptions_frame.append({
             'start': label_begin_try(),
             'catch': label_begin_catch(),
-            'type': catch_type,
-            'local_pos': var_idx})
+            'type': catch_type})
 
 
     def current_label(self, current=True):
@@ -940,13 +933,11 @@ class CompiledFunction(Entry):
         # hack
         return len(self.bytecodes) - 1
 
-    def emit_try_catch(self, lb_begin_try, lb_begin_catch, jmp_pos, catch_type, catch_name):
+    def emit_try_catch(self, lb_begin_try, lb_begin_catch, jmp_pos, catch_type):
         # hack
         blen = len(self.bytecodes)
         self.bytecodes.lst[jmp_pos].arg = lambda: blen - jmp_pos
-
-        var_idx = self.var_declarations.index(self, catch_name)
-        self.add_exception_entry(lb_begin_try, lb_begin_catch, catch_type, var_idx)
+        self.add_exception_entry(lb_begin_try, lb_begin_catch, catch_type)
 
 
     @emitter

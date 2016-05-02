@@ -1003,11 +1003,13 @@ bool Process::exception_has_handler(oop e, oop next_bp) {
   //so iterating normally we always reach the innermost frame first
   oop exception_frames = _mmobj->mm_function_exception_frames(this, cp, true);
   for(int i = 0; i < exception_frames_count; i++) {
-    oop frame_begin = exception_frames + (4 * i);
+    oop frame_begin = exception_frames + (EXCEPTION_FRAME_SIZE * i);
 
     word try_block =  *(word*) frame_begin;
     word catch_block = *(word*) (frame_begin + 1);
-    oop str_type_oop = *(oop*) (frame_begin + 3);
+    oop str_type_oop = *(oop*) (frame_begin + 2);
+
+    DBG() << "exception frame: " << try_block << " " << catch_block << " " << str_type_oop << endl;
 
     oop type_oop;
     if (str_type_oop == MM_NULL) {
@@ -1113,11 +1115,11 @@ oop Process::unwind_with_exception(oop e) {
   //so iterating normally we always reach the innermost frame first
   oop exception_frames = _mmobj->mm_function_exception_frames(this, _cp, true);
   for(int i = 0; i < exception_frames_count; i++) {
-    oop frame_begin = exception_frames + (4 * i);
+    oop frame_begin = exception_frames + (EXCEPTION_FRAME_SIZE * i);
 
     word try_block =  *(word*) frame_begin;
     word catch_block = *(word*) (frame_begin + 1);
-    oop str_type_oop = *(oop*) (frame_begin + 3);
+    oop str_type_oop = *(oop*) (frame_begin + 2);
 
     oop type_oop;
     if (str_type_oop == MM_NULL) {

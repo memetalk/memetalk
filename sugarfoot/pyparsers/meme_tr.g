@@ -122,7 +122,7 @@ foo :fnobj :ast = 'var-def' :id expr(fnobj) ->  fnobj.emit_var_decl(ast, id)
                   !(fnobj.current_label()):label_begin_catch
                     catch_decl:cp
                   !(fnobj.bind_catch_var(cp[1]))
-                    [expr(fnobj)*] -> fnobj.emit_try_catch(label_begin_try, label_begin_catch, end_pos, cp[0], cp[1])
+                    [expr(fnobj)*] -> fnobj.emit_try_catch(label_begin_try, label_begin_catch, end_pos, cp[0])
                | '=' ['id' :v] expr(fnobj)    -> fnobj.emit_local_assignment(ast, v)
                | '=' ['field' :f] expr(fnobj) -> fnobj.emit_field_assignment(ast, f)
                | 'literal-number' :x -> fnobj.emit_push_num_literal(ast, x)
