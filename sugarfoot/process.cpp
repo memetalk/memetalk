@@ -133,11 +133,15 @@ oop Process::dp() {
   return * (oop*) (_fp + _ss + 1);
 }
 
-oop Process::cp_from_frame(oop bp) {
+oop Process::cp_from_base(oop bp) {
   return * ((oop*)bp - 3);
 }
 
-bytecode* Process::ip_from_frame(oop bp) {
+oop Process::fp_from_base(oop bp) {
+  return * ((oop*)bp - 4);
+}
+
+bytecode* Process::ip_from_base(oop bp) {
   return (bytecode*) * ((oop*)bp - 2);
 }
 
@@ -616,7 +620,7 @@ void Process::tick() {
     LOG_STATE();
     DBG() << "resuming! state == rewind? " << (_state == REWIND_STATE) << endl;
     if (_state == REWIND_STATE) {
-      throw mm_frame_rewind(_unwind_to_frame);
+      throw mm_frame_rewind(_unwind_to_bp);
     }
     // DBG() << "Process::tick: resuming..." << endl;
 }
@@ -971,7 +975,7 @@ int Process::execute_primitive(std::string name) {
 
 
 bool Process::exception_has_handler(oop e, oop next_bp) {
-  oop cp = next_bp == _bp ? _cp : cp_from_frame(next_bp);
+  oop cp = next_bp == _bp ? _cp : cp_from_base(next_bp);
 
   DBG() << "** exception_has_handler e: " << e <<
     " on cp: " << cp <<
@@ -1023,9 +1027,9 @@ bool Process::exception_has_handler(oop e, oop next_bp) {
     // DBG() << "code:  " << code << endl;
     // DBG() << "cp == _cp?: " << (cp == _cp) << endl;
     // DBG() << "_ip: " << _ip << endl;
-    // DBG() << "ip from next_bp: " << ip_from_frame(next_bp) << " " << next_bp << endl;
+    // DBG() << "ip from next_bp: " << ip_from_base(next_bp) << " " << next_bp << endl;
 
-    bytecode* ip = next_bp == _bp ? _ip : ip_from_frame(next_bp);
+    bytecode* ip = next_bp == _bp ? _ip : ip_from_base(next_bp);
 
     unsigned long instr = ip - code;
 
@@ -1261,10 +1265,10 @@ void Process::break_at_addr(bytecode* addr) {
   _volatile_breakpoints.push_back(addr);
 }
 
-void Process::rewind_to_frame_and_continue(oop frame) {
-  DBG() << "rewind to frame: " << frame << endl;
+void Process::rewind_to_frame_and_continue(oop bp) {
+  DBG() << "rewind to bp: " << bp << endl;
   _state = REWIND_STATE;
-  _unwind_to_frame = frame;
+  _unwind_to_bp = bp;
   _control->resume();
 }
 
@@ -1274,16 +1278,19 @@ void Process::rewind_to_frame_and_continue(oop frame) {
 //   _control->resume();
 // }
 
-void Process::unwind_with_frame(oop frame) {
-  DBG() << "unwind from fp:" << _fp << " to frame: " <<  frame << endl;
-  if (_fp == frame) {
+void Process::unwind_with_frame(oop bp) {
+  DBG() << "unwind from _bp: " << _bp << " to bp: " <<  bp
+        << " current _cp: " << _cp << " = " << CTXNAME(_cp) << endl;
+  if (_bp == bp) {
+    DBG() << "found bp. stop unwinding" << endl;
     reload_frame();
     return;
   } else if (_mmobj->mm_function_is_prim(this, _cp, true)) {
-      throw mm_frame_rewind(frame);
+    DBG() << "prim, lets throw" << endl;
+      throw mm_frame_rewind(bp);
   } else {
     pop_frame();
-    unwind_with_frame(frame);
+    unwind_with_frame(bp);
   }
 }
 

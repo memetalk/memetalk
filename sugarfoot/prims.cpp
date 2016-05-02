@@ -44,10 +44,6 @@ static int prim_remote_repl_instantiate_module(Process* proc) {
                                               proc->mmobj()->mm_list_new());
     proc->stack_push(imod);
     return 0;
-  } catch(mm_exception_rewind e) {
-    DBG() << "instantiating module failed: " << e.mm_exception << endl;
-    proc->stack_push(e.mm_exception);
-    return PRIM_RAISED;
   } catch(std::invalid_argument e) {
     DBG() << "instantiating module failed: " << e.what() << endl;
     oop ex = proc->mm_exception(
@@ -1379,11 +1375,11 @@ static int prim_process_break_at_addr(Process* proc) {
 
 static int prim_process_rewind_and_continue(Process* proc) {
   oop oop_target_proc = proc->rp();
-  oop frame = proc->get_arg(0);
+  oop bp = proc->get_arg(0);
 
-  DBG() << "rewiding to frame: " << frame << endl;
+  DBG() << "rewiding to bp: " << bp << endl;
   Process* target_proc = (Process*) (((oop*)oop_target_proc)[2]);
-  target_proc->rewind_to_frame_and_continue(frame);
+  target_proc->rewind_to_frame_and_continue(bp);
   proc->stack_push(proc->rp());
   return 0;
 }

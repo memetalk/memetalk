@@ -64,8 +64,9 @@ public:
   oop set_dp(oop);
 
   oop get_arg(number idx);
-  oop cp_from_frame(oop bp);
-  bytecode* ip_from_frame(oop bp);
+  oop cp_from_base(oop bp);
+  oop fp_from_base(oop bp);
+  bytecode* ip_from_base(oop bp);
 
   // oop get_rp() { return _rp; };
   // oop get_dp() { return _dp; };
@@ -186,7 +187,7 @@ private:
   number _code_size;
   std::list<bytecode*> _volatile_breakpoints;
   oop _step_bp;
-  oop _unwind_to_frame;
+  oop _unwind_to_bp;
   oop _current_exception;
 };
 
