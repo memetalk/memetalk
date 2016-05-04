@@ -319,8 +319,18 @@ bool Process::load_fun(oop recv, oop drecv, oop fun, bool should_allocate) {
     } else if (ret == PRIM_RAISED) {
       oop ex_oop = stack_pop(); //shit
       DBG() << "prim returned: RAISED " << ex_oop << endl;
+
+      //because `exception_has_handler()` (called by `maybe_debug_on_raise()`)
+      //uses `_bp` to go through the stack looking for handlers by grabing the
+      //`cp`'s, the first `cp grabbed is our current caller.  So, if we
+      //pop_frame() before maybe_debug_on_raise(), the stack won't have the
+      //first cp to check for catch() -- it is outside the stack, in our
+      //register _cp. So lookup will not check our caller's cp but the caller
+      //before it.  Therefore, lets pop_frame() *after* maybe_debug_on_raise()
       pop_frame();
       maybe_debug_on_raise(ex_oop);
+
+
       //we rely on compiler generating a pop instruction to bind ex_oop to the catch var
       oop exc_unwind = unwind_with_exception(ex_oop);
       if (exc_unwind != MM_NULL) {
@@ -633,7 +643,7 @@ void Process::step_out() {
 
 void Process::resume() {
   _state = RUN_STATE;
-  clear_exception_state();
+  //clear_exception_state(); make test && "continue" on tests/exception8 segfaults w/ this
   _control->resume();
 }
 
@@ -931,9 +941,12 @@ int Process::execute_primitive(std::string name) {
 }
 
 
-bool Process::exception_has_handler(oop e, oop bp) {
-  oop cp = cp_from_frame(bp);
-  DBG() << "** exception_has_handler e: " << e << " on cp: " << cp << endl;
+bool Process::exception_has_handler(oop e, oop next_bp) {
+  oop cp = next_bp == _bp ? _cp : cp_from_frame(next_bp);
+
+  DBG() << "** exception_has_handler e: " << e <<
+    " on cp: " << cp <<
+    ", next_bp:" << next_bp << endl;
 
   if (cp == NULL) {
     return false;
@@ -942,7 +955,7 @@ bool Process::exception_has_handler(oop e, oop bp) {
   DBG() << "exception_has_handler: " << _mmobj->mm_string_cstr(this, _mmobj->mm_function_get_name(this, cp, true), true) << endl;
 
   if (_mmobj->mm_function_is_prim(this, cp, true)) {
-    return exception_has_handler(e, *(oop*)bp);
+    return exception_has_handler(e, *(oop*)next_bp);
   }
 
   bytecode* code = _mmobj->mm_function_get_code(this, cp, true);
@@ -950,7 +963,7 @@ bool Process::exception_has_handler(oop e, oop bp) {
   number exception_frames_count = _mmobj->mm_function_exception_frames_count(this, cp, true);
   DBG() << "exception frames: " << exception_frames_count << endl;
   if (exception_frames_count == 0) { //cp is unable to handle
-    return exception_has_handler(e, *(oop*)bp);
+    return exception_has_handler(e, *(oop*)next_bp);
   }
 
   //exception frames are lexically ordered,
@@ -978,7 +991,12 @@ bool Process::exception_has_handler(oop e, oop bp) {
       DBG() << "fetching exception type got " << type_oop << endl;;
     }
 
-    bytecode* ip = ip_from_frame(bp);
+    // DBG() << "code:  " << code << endl;
+    // DBG() << "cp == _cp?: " << (cp == _cp) << endl;
+    // DBG() << "_ip: " << _ip << endl;
+    // DBG() << "ip from next_bp: " << ip_from_frame(next_bp) << " " << next_bp << endl;
+
+    bytecode* ip = ip_from_frame(next_bp);
 
     unsigned long instr = ip - code;
 
@@ -998,7 +1016,7 @@ bool Process::exception_has_handler(oop e, oop bp) {
     }
   }
 
-  return exception_has_handler(e, *(oop*)bp);
+  return exception_has_handler(e, *(oop*)next_bp);
 }
 
 void Process::fail(oop e) {
@@ -1033,10 +1051,11 @@ oop Process::unwind_with_exception(oop e) {
     // if (!(exc == 0)) {
     //     raise("InternalError", "Unable to get string representation from exception");
     // }
-    fail(e);
+  DBG() << "cp is NULL!" << endl;
+    throw mm_exception_rewind(e);
   }
 
-  DBG() << "unwind_with_exception: " << _mmobj->mm_string_cstr(this, _mmobj->mm_function_get_name(this, _cp, true), true) << endl;
+  DBG() << "unwind_with_exception: " << CTXNAME(_cp) << endl;
 
   if (_mmobj->mm_function_is_prim(this, _cp, true)) {
     DBG() << "->> unwind reached primitive " << _mmobj->mm_string_cstr(this, _mmobj->mm_function_get_prim_name(this, _cp, true), true) << endl;
