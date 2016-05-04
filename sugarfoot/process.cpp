@@ -15,14 +15,11 @@
 #include "remote_repl.hpp"
 
 
-#define BCOLOR (_log.normal + (_is_dbg? _log.bold + _log.cyan : _log.bold + _log.green))
-#define COLOR (_log.normal + (_is_dbg?  _log.cyan : _log.green))
-#define DBG() _log << COLOR << "[" << (_is_dbg? "DBGProc" : "Target")  \
-                   << "|" << BCOLOR + meme_curr_fname() << COLOR << "." << __FUNCTION__ << "] " << _log.normal
-#define WARNING() MMLog::warning() << COLOR << "[" << (_is_dbg? "DBGProc" : "Target") \
-                                   << "|" << BCOLOR + meme_curr_fname() << COLOR << "." << __FUNCTION__ << "] " << _log.normal
-#define ERROR() MMLog::error() << COLOR << "[" << (_is_dbg? "DBGProc" : "Target") \
-                                   << "|" << BCOLOR + meme_curr_fname() << COLOR << "." << __FUNCTION__ << "] " << _log.normal
+#define BCOLOR (_log.normal + (_debugger_id > 0? _log.bold + _log.cyan : _log.bold + _log.green))
+#define COLOR (_log.normal + (_debugger_id > 0?  _log.cyan : _log.green))
+#define DBG() _log << COLOR << "[" << log_label()  << "|" << BCOLOR + meme_curr_fname() << COLOR << "." << __FUNCTION__ << "] " << _log.normal
+#define WARNING() MMLog::warning() << COLOR << "[" << log_label() << "|" << BCOLOR + meme_curr_fname() << COLOR << "." << __FUNCTION__ << "] " << _log.normal
+#define ERROR() MMLog::error() << COLOR << "[" << log_label() << "|" << BCOLOR + meme_curr_fname() << COLOR << "." << __FUNCTION__ << "] " << _log.normal
 
 #define LOG_REGISTERS() DBG() << "registers: " << endl  \
                               << _log.yellow << "         SP: " << _sp << endl \
@@ -37,8 +34,10 @@
 
 #define LOG_STATE() LOG_REGISTERS(); LOG_STACK_TOP();
 
-Process::Process(VM* vm, bool is_debugger)
-  : _log(is_debugger?LOG_DBG_PROC:LOG_TARGET_PROC), _is_dbg(is_debugger), _vm(vm), _mmobj(vm->mmobj()), _control(new ProcessControl()), _dbg_handler(NULL, MM_NULL) {
+#define CTXNAME(ctx) _mmobj->mm_string_cstr(this, _mmobj->mm_function_get_name(this, ctx), true)
+
+Process::Process(VM* vm, int debugger_id)
+  : _log(debugger_id > 0?LOG_DBG_PROC:LOG_TARGET_PROC), _debugger_id(debugger_id), _vm(vm), _mmobj(vm->mmobj()), _control(new ProcessControl()), _dbg_handler(NULL, MM_NULL) {
   init();
   _state = RUN_STATE;
   _unwinding_exception = false;
@@ -1200,7 +1199,7 @@ void Process::bail() {
 
 const char* Process::meme_curr_fname() {
   if (_cp) {
-    return _mmobj->mm_string_cstr(this, _mmobj->mm_function_get_name(this, _cp));
+    return CTXNAME(_cp);
   } else {
     return "?";
   }
@@ -1234,5 +1233,15 @@ void Process::unwind_with_frame(oop frame) {
   } else {
     pop_frame();
     unwind_with_frame(frame);
+  }
+}
+
+std::string Process::log_label() {
+  if (_debugger_id == 0) {
+    return "Target";
+  } else {
+    std::stringstream s;
+    s << "DBGProc{" << _debugger_id << "}";
+    return s.str();
   }
 }

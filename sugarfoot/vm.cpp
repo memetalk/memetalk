@@ -104,8 +104,12 @@ int VM::start() {
 }
 
 std::pair<Process*, oop> VM::start_debugger(Process* target) {
+  DBG() << "debugger for target: " << target << endl;
+
+  static int debugger_id = 0;
+
   oop imod;
-  Process* dbg_proc = new Process(this, true);
+  Process* dbg_proc = new Process(this, ++debugger_id);
   try {
     imod = instantiate_module(dbg_proc, "idez", _mmobj->mm_list_new());
   } catch(mm_exception_rewind e) {

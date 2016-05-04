@@ -39,7 +39,7 @@ class Process {
 
 
 public:
-  Process(VM*, bool is_debugger = false);
+  Process(VM*, int debugger_id = 0);
 
   oop run(oop, oop, int*);
 
@@ -123,6 +123,7 @@ public:
   void unwind_with_frame(oop frame);
 
 private:
+  std::string log_label();
   std::string dump_stack_top();
   const char* meme_curr_fname();
   void pause() { _state = HALT_STATE; };
@@ -160,7 +161,7 @@ private:
   void maybe_break_on_exception();
 
   MMLog _log;
-  bool _is_dbg;
+  int _debugger_id;
   VM* _vm;
   MMObj* _mmobj;
 

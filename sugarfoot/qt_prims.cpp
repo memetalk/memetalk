@@ -36,13 +36,21 @@ Q_DECLARE_METATYPE (Process*);
 #include <QWidget>
 #include <QMetaType>
 #include <QPushButton>
+#include "log.hpp"
+
+
+#define DBG() _log << _log.yellow + _log.bold + "[prim|" << __FUNCTION__ << "] " << _log.normal
+#define WARNING() MMLog::warning() << "[prim|" << __FUNCTION__ << "] " << _log.normal
+#define ERROR() MMLog::error() << "[prim|" << __FUNCTION__ << "] " << _log.normal
+
+static MMLog _log(LOG_QTPRIMS);
+
 
 Q_DECLARE_METATYPE (QListWidgetItem*);
 
 static
 QScriptEngine *engine;
 
-static MMLog _log(LOG_QTPRIMS);
 
 static
 oop lookup_bottom_qt_instance(MMObj* mmobj, oop obj) {
