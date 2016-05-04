@@ -181,10 +181,10 @@ class Decompiler(ASTBuilder):
 
     def decompile(self):
 
-        # loading core.md source structure
+        # loading core.mm source structure
 
         self.line_offset = 0
-        self.parser = MemeParser(open(os.path.join(os.path.dirname(__file__), '../mm/core.md'), 'r').read())
+        self.parser = MemeParser(open(os.path.join(os.path.dirname(__file__), '../mm/core.mm'), 'r').read())
         self.parser.i = self
         self.parser.uses_literal = pyutils.Flag() # pymeta uses eval() which disables assignment. This works around it
         ast = self.parser.apply("start")[0]

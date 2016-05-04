@@ -17,6 +17,7 @@
     _delegate: null;
     name: "Object";
     super_class_name: "";
+    compiled_module: null;
     fields: [];
     methods: {};
     own_methods: {};
@@ -76,10 +77,33 @@
   end
 
   class CompiledClass
-    fields: name, super_class_name, fields,
-            methods, class_methods, module;
+    fields: name, super_class_name, compiled_module,
+            fields, methods, own_methods;
+    instance_method name: fun() {
+      return @name;
+    }
+    instance_method super_class_name: fun() {
+      return @super_class_name;
+    }
+    instance_method compiled_module: fun() {
+      return @compiled_module;
+    }
+    instance_method fields: fun() {
+      return @fields;
+    }
+    instance_method methods: fun() {
+      return @methods;
+    }
+    instance_method own_methods: fun() {
+      return @own_methods;
+    }
     instance_method fullName: fun() {
-      return @module.fullName() + ":" + @name;
+      if (@compiled_module) {
+        return @compiled_module.fullName() + ":" + @name;
+      } else {
+        //TODO: actually get thisModule.compiledModile or something
+        return "core:" + @name;
+      }
     }
   end
 
@@ -122,6 +146,12 @@
       } else {
         return this.source_location_for(frame)[0];
       }
+    }
+    instance_method name: fun() {
+      return @name;
+    }
+    instance_method owner: fun() {
+      return @owner;
     }
     instance_method fullName: fun() {
       return @owner.fullName + "/" + @name;
@@ -197,11 +227,20 @@
   instance_method ==: fun(other) {
     <primitive "string_equal">
   }
+  instance_method find: fun(arg) {
+    <primitive "string_find">
+  }
   instance_method rindex: fun(arg) {
     <primitive "string_rindex">
   }
   instance_method from: fun(idx) {
     <primitive "string_from">
+  }
+  instance_method b64encode: fun() {
+    <primitive "string_b64encode">
+  }
+  instance_method b64decode: fun() {
+    <primitive "string_b64decode">
   }
   instance_method replace_all: fun(what, value) {
     <primitive "string_replace_all">
@@ -474,6 +513,9 @@ end
   }
   instance_method cp: fun() {
      <primitive "process_cp">
+  }
+  instance_method mp: fun() {
+     <primitive "process_mp">
   }
   // instance_method ip: fun() {
   //   <primitive "process_ip">

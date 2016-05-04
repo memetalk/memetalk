@@ -55,7 +55,7 @@ clean:
 GRAMMARS = pyparsers/*.g
 PY_PARSER_FILES = pyparsers/memetr.py pyparsers/parser.py
 PY_COMPILER_DEPENDENCIES = $(GRAMMARS) pycompiler/*py pycore/*.py pyutils/*.py
-MM_CORE = mm/core.md
+MM_CORE = mm/core.mm
 MEMETALK = core.img $(PY_PARSER_FILES) sf-vm
 
 core: core.img
