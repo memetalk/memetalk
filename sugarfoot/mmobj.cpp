@@ -984,28 +984,35 @@ oop MMObj::mm_compiled_class_super_name(Process* p, oop cclass, bool should_asse
   return ((oop*)cclass)[3];
 }
 
-oop MMObj::mm_compiled_class_fields(Process* p, oop cclass, bool should_assert) {
+oop MMObj::mm_compiled_class_compiled_module(Process* p, oop cclass, bool should_assert) {
   TYPE_CHECK(!( *(oop*) cclass == _core_image->get_prime("CompiledClass")),
              "TypeError","Expected CompiledClass")
   return ((oop*)cclass)[4];
 }
 
-oop MMObj::mm_compiled_class_methods(Process* p, oop cclass, bool should_assert) {
+//
+oop MMObj::mm_compiled_class_fields(Process* p, oop cclass, bool should_assert) {
   TYPE_CHECK(!( *(oop*) cclass == _core_image->get_prime("CompiledClass")),
              "TypeError","Expected CompiledClass")
   return ((oop*)cclass)[5];
 }
 
-oop MMObj::mm_compiled_class_own_methods(Process* p, oop cclass, bool should_assert) {
+oop MMObj::mm_compiled_class_methods(Process* p, oop cclass, bool should_assert) {
   TYPE_CHECK(!( *(oop*) cclass == _core_image->get_prime("CompiledClass")),
              "TypeError","Expected CompiledClass")
   return ((oop*)cclass)[6];
 }
 
+oop MMObj::mm_compiled_class_own_methods(Process* p, oop cclass, bool should_assert) {
+  TYPE_CHECK(!( *(oop*) cclass == _core_image->get_prime("CompiledClass")),
+             "TypeError","Expected CompiledClass")
+  return ((oop*)cclass)[7];
+}
+
 number MMObj::mm_compiled_class_num_fields(Process* p, oop cclass, bool should_assert) {
   TYPE_CHECK(!( *(oop*) cclass == _core_image->get_prime("CompiledClass")),
              "TypeError","Expected CompiledClass")
-  oop fields_list = ((oop*)cclass)[4];
+  oop fields_list = mm_compiled_class_fields(p, cclass, should_assert);
   return mm_list_size(p, fields_list);
 }
 

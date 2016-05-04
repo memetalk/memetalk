@@ -293,10 +293,10 @@ class CompiledClass(Entry):
         vmem.append_pointer_to(delegate)
         vmem.append_pointer_to(oop_name)
         vmem.append_pointer_to(oop_super)
+        vmem.append_label_ref(self.cmod.label()) ####
         vmem.append_pointer_to(oop_fields)
         vmem.append_pointer_to(oop_methods)
         vmem.append_pointer_to(oop_class_methods)
-        vmem.append_label_ref(self.cmod.label()) ####
         self.oop = oop
         return oop
 

@@ -82,8 +82,10 @@ class CompiledClassEntry(Entry):
 
     def dump(self, dec, ptr):
         print '[{}] -- {}'.format(ptr, self.name)
-        return self.dump_with_slots(dec, ptr, ['vt', 'delegate', 'name', 'super_class_name',
-                 'compiled_module', 'fields', 'methods', 'own_methods'])
+        return self.dump_with_slots(dec, ptr,
+                                    ['vt', 'delegate', 'name', 'super_class_name',
+                                     'compiled_module', 'fields', 'methods',
+                                     'own_methods'])
 
 class ClassEntry(Entry):
     def __init__(self, name, super_class, behavior, cclass):

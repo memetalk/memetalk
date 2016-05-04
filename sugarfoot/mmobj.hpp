@@ -160,6 +160,7 @@ public:
 
   oop mm_compiled_class_name(Process*, oop cclass, bool should_assert = false);
   oop mm_compiled_class_super_name(Process*, oop cclass, bool should_assert = false);
+  oop mm_compiled_class_compiled_module(Process* p, oop cclass, bool should_assert);
   oop mm_compiled_class_own_methods(Process*, oop cclass, bool should_assert = false);
   oop mm_compiled_class_methods(Process*, oop cclass, bool should_assert = false);
   oop mm_compiled_class_fields(Process*, oop cclass, bool should_assert = false);
