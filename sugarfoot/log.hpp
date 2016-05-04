@@ -17,6 +17,7 @@
 #define LOG_QTPRIMS "qp"
 #define LOG_CTRL "ct"
 #define LOG_UTILS "ut"
+#define LOG_REPL "rp"
 #define LOG_TARGET_PROC "tp"
 #define LOG_DBG_PROC "dp"
 #define LOG_TARGET_MMT "mt"

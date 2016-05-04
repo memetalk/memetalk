@@ -5,9 +5,15 @@
 #include <netdb.h>
 #include <iostream>
 #include <string>
+#include <sstream>
 #include <assert.h>
+#include <stdlib.h>
+#include <stdexcept>
+
 
 using namespace std;
+
+#define DBG() _log << _log.yellow + _log.bold + "[repl|" << __FUNCTION__ << "] " << _log.normal
 
 #define ERROR(vm, clientsock, msg)  shutdown(clientsock, SHUT_RDWR);     \
                                     close(clientsock); \
@@ -16,38 +22,71 @@ using namespace std;
 #define REPL_MESSAGE_OK "* OK\n"
 #define REPL_MESSAGE_ERROR "* ERROR\n"
 
-char* Repl::readline(int client_sock) {
+Repl::Repl(Process *proc)
+  : _log(LOG_REPL), _proc(proc), _current_imod(MM_NULL) {
+}
+
+char* Repl::readmessage(int client_sock) {
   char message[1024];
   char buffer[1];
   int idx = 0;
   while (1) {
     if (recv(client_sock, buffer, 1, 0) < 0) {
       ERROR(_proc->vm(), client_sock, "recv error\n");
-    }
-    if (buffer[0] == 13) {
-      continue;
-    } else if (buffer[0] == 10) {
+    } else if (buffer[0] == 0) {
       message[idx++] = '\0';
       return strdup(message);
     } else {
       message[idx++] = buffer[0];
     }
+    if (idx > 1024) {
+      ERROR(_proc->vm(), client_sock, "readmessage reading more than 1024 chars\n");
+    }
   }
-  ERROR(_proc->vm(), client_sock, "readline post while\n");
+  ERROR(_proc->vm(), client_sock, "readmessage post while\n");
+}
+
+int Repl::compile_module(std::string module_name) {
+  char* mmpath = getenv("MEME_PATH");
+  std::stringstream s;
+  s << "python -m pycompiler.compiler  "<< mmpath << module_name << ".mm";
+  std::cerr << "Executing ... " << s.str() << std::endl;
+  return system(s.str().c_str());
+}
+
+void Repl::load_module(int socket, char* module_name) {
+    DBG() << "loading module: " << module_name << endl;
+
+  if (compile_module(module_name) != 0) {
+      write(socket, REPL_MESSAGE_ERROR, strlen(REPL_MESSAGE_ERROR));
+  } else {
+    try {
+      _current_imod = _proc->vm()->instantiate_module(_proc, module_name, _proc->mmobj()->mm_list_new());
+      write(socket, REPL_MESSAGE_OK, strlen(REPL_MESSAGE_OK));
+    } catch(mm_exception_rewind e) {
+      assert(0); //not sure what makes us reach this place
+      // //TODO: it doesn't seem to reach here, it dies in process I think
+      // write(socket, REPL_MESSAGE_ERROR, strlen(REPL_MESSAGE_ERROR));
+      // _proc->vm()->print_error(_proc, e.mm_exception);
+    } catch(const std::invalid_argument& e) {
+      DBG() << "load failed" << endl;
+      write(socket, REPL_MESSAGE_ERROR, strlen(REPL_MESSAGE_ERROR));
+      //std::cerr << "Uncaugh C++ exception: " <<  e.what() << std::endl;
+    }
+  }
+}
+
+void Repl::doit(int socket, char* code) {
+
 }
 
 void Repl::dispatch(int socket, std::string msg) {
   if (msg.find("load") == 0) {
     char* module_name = strdup(msg.substr(5).c_str()); //strlen("load") == 4
-    try {
-      _current_imod = _proc->vm()->instantiate_module(_proc, module_name, _proc->mmobj()->mm_list_new());
-      write(socket, REPL_MESSAGE_OK, strlen(REPL_MESSAGE_OK));
-    } catch(mm_exception_rewind e) {
-      //TODO: it doesn't seem to reach here, it dies in process I think
-      write(socket, REPL_MESSAGE_ERROR, strlen(REPL_MESSAGE_ERROR));
-      _proc->vm()->print_error(_proc, e.mm_exception);
-    }
-  // } else if(msg.find()) {
+    load_module(socket, module_name);
+  } else if (msg.find("do-it") == 0) {
+    char* code = strdup(msg.substr(5).c_str()); //strlen("do-it") == 5
+    doit(socket, code);
   } else {
     cerr << "REPL: unknown command " << msg << endl;
   }
@@ -83,11 +122,12 @@ void Repl::start_read_eval_loop() {
     _proc->vm()->bail("repl: accept failed");
   }
 
-  write(client_sock, REPL_MESSAGE_OK, strlen(REPL_MESSAGE_OK));
+  // write(client_sock, REPL_MESSAGE_OK, strlen(REPL_MESSAGE_OK));
 
   char* msg;
   while (1) {
-    msg = readline(client_sock);
+    msg = readmessage(client_sock);
+    DBG() << "got msg: " << msg << endl;
     dispatch(client_sock, msg);
   }
 }
