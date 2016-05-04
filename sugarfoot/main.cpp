@@ -13,7 +13,7 @@ int main(int argc, char** argv) {
     } else {
       return vm->start();
     }
-  }  catch(const std::exception& e) {
+  } catch(const std::exception& e) {
     std::cerr << "Uncaugh C++ exception: " << e.what() << std::endl;
     return 1;
   }
