@@ -140,7 +140,8 @@ expr_decl =  spaces !(self.input.position):begin token("var")
 
 expr_attr =  spaces !(self.input.position):begin lhs:a token("=") expr:b -> self.i.ast(begin,["=", a, b])
 
-lhs = !(self.input.position):begin alpha_name:x -> self.i.ast(begin, ["id", x])
+lhs = !(self.input.position):begin expr:r ?(len(r)>0 and r[0] == 'index') -> self.i.ast(begin, r)
+    | !(self.input.position):begin alpha_name:x -> self.i.ast(begin, ["id", x])
     | !(self.input.position):begin field_name:x -> self.i.ast(begin, ["field", x])
 
 control_expr = expr_if

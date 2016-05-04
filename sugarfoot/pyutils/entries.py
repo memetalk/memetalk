@@ -801,6 +801,12 @@ class CompiledFunction(Entry):
         self.bytecodes.append('pop_field', idx)
 
     @emitter
+    def emit_index_assignment(self, _, lhs, idx, rhs):
+        idx_selector = self.create_and_register_symbol_literal("set")
+        self.bytecodes.append('push_literal', idx_selector)
+        self.bytecodes.append('send', 2)
+
+    @emitter
     def emit_pop(self, _):
         self.bytecodes.append('pop', 0)
 
