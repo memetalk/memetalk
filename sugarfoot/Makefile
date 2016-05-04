@@ -32,13 +32,14 @@ QT_FLAGS = -pipe -O2 -arch x86_64 -W \
 	-I/usr/local/Cellar/qt/4.8.5/lib/QtGui.framework/Versions/4/Headers \
 	-I/usr/local/Cellar/qt/4.8.5/lib/QtScript.framework/Versions/4/Headers \
 	-I/usr/local/Cellar/qt/4.8.5/lib/QtWebKit.framework/Versions/4/Headers \
+	-I/usr/local/Cellar/qt/4.8.5/lib/QtNetwork.framework/Versions/4/Headers \
 	-I/usr/local/Cellar/qt/4.8.5/include \
 	-I. \
 	-F/usr/local/Cellar/qt/4.8.5/lib \
 	-headerpad_max_install_names -arch x86_64 \
 	-F/usr/local/Cellar/qt/4.8.5/lib -L/usr/local/Cellar/qt/4.8.5/lib \
 	-framework QtScript -L/opt/X11/lib -L/usr/local/Cellar/qt/4.8.5/lib \
-	-F/usr/local/Cellar/qt/4.8.5/lib -framework QtCore -framework QtGui -framework QtWebKit
+	-F/usr/local/Cellar/qt/4.8.5/lib -framework QtCore -framework QtGui -framework QtWebKit -framework QtNetwork
 
 sf-vm: $(CPP_FILES) $(HPP_FILES)
 	moc qsc.hpp > qsc.moc.cpp

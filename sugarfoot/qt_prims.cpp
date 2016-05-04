@@ -36,6 +36,8 @@ Q_DECLARE_METATYPE (Process*);
 #include <QWidget>
 #include <QMetaType>
 #include <QPushButton>
+#include <QTcpServer>
+#include <QTcpSocket>
 #include "log.hpp"
 
 
@@ -304,6 +306,70 @@ void init_qt_stuff() { //stuff that needs QApplication to exist
 
 ////////// bindings /////////
 
+
+static int prim_qt_server_create_server(Process* proc) {
+  oop data_self =  proc->dp();
+  QTcpServer* server = new QTcpServer(NULL);
+  set_meme_instance(server, proc->rp());
+  set_qt_instance(proc->mmobj(), data_self, server);
+  proc->stack_push(proc->rp());
+  return 0;
+}
+
+static int prim_qt_server_listen(Process* proc) {
+  oop data_self =  proc->dp();
+  oop port = proc->get_arg(0);
+
+  QTcpServer* server = (QTcpServer*) get_qt_instance(proc->mmobj(), data_self);
+  number _port = untag_small_int(port);
+
+  server->listen(QHostAddress("127.0.0.1"), _port);
+  proc->stack_push(proc->rp());
+  return 0;
+}
+
+static int prim_qt_server_next_pending_connection(Process* proc) {
+  oop data_self =  proc->dp();
+  QTcpServer* server = (QTcpServer*) get_qt_instance(proc->mmobj(), data_self);
+
+  QTcpSocket* socket = server->nextPendingConnection();
+
+  int exc;
+  proc->stack_push(meme_instance(proc, socket, &exc));
+  return exc;
+}
+
+#include <sstream>
+
+static int prim_qt_socket_read_string(Process* proc) {
+  oop data_self =  proc->dp();
+  QTcpSocket* socket = (QTcpSocket*) get_qt_instance(proc->mmobj(), data_self);
+  char c[1];
+  std::stringstream s;
+  while (socket->getChar(c) && *c) {
+    s << *c;
+  }
+  s << '\0';
+  DBG() << "read_string: [" << s.str() << "]" << endl;
+
+  oop text = proc->mmobj()->mm_string_new(s.str().c_str());
+  proc->stack_push(text);
+  return 0;
+}
+
+static int prim_qt_socket_write_line(Process* proc) {
+  oop data_self =  proc->dp();
+  oop line = proc->get_arg(0);
+  char* str = proc->mmobj()->mm_string_cstr(proc, line);
+  std::stringstream s;
+  s << str << "\n";
+  QTcpSocket* socket = (QTcpSocket*) get_qt_instance(proc->mmobj(), data_self);
+  socket->write(s.str().c_str(), s.str().size());
+  socket->flush();
+  DBG() << "write line: [" << str << "]" << endl;
+  proc->stack_push(proc->rp());
+  return 0;
+}
 
 /** QApplication **/
 
@@ -2075,6 +2141,13 @@ void qt_init_primitives(VM* vm) {
   vm->register_primitive("qt_status_bar_show_message", prim_qt_status_bar_show_message);
 
   vm->register_primitive("qt_maybe_construct_qapp", prim_qt_maybe_construct_qapp);
+
+  vm->register_primitive("qt_server_create_server", prim_qt_server_create_server);
+  vm->register_primitive("qt_server_listen", prim_qt_server_listen);
+  vm->register_primitive("qt_socket_write_line", prim_qt_socket_write_line);
+  vm->register_primitive("qt_socket_read_string", prim_qt_socket_read_string);
+  vm->register_primitive("qt_server_next_pending_connection", prim_qt_server_next_pending_connection);
+
 
   qRegisterMetaType<QListWidgetItem*>("QListWidgetItem");//Do this if you need signal/slots
 

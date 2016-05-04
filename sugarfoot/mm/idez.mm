@@ -1,12 +1,13 @@
-.preamble(qt, io, dd)
+.preamble(qt, io, remote_repl, dd)
   qt : meme:qt;
   io : meme:io;
+  remote_repl : meme:remote_repl;
   dd : meme:dd;
   [QWidget, QMainWindow, QsciScintilla, QLineEdit, QComboBox, QTableWidget, QListWidgetItem, QTableWidgetItem] <= qt;
 .code
 
 debug: fun(proc) {
-  return dd.main(proc);
+  return remote_repl.debug(proc);
 }
 
 main: fun() {

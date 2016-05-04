@@ -635,4 +635,40 @@ instance_method showMessage: fun(text) {
 }
 end
 
+
+
+//quick dirty qt based socket/server
+
+class QTcpSocket
+fields: self;
+instance_method read_string: fun() {
+  <primitive "qt_socket_read_string">
+}
+instance_method write_line: fun(line) {
+  <primitive "qt_socket_write_line">
+}
+instance_method connect: fun(signal, slot) {
+  <primitive "qt_qaction_connect">
+}
+end
+
+class QTcpServer
+fields: self;
+init create_server: fun() {
+  <primitive "qt_server_create_server">
+}
+instance_method nextPendingConnection: fun() {
+  <primitive "qt_server_next_pending_connection">
+}
+
+instance_method listen: fun(port) {
+  <primitive "qt_server_listen">
+}
+instance_method connect: fun(signal, slot) {
+  <primitive "qt_qaction_connect">
+}
+end
+
+.endcode
+
 .end

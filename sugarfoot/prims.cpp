@@ -20,6 +20,46 @@ namespace fs = ::boost::filesystem;
 
 static MMLog _log(LOG_PRIMS);
 
+static int prim_remote_repl_compile_module(Process* proc) {
+  oop module_name = proc->get_arg(0);
+  char* mmpath = getenv("MEME_PATH");
+  std::stringstream s;
+  s << "python -m pycompiler.compiler  "<< mmpath << proc->mmobj()->mm_string_cstr(proc, module_name) << ".mm";
+  DBG() << "Executing ... " << s.str() << std::endl;
+  if (system(s.str().c_str()) == 0) {
+    proc->stack_push(MM_TRUE);
+  } else {
+    proc->stack_push(MM_FALSE);
+  }
+  return 0;
+}
+
+static int prim_remote_repl_instantiate_module(Process* proc) {
+  oop oop_module_name = proc->get_arg(0);
+  char* module_name = proc->mmobj()->mm_string_cstr(proc, oop_module_name);
+  try {
+    DBG() << "instantiating module" << module_name << endl;
+
+    oop imod = proc->vm()->instantiate_module(proc, module_name,
+                                              proc->mmobj()->mm_list_new());
+    proc->stack_push(imod);
+    return 0;
+  } catch(mm_exception_rewind e) {
+    DBG() << "instantiating module failed: " << e.mm_exception << endl;
+    proc->stack_push(e.mm_exception);
+    return PRIM_RAISED;
+  } catch(std::invalid_argument e) {
+    DBG() << "instantiating module failed: " << e.what() << endl;
+    oop ex = proc->mm_exception(
+      "ImportError",
+      (std::string("could not import module ") + e.what()).c_str());
+    DBG() << "returning mm_exception : " << ex << endl;
+    proc->stack_push(ex);
+    return PRIM_RAISED;
+  }
+}
+
+
 static int prim_io_print(Process* proc) {
   oop obj = proc->get_arg(0);
 
@@ -88,6 +128,20 @@ static int prim_string_count(Process* proc) {
   return 0;
 }
 
+static int prim_string_find(Process* proc) {
+  oop self =  proc->dp();
+  oop arg = proc->get_arg(0);
+  std::string str = proc->mmobj()->mm_string_cstr(proc, self);
+  std::string str_arg = proc->mmobj()->mm_string_cstr(proc, arg);
+  std::size_t pos = str.find(str_arg);
+  if (pos == std::string::npos) {
+    proc->stack_push(tag_small_int(-1));
+  } else {
+    proc->stack_push(tag_small_int(pos));
+  }
+  return 0;
+}
+
 static int prim_string_rindex(Process* proc) {
   oop self =  proc->dp();
   oop arg = proc->get_arg(0);
@@ -124,6 +178,126 @@ static int prim_string_replace_all(Process* proc) {
   std::string output = boost::replace_all_copy(str, _what, _val);
 
   proc->stack_push(proc->mmobj()->mm_string_new(output.c_str()));
+  return 0;
+}
+
+static const std::string base64_chars =
+             "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+             "abcdefghijklmnopqrstuvwxyz"
+             "0123456789+/";
+static inline bool is_base64(unsigned char c) {
+  return (isalnum(c) || (c == '+') || (c == '/'));
+}
+
+std::string base64_encode(unsigned char const* bytes_to_encode, unsigned int in_len) {
+  std::string ret;
+  int i = 0;
+  int j = 0;
+  unsigned char char_array_3[3];
+  unsigned char char_array_4[4];
+
+  while (in_len--) {
+    char_array_3[i++] = *(bytes_to_encode++);
+    if (i == 3) {
+      char_array_4[0] = (char_array_3[0] & 0xfc) >> 2;
+      char_array_4[1] = ((char_array_3[0] & 0x03) << 4) + ((char_array_3[1] & 0xf0) >> 4);
+      char_array_4[2] = ((char_array_3[1] & 0x0f) << 2) + ((char_array_3[2] & 0xc0) >> 6);
+      char_array_4[3] = char_array_3[2] & 0x3f;
+
+      for(i = 0; (i <4) ; i++)
+        ret += base64_chars[char_array_4[i]];
+      i = 0;
+    }
+  }
+
+  if (i)
+  {
+    for(j = i; j < 3; j++)
+      char_array_3[j] = '\0';
+
+    char_array_4[0] = (char_array_3[0] & 0xfc) >> 2;
+    char_array_4[1] = ((char_array_3[0] & 0x03) << 4) + ((char_array_3[1] & 0xf0) >> 4);
+    char_array_4[2] = ((char_array_3[1] & 0x0f) << 2) + ((char_array_3[2] & 0xc0) >> 6);
+    char_array_4[3] = char_array_3[2] & 0x3f;
+
+    for (j = 0; (j < i + 1); j++)
+      ret += base64_chars[char_array_4[j]];
+
+    while((i++ < 3))
+      ret += '=';
+
+  }
+
+  return ret;
+
+}
+
+
+static std::string base64_decode(std::string const& encoded_string) {
+  int in_len = encoded_string.size();
+  int i = 0;
+  int j = 0;
+  int in_ = 0;
+  unsigned char char_array_4[4], char_array_3[3];
+  std::string ret;
+
+  while (in_len-- && ( encoded_string[in_] != '=') && is_base64(encoded_string[in_])) {
+    char_array_4[i++] = encoded_string[in_]; in_++;
+    if (i ==4) {
+      for (i = 0; i <4; i++)
+        char_array_4[i] = base64_chars.find(char_array_4[i]);
+
+      char_array_3[0] = (char_array_4[0] << 2) + ((char_array_4[1] & 0x30) >> 4);
+      char_array_3[1] = ((char_array_4[1] & 0xf) << 4) + ((char_array_4[2] & 0x3c) >> 2);
+      char_array_3[2] = ((char_array_4[2] & 0x3) << 6) + char_array_4[3];
+
+      for (i = 0; (i < 3); i++)
+        ret += char_array_3[i];
+      i = 0;
+    }
+  }
+
+  if (i) {
+    for (j = i; j <4; j++)
+      char_array_4[j] = 0;
+
+    for (j = 0; j <4; j++)
+      char_array_4[j] = base64_chars.find(char_array_4[j]);
+
+    char_array_3[0] = (char_array_4[0] << 2) + ((char_array_4[1] & 0x30) >> 4);
+    char_array_3[1] = ((char_array_4[1] & 0xf) << 4) + ((char_array_4[2] & 0x3c) >> 2);
+    char_array_3[2] = ((char_array_4[2] & 0x3) << 6) + char_array_4[3];
+
+    for (j = 0; (j < i - 1); j++) ret += char_array_3[j];
+  }
+
+  return ret;
+}
+
+static int prim_string_b64decode(Process* proc) {
+  oop self =  proc->dp();
+  std::string str = proc->mmobj()->mm_string_cstr(proc, self);
+
+  DBG() << "decode: [" << str << "] " << str.size() << endl;
+  std::string dec = base64_decode(str);
+  DBG() << "decoded: [" << dec << "]" << endl;
+
+  oop oop_res = proc->mmobj()->mm_string_new(dec.c_str());
+  proc->stack_push(oop_res);
+  return 0;
+}
+
+static int prim_string_b64encode(Process* proc) {
+  oop self =  proc->dp();
+  std::string str = proc->mmobj()->mm_string_cstr(proc, self);
+
+  DBG() << "encode: [" << str << "] " << str.size() << endl;
+
+  std::string enc = base64_encode(reinterpret_cast<const unsigned char*>(str.c_str()), str.length());
+  DBG() << "encoded: [" << enc << "]" << endl;
+
+  oop oop_res = proc->mmobj()->mm_string_new(enc.c_str());
+  proc->stack_push(oop_res);
   return 0;
 }
 
@@ -1232,6 +1406,15 @@ static int prim_process_fp(Process* proc) {
   return 0;
 }
 
+static int prim_process_mp(Process* proc) {
+  oop oop_target_proc = proc->rp();
+
+  Process* target_proc = (Process*) (((oop*)oop_target_proc)[2]);
+  proc->stack_push(target_proc->mp());
+  return 0;
+}
+
+
 // static int prim_process_ip(Process* proc) {
 //   oop oop_target_proc = proc->rp();
 
@@ -1343,6 +1526,9 @@ static int prim_modules_path(Process* proc) {
 void init_primitives(VM* vm) {
   vm->register_primitive("io_print", prim_io_print);
 
+  vm->register_primitive("remote_repl_compile_module", prim_remote_repl_compile_module);
+  vm->register_primitive("remote_repl_instantiate_module", prim_remote_repl_instantiate_module);
+
   vm->register_primitive("behavior_to_string", prim_behavior_to_string);
   vm->register_primitive("behavior_to_source", prim_behavior_to_source);
 
@@ -1394,9 +1580,12 @@ void init_primitives(VM* vm) {
   vm->register_primitive("string_equal", prim_string_equal);
   vm->register_primitive("string_count", prim_string_count);
   vm->register_primitive("string_size", prim_string_size);
+  vm->register_primitive("string_find", prim_string_find);
   vm->register_primitive("string_rindex", prim_string_rindex);
   vm->register_primitive("string_from", prim_string_from);
   vm->register_primitive("string_replace_all", prim_string_replace_all);
+  vm->register_primitive("string_b64decode", prim_string_b64decode);
+  vm->register_primitive("string_b64encode", prim_string_b64encode);
 
 
   vm->register_primitive("mirror_entries", prim_mirror_entries);
@@ -1441,6 +1630,7 @@ void init_primitives(VM* vm) {
   vm->register_primitive("process_current_exception", prim_process_current_exception);
   vm->register_primitive("process_cp", prim_process_cp);
   vm->register_primitive("process_fp", prim_process_fp);
+  vm->register_primitive("process_mp", prim_process_mp);
   // vm->register_primitive("process_ip", prim_process_ip);
   vm->register_primitive("process_frames", prim_process_frames);
   // vm->register_primitive("process_apply", prim_process_apply);

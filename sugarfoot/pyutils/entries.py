@@ -738,11 +738,11 @@ class CompiledFunction(Entry):
         # self.line_mapping: bytecode_offset => lineno
 
         if self.outer_cfun:
-            start_line = ast.start_line - self.outer_cfun.start_line
-            end_line = ast.end_line - self.outer_cfun.start_line
+            start_line = ast.start_line # - self.outer_cfun.start_line
+            end_line = ast.end_line # - self.outer_cfun.start_line
         else:
-            start_line = ast.start_line - self.start_line
-            end_line = ast.end_line - self.start_line
+            start_line = ast.start_line # - self.start_line
+            end_line = ast.end_line # - self.start_line
 
         # print self.name, bpos, [start_line, ast.start_col, end_line, ast.end_col]
         # if bpos not in self.location_mapping:
