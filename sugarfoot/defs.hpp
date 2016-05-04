@@ -21,6 +21,7 @@ typedef int (*prim_function_t) (Process*);
 #define INVALID_PAYLOAD 256
 
 #define PRIM_RAISED 1
+#define PRIM_HALTED 2
 
 #define MM_TRUE (oop) 1
 #define MM_FALSE (oop) 2

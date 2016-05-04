@@ -340,6 +340,10 @@ bool Process::load_fun(oop recv, oop drecv, oop fun, bool should_allocate) {
       oop value = stack_pop(); //shit
       unload_fun_and_return(value);
       return false;
+    } else if (ret == PRIM_HALTED) {
+      pop_frame();
+      halt_and_debug();
+      return false;
     } else if (ret == PRIM_RAISED) {
       oop ex_oop = stack_pop(); //shit
       DBG() << "prim returned: RAISED " << ex_oop << endl;
@@ -560,9 +564,9 @@ void Process::maybe_break_on_call() {
 
 void Process::maybe_break_on_exception() {
   if (_state == STEP_INTO_STATE || _state == STEP_OVER_STATE) {
+    DBG() << "goint to HALT state" << endl;
     _state = HALT_STATE;
   }
-  // DBG() << "maybe_tick_return: " << _step_fp << " " << _fp << endl;
 }
 
 void Process::tick() {
@@ -582,16 +586,16 @@ void Process::tick() {
       }
     }
     if (_step_bp >= _bp) {
-      // DBG() << "BREAK on FP "  << _fp << " " << _ip << " " << decode_opcode(*_ip) << endl;
+      DBG() << "_step_bp >= _bp, lets break" << endl;
       goto do_pause;
     }
   } else if (_state == STEP_OUT_STATE) {
     if (_step_bp >= _bp) {
-      // DBG() << "BREAK on FP "  << _fp << " " << _ip << " " << decode_opcode(*_ip) << endl;
+      DBG() << "BREAK on FP "  << _fp << " " << _ip << " " << decode_opcode(*_ip) << endl;
       goto do_pause;
     }
   } else if (_state == HALT_STATE) {
-    // DBG() << "tick:HALT state. goto pause " << endl;
+    DBG() << "tick:HALT state. goto pause " << endl;
     goto do_pause;
   }
   return;
@@ -633,12 +637,12 @@ void Process::step_over() {
   bytecode* next = _mmobj->mm_function_next_expr(this, _cp, _ip, true);
   DBG() << "step over next instruction: " << next << endl;
   if (next) {
-    // DBG() << "step_over: BP on next op: " << next << " "
-    //           << decode_opcode(*next) << endl;
+    DBG() << "step_over: BP on next op: " << next << " "
+              << decode_opcode(*next) << endl;
     _volatile_breakpoints.push_back(next);
   }
   _step_bp = *(oop*)_bp; //previous bp
-  // DBG()  << "ste_over will br on: " << _step_bp << " " << std::endl;
+  DBG()  << "ste_over will br on: " << _step_bp << " " << std::endl;
   _state = STEP_OVER_STATE;
   _control->resume();
 }
@@ -698,6 +702,7 @@ void Process::handle_send(number num_args) {
     //we rely on compiler generating a pop instruction to bind ex_oop to the catch var
     WARNING() << "will raise DoesNotUnderstand: " << s.str() << endl;
     oop oo_ex = mm_exception("DoesNotUnderstand", s.str().c_str());
+    DBG() << "created exception object " << oo_ex << endl;
     maybe_debug_on_raise(oo_ex);
     oop unwind_exc = unwind_with_exception(oo_ex);
     if (unwind_exc != MM_NULL) {
@@ -1020,11 +1025,11 @@ bool Process::exception_has_handler(oop e, oop next_bp) {
     // DBG() << "_ip: " << _ip << endl;
     // DBG() << "ip from next_bp: " << ip_from_frame(next_bp) << " " << next_bp << endl;
 
-    bytecode* ip = ip_from_frame(next_bp);
+    bytecode* ip = next_bp == _bp ? _ip : ip_from_frame(next_bp);
 
     unsigned long instr = ip - code;
 
-    DBG() << "RAISE instr: " << instr << " try: " << try_block
+    DBG() << "RAISE instr: " << instr << " at ip: " << ip << " try: " << try_block
             << " catch: " << catch_block << " type: " << type_oop << endl;
 
     bool delegates_to = _mmobj->delegates_to(_mmobj->mm_object_vt(e), type_oop);
@@ -1035,7 +1040,7 @@ bool Process::exception_has_handler(oop e, oop next_bp) {
 
     if (instr >= try_block && instr < catch_block &&
         (type_oop == MM_NULL || delegates_to)) {
-      DBG() << "CAUGHT " << endl;
+      DBG() << "HAS CATCH " << endl;
       return true;
     }
   }
@@ -1064,7 +1069,7 @@ oop Process::unwind_with_exception(oop e) {
   _unwinding_exception = true;
   DBG() << "** unwind_with_exception e: " << e << " on cp: " << _cp << " state: " << _state << endl;
 
-  maybe_break_on_exception();//  why is this here? Shouldn't we check if there's no catch{} in the stack?
+  // maybe_break_on_exception();//  why is this here? Shouldn't we check if there's no catch{} in the stack?
 
   DBG() << "ticking..." << endl;
   tick();
@@ -1127,7 +1132,7 @@ oop Process::unwind_with_exception(oop e) {
 
     word instr = _ip - code;
 
-    DBG() << "RAISE instr: " << instr << " try: " << try_block
+    DBG() << "RAISE instr: " << instr << " ip: " << _ip << " try: " << try_block
             << " catch: " << catch_block << " type: " << type_oop << endl;
 
     bool delegates_to = _mmobj->delegates_to(_mmobj->mm_object_vt(e), type_oop);
@@ -1177,12 +1182,13 @@ void Process::halt_and_debug() {
     DBG() << "got a _dbg_handler " << endl;
   }
   DBG() << "pausing... " << endl;
-  pause();
+  step_over();
 }
 
 void Process::maybe_debug_on_raise(oop ex_oop) {
-  if (has_debugger_attached()) {
-    pause();
+  if (has_debugger_attached() && !exception_has_handler(ex_oop, _bp)) {
+    DBG() << "we have a debugger and this exception does not have handler. state=halt" << endl;
+    _state = HALT_STATE;
   } else if (_vm->running_online() &&
              !exception_has_handler(ex_oop, _bp)) {
 
@@ -1191,6 +1197,8 @@ void Process::maybe_debug_on_raise(oop ex_oop) {
 
     _current_exception = ex_oop;
     halt_and_debug();
+  } else {
+    DBG() << "maybe_debug_on_raise: NOT. state" << _state << endl;
   }
 }
 

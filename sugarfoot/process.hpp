@@ -127,7 +127,6 @@ private:
   std::string dump_code_body();
   std::string dump_stack_top();
   const char* meme_curr_fname();
-  void pause() { _state = HALT_STATE; };
 
   void init();
 

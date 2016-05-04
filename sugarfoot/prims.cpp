@@ -1067,10 +1067,10 @@ static int prim_compiled_function_loc_for(Process* proc) {
 
   oop frame = proc->get_arg(0);
   bytecode* ip = proc->mmobj()->mm_frame_get_ip(proc, frame);
-  // DBG() << "loc_for_ip: " << ip << endl;
+  DBG() << "loc_for_ip: " << ip << endl;
   bytecode* base_ip = proc->mmobj()->mm_compiled_function_get_code(proc, self);
   word idx = ip - base_ip;
-  // DBG() << "loc_for_ip base: " << base_ip << " idx" << ip - base_ip << endl;
+  DBG() << "loc_for_ip base: " << base_ip << " ip: " << ip << " idx: " << idx << endl;
 
   oop mapping = proc->mmobj()->mm_compiled_function_get_loc_mapping(proc, self);
   std::map<oop, oop>::iterator it = proc->mmobj()->mm_dictionary_begin(proc, mapping);
@@ -1078,7 +1078,7 @@ static int prim_compiled_function_loc_for(Process* proc) {
   oop the_lst = MM_NULL;
   for ( ; it != end; it++) {
     word b_offset = untag_small_int(it->first);
-    // DBG() << " -- " << b_offset << " " <<  idx << std::endl;
+    DBG() << " -- " << b_offset << " " <<  idx << std::endl;
     if (b_offset == idx) {
       the_lst = it->second;
       break;
@@ -1272,9 +1272,7 @@ static int prim_test_catch_exception(Process* proc) {
 }
 
 static int prim_test_debug(Process* proc) {
-  proc->halt_and_debug();
-  proc->stack_push(proc->rp());
-  return 0;
+  return PRIM_HALTED;
 }
 //   // DBG() << "prim_test_debug" << endl;
 //   proc->pause();
