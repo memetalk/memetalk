@@ -543,6 +543,21 @@ static int prim_list_last(Process* proc) {
   return 0;
 }
 
+static int prim_list_from(Process* proc) {
+  oop self =  proc->dp();
+  oop idx = proc->get_arg(0);
+  number index = untag_small_int(idx);
+
+  number size = proc->mmobj()->mm_list_size(proc, self);
+  oop ret = proc->mmobj()->mm_list_new();
+  for (number i = index; i < size; i++) {
+    oop next = proc->mmobj()->mm_list_entry(proc, self, i);
+    proc->mmobj()->mm_list_append(proc, ret, next);
+  }
+  proc->stack_push(ret);
+  return 0;
+}
+
 
 static int prim_list_to_string(Process* proc) {
   oop self =  proc->dp();
@@ -1556,6 +1571,7 @@ void init_primitives(VM* vm) {
   vm->register_primitive("list_map", prim_list_map);
   vm->register_primitive("list_has", prim_list_has);
   vm->register_primitive("list_last", prim_list_last);
+  vm->register_primitive("list_from", prim_list_from);
   vm->register_primitive("list_to_string", prim_list_to_string);
   vm->register_primitive("list_to_source", prim_list_to_source);
   vm->register_primitive("list_size", prim_list_size);

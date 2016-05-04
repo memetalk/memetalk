@@ -308,6 +308,9 @@
   instance_method last: fun() {
     <primitive "list_last">
   }
+  instance_method from: fun(idx) {
+    <primitive "list_from">
+  }
   instance_method toString: fun() {
     <primitive "list_to_string">
   }
