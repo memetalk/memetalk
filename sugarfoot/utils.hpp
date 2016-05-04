@@ -17,6 +17,7 @@ void link_symbols(char* data, int es_size, int start_external_symbols, VM* vm, C
 int decode_opcode(bytecode);
 int decode_args(bytecode);
 
+std::string bytecode_to_str(bytecode code);
 
 bool is_small_int(oop num);
 number untag_small_int(oop num);

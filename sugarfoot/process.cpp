@@ -29,10 +29,12 @@
                               << _log.yellow << "         MP: " << _mp << endl \
                               << _log.yellow << "         CP: " << _cp << endl
 
-#define LOG_STACK_TOP() DBG() << "stack_depth: " << _stack_depth << ", stack:" << endl \
+#define LOG_STACK_TOP() DBG() << "stack_depth: " << _stack_depth << ", state: " << _state << " - stack:" << endl \
                               << _log.yellow << dump_stack_top() << endl
 
-#define LOG_STATE() LOG_REGISTERS(); LOG_STACK_TOP();
+#define LOG_BODY() DBG() << "code body: " << endl << dump_code_body() << endl
+
+#define LOG_STATE() LOG_REGISTERS(); LOG_STACK_TOP(); LOG_BODY();
 
 #define CTXNAME(ctx) _mmobj->mm_string_cstr(this, _mmobj->mm_function_get_name(this, ctx), true)
 
@@ -44,6 +46,28 @@ Process::Process(VM* vm, int debugger_id)
   _step_bp = MM_NULL;
   _current_exception = MM_NULL;
 }
+
+std::string Process::dump_code_body() {
+  std::stringstream s;
+  if (!_cp) {
+    return s.str();
+  }
+  bytecode* ip = _mmobj->mm_function_get_code(this, _cp, true);
+  number size = _mmobj->mm_function_get_code_size(this, _cp, true);
+  if (!ip) {
+    return s.str();
+  }
+  for (number i = 0; i < size / 4; i++) {
+    if (ip != _ip) {
+      s << _log.normal << "*** ip: " << ip << " [" << bytecode_to_str(*ip) << "]" << endl;
+    } else {
+      s << _log.bold << "*** ip: " << ip << " [" << bytecode_to_str(*ip) << "]" << endl;
+    }
+    ip++;
+  }
+  return s.str();
+}
+
 
 std::string Process::dump_stack_top() {
   std::stringstream s;

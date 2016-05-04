@@ -7,6 +7,7 @@
 #include "core_image.hpp"
 #include "log.hpp"
 #include <stdexcept>
+#include <sstream>
 
 using namespace std;
 
@@ -142,3 +143,74 @@ bool check_and_print_exception(Process* proc, int exc, oop ex) {
   }
   return false;
 }
+
+
+std::string bytecode_to_str(bytecode code) {
+  std::stringstream s;
+  switch(decode_opcode(code)) {
+    case PUSH_LOCAL:
+      s <<"PUSH_LOCAL" << decode_args(code);
+      break;
+    case PUSH_LITERAL:
+      s <<"PUSH_LITERAL"<< decode_args(code);
+      break;
+    case PUSH_FIELD:
+      s <<"PUSH_FIELD"<< decode_args(code);
+      break;
+    case PUSH_THIS:
+      s <<"PUSH_THIS"<< decode_args(code);
+      break;
+    case PUSH_MODULE:
+      s <<"PUSH_MODULE"<< decode_args(code);
+      break;
+    case PUSH_BIN:
+      s <<"PUSH_BIN"<< decode_args(code);
+      break;
+    case PUSH_FP:
+      s <<"PUSH_FP"<< decode_args(code);
+      break;
+    case PUSH_CONTEXT:
+      s <<"PUSH_CONTEXT"<< decode_args(code);
+      break;
+    case POP_LOCAL:
+      s <<"POP_LOCAL"<< decode_args(code);
+      break;
+    case POP_FIELD:
+      s <<"POP_FIELD"<< decode_args(code);
+      break;
+    case POP:
+      s <<"POP"<< decode_args(code);
+      break;
+    case RETURN_TOP:
+      s <<"RETURN_TOP"<< decode_args(code);
+      break;
+    case RETURN_THIS:
+      s <<"RETURN_THIS"<< decode_args(code);
+      break;
+    case SEND:
+      s <<"SEND"<< decode_args(code);
+      break;
+    case CALL:
+      s <<"CALL"<< decode_args(code);
+      break;
+    case SUPER_SEND:
+      s <<"SUPER_SEND"<< decode_args(code);
+      break;
+    case SUPER_CTOR_SEND:
+      s <<"SUPER_CTOR_SEND"<< decode_args(code);
+      break;
+    case JZ:
+      s <<"JZ"<< decode_args(code);
+      break;
+    case JMP:
+      s <<"JMP"<< decode_args(code);
+      break;
+    case JMPB:
+      s <<"JMPB"<< decode_args(code);
+      break;
+    default:
+      std::cerr << "unknown code " << code << endl;
+  }
+  return s.str();
+}
+
