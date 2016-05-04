@@ -111,7 +111,7 @@ std::pair<Process*, oop> VM::start_debugger(Process* target) {
   oop imod;
   Process* dbg_proc = new Process(this, ++debugger_id);
   try {
-    imod = instantiate_module(dbg_proc, "idez", _mmobj->mm_list_new());
+    imod = instantiate_module(dbg_proc, "remote_repl", _mmobj->mm_list_new());
   } catch(mm_exception_rewind e) {
     ERROR() << "uncaught exception while instantiating debugger module :(" << endl;
     dbg_proc->fail(e.mm_exception);
