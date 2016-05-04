@@ -663,7 +663,7 @@ void Process::handle_send(number num_args) {
     std::stringstream s;
     s << _mmobj->mm_symbol_cstr(this, selector) << " not found in object " << recv;
     //we rely on compiler generating a pop instruction to bind ex_oop to the catch var
-    DBG() << "will raise DoesNotUnderstand: " << s.str() << endl;
+    WARNING() << "will raise DoesNotUnderstand: " << s.str() << endl;
     oop oo_ex = mm_exception("DoesNotUnderstand", s.str().c_str());
     maybe_debug_on_raise(oo_ex);
     oop unwind_exc = unwind_with_exception(oo_ex);
@@ -1021,10 +1021,11 @@ oop Process::unwind_with_exception(oop e) {
   //   and also change the signature to return bool instead of oop
   //-returns false, in case execution should resume normally.
   _unwinding_exception = true;
-  DBG() << "** unwind_with_exception e: " << e << " on cp: " << _cp << endl;
+  DBG() << "** unwind_with_exception e: " << e << " on cp: " << _cp << " state: " << _state << endl;
 
-  maybe_break_on_exception();//  maybe_break_on_return();
+  maybe_break_on_exception();//  why is this here? Shouldn't we check if there's no catch{} in the stack?
 
+  DBG() << "ticking..." << endl;
   tick();
 
   if (_cp == NULL) {
@@ -1104,7 +1105,7 @@ oop Process::unwind_with_exception(oop e) {
 
 
 void Process::raise(const char* ex_type_name, const char* msg) {
-  DBG() << ex_type_name << " -- " << msg << endl;
+  WARNING() << ex_type_name << " -- " << msg << endl;
   //TODO: this is used by mmc_image. I think we should just return the
   // exception and let that class deal with it.
   throw mm_exception_rewind(mm_exception(ex_type_name, msg));
@@ -1128,10 +1129,12 @@ bool Process::has_debugger_attached() {
 }
 
 void Process::halt_and_debug() {
-  DBG() << "starting new debugger? "" << has_debugger_attached()" << endl;
+  DBG() << "starting new debugger? " << has_debugger_attached() << endl;
   if (!has_debugger_attached()) {
     _dbg_handler = _vm->start_debugger(this);
+    DBG() << "got a _dbg_handler " << endl;
   }
+  DBG() << "pausing... " << endl;
   pause();
 }
 
@@ -1140,6 +1143,10 @@ void Process::maybe_debug_on_raise(oop ex_oop) {
     pause();
   } else if (_vm->running_online() &&
              !exception_has_handler(ex_oop, _bp)) {
+
+    DBG() << "running online and there's no handler for exception "
+          << ex_oop << "; calling halt_and_debug()" << endl;
+
     _current_exception = ex_oop;
     halt_and_debug();
   }

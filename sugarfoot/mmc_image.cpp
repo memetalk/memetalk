@@ -137,6 +137,7 @@ void MMCImage::load_default_dependencies_and_assign_module_arguments(oop imodule
                                       _mmobj->mm_list_new());
     number midx = _mmobj->mm_list_index_of(_proc, params_list, _mmobj->mm_symbol_to_string(_proc, lhs_name));
     if (midx == -1) {
+      DBG() << "raising Import error on " << _mmobj->mm_symbol_cstr(_proc, lhs_name) << endl;
       _proc->raise("ImportError", "Could not bind unknown module parameter to default value");
     }
     _mmobj->mm_module_set_module_argument(imodule, imd, midx);
