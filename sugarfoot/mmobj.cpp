@@ -96,7 +96,7 @@ bytecode* MMObj::mm_frame_get_ip(Process* p, oop frame, bool should_assert) {
 }
 
 oop MMObj::mm_module_new(int num_fields, oop cmod, oop delegate) {
-  oop imodule = (oop) malloc(sizeof(word) * (4 + num_fields)); //4: vt, delegate, dict, cmod
+  oop imodule = (oop) calloc(4 + num_fields, sizeof(word)); //4: vt, delegate, dict, cmod
 
   ((word**) imodule)[0] = imodule; //imodule[vt] = imodule
   ((word**) imodule)[1] = delegate; // imodule[delegate]
