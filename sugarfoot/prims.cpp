@@ -152,6 +152,19 @@ static int prim_string_rindex(Process* proc) {
   return 0;
 }
 
+static int prim_string_index(Process* proc) {
+  oop self =  proc->dp();
+  oop arg = proc->get_arg(0);
+  number idx = untag_small_int(arg);
+
+  std::string str = proc->mmobj()->mm_string_cstr(proc, self);
+  char res[2];
+  res[0] = str[idx];
+  res[1] = '\0';
+  proc->stack_push(proc->mmobj()->mm_string_new(res));
+  return 0;
+}
+
 static int prim_string_from(Process* proc) {
   oop self =  proc->dp();
   oop idx = proc->get_arg(0);
@@ -294,6 +307,62 @@ static int prim_string_b64encode(Process* proc) {
 
   oop oop_res = proc->mmobj()->mm_string_new(enc.c_str());
   proc->stack_push(oop_res);
+  return 0;
+}
+
+static int prim_string_only_spaces(Process* proc) {
+  oop self =  proc->dp();
+  std::string str = proc->mmobj()->mm_string_cstr(proc, self);
+  for (int i = 0; i < str.size(); i++) {
+    if (str[i] != ' ' &&
+        str[i] != '\t' &&
+        str[i] != '\r' &&
+        str[i] != '\n') {
+      proc->stack_push(MM_FALSE);
+      return 0;
+    }
+  }
+  proc->stack_push(MM_TRUE);
+  return 0;
+}
+
+static int prim_string_only_digits(Process* proc) {
+  oop self =  proc->dp();
+  std::string str = proc->mmobj()->mm_string_cstr(proc, self);
+  for (int i = 0; i < str.size(); i++) {
+    if (str[i] < '0' || str[i] > '9') {
+      proc->stack_push(MM_FALSE);
+      return 0;
+    }
+  }
+  proc->stack_push(MM_TRUE);
+  return 0;
+}
+
+static int prim_string_is_lower(Process* proc) {
+  oop self =  proc->dp();
+  std::string str = proc->mmobj()->mm_string_cstr(proc, self);
+  for (int i = 0; i < str.size(); i++) {
+    if (str[i] < 'a' || str[i] > 'z') {
+      proc->stack_push(MM_FALSE);
+      return 0;
+    }
+  }
+  proc->stack_push(MM_TRUE);
+  return 0;
+}
+
+static int prim_string_is_upper(Process* proc) {
+  oop self =  proc->dp();
+  std::string str = proc->mmobj()->mm_string_cstr(proc, self);
+  for (int i = 0; i < str.size(); i++) {
+    DBG() << (str[i] < 'A') << (str[i] > 'Z') << endl;
+    if (str[i] < 'A' || str[i] > 'Z') {
+      proc->stack_push(MM_FALSE);
+      return 0;
+    }
+  }
+  proc->stack_push(MM_TRUE);
   return 0;
 }
 
@@ -514,6 +583,19 @@ static int prim_list_map(Process* proc) {
 static int prim_list_size(Process* proc) {
   oop self =  proc->dp();
   proc->stack_push(tag_small_int(proc->mmobj()->mm_list_size(proc, self)));
+  return 0;
+}
+
+static int prim_list_reverse(Process* proc) {
+  oop self =  proc->dp();
+
+  number size = proc->mmobj()->mm_list_size(proc, self);
+  oop ret = proc->mmobj()->mm_list_new();
+  for (int i = size; i >= 0; i--) {
+    oop next = proc->mmobj()->mm_list_entry(proc, self, i);
+    proc->mmobj()->mm_list_append(proc, ret, next);
+  }
+  proc->stack_push(ret);
   return 0;
 }
 
@@ -851,6 +933,13 @@ static int prim_mirror_set_value_for(Process* proc) {
   }
 }
 
+static int prim_mirror_vt_for(Process* proc) {
+  oop obj = proc->get_arg(0);
+  DBG() << "vt for " << obj << " = " << proc->mmobj()->mm_object_vt(obj) << endl;
+  proc->stack_push(proc->mmobj()->mm_object_vt(obj));
+  return 0;
+}
+
 static int prim_equal(Process* proc) {
   oop self =  proc->rp();
   oop other = proc->get_arg(0);
@@ -910,6 +999,21 @@ static int prim_object_to_string(Process* proc) {
 
 static int prim_object_to_source(Process* proc) {
   return prim_object_to_string(proc);
+}
+
+static int prim_object_send(Process* proc) {
+  oop self =  proc->rp();
+  oop name = proc->get_arg(0);
+  oop args_list = proc->get_arg(1);
+
+  int exc;
+  oop res = proc->send(self, name, args_list, &exc);
+  if (exc != 0) {
+    proc->stack_push(res);
+    return PRIM_RAISED;
+  }
+  proc->stack_push(res);
+  return 0;
 }
 
 static int prim_symbol_to_string(Process* proc) {
@@ -1558,6 +1662,7 @@ void init_primitives(VM* vm) {
   vm->register_primitive("object_not", prim_object_not);
   vm->register_primitive("object_to_string", prim_object_to_string);
   vm->register_primitive("object_to_source", prim_object_to_source);
+  vm->register_primitive("object_send", prim_object_send);
 
   vm->register_primitive("symbol_to_string", prim_symbol_to_string);
 
@@ -1575,6 +1680,8 @@ void init_primitives(VM* vm) {
   vm->register_primitive("list_to_string", prim_list_to_string);
   vm->register_primitive("list_to_source", prim_list_to_source);
   vm->register_primitive("list_size", prim_list_size);
+  vm->register_primitive("list_reverse", prim_list_reverse);
+
 
   vm->register_primitive("dictionary_new", prim_dictionary_new);
   vm->register_primitive("dictionary_set", prim_dictionary_set);
@@ -1592,15 +1699,23 @@ void init_primitives(VM* vm) {
   vm->register_primitive("string_size", prim_string_size);
   vm->register_primitive("string_find", prim_string_find);
   vm->register_primitive("string_rindex", prim_string_rindex);
+  vm->register_primitive("string_index", prim_string_index);
+
   vm->register_primitive("string_from", prim_string_from);
   vm->register_primitive("string_replace_all", prim_string_replace_all);
   vm->register_primitive("string_b64decode", prim_string_b64decode);
   vm->register_primitive("string_b64encode", prim_string_b64encode);
 
+  vm->register_primitive("string_only_spaces", prim_string_only_spaces);
+  vm->register_primitive("string_only_digits", prim_string_only_digits);
+  vm->register_primitive("string_is_lower", prim_string_is_lower);
+  vm->register_primitive("string_is_upper", prim_string_is_upper);
+
 
   vm->register_primitive("mirror_entries", prim_mirror_entries);
   vm->register_primitive("mirror_value_for", prim_mirror_value_for);
   vm->register_primitive("mirror_set_value_for", prim_mirror_set_value_for);
+  vm->register_primitive("mirror_vt_for", prim_mirror_vt_for);
 
 
   vm->register_primitive("compiled_function_new_context", prim_compiled_function_new_context);

@@ -73,6 +73,9 @@
        !=: fun(other) {
          return !(this == other);
        }
+       send: fun(name, args) {
+         <primitive "object_send">
+       }
     }
   end
 
@@ -230,6 +233,9 @@
   instance_method find: fun(arg) {
     <primitive "string_find">
   }
+  instance_method index: fun(arg) {
+    <primitive "string_index">
+  }
   instance_method rindex: fun(arg) {
     <primitive "string_rindex">
   }
@@ -244,6 +250,18 @@
   }
   instance_method replace_all: fun(what, value) {
     <primitive "string_replace_all">
+  }
+  instance_method onlySpaces: fun() {
+    <primitive "string_only_spaces">
+  }
+  instance_method onlyDigits: fun() {
+    <primitive "string_only_digits">
+  }
+  instance_method isLower: fun() {
+    <primitive "string_is_lower">
+  }
+  instance_method isUpper: fun() {
+    <primitive "string_is_upper">
   }
   end
 
@@ -319,6 +337,9 @@
   }
   instance_method size: fun() {
     <primitive "list_size">
+  }
+  instance_method reverse: fun() {
+    <primitive "list_reverse">
   }
   class_method new: fun() {
     <primitive "list_new">
@@ -489,7 +510,7 @@ end
       <primitive "mirror_set_value_for">
     }
     class_method vtFor: fun(obj) {
-      <primitive "mirror_vt">
+      <primitive "mirror_vt_for">
     }
   end
 
