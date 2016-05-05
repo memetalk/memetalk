@@ -428,6 +428,7 @@ oop Process::do_send(oop recv, oop selector, int num_args, int *exc) {
     s << _mmobj->mm_symbol_cstr(this, selector, true) << ": expects " <<  arity << " but got " << num_args;
     DBG() << s << endl;
     *exc = 1;
+    WARNING() << "wrong arity: " << s.str() << endl;
     oop ex = mm_exception("ArityError", s.str().c_str());
     DBG() << "-- end do_send returning exception object " << ex << endl;
     return ex;
