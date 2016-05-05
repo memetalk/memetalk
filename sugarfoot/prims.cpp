@@ -591,9 +591,9 @@ static int prim_list_reverse(Process* proc) {
 
   number size = proc->mmobj()->mm_list_size(proc, self);
   oop ret = proc->mmobj()->mm_list_new();
-  for (int i = size; i >= 0; i--) {
+  for (int i = 0; i < size; i++) {
     oop next = proc->mmobj()->mm_list_entry(proc, self, i);
-    proc->mmobj()->mm_list_append(proc, ret, next);
+    proc->mmobj()->mm_list_prepend(proc, ret, next);
   }
   proc->stack_push(ret);
   return 0;
