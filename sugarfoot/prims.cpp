@@ -1555,6 +1555,41 @@ static int prim_process_frames(Process* proc) {
   return 0;
 }
 
+static int prim_exception_constructor(Process* proc) {
+  oop self = proc->dp();
+  // std::cerr << "prim exception" << " bp " << proc->bp() << endl;
+  oop msg = proc->get_arg(0);
+  proc->mmobj()->mm_exception_set_message(proc, self, msg);
+  proc->mmobj()->mm_exception_set_bp(proc, self, proc->bp());
+  // std::cerr << "get bp " << proc->mmobj()->mm_exception_get_bp(proc, self);
+  proc->stack_push(proc->rp());
+  return 0;
+}
+
+static int prim_exception_stack_trace(Process* proc) {
+  oop dself = proc->dp();
+  oop msg = proc->mmobj()->mm_exception_get_message(proc, dself, msg);
+  oop bp = proc->mmobj()->mm_exception_get_bp(proc, dself);
+
+  std::stringstream s;
+  s << "Uncaugh exception: " << proc->mmobj()->mm_string_cstr(proc, msg) << endl;
+
+  while (bp) {
+    oop cp = proc->cp_from_base(bp);
+    if (!cp) break;
+    s << proc->mmobj()->mm_string_cstr(proc,
+                                  proc->mmobj()->mm_function_get_name(
+                                    proc, cp), true);
+    s << "():" << (proc->mmobj()->mm_function_get_line_for_instruction(
+                     proc, cp, proc->ip_from_base(bp), true) + 1) << endl;
+    bp = *(oop*)bp;
+  }
+
+  oop ret = proc->mmobj()->mm_string_new(s.str().c_str());
+  proc->stack_push(ret);
+  return 0;
+}
+
 static int prim_process_current_exception(Process* proc) {
   oop oop_target_proc = proc->rp();
 
@@ -1760,6 +1795,9 @@ void init_primitives(VM* vm) {
   vm->register_primitive("process_frames", prim_process_frames);
   // vm->register_primitive("process_apply", prim_process_apply);
   // vm->register_primitive("process_eval_in_frame", prim_process_eval_in_frame);
+
+  vm->register_primitive("exception_constructor", prim_exception_constructor);
+  vm->register_primitive("exception_stack_trace", prim_exception_stack_trace);
 
   vm->register_primitive("frame_ip", prim_frame_ip);
   vm->register_primitive("frame_cp", prim_frame_cp);

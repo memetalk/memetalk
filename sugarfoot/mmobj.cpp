@@ -682,6 +682,14 @@ bytecode* MMObj::mm_function_next_line_expr(Process* p, oop fun, bytecode* ip, b
   return mm_compiled_function_next_line_expr(p, cfun, ip);
 }
 
+number MMObj::mm_function_get_line_for_instruction(Process* p, oop fun, bytecode* ip, bool should_assert) {
+  TYPE_CHECK(!( mm_object_vt(fun) == _core_image->get_prime("Function") ||
+                mm_object_vt(fun) == _core_image->get_prime("Context")),
+             "TypeError","Expected Function or Context")
+  oop cfun = mm_function_get_cfun(p, fun);
+  return mm_compiled_function_get_line_for_instruction(p, cfun, ip);
+}
+
 
 void MMObj::mm_overwrite_compiled_function(Process* p, oop target_cfun, oop origin_cfun, bool should_assert) {
   TYPE_CHECK(!(mm_object_vt(target_cfun) == _core_image->get_prime("CompiledFunction") ||
@@ -942,6 +950,29 @@ bytecode* MMObj::mm_compiled_function_next_line_expr(Process* p, oop cfun, bytec
     //           << " offset: " << next_offset << endl;
     return base_ip + next_offset;
   }
+}
+
+number MMObj::mm_compiled_function_get_line_for_instruction(Process* p, oop cfun, bytecode* ip, bool should_assert) {
+  TYPE_CHECK(!( *(oop*) cfun == _core_image->get_prime("CompiledFunction")),
+             "TypeError","Expected CompiledFunction")
+  bytecode* base_ip = mm_compiled_function_get_code(p, cfun);
+  word idx = ip - base_ip;
+
+  oop mapping = mm_compiled_function_get_line_mapping(p, cfun);
+  std::map<oop, oop>::iterator it = mm_dictionary_begin(p, mapping);
+  std::map<oop, oop>::iterator end = mm_dictionary_end(p, mapping);
+  word current_line = 0;
+  for ( ; it != end; it++) {
+    word b_offset = untag_small_int(it->first);
+    word line = untag_small_int(it->second);
+    // DBG() << " SEARCH CURR LINE "
+    //           << idx << " " << b_offset << " " << line << endl;
+    if ((idx >= b_offset) && (current_line < line)) {
+      // DBG() << "GOT LINE " << line << endl;
+      current_line = line;
+    }
+  }
+  return current_line;
 }
 
 // bool MMObj::mm_compiled_function_loc_mapping_matches_ip(oop cfun, bytecode* ip, bool should_assert) {
@@ -1220,4 +1251,30 @@ std::list<std::string> MMObj::mm_sym_list_to_cstring_list(Process* p, oop lst, b
     res.push_back(mm_symbol_cstr(p, mm_list_entry(p, lst, i)));
   }
   return res;
+}
+
+void MMObj::mm_exception_set_message(Process* p, oop ex, oop msg, bool should_assert) {
+  TYPE_CHECK(!( *(oop*) ex == _core_image->get_prime("Exception")),
+             "TypeError","Expected Exception")
+
+  ((oop*)ex)[2] = msg;
+}
+
+oop MMObj::mm_exception_get_message(Process* p, oop ex, bool should_assert) {
+  TYPE_CHECK(!( *(oop*) ex == _core_image->get_prime("Exception")),
+             "TypeError","Expected Exception")
+    return ((oop*)ex)[2];
+}
+
+void MMObj::mm_exception_set_bp(Process* p, oop ex, oop bp, bool should_assert) {
+  TYPE_CHECK(!( *(oop*) ex == _core_image->get_prime("Exception")),
+             "TypeError","Expected Exception")
+
+  ((oop*)ex)[3] = bp;
+}
+
+oop MMObj::mm_exception_get_bp(Process* p, oop ex, bool should_assert) {
+  TYPE_CHECK(!( *(oop*) ex == _core_image->get_prime("Exception")),
+             "TypeError","Expected Exception")
+    return ((oop*)ex)[3];
 }
