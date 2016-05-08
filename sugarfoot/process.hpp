@@ -13,6 +13,8 @@ class VM;
 class MMObj;
 class ProcessControl;
 
+typedef std::pair<bytecode*,bytecode*> bytecode_range_t;
+
 class mm_exception_rewind {
 public:
   mm_exception_rewind(oop ex) : mm_exception(ex) {}
@@ -185,7 +187,7 @@ private:
   word* _stack;
   unsigned int _stack_depth;
   number _code_size;
-  std::list<bytecode*> _volatile_breakpoints;
+  std::list<bytecode_range_t> _volatile_breakpoints;
   oop _step_bp;
   oop _unwind_to_bp;
   oop _current_exception;

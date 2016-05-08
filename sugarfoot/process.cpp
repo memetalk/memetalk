@@ -556,14 +556,16 @@ void Process::fetch_cycle(void* stop_at_bp) {
 
 void Process::maybe_break_on_return() {
   if (_state == STEP_INTO_STATE) {
-    _volatile_breakpoints.push_back(_ip);
+    bytecode* last = _ip + _mmobj->mm_function_get_code_size(this, _cp, true);
+    _volatile_breakpoints.push_back(bytecode_range_t(_ip,last));
   }
   // DBG() << "maybe_tick_return: " << _step_fp << " " << _fp << endl;
 }
 
 void Process::maybe_break_on_call() {
   if (_state == STEP_INTO_STATE) {
-    _volatile_breakpoints.push_back(_ip);
+    bytecode* last = _ip + _mmobj->mm_function_get_code_size(this, _cp, true);
+    _volatile_breakpoints.push_back(bytecode_range_t(_ip, last));
   }
 }
 
@@ -580,11 +582,11 @@ void Process::tick() {
   DBG() << "breakpoints " << _volatile_breakpoints.size() << " state: " << _state << endl;
 
   if (_state == RUN_STATE || _state == STEP_INTO_STATE || _state == STEP_OVER_STATE) {
-    for(std::list<bytecode*>::iterator it = _volatile_breakpoints.begin(); it != _volatile_breakpoints.end(); it++) {
+    for(std::list<bytecode_range_t>::iterator it = _volatile_breakpoints.begin(); it != _volatile_breakpoints.end(); it++) {
       DBG() << "tick: looking for breakpoint "
-                << *it << " =?= " << _ip
+            << (*it).first << " <= " << _ip << " <= " << (*it).second
                 << " -- opcode: " << decode_opcode(*_ip) << endl;
-      if (*it == _ip) {
+      if ((*it).first <= _ip && (*it).second >= _ip) {
         DBG() << "BREAK on "  << _ip << " " << decode_opcode(*_ip) << endl;
         _volatile_breakpoints.erase(it);
         goto do_pause;
@@ -632,7 +634,8 @@ void Process::step_into() {
   if (next) {
     // DBG() << "step_into: BP on next op: " << next << " "
     //           << decode_opcode(*next) << endl;
-    _volatile_breakpoints.push_back(next);
+    bytecode* last = _ip + _mmobj->mm_function_get_code_size(this, _cp, true);
+    _volatile_breakpoints.push_back(bytecode_range_t(next, last));
   }
   _state = STEP_INTO_STATE;
   _control->resume();
@@ -644,7 +647,8 @@ void Process::step_over() {
   if (next) {
     DBG() << "step_over: BP on next op: " << next << " "
               << decode_opcode(*next) << endl;
-    _volatile_breakpoints.push_back(next);
+    bytecode* last = _ip + _mmobj->mm_function_get_code_size(this, _cp, true);
+    _volatile_breakpoints.push_back(bytecode_range_t(next, last));
   }
   _step_bp = *(oop*)_bp; //previous bp
   DBG()  << "ste_over will br on: " << _step_bp << " " << std::endl;
@@ -658,7 +662,8 @@ void Process::step_over_line() {
   if (next) {
     // DBG() << "step_over_line: BP on next op: " << next << " "
     //           << decode_opcode(*next) << endl;
-    _volatile_breakpoints.push_back(next);
+    bytecode* last = _ip + _mmobj->mm_function_get_code_size(this, _cp, true);
+    _volatile_breakpoints.push_back(bytecode_range_t(next, last));
   }
   _step_bp = *(oop*)_bp; //previous frame
   // DBG()  << "ste_over_line will br on FP: " << _step_bp << " " << *((oop*)_bp - 6) << std::endl;
@@ -1264,7 +1269,8 @@ const char* Process::meme_curr_fname() {
 
 void Process::break_at_addr(bytecode* addr) {
   DBG() << "break_at_addr: " << addr << endl;
-  _volatile_breakpoints.push_back(addr);
+  bytecode* last = _ip + _mmobj->mm_function_get_code_size(this, _cp, true);
+  _volatile_breakpoints.push_back(bytecode_range_t(addr, last));
 }
 
 void Process::rewind_to_frame_and_continue(oop bp) {
