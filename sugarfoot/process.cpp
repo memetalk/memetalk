@@ -19,25 +19,26 @@
 #define COLOR(log) (log.normal + (_debugger_id > 0?  log.cyan : log.green))
 #define LOG_HEAD(log) log << COLOR(log) << "[" << log_label()  << "|" << BCOLOR(log) + meme_curr_fname() << COLOR(log) << "." << __FUNCTION__ << "] " << log.normal
 
-#define DBG() LOG_HEAD(_log)
+#define DBG(...) if(_log._enabled) { LOG_HEAD(_log) << __VA_ARGS__; }
+
 #define WARNING() MMLog::warning() << COLOR(_log) << "[" << log_label() << "|" << BCOLOR(_log) + meme_curr_fname() << COLOR(_log) << "." << __FUNCTION__ << "] " << _log.normal
 #define ERROR() MMLog::error() << COLOR(_log) << "[" << log_label() << "|" << BCOLOR(_log) + meme_curr_fname() << COLOR(_log) << "." << __FUNCTION__ << "] " << _log.normal
 
-#define LOG_REGISTERS() LOG_HEAD(_log_registers) << _log_registers.yellow << "registers: " << endl \
+#define LOG_REGISTERS() if(_log_registers._enabled) { LOG_HEAD(_log_registers) << _log_registers.yellow << "registers: " << endl \
                                       << _log_registers.yellow << "         SP: " << _sp << endl \
                                       << _log_registers.yellow << "         FP: " << _fp << endl \
                                       << _log_registers.yellow << "         BP: " << _bp << endl \
                                       << _log_registers.yellow << "         IP: " << _ip << endl \
                                       << _log_registers.yellow << "         MP: " << _mp << endl \
                                       << _log_registers.yellow << "         CP: " << _cp << endl \
-                                      << _log_registers.normal
+                                      << _log_registers.normal; }
 
-#define LOG_STACK() LOG_HEAD(_log_stack) << "state: " << _state << " - stack:" << endl \
-                              << _log_stack.yellow << dump_stack_top(_log_stack._enabled) << endl
+#define LOG_STACK() if (_log_stack._enabled) { LOG_HEAD(_log_stack) << "state: " << _state << " - stack:" << endl \
+                         << _log_stack.yellow << dump_stack_top(_log_stack._enabled) << endl; }
 
-#define LOG_BODY() LOG_HEAD(_log_body) << "code body: " << endl << dump_code_body(_log_body._enabled) << endl
+#define LOG_BODY() if (_log_body._enabled) { LOG_HEAD(_log_body) << "code body: " << endl << dump_code_body(_log_body._enabled) << endl; }
 
-#define LOG_TRACE() LOG_HEAD(_log_stack_trace) << dump_stack_trace(_log_stack_trace._enabled) << endl;
+#define LOG_TRACE() if (_log_stack_trace._enabled) { LOG_HEAD(_log_stack_trace) << dump_stack_trace(_log_stack_trace._enabled) << endl; }
 
 #define LOG_ENTER_FRAME() LOG_TRACE(); LOG_REGISTERS(); LOG_STACK(); LOG_BODY();
 #define LOG_EXIT_FRAME()  LOG_TRACE(); LOG_REGISTERS(); LOG_STACK(); LOG_BODY();
@@ -219,7 +220,7 @@ bytecode* Process::ip_from_base(oop bp) {
 }
 
 void Process::push_frame(oop recv, oop drecv, number arity, number storage_size) {
-  DBG() << " recv: " << recv << ", drecv: " << drecv << ", arity: " << arity << ", storage_size: " << storage_size << endl;
+  DBG(" recv: " << recv << ", drecv: " << drecv << ", arity: " << arity << ", storage_size: " << storage_size << endl);
 
   // oop curr_sp = _sp;
 
@@ -230,7 +231,7 @@ void Process::push_frame(oop recv, oop drecv, number arity, number storage_size)
   oop fp = _fp;
   _fp = _sp - (arity - 1);  // _sp points to the last arg pushed
 
-  DBG() << "before -- sp: " << _sp << " old fp: " << fp << " new fp:" << _fp << endl;
+  DBG("before -- sp: " << _sp << " old fp: " << fp << " new fp:" << _fp << endl);
 
   for (int i = 0; i < storage_size - arity; i++) {
     stack_push(MM_NULL);
@@ -258,7 +259,7 @@ void Process::push_frame(oop recv, oop drecv, number arity, number storage_size)
 void Process::pop_frame() {
   number storage_size = _ss;
 
-  DBG() << "pop_frame begin SP: " << _sp << endl;
+  DBG("pop_frame begin SP: " << _sp << endl);
 
 
   _sp = _bp; //restore sp, ignoring frame data. push_frame/pop_frame are always in sync.
@@ -274,7 +275,7 @@ void Process::pop_frame() {
   if (_cp) {// first frame has _cp = null
     _mp = _mmobj->mm_function_get_module(this, _cp, true);
   } else {
-    DBG() << "MP unloaded is null! we should be in the first stack frame!" << endl;
+    DBG("MP unloaded is null! we should be in the first stack frame!" << endl);
     _state = RUN_STATE; //without this, we end up debugging the printing of
                         //failed stack trace and it sefgaults!
   }
@@ -292,7 +293,7 @@ void Process::clear_exception_state() {
 }
 
 oop Process::ctor_rdp_for(oop rp, oop cp) {
-  DBG() << "ctor_rdp_for rp: " << rp << ", cp: " << cp << endl;
+  DBG("ctor_rdp_for rp: " << rp << ", cp: " << cp << endl);
   if (!rp) {
     _vm->bail("no rdp for ctor!");
   }
@@ -301,7 +302,7 @@ oop Process::ctor_rdp_for(oop rp, oop cp) {
 
   oop other_cclass = _mmobj->mm_function_get_owner(this, cp, true);
 
-  DBG() << "cclass: " << cclass << ", other cclass: " << other_cclass << endl;
+  DBG("cclass: " << cclass << ", other cclass: " << other_cclass << endl);
 
   if (cclass == other_cclass) {
     return rp;
@@ -313,7 +314,7 @@ oop Process::ctor_rdp_for(oop rp, oop cp) {
 void Process::basic_new_and_load(oop klass) {
   oop rp = _mmobj->alloc_instance(this, klass);
   oop dp = ctor_rdp_for(rp, _cp);
-  DBG() << rp << " dp: " << dp << endl;
+  DBG(rp << " dp: " << dp << endl);
   set_rp(rp);
   set_dp(dp);
 }
@@ -321,11 +322,11 @@ void Process::basic_new_and_load(oop klass) {
 void Process::setup_fp(number params, number storage_size) {
   //ideally this should be a calloc followed by memcpy
   oop fp = (oop) calloc(sizeof(oop), storage_size + 2); //+2: space for rp, dp
-  DBG() << "allocated fp: " << fp << " - " << " params: " << params
-        << " storage_size: " << storage_size << endl;
+  DBG("allocated fp: " << fp << " - " << " params: " << params
+      << " storage_size: " << storage_size << endl);
 
   for (int i = 0; i < storage_size + 2; i++) {
-    DBG() << "new_fp[" << i << " - " << (oop*)fp << "]  " << *((oop*)_fp + i) << endl;
+    DBG("new_fp[" << i << " - " << (oop*)fp << "]  " << *((oop*)_fp + i) << endl);
     ((oop*)fp)[i] = *((oop*)_fp + i);
   }
 
@@ -340,10 +341,10 @@ void Process::setup_fp(number params, number storage_size) {
 }
 
 void Process::restore_fp(oop fp, number params, number env_offset) {
-  DBG() << fp << " " << params << " " << env_offset << endl;
+  DBG(fp << " " << params << " " << env_offset << endl);
 
   for (int i = 0; i < params; i++) {
-    DBG() << "fp[" << env_offset + i << "] = " << * (oop*)(_fp + i) << endl;
+    DBG("fp[" << env_offset + i << "] = " << * (oop*)(_fp + i) << endl);
     ((oop*)fp)[env_offset + i] = * (oop*)(_fp + i);
   }
   _fp = fp;
@@ -355,13 +356,13 @@ bool Process::load_fun(oop recv, oop drecv, oop fun, bool should_allocate) {
     raise("TypeError", "Expecting function or context");
   }
 
-  DBG() << fun << endl;
+  DBG(fun << endl);
 
   if (_mmobj->mm_function_is_getter(this, fun, true)) {
     number idx = _mmobj->mm_function_access_field(this, fun, true);
-    DBG() << "GETTER: idx " << idx << " on " << recv << endl;
+    DBG("GETTER: idx " << idx << " on " << recv << endl);
     oop val = ((oop*)drecv)[idx];
-    DBG() << "GETTER: pushing retval: " << val << endl;
+    DBG("GETTER: pushing retval: " << val << endl);
     stack_push(val);
     return false;
   }
@@ -371,25 +372,25 @@ bool Process::load_fun(oop recv, oop drecv, oop fun, bool should_allocate) {
   push_frame(recv, drecv, num_params, storage_size);
 
 
-  DBG() << "storage: " << _ss << " " << _mmobj->mm_string_cstr(this, _mmobj->mm_function_get_name(this, fun, true), true) << endl;
+  DBG("storage: " << _ss << " " << _mmobj->mm_string_cstr(this, _mmobj->mm_function_get_name(this, fun, true), true) << endl);
 
-  // DBG() << "line mapping: " << " " << _mmobj->mm_string_cstr(_mmobj->mm_function_get_name(fun)) << endl;
+  // DBG("line mapping: " << " " << _mmobj->mm_string_cstr(_mmobj->mm_function_get_name(fun)) << endl);
   // oop mapping = _mmobj->mm_function_get_line_mapping(fun);
   // std::map<oop, oop>::iterator it = _mmobj->mm_dictionary_begin(mapping);
   // std::map<oop, oop>::iterator end = _mmobj->mm_dictionary_end(mapping);
   // for ( ; it != end; it++) {
-  //   DBG() << untag_small_int(it->first) << " => " << untag_small_int(it->second) << endl;
+  //   DBG(untag_small_int(it->first) << " => " << untag_small_int(it->second) << endl);
   // }
-  // DBG() << "loc mapping: " << endl;
+  // DBG("loc mapping: " << endl);
   // mapping = _mmobj->mm_function_get_loc_mapping(fun);
   // it = _mmobj->mm_dictionary_begin(mapping);
   // end = _mmobj->mm_dictionary_end(mapping);
   // for ( ; it != end; it++) {
-  //   DBG() << untag_small_int(it->first) << " => [" << _mmobj->mm_list_size(it->second) << "] " ;
+  //   DBG(untag_small_int(it->first) << " => [" << _mmobj->mm_list_size(it->second) << "] " );
   //   for(int i = 0; i < _mmobj->mm_list_size(it->second); i++) {
-  //     DBG() << " " << untag_small_int(_mmobj->mm_list_entry(it->second, i));
+  //     DBG(" " << untag_small_int(_mmobj->mm_list_entry(it->second, i)));
   //   }
-  //   DBG() << endl;
+  //   DBG(endl);
   // }
 
   if (_mmobj->mm_is_context(fun)) {
@@ -402,8 +403,8 @@ bool Process::load_fun(oop recv, oop drecv, oop fun, bool should_allocate) {
 
   _cp = fun;
   _mp = _mmobj->mm_function_get_module(this, _cp, true);
-  DBG() << "MP for fun load: " << _mp << endl;
-  DBG() << "_cp is " << _cp << endl;
+  DBG("MP for fun load: " << _mp << endl);
+  DBG("_cp is " << _cp << endl);
 
   if (_mmobj->mm_function_is_ctor(this, fun, true) and should_allocate) {
     basic_new_and_load(recv);
@@ -425,7 +426,7 @@ bool Process::load_fun(oop recv, oop drecv, oop fun, bool should_allocate) {
       return false;
     } else if (ret == PRIM_RAISED) {
       oop ex_oop = stack_pop(); //shit
-      DBG() << "prim returned: RAISED " << ex_oop << endl;
+      DBG("prim returned: RAISED " << ex_oop << endl);
 
       //because `exception_has_handler()` (called by `maybe_debug_on_raise()`)
       //uses `_bp` to go through the stack looking for handlers by grabing the
@@ -443,8 +444,8 @@ bool Process::load_fun(oop recv, oop drecv, oop fun, bool should_allocate) {
       if (exc_unwind != MM_NULL) {
         stack_push(exc_unwind);
       }
-        // DBG() << "load_fun: unwind_with_exception reached primitive. c++ throwing...: " << ex_oop << endl;
-      DBG() << "unwind_with_exception rached catch block for " << ex_oop << endl;
+        // DBG("load_fun: unwind_with_exception reached primitive. c++ throwing...: " << ex_oop << endl);
+      DBG("unwind_with_exception rached catch block for " << ex_oop << endl);
       // oop value = stack_pop(); //shit
       // unload_fun_and_return(value);
       return false;
@@ -452,10 +453,10 @@ bool Process::load_fun(oop recv, oop drecv, oop fun, bool should_allocate) {
   }
 
 
-  // DBG() << "load_fun: module for fun " << fun << " is " << _mp << endl;
-  // DBG() << "load_fun: is ctor? " << _mmobj->mm_function_is_ctor(fun) << " alloc? " << should_allocate << endl;
+  // DBG("load_fun: module for fun " << fun << " is " << _mp << endl);
+  // DBG("load_fun: is ctor? " << _mmobj->mm_function_is_ctor(fun) << " alloc? " << should_allocate << endl);
   _ip = _mmobj->mm_function_get_code(this, fun, true);
-  // DBG() << "first instruction " << decode_opcode(*_ip) << endl;
+  // DBG("first instruction " << decode_opcode(*_ip) << endl);
   _code_size = _mmobj->mm_function_get_code_size(this, fun, true);
   maybe_break_on_call();
   return true;
@@ -479,8 +480,8 @@ oop Process::send(oop recv, oop selector, oop args, int* exc) {
 }
 
 oop Process::do_send(oop recv, oop selector, int num_args, int *exc) {
-  DBG() << "-- begin do_send, recv: " << recv
-        << ", selector: " << _mmobj->mm_symbol_cstr(this, selector, true) << " #args: " << num_args << endl;
+  DBG("-- begin do_send, recv: " << recv
+      << ", selector: " << _mmobj->mm_symbol_cstr(this, selector, true) << " #args: " << num_args << endl);
 
   *exc = 0;
   std::pair<oop, oop> res = lookup(recv, _mmobj->mm_object_vt(recv), selector);
@@ -490,11 +491,11 @@ oop Process::do_send(oop recv, oop selector, int num_args, int *exc) {
   if (!fun) {
     std::stringstream s;
     s << _mmobj->mm_symbol_cstr(this, selector, true) << " not found in object " << recv;
-    DBG() << s << endl;
+    DBG(s << endl);
     *exc = 1;
     oop ex = mm_exception("DoesNotUnderstand", s.str().c_str());
     WARNING() << "raising DoesNotUnderstand: " << s.str() << endl;
-    DBG() << "-- end do_send returning exception object " << ex << endl;
+    DBG("-- end do_send returning exception object " << ex << endl);
     return ex;
   }
 
@@ -502,11 +503,11 @@ oop Process::do_send(oop recv, oop selector, int num_args, int *exc) {
   if (num_args != arity) {
     std::stringstream s;
     s << _mmobj->mm_symbol_cstr(this, selector, true) << ": expects " <<  arity << " but got " << num_args;
-    DBG() << s << endl;
+    DBG(s << endl);
     *exc = 1;
     WARNING() << "wrong arity: " << s.str() << endl;
     oop ex = mm_exception("ArityError", s.str().c_str());
-    DBG() << "-- end do_send returning exception object " << ex << endl;
+    DBG("-- end do_send returning exception object " << ex << endl);
     return ex;
   }
 
@@ -529,12 +530,12 @@ oop Process::protected_fetch_cycle(oop recv, oop drecv, oop fun, int* exc, bool 
     }
   } catch(mm_exception_rewind e) {
     *exc = 1;
-    DBG() << "-- end fetch cycle with excepton: " << e.mm_exception << endl;
+    DBG("-- end fetch cycle with excepton: " << e.mm_exception << endl);
     return e.mm_exception;
   }
 
   oop val = stack_pop();
-  DBG() << "-- end fetch cycle with val: " << val << endl;
+  DBG("-- end fetch cycle with val: " << val << endl);
   return val;
 }
 
@@ -559,7 +560,7 @@ oop Process::do_call(oop fun, int* exc) {
     raise("TypeError", "Expecting Context");
   }
 
-  DBG() << "-- begin: fun: " << fun << " sp: " << _sp << ", fp: " << _fp << endl;
+  DBG("-- begin: fun: " << fun << " sp: " << _sp << ", fp: " << _fp << endl);
 
   *exc = 0;
   return protected_fetch_cycle(NULL, NULL, fun, exc, false);
@@ -575,7 +576,7 @@ oop Process::call(oop fun, oop args, int* exc) {
   if (num_args != arity) {
     std::stringstream s;
     s << _mmobj->mm_string_cstr(this, _mmobj->mm_function_get_name(this, fun)) << ": expects " <<  arity << " but got " << num_args;
-    DBG() << s << endl;
+    DBG(s << endl);
     oop ex = mm_exception("ArityError", s.str().c_str());
     WARNING() << "returning ArityError exception object " << ex << endl;
     *exc = 1;
@@ -589,8 +590,8 @@ oop Process::call(oop fun, oop args, int* exc) {
 }
 
 void Process::fetch_cycle(void* stop_at_bp) {
-  DBG() << "begin fp:" << _fp <<  " stop_fp:" <<  stop_at_bp
-        << " ip: " << _ip << endl;
+  DBG("begin fp:" << _fp <<  " stop_fp:" <<  stop_at_bp
+      << " ip: " << _ip << endl);
 
   //at least one instructionn should be executed.  stop_at_bp is usually the
   //top mark of the stack when a function is loaded (_bp). So starting a fetch
@@ -616,18 +617,18 @@ void Process::fetch_cycle(void* stop_at_bp) {
     int opcode = decode_opcode(code);
     int arg = decode_args(code);
 
-    DBG() << "IP: " << _ip << " with code: " << code << " decoded as opcode " << opcode << ", arg: " << arg << endl;
+    DBG("IP: " << _ip << " with code: " << code << " decoded as opcode " << opcode << ", arg: " << arg << endl);
 
     _ip++; //this can't be done after dispatch, where an ip for a different fun may be set
 
     // if (_state != RUN_STATE) {
     //   char* name = _mmobj->mm_string_cstr(_mmobj->mm_function_get_name(_cp));
-    //   DBG() << " [dispatching] " << name << " " << (_ip-1) << " " << opcode << endl;
+    //   DBG(" [dispatching] " << name << " " << (_ip-1) << " " << opcode << endl);
     // }
     dispatch(opcode, arg);
-    // DBG() << " [end of dispatch] " << opcode << endl;
+    // DBG(" [end of dispatch] " << opcode << endl);
   }
-  DBG() << "end" << endl;
+  DBG("end" << endl);
 }
 
 void Process::maybe_break_on_return() {
@@ -635,7 +636,7 @@ void Process::maybe_break_on_return() {
     bytecode* last = _ip + _mmobj->mm_function_get_code_size(this, _cp, true);
     _volatile_breakpoints.push_back(bytecode_range_t(_ip,last));
   }
-  // DBG() << "maybe_tick_return: " << _step_fp << " " << _fp << endl;
+  // DBG("maybe_tick_return: " << _step_fp << " " << _fp << endl);
 }
 
 void Process::maybe_break_on_call() {
@@ -647,7 +648,7 @@ void Process::maybe_break_on_call() {
 
 void Process::maybe_break_on_exception() {
   if (_state == STEP_INTO_STATE || _state == STEP_OVER_STATE) {
-    DBG() << "goint to HALT state" << endl;
+    DBG("goint to HALT state" << endl);
     _state = HALT_STATE;
   }
 }
@@ -655,61 +656,61 @@ void Process::maybe_break_on_exception() {
 void Process::tick() {
   if (!_ip) return;
 
-  DBG() << "breakpoints " << _volatile_breakpoints.size() << " state: " << _state << endl;
+  DBG("breakpoints " << _volatile_breakpoints.size() << " state: " << _state << endl);
 
   if (_state == RUN_STATE || _state == STEP_INTO_STATE || _state == STEP_OVER_STATE) {
     for(std::list<bytecode_range_t>::iterator it = _volatile_breakpoints.begin(); it != _volatile_breakpoints.end(); it++) {
-      DBG() << "tick: looking for breakpoint "
+      DBG("tick: looking for breakpoint "
             << (*it).first << " <= " << _ip << " <= " << (*it).second
-                << " -- opcode: " << decode_opcode(*_ip) << endl;
+          << " -- opcode: " << decode_opcode(*_ip) << endl);
       if ((*it).first <= _ip && (*it).second >= _ip) {
-        DBG() << "BREAK on "  << _ip << " " << decode_opcode(*_ip) << endl;
+        DBG("BREAK on "  << _ip << " " << decode_opcode(*_ip) << endl);
         _volatile_breakpoints.erase(it);
         goto do_pause;
       }
     }
     if (_step_bp >= _bp) {
-      DBG() << "_step_bp >= _bp, lets break" << endl;
+      DBG("_step_bp >= _bp, lets break" << endl);
       goto do_pause;
     }
   } else if (_state == STEP_OUT_STATE) {
     if (_step_bp >= _bp) {
-      DBG() << "BREAK on FP "  << _fp << " " << _ip << " " << decode_opcode(*_ip) << endl;
+      DBG("BREAK on FP "  << _fp << " " << _ip << " " << decode_opcode(*_ip) << endl);
       goto do_pause;
     }
   } else if (_state == HALT_STATE) {
-    DBG() << "tick:HALT state. goto pause " << endl;
+    DBG("tick:HALT state. goto pause " << endl);
     goto do_pause;
   }
   return;
 
   do_pause:
-    DBG() << "do_pause" << endl;
+  DBG("do_pause" << endl);
     int exc;
     oop retval = _dbg_handler.first->send_0(_dbg_handler.second,
                                             _vm->new_symbol("process_paused"), &exc);
     check_and_print_exception(_dbg_handler.first, exc, retval);
-    // DBG() << "tick:HALT "
+    // DBG("tick:HALT "
     //           << _mmobj->mm_string_cstr(_mmobj->mm_function_get_name(_cp))
-    //           << " next opcode" <<  decode_opcode(*_ip) << endl;
+    //           << " next opcode" <<  decode_opcode(*_ip) << endl);
     _state = HALT_STATE;
     _volatile_breakpoints.clear();
     _step_bp = MM_NULL;
     _control->pause();
 
-    DBG() << "resuming! state == rewind? " << (_state == REWIND_STATE) << endl;
+    DBG("resuming! state == rewind? " << (_state == REWIND_STATE) << endl);
     if (_state == REWIND_STATE) {
       throw mm_frame_rewind(_unwind_to_bp);
     }
-    // DBG() << "Process::tick: resuming..." << endl;
+    // DBG("Process::tick: resuming..." << endl);
 }
 
 void Process::step_into() {
   bytecode* next = _mmobj->mm_function_next_expr(this, _cp, _ip, true);
-  DBG() << "step into next instruction: " << next << endl;
+  DBG("step into next instruction: " << next << endl);
   if (next) {
-    // DBG() << "step_into: BP on next op: " << next << " "
-    //           << decode_opcode(*next) << endl;
+    // DBG("step_into: BP on next op: " << next << " "
+    //           << decode_opcode(*next) << endl);
     bytecode* last = _ip + _mmobj->mm_function_get_code_size(this, _cp, true);
     _volatile_breakpoints.push_back(bytecode_range_t(next, last));
   }
@@ -719,38 +720,38 @@ void Process::step_into() {
 
 void Process::step_over() {
   bytecode* next = _mmobj->mm_function_next_expr(this, _cp, _ip, true);
-  DBG() << "step over next instruction: " << next << endl;
+  DBG("step over next instruction: " << next << endl);
   if (next) {
-    DBG() << "step_over: BP on next op: " << next << " "
-              << decode_opcode(*next) << endl;
+    DBG("step_over: BP on next op: " << next << " "
+        << decode_opcode(*next) << endl);
     bytecode* last = _ip + _mmobj->mm_function_get_code_size(this, _cp, true);
     _volatile_breakpoints.push_back(bytecode_range_t(next, last));
   }
   _step_bp = *(oop*)_bp; //previous bp
-  DBG()  << "ste_over will br on: " << _step_bp << " " << std::endl;
+  DBG("ste_over will br on: " << _step_bp << " " << std::endl);
   _state = STEP_OVER_STATE;
   _control->resume();
 }
 
 void Process::step_over_line() {
   bytecode* next = _mmobj->mm_function_next_line_expr(this, _cp, _ip, true);
-  DBG() << "step over line next instruction: " << next << endl;
+  DBG("step over line next instruction: " << next << endl);
   if (next) {
-    // DBG() << "step_over_line: BP on next op: " << next << " "
-    //           << decode_opcode(*next) << endl;
+    // DBG("step_over_line: BP on next op: " << next << " "
+    //           << decode_opcode(*next) << endl);
     bytecode* last = _ip + _mmobj->mm_function_get_code_size(this, _cp, true);
     _volatile_breakpoints.push_back(bytecode_range_t(next, last));
   }
   _step_bp = *(oop*)_bp; //previous frame
-  // DBG()  << "ste_over_line will br on FP: " << _step_bp << " " << *((oop*)_bp - 6) << std::endl;
+  // DBG("ste_over_line will br on FP: " << _step_bp << " " << *((oop*)_bp - 6) << std::endl);
   _state = STEP_OVER_STATE;
   _control->resume();
 }
 
 void Process::step_out() {
-  // DBG() << "Process::step_out resuming ..." << endl;
+  // DBG("Process::step_out resuming ..." << endl);
   _step_bp = *(oop*)_bp; //previous bp
-  // DBG()  << "ste_out will br on FP: " << _step_bp << " " << std::endl;
+  // DBG("ste_out will br on FP: " << _step_bp << " " << std::endl);
   _state = STEP_OUT_STATE;
   _control->resume();
 }
@@ -765,20 +766,20 @@ void Process::reload_frame() {
   _sp = _bp; //restore sp, ignoring frame data. push_frame/pop_frame are always in sync.
   _ip = _mmobj->mm_function_get_code(this, _cp, true);
 
-  DBG() << " reloading frame back to " << _bp << ", IP: " << _ip << endl;
+  DBG(" reloading frame back to " << _bp << ", IP: " << _ip << endl);
 }
 
 void Process::handle_send(number num_args) {
   oop selector = stack_pop();
   oop recv = stack_pop(); //(oop) * _sp;
 
-  DBG() << " SEND " << selector << " name: " << _mmobj->mm_symbol_cstr(this, selector)
-          << " " << "recv: " << recv << " vt: " << _mmobj->mm_object_vt(recv) << endl;
+  DBG(" SEND " << selector << " name: " << _mmobj->mm_symbol_cstr(this, selector)
+      << " " << "recv: " << recv << " vt: " << _mmobj->mm_object_vt(recv) << endl);
 
   std::pair<oop,oop> res = lookup(recv, _mmobj->mm_object_vt(recv), selector);
   oop drecv = res.first;
   oop fun = res.second;
-  DBG() << "Lookup FOUND " << fun << endl;
+  DBG("Lookup FOUND " << fun << endl);
 
   if (!fun) {
     std::stringstream s;
@@ -786,7 +787,7 @@ void Process::handle_send(number num_args) {
     //we rely on compiler generating a pop instruction to bind ex_oop to the catch var
     WARNING() << "will raise DoesNotUnderstand: " << s.str() << endl;
     oop oo_ex = mm_exception("DoesNotUnderstand", s.str().c_str());
-    DBG() << "created exception object " << oo_ex << " on bp: " << _bp << endl;
+    DBG("created exception object " << oo_ex << " on bp: " << _bp << endl);
     maybe_debug_on_raise(oo_ex);
     oop unwind_exc = unwind_with_exception(oo_ex);
     if (unwind_exc != MM_NULL) {
@@ -799,13 +800,13 @@ void Process::handle_send(number num_args) {
   if (num_args != arity) {
     std::stringstream s;
     s << _mmobj->mm_string_cstr(this, _mmobj->mm_function_get_name(this, fun)) << ": expects " <<  arity << " but got " << num_args;
-    DBG() << s << endl;
+    DBG(s << endl);
     oop ex = mm_exception("ArityError", s.str().c_str());
     WARNING() << "will raise ArityError: " << s.str() << endl;
     maybe_debug_on_raise(ex);
     oop unwind_exc = unwind_with_exception(ex);
     if (unwind_exc) {
-      DBG() << "unwinded ex. returning exception " << ex << endl;
+      DBG("unwinded ex. returning exception " << ex << endl);
       stack_push(unwind_exc);
     }
     return;
@@ -815,7 +816,7 @@ void Process::handle_send(number num_args) {
 
 void Process::handle_super_ctor_send(number num_args) {
   oop selector = stack_pop();
-  // DBG() << " SUPER: " << selector << " -- " << _mmobj->mm_symbol_cstr(selector) << endl;
+  // DBG(" SUPER: " << selector << " -- " << _mmobj->mm_symbol_cstr(selector) << endl);
 
   // lookup starts at the parent of rp's class
   oop instance = dp();
@@ -828,10 +829,10 @@ void Process::handle_super_ctor_send(number num_args) {
   oop fun = res.second;
 
   if (!fun) {
-    DBG() << "super Lookup failed";
+    DBG("super Lookup failed");
     std::stringstream s;
     s << _mmobj->mm_symbol_cstr(this, selector) << " not found in child object " << instance;
-    DBG() << s << endl;
+    DBG(s << endl);
     //we rely on compiler generating a pop instruction to bind ex_oop to the catch var
     oop oo_ex = mm_exception("DoesNotUnderstand", s.str().c_str());
     WARNING() << "will raise DoesNotUnderstand: " << s.str() << endl;
@@ -843,14 +844,14 @@ void Process::handle_super_ctor_send(number num_args) {
     return;
   }
 
-  DBG() << "Lookup FOUND " << fun << endl;
+  DBG("Lookup FOUND " << fun << endl);
 
 
   number arity = _mmobj->mm_function_get_num_params(this, fun);
   if (num_args != arity) {
     std::stringstream s;
     s << "arity and num_args differ: " << num_args << " != " << arity;
-    DBG() << s << endl;
+    DBG(s << endl);
     oop oo_ex = mm_exception("ArityError", s.str().c_str());
     WARNING() << "will raise ArityError: " << s.str() << endl;
     maybe_debug_on_raise(oo_ex);
@@ -865,15 +866,15 @@ void Process::handle_super_ctor_send(number num_args) {
 }
 
 void Process::handle_call(number num_args) {
-  // DBG() << "handle_call" << endl;
+  // DBG("handle_call" << endl);
   oop fun = stack_pop();
-  // DBG() << "handle_call: fn " << fun << endl;
+  // DBG("handle_call: fn " << fun << endl);
   number arity = _mmobj->mm_function_get_num_params(this, fun);
-  // DBG() << "handle_call: arity " << arity << endl;
+  // DBG("handle_call: arity " << arity << endl);
   if (num_args != arity) {
     std::stringstream s;
     s << _mmobj->mm_string_cstr(this, _mmobj->mm_function_get_name(this, fun)) << ": expects " <<  arity << " but got " << num_args;
-    DBG() << s << endl;
+    DBG(s << endl);
     oop oo_ex = mm_exception("ArityError", s.str().c_str());
     WARNING() << "will raise ArityError: " << s.str() << endl;
     maybe_debug_on_raise(oo_ex);
@@ -893,94 +894,94 @@ void Process::handle_return(oop val) {
 }
 
 void Process::dispatch(int opcode, int arg) {
-    // DBG() << " executing " << opcode << " " << arg << endl;
+    // DBG(" executing " << opcode << " " << arg << endl);
     oop val;
     switch(opcode) {
       case PUSH_LOCAL:
-        DBG() << "PUSH_LOCAL " << arg << " " << (oop) *(_fp + arg) << endl;
+        DBG("PUSH_LOCAL " << arg << " " << (oop) *(_fp + arg) << endl);
         stack_push(*(_fp + arg));
         break;
       case PUSH_LITERAL:
         try {
-          DBG() << "PUSH_LITERAL " << arg << " " << _mmobj->mm_function_get_literal_by_index(this, _cp, arg, true) << endl;
+          DBG("PUSH_LITERAL " << arg << " " << _mmobj->mm_function_get_literal_by_index(this, _cp, arg, true) << endl);
           stack_push(_mmobj->mm_function_get_literal_by_index(this, _cp, arg, true));
         } catch(...) {
           assert(0);
         }
         break;
       case PUSH_MODULE:
-        DBG() << "PUSH_MODULE " << arg << " " << _mp << endl;
+        DBG("PUSH_MODULE " << arg << " " << _mp << endl);
         stack_push(_mp);
         break;
       case PUSH_FIELD:
-        DBG() << "PUSH_FIELD " << arg << " " << (oop) *(dp() + arg + 2) <<  " dp: " << dp() << endl;
+        DBG("PUSH_FIELD " << arg << " " << (oop) *(dp() + arg + 2) <<  " dp: " << dp() << endl);
         stack_push(*(dp() + arg + 2));
         break;
       case PUSH_THIS:
-        DBG() << "PUSH_THIS " << rp() << endl;
+        DBG("PUSH_THIS " << rp() << endl);
         stack_push(rp());
         break;
       case PUSH_FP:
-        DBG() << "PUSH_FP " << arg << " -- " << _fp << endl;
+        DBG("PUSH_FP " << arg << " -- " << _fp << endl);
         stack_push(_fp);
         break;
 
       case PUSH_CONTEXT:
-        DBG() << "PUSH_CONTEXT " << arg << endl;
+        DBG("PUSH_CONTEXT " << arg << endl);
         stack_push(_cp);
         break;
       case PUSH_BIN:
-        DBG() << "PUSH_BIN " << arg << endl;
+        DBG("PUSH_BIN " << arg << endl);
         stack_push(arg);
         break;
       case RETURN_TOP:
         val = stack_pop();
-        DBG() << "RETURN_TOP " << arg << " " << val << endl;
+        DBG("RETURN_TOP " << arg << " " << val << endl);
         handle_return(val);
         break;
       case RETURN_THIS:
-        DBG() << "RETURN_THIS " << rp() << endl;
+        DBG("RETURN_THIS " << rp() << endl);
         handle_return(rp());
         break;
       case POP:
         val =stack_pop();
-        DBG() << "POP " << arg << " = " << val << endl;
+        DBG("POP " << arg << " = " << val << endl);
         break;
       case POP_LOCAL:
         val = stack_pop();
-        DBG() << "POP_LOCAL " << arg << " on " << (oop) (_fp + arg) << " -- "
-                << (oop) *(_fp + arg) << " = " << val << endl;
+        DBG("POP_LOCAL " << arg << " on " << (oop) (_fp + arg) << " -- "
+            << (oop) *(_fp + arg) << " = " << val << endl);
         *(_fp + arg) = (word) val;
         break;
       case POP_FIELD:
         val = stack_pop();
-        DBG() << "POP_FIELD " << arg << " on " << (oop) (dp() + arg + 2) << " dp: " << dp() << " -- "
-                << (oop) *(dp() + arg + 2) << " = " << val << endl; //2: vt, delegate
+        DBG("POP_FIELD " << arg << " on " << (oop) (dp() + arg + 2) << " dp: " << dp() << " -- "
+            << (oop) *(dp() + arg + 2) << " = " << val << endl); //2: vt, delegate
         *(dp() + arg + 2) = (word) val;
         break;
       case SEND:
-        DBG() << "SEND " << arg << endl;
+        DBG("SEND " << arg << endl);
         handle_send(arg);
         break;
       case SUPER_CTOR_SEND:
         handle_super_ctor_send(arg);
         break;
       case CALL:
-        DBG() << "CALL " << arg << endl;
+        DBG("CALL " << arg << endl);
         handle_call(arg);
         break;
       case JMP:
-        DBG() << "JMP " << arg << " " << endl;
+        DBG("JMP " << arg << " " << endl);
         _ip += (arg -1); //_ip already suffered a ++ in dispatch
         break;
       case JMPB:
-        DBG() << "JMPB " << arg << " " << endl;
+        DBG("JMPB " << arg << " " << endl);
         _ip -= (arg+1); //_ip already suffered a ++ in dispatch
         break;
 
       case JZ:
         val = stack_pop();
-        DBG() << "JZ " << arg << " " << val << endl;
+        DBG("JZ " << arg << " " << val << endl);
         if ((val == MM_FALSE) || (val == MM_NULL)) {
           _ip += (arg -1); //_ip already suffered a ++ in dispatch
         }
@@ -1002,20 +1003,20 @@ std::pair<oop, oop> Process::lookup(oop drecv, oop vt, oop selector) {
     return std::pair<oop, oop>(MM_NULL, MM_NULL);
   }
 
-  // DBG() << "lookup selector on vt: " << vt << " whose vt is " << _mmobj->mm_object_vt(*(oop*)vt) << endl;
+  // DBG("lookup selector on vt: " << vt << " whose vt is " << _mmobj->mm_object_vt(*(oop*)vt) << endl);
 
   oop dict = _mmobj->mm_behavior_get_dict(vt);
-  DBG() << "dict: " << dict
-        << " selector: " << _mmobj->mm_symbol_cstr(this, selector, true) << endl;
+  DBG("dict: " << dict
+      << " selector: " << _mmobj->mm_symbol_cstr(this, selector, true) << endl);
 
   if (_mmobj->mm_dictionary_has_key(this, dict, selector, true)) {
     oop fun = _mmobj->mm_dictionary_get(this, dict, selector, true);
-    DBG() << "Lookup of " << selector << " found in " << vt
-            << " fun: " << fun << " drecv: " << drecv << endl;
+    DBG("Lookup of " << selector << " found in " << vt
+        << " fun: " << fun << " drecv: " << drecv << endl);
     std::pair<oop,oop> res = std::pair<oop,oop>(drecv, fun);
     return res;
   } else {
-    DBG() << "Lookup of " << selector << " NOT found in " << vt << ", recursively looking up..." << endl;
+    DBG("Lookup of " << selector << " NOT found in " << vt << ", recursively looking up..." << endl);
     oop pklass = _mmobj->mm_object_delegate(vt);
     oop delegate = _mmobj->mm_object_delegate(drecv);
     return lookup(delegate, pklass, selector);
@@ -1025,25 +1026,25 @@ std::pair<oop, oop> Process::lookup(oop drecv, oop vt, oop selector) {
 oop Process::stack_pop() {
   oop val = * (oop*)_sp;
   _sp--;
-  DBG() << "POP " << val << " >> " << _sp << endl;
+  DBG("POP " << val << " >> " << _sp << endl);
   return val;
 }
 
 void Process::stack_push(oop data) {
   _sp++;
-  DBG() << "PUSH " << data << " -> " << _sp << endl;
+  DBG("PUSH " << data << " -> " << _sp << endl);
   * (word*) _sp = (word) data;
 }
 
 void Process::stack_push(word data) {
   _sp++;
-  DBG() << "PUSH " << (oop) data << " -> " << _sp << endl;
+  DBG("PUSH " << (oop) data << " -> " << _sp << endl);
   * (word*) _sp = data;
 }
 
 void Process::stack_push(bytecode* data) {
   _sp++;
-  DBG() << "PUSH " << data << " -> " << _sp << endl;
+  DBG("PUSH " << data << " -> " << _sp << endl);
   * (word*) _sp = (word) data;
 }
 
@@ -1051,10 +1052,10 @@ void Process::stack_push(bytecode* data) {
 int Process::execute_primitive(std::string name) {
   try {
     int val = _vm->get_primitive(this, name)(this);
-    DBG() << "primitive " << name << " returned " << val << endl;
+    DBG("primitive " << name << " returned " << val << endl);
     return val;
   } catch(mm_exception_rewind e) {
-    DBG() << "primitive " << name << " raised " << e.mm_exception << endl;
+    DBG("primitive " << name << " raised " << e.mm_exception << endl);
     stack_push(e.mm_exception);
     return PRIM_RAISED;
   }
@@ -1062,15 +1063,15 @@ int Process::execute_primitive(std::string name) {
 
 
 bool Process::exception_has_handler(oop e, oop cp, bytecode* ip, oop next_bp) {
-  DBG() << "** exception_has_handler e: " << e <<
+  DBG("** exception_has_handler e: " << e <<
     " on cp: " << cp <<
-    ", next_bp:" << next_bp << endl;
+      ", next_bp:" << next_bp << endl);
 
   if (cp == NULL) {
     return false;
   }
 
-  DBG() << "exception_has_handler: " << _mmobj->mm_string_cstr(this, _mmobj->mm_function_get_name(this, cp, true), true) << endl;
+  DBG("exception_has_handler: " << _mmobj->mm_string_cstr(this, _mmobj->mm_function_get_name(this, cp, true), true) << endl);
 
   if (_mmobj->mm_function_is_prim(this, cp, true)) {
     cp = cp_from_base(next_bp);
@@ -1081,7 +1082,7 @@ bool Process::exception_has_handler(oop e, oop cp, bytecode* ip, oop next_bp) {
   bytecode* code = _mmobj->mm_function_get_code(this, cp, true);
 
   number exception_frames_count = _mmobj->mm_function_exception_frames_count(this, cp, true);
-  DBG() << "exception frames: " << exception_frames_count << endl;
+  DBG("exception frames: " << exception_frames_count << endl);
   if (exception_frames_count == 0) { //cp is unable to handle
     cp = cp_from_base(next_bp);
     ip = ip_from_base(next_bp);
@@ -1098,13 +1099,13 @@ bool Process::exception_has_handler(oop e, oop cp, bytecode* ip, oop next_bp) {
     word catch_block = *(word*) (frame_begin + 1);
     oop str_type_oop = *(oop*) (frame_begin + 2);
 
-    DBG() << "exception frame: " << try_block << " " << catch_block << " " << str_type_oop << endl;
+    DBG("exception frame: " << try_block << " " << catch_block << " " << str_type_oop << endl);
 
     oop type_oop;
     if (str_type_oop == MM_NULL) {
       type_oop  = MM_NULL;
     } else {
-      DBG() << "fetching exception type for name: " << str_type_oop << endl;
+      DBG("fetching exception type for name: " << str_type_oop << endl);
       oop mp = _mmobj->mm_function_get_module(this, cp, true);
       int exc;
       type_oop = send_0(mp, _vm->new_symbol(this, str_type_oop), &exc);
@@ -1112,28 +1113,28 @@ bool Process::exception_has_handler(oop e, oop cp, bytecode* ip, oop next_bp) {
         ERROR() << "raising InternalError: Unable to get exception type from module" << endl;
         raise("InternalError", "Unable to get exception type from module");
       }
-      DBG() << "fetching exception type got " << type_oop << endl;;
+      DBG("fetching exception type got " << type_oop << endl);;
     }
 
-    // DBG() << "code:  " << code << endl;
-    // DBG() << "cp == _cp?: " << (cp == _cp) << endl;
-    // DBG() << "_ip: " << _ip << endl;
-    // DBG() << "ip from next_bp: " << ip_from_base(next_bp) << " " << next_bp << endl;
+    // DBG("code:  " << code << endl);
+    // DBG("cp == _cp?: " << (cp == _cp) << endl);
+    // DBG("_ip: " << _ip << endl);
+    // DBG("ip from next_bp: " << ip_from_base(next_bp) << " " << next_bp << endl);
 
     unsigned long instr = ip - code;
 
-    DBG() << "RAISE instr: " << instr << " at ip: " << ip << " try: " << try_block
-            << " catch: " << catch_block << " type: " << type_oop << endl;
+    DBG("RAISE instr: " << instr << " at ip: " << ip << " try: " << try_block
+        << " catch: " << catch_block << " type: " << type_oop << endl);
 
     bool delegates_to = _mmobj->delegates_to(_mmobj->mm_object_vt(e), type_oop);
-    DBG() << "delegates_to == " << delegates_to  << endl;
+    DBG("delegates_to == " << delegates_to  << endl);
 
-    DBG() << "::" <<  (instr >= try_block) << " " << (instr < catch_block)
-            << " " << (type_oop == MM_NULL) << " " << delegates_to << endl;
+    DBG("::" <<  (instr >= try_block) << " " << (instr < catch_block)
+        << " " << (type_oop == MM_NULL) << " " << delegates_to << endl);
 
     if (instr >= try_block && instr < catch_block &&
         (type_oop == MM_NULL || delegates_to)) {
-      DBG() << "HAS CATCH " << endl;
+      DBG("HAS CATCH " << endl);
       return true;
     }
   }
@@ -1161,11 +1162,11 @@ oop Process::unwind_with_exception(oop e) {
   //   and also change the signature to return bool instead of oop
   //-returns false, in case execution should resume normally.
   _unwinding_exception = true;
-  DBG() << "** unwind_with_exception e: " << e << " on cp: " << _cp << " state: " << _state << endl;
+  DBG("** unwind_with_exception e: " << e << " on cp: " << _cp << " state: " << _state << endl);
 
   // maybe_break_on_exception();//  why is this here? Shouldn't we check if there's no catch{} in the stack?
 
-  DBG() << "ticking..." << endl;
+  DBG("ticking..." << endl);
   tick();
 
   if (_cp == NULL) {
@@ -1178,21 +1179,21 @@ oop Process::unwind_with_exception(oop e) {
     _state = RUN_STATE; //without this, we end up debugging the printing of
                         //failed stack trace and it sefgaults!
 
-    DBG() << "cp is NULL!" << endl;
+    DBG("cp is NULL!" << endl);
     throw mm_exception_rewind(e);
   }
 
-  DBG() << "unwind_with_exception: " << CTXNAME(_cp) << endl;
+  DBG("unwind_with_exception: " << CTXNAME(_cp) << endl);
 
   if (_mmobj->mm_function_is_prim(this, _cp, true)) {
-    DBG() << "->> unwind reached primitive " << _mmobj->mm_string_cstr(this, _mmobj->mm_function_get_prim_name(this, _cp, true), true) << endl;
+    DBG("->> unwind reached primitive " << _mmobj->mm_string_cstr(this, _mmobj->mm_function_get_prim_name(this, _cp, true), true) << endl);
     throw mm_exception_rewind(e);
   }
 
   bytecode* code = _mmobj->mm_function_get_code(this, _cp, true);
 
   number exception_frames_count = _mmobj->mm_function_exception_frames_count(this, _cp, true);
-  DBG() << "exception frames: " << exception_frames_count << endl;
+  DBG("exception frames: " << exception_frames_count << endl);
   if (exception_frames_count == 0) { //_cp is unable to handle
     pop_frame();
     tick();
@@ -1217,7 +1218,7 @@ oop Process::unwind_with_exception(oop e) {
     if (str_type_oop == MM_NULL) {
       type_oop  = MM_NULL;
     } else {
-      DBG() << "fetching exception type for name: " << str_type_oop << endl;
+      DBG("fetching exception type for name: " << str_type_oop << endl);
       int exc;
       oop mp = _mmobj->mm_function_get_module(this, _cp, true);
       type_oop = send_0(mp, _vm->new_symbol(this, str_type_oop), &exc);
@@ -1225,19 +1226,19 @@ oop Process::unwind_with_exception(oop e) {
         ERROR() << "Will raise InternalError: Unable to get exception type from module" << endl;
         raise("InternalError", "Unable to get exception type from module");
       }
-      DBG() << "fetching exception type got " << type_oop << endl;;
+      DBG("fetching exception type got " << type_oop << endl);;
     }
 
     word instr = _ip - code;
 
-    DBG() << "RAISE instr: " << instr << " ip: " << _ip << " try: " << try_block
-            << " catch: " << catch_block << " type: " << type_oop << endl;
+    DBG("RAISE instr: " << instr << " ip: " << _ip << " try: " << try_block
+        << " catch: " << catch_block << " type: " << type_oop << endl);
 
     bool delegates_to = _mmobj->delegates_to(_mmobj->mm_object_vt(e), type_oop);
-    DBG() << "delegates_to == " << delegates_to  << endl;
+    DBG("delegates_to == " << delegates_to  << endl);
     if (instr >= try_block && instr < catch_block &&
         (type_oop == MM_NULL || delegates_to)) {
-      DBG() << "CAUGHT " << endl;
+      DBG("CAUGHT " << endl);
       _ip = code + catch_block;
       clear_exception_state();
       return e;
@@ -1257,7 +1258,7 @@ void Process::raise(const char* ex_type_name, const char* msg) {
 }
 
 oop Process::mm_exception(const char* ex_type_name, const char* msg) {
-  DBG() << ex_type_name << " -- " << msg << endl;
+  DBG(ex_type_name << " -- " << msg << endl);
   oop ex_type = _vm->get_prime(ex_type_name);
 
   int exc;
@@ -1265,7 +1266,7 @@ oop Process::mm_exception(const char* ex_type_name, const char* msg) {
   //if this fails, can't call raise() because it calls mm_exception again
   //recursively. So let's just bail.
   assert(exc == 0);
-  DBG() << "returning ex: " << exobj << endl;
+  DBG("returning ex: " << exobj << endl);
   return exobj;
 }
 
@@ -1274,45 +1275,45 @@ bool Process::has_debugger_attached() {
 }
 
 void Process::halt_and_debug() {
-  DBG() << "starting new debugger? " << has_debugger_attached() << endl;
+  DBG("starting new debugger? " << has_debugger_attached() << endl);
   if (!has_debugger_attached()) {
     WARNING() << "starting debugger" << endl;
     _dbg_handler = _vm->start_debugger(this);
-    DBG() << "got a _dbg_handler " << endl;
+    DBG("got a _dbg_handler " << endl);
   }
-  DBG() << "pausing... " << endl;
+  DBG("pausing... " << endl);
   step_over();
 }
 
 void Process::maybe_debug_on_raise(oop ex_oop) {
   if (has_debugger_attached() && !exception_has_handler(ex_oop, _cp, _ip, _bp)) {
-    DBG() << "we have a debugger and this exception does not have handler. state=halt" << endl;
+    DBG("we have a debugger and this exception does not have handler. state=halt" << endl);
     _state = HALT_STATE;
   } else if (_vm->running_online() &&
              !exception_has_handler(ex_oop, _cp, _ip, _bp)) {
 
-    DBG() << "running online and there's no handler for exception "
-          << ex_oop << "; calling halt_and_debug()" << endl;
+    DBG("running online and there's no handler for exception "
+        << ex_oop << "; calling halt_and_debug()" << endl);
 
     _current_exception = ex_oop;
     halt_and_debug();
   } else {
-    DBG() << "maybe_debug_on_raise: NOT. state" << _state << endl;
+      DBG("maybe_debug_on_raise: NOT. state" << _state << endl);
   }
 }
 
 
 // oop Process::bp_at(unsigned int idx) { //backwards 0 is current
 //   if (idx == 0) {
-//     // DBG() << "Process::bp_at BP[" << idx << "] ret&: " << &_bp << endl;
+//     // DBG("Process::bp_at BP[" << idx << "] ret&: " << &_bp << endl);
 //     return (oop) &_bp;
 //   }
 //   oop bp = _bp;
 //   for (unsigned int i = 0; i < idx-1; i++) {
 //     bp = *(oop*) bp;
-//     // DBG() << "Process::bp_at " << i << " = " << bp << endl;
+//     // DBG("Process::bp_at " << i << " = " << bp << endl);
 //   }
-//   // DBG() << "Process::bp_at BP[" << idx << "] ret: " << bp << endl;
+//   // DBG("Process::bp_at BP[" << idx << "] ret: " << bp << endl);
 //   return bp;
 // }
 
@@ -1353,13 +1354,13 @@ const char* Process::meme_curr_fname() {
 }
 
 void Process::break_at_addr(bytecode* addr) {
-  DBG() << "break_at_addr: " << addr << endl;
+  DBG("break_at_addr: " << addr << endl);
   bytecode* last = _ip + _mmobj->mm_function_get_code_size(this, _cp, true);
   _volatile_breakpoints.push_back(bytecode_range_t(addr, last));
 }
 
 void Process::rewind_to_frame_and_continue(oop bp) {
-  DBG() << "rewind to bp: " << bp << endl;
+  DBG("rewind to bp: " << bp << endl);
   _state = REWIND_STATE;
   _unwind_to_bp = bp;
   _control->resume();
@@ -1372,14 +1373,14 @@ void Process::rewind_to_frame_and_continue(oop bp) {
 // }
 
 void Process::unwind_with_frame(oop bp) {
-  DBG() << "unwind from _bp: " << _bp << " to bp: " <<  bp
-        << " current _cp: " << _cp << " = " << CTXNAME(_cp) << endl;
+  DBG("unwind from _bp: " << _bp << " to bp: " <<  bp
+      << " current _cp: " << _cp << " = " << CTXNAME(_cp) << endl);
   if (_bp == bp) {
-    DBG() << "found bp. stop unwinding" << endl;
+    DBG("found bp. stop unwinding" << endl);
     reload_frame();
     return;
   } else if (_mmobj->mm_function_is_prim(this, _cp, true)) {
-    DBG() << "prim, lets throw" << endl;
+    DBG("prim, lets throw" << endl);
       throw mm_frame_rewind(bp);
   } else {
     pop_frame();

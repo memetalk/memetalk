@@ -9,7 +9,9 @@
 #include "mmc_fun.hpp"
 #include <cstdlib>
 
-#define DBG() _log << _log.magenta + _log.bold + "[VM|" << __FUNCTION__ << "] " << _log.normal
+
+#define DBG(...) if(_log._enabled) { _log << _log.magenta + _log.bold + "[VM|" << __FUNCTION__ << "] " << _log.normal << __VA_ARGS__; }
+
 #define WARNING() MMLog::warning() << "[VM|" << __FUNCTION__ << "] " << _log.normal
 #define ERROR() MMLog::error() << "[VM|" << __FUNCTION__ << "] " << _log.normal
 
@@ -49,9 +51,9 @@ MMObj* VM::mmobj() {
 
 void VM::print_retval(Process* proc, oop retval) {
   int exc;
-  DBG() << " ======== the end ======= " << endl;
+  DBG(" ======== the end ======= " << endl)
   oop retval_str = proc->send_0(retval, new_symbol("toString"), &exc);
-  DBG() << "RETVAL: " << retval << " => " << _mmobj->mm_string_cstr(proc, retval_str) << endl;
+  DBG("RETVAL: " << retval << " => " << _mmobj->mm_string_cstr(proc, retval_str) << endl)
 }
 
 void VM::print_error(Process* proc, oop retval) {
@@ -104,7 +106,7 @@ int VM::start() {
 }
 
 std::pair<Process*, oop> VM::start_debugger(Process* target) {
-  DBG() << "debugger for target: " << target << endl;
+  DBG("debugger for target: " << target << endl)
 
   static int debugger_id = 0;
 
@@ -132,9 +134,9 @@ oop VM::new_symbol(const char* cstr) {
   std::string s = cstr;
   if (_symbols.find(s) == _symbols.end()) {
     _symbols[s] = _mmobj->mm_symbol_new(cstr);
-    // DBG() << "Creating new symbol " << cstr << " = " << _symbols[s] << endl;
+    // DBG("Creating new symbol " << cstr << " = " << _symbols[s] << endl)
   } else {
-    // DBG() << "returning existing symbol " << cstr << " = " << _symbols[s] << endl;
+    // DBG("returning existing symbol " << cstr << " = " << _symbols[s] << endl);
   }
   return _symbols[s];
 }
@@ -152,7 +154,7 @@ void VM::register_primitive(std::string name, prim_function_t fun) {
 }
 
 prim_function_t VM::get_primitive(Process* proc, std::string name) {
-  DBG() << "VM::get_primitive " << name << endl;
+  DBG("VM::get_primitive " << name << endl)
   if (!(_primitives.find(name) != _primitives.end())) {
     ERROR() << "did not find primitive with name:" << name << endl;
     proc->raise("InternalError", (std::string("primitive not found: ") + name).c_str());
@@ -205,7 +207,7 @@ oop VM::recompile_fun(Process* proc, oop cfun, const char* text, int* exc) {
   std::string json = get_compile_fun_json(text, vars);
 
   s << "python -m pycompiler.compiler recompile-fun '" << json << "'";
-  DBG() << "Executing python compiler: " << s.str() << endl;
+  DBG("Executing python compiler: " << s.str() << endl);
   *exc = 0;
   if (FILE* p = popen(s.str().c_str(), "r")) {
     boost::iostreams::file_descriptor_source d(fileno(p), boost::iostreams::close_handle);
@@ -217,7 +219,7 @@ oop VM::recompile_fun(Process* proc, oop cfun, const char* text, int* exc) {
     char* c_data = (char*) calloc(sizeof(char), data.size());
     data.copy(c_data, data.size());
 
-    DBG() << "Done executing python compiler" << endl;
+    DBG("Done executing python compiler" << endl);
     if (pclose(p) == 0) {
       MMCFunction* mmcf = new MMCFunction(this, _core_image, c_data, data.size());
       oop new_cfun = mmcf->load(proc);
@@ -238,7 +240,7 @@ oop VM::compile_fun(Process* proc, const char* text, std::list<std::string> vars
   std::string json = get_compile_fun_json(text, vars);
 
   s << "python -m pycompiler.compiler compile-lambda '" << json << "'";
-  DBG() << "Executing python compiler: " << s.str() << endl;
+  DBG("Executing python compiler: " << s.str() << endl);
 
   *exc = 0;
   if (FILE* p = popen(s.str().c_str(), "r")) {
