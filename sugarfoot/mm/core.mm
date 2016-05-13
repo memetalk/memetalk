@@ -269,6 +269,9 @@
   instance_method isUpper: fun() {
     <primitive "string_is_upper">
   }
+  instance_method split: fun(sep) {
+    <primitive "string_split">
+  }
   end
 
   class Symbol
@@ -346,6 +349,9 @@
   }
   instance_method reverse: fun() {
     <primitive "list_reverse">
+  }
+  instance_method join: fun(sep) {
+    <primitive "list_join">
   }
   class_method new: fun() {
     <primitive "list_new">

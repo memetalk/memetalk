@@ -283,6 +283,30 @@ static std::string base64_decode(std::string const& encoded_string) {
   return ret;
 }
 
+static int prim_string_split(Process* proc) {
+  oop self =  proc->dp();
+  oop sep = proc->get_arg(0);
+
+  char* sep_str = proc->mmobj()->mm_string_cstr(proc, sep);
+  char* self_str = proc->mmobj()->mm_string_cstr(proc, self);
+
+  oop ret = proc->mmobj()->mm_list_new();
+
+  if (strlen(sep_str) == 0) {
+    for (number i = 0; i < strlen(self_str); i++) {
+      std::stringstream s;
+      s << self_str[i];
+      oop chr = proc->mmobj()->mm_string_new(s.str().c_str());
+      proc->mmobj()->mm_list_append(proc, ret, chr);
+    }
+  } else {
+    assert(0); //todo
+  }
+  proc->stack_push(ret);
+  return 0;
+}
+
+
 static int prim_string_b64decode(Process* proc) {
   oop self =  proc->dp();
   std::string str = proc->mmobj()->mm_string_cstr(proc, self);
@@ -596,6 +620,26 @@ static int prim_list_reverse(Process* proc) {
     proc->mmobj()->mm_list_prepend(proc, ret, next);
   }
   proc->stack_push(ret);
+  return 0;
+}
+
+static int prim_list_join(Process* proc) {
+  oop self =  proc->dp();
+  oop sep = proc->get_arg(0);
+
+  char* str_sep = "";
+
+  number size = proc->mmobj()->mm_list_size(proc, self);
+
+  std::stringstream s;
+  for (int i = 0; i < size; i++) {
+    oop next = proc->mmobj()->mm_list_entry(proc, self, i);
+    s << str_sep << proc->mmobj()->mm_string_cstr(proc, next);
+    str_sep = proc->mmobj()->mm_string_cstr(proc, sep);
+  }
+
+  oop res = proc->mmobj()->mm_string_new(s.str().c_str());
+  proc->stack_push(res);
   return 0;
 }
 
@@ -1716,6 +1760,7 @@ void init_primitives(VM* vm) {
   vm->register_primitive("list_to_source", prim_list_to_source);
   vm->register_primitive("list_size", prim_list_size);
   vm->register_primitive("list_reverse", prim_list_reverse);
+  vm->register_primitive("list_join", prim_list_join);
 
 
   vm->register_primitive("dictionary_new", prim_dictionary_new);
@@ -1745,6 +1790,7 @@ void init_primitives(VM* vm) {
   vm->register_primitive("string_only_digits", prim_string_only_digits);
   vm->register_primitive("string_is_lower", prim_string_is_lower);
   vm->register_primitive("string_is_upper", prim_string_is_upper);
+  vm->register_primitive("string_split", prim_string_split);
 
 
   vm->register_primitive("mirror_entries", prim_mirror_entries);
