@@ -222,7 +222,7 @@
     return this;
   }
   instance_method toSource: fun() {
-    return "\"" + this.replace_all("\"", "\\"") + "\"";
+    return "\"" + this.replace_all("\"", "\\\"") + "\"";
   }
   instance_method +: fun(other) {
     <primitive "string_append">

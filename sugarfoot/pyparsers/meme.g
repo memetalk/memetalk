@@ -271,10 +271,10 @@ lit_symbol = spaces !(self.input.position):begin token(":") alpha_name:xs
 
 lit_number = spaces !(self.input.position):begin digit+:ds -> self.i.ast(begin, ["literal-number", int(''.join(ds))])
 
-lit_string  = spaces !(self.input.position):begin '"' ('\\' '"' | ~'"' :x)*:xs '"'
-               -> self.i.ast(begin, ["literal-string", unicode(''.join(xs).decode("string_escape"))])
-            | spaces !(self.input.position):begin '\'' (~'\'' :x)*:xs '\''
-               -> self.i.ast(begin, ["literal-string", unicode(''.join(xs).decode("string_escape"))])
+lit_string  = spaces !(self.input.position):begin '"' ( lit_escaped | ~'"' :x)*:xs '"'
+               -> self.i.ast(begin, ["literal-string", b''.join(xs).decode("string_escape")])
+
+lit_escaped = ~'"' '\\' :x -> "\\" + x
 
 field_name = spaces '@' letter_or_digit_string:x -> x
 
