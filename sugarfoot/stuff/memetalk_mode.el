@@ -10,6 +10,10 @@
     (define-key map "\C-o" 'memetalk-step-over)
     (define-key map "\C-u" 'memetalk-step-out)
     (define-key map "\C-l" 'memetalk-step-line)
+    (define-key map "\M-r" 'memetalk-continue)
+    (define-key map (kbd "<M-down>") 'memetalk-bt-up)
+    (define-key map (kbd "<M-up>") 'memetalk-bt-down)
+    (define-key map (kbd "C-c C-v") 'memetalk-locals)
     map)
   "Keymap for memetalk major mode")
 
@@ -85,7 +89,7 @@
 
 (defun memetalk-repl-detect-disconnect (process event)
   (message (format "%s %s" process (memetalk-trim-r event)))
-  (memetalk-remove-overlays memetalk-current-buffer)
+  (memetalk-clear-current-buffer)
   (memetalk-repl-setup-reconnection))
 
 
@@ -165,6 +169,22 @@
   (interactive)
   (memetalk-repl-send "step-out"))
 
+(defun memetalk-continue ()
+  (interactive)
+  (memetalk-repl-send "continue"))
+
+(defun memetalk-locals ()
+  (interactive)
+  (memetalk-repl-send "locals"))
+
+(defun memetalk-bt-up ()
+  (interactive)
+  (memetalk-repl-send "bt-up"))
+
+(defun memetalk-bt-down ()
+  (interactive)
+  (memetalk-repl-send "bt-down"))
+
 
 ;; utils
 (defun memetalk-current-selection ()
@@ -174,84 +194,95 @@
 
 (defun memetalk-instantiate-module (filepath)
   (setq memetalk-current-module-filepath filepath)
-  (if (memetalk-repl-is-open)
-      (let ((module-name (memetalk-module-name-from-path filepath)))
-        (memetalk-repl-load module-name))))
+  (when (memetalk-repl-is-open)
+    (let ((module-name (memetalk-module-name-from-path filepath)))
+      (memetalk-repl-load module-name))))
 
 ;; hooks
 
 (defun memetalk-after-save ()
-  (if (equal (buffer-file-name) memetalk-current-module-filepath)
-      (progn
-        (memetalk-instantiate-module memetalk-current-module-filepath))))
+  (when (equal (buffer-file-name) memetalk-current-module-filepath)
+    (memetalk-instantiate-module memetalk-current-module-filepath)))
 
 
 (defvar memetalk-response-content "")
 ;; (message memetalk-response-content)
 ;; (setq memetalk-response-content "")
 
-
 (defvar memetalk-current-buffer nil)
+
 (defun change-memetalk-current-buffer (buffer)
-  (if memetalk-current-buffer
-      (memetalk-remove-overlays memetalk-current-buffer))
+  (when (buffer-live-p memetalk-current-buffer)
+    (memetalk-remove-overlays memetalk-current-buffer))
   (setq memetalk-current-buffer buffer))
+
+(defun memetalk-clear-current-buffer ()
+  (memetalk-remove-overlays memetalk-current-buffer)
+  (setq memetalk-current-buffer nil))
 
 (defvar memetalk-path (or  (getenv "MEME_PATH") "/Users/jester/src/memetalk/sugarfoot/mm/"))
 
 (defvar commands (list))
+
+(defun memetalk-process-module-response (res file-part)
+  (string-match "\\([a-zA-Z0-9]+\\)[:/]" file-part)
+  (let ((mod-name (concat (match-string-no-properties 1 file-part) ".mm")))
+    (message (format "mattched module '%s'" mod-name))
+    (let ((mod-path (concat (file-name-as-directory memetalk-path) mod-name)))
+      (with-current-buffer (find-file mod-path)
+        (message (format "opened file '%s'" mod-path))
+        (widen) ;this shit keep being opened narrowed, god damn it!
+        (change-memetalk-current-buffer (current-buffer))))
+    (message resp)
+    (string-match
+     "@\\[\\([0-9]+\\), \\([0-9]+\\), \\([0-9]+\\), \\([0-9]+\\)\\]"
+     resp)
+    (let ((start-line (string-to-number (match-string-no-properties 1 resp)))
+          (start-col (string-to-number (match-string-no-properties 2 resp)))
+          (end-line (string-to-number (match-string-no-properties 3 resp)))
+          (end-col (string-to-number (match-string-no-properties 4 resp))))
+      (with-current-buffer memetalk-current-buffer
+        (memetalk-remove-overlays memetalk-current-buffer)
+        (goto-line  (+ 1 start-line))
+        (forward-char start-col)
+        (let ((begin (point)))
+          (goto-line (+ 1 end-line))
+          (forward-char end-col)
+          (let ((x (make-overlay begin (point))))
+            (overlay-put x 'face '(:box "yellow"))))))))
+
+(defun memetalk-process-show-response (resp b64text)
+  (with-current-buffer memetalk-current-buffer
+    (deactivate-mark)
+    (set-mark-command nil)
+    (insert (base64-decode-string b64text))))
+
+(defun memetalk-process-locals-response (resp b64text)
+  (let ((base64-decode-string b64text))
+    (message (base64-decode-string b64text))))
+
 (defun memetalk-repl-dispatch-response (resp)
   (message (format "received response '%s'" resp))
   (setq commands (cons resp commands))
-  (if (equal (string-match "module: \\(.*\\)@" resp) 0)
-      (let ((file-part (match-string-no-properties 1 resp)))
-        (string-match "\\([a-zA-Z0-9]+\\)[:/]" file-part)
-        (let ((mod-name (concat (match-string-no-properties 1 file-part) ".mm")))
-          (message (format "mattched module '%s'" mod-name))
-          (let ((mod-path (concat (file-name-as-directory memetalk-path) mod-name)))
-            (with-current-buffer (find-file mod-path)
-              (message (format "opened file '%s'" mod-path))
-              (widen) ;this shit keep being opened narrowed, god damn it!
-              (change-memetalk-current-buffer (current-buffer))))
-          (message resp)
-          (string-match
-           "@\\[\\([0-9]+\\), \\([0-9]+\\), \\([0-9]+\\), \\([0-9]+\\)\\]"
-           resp)
-          (let ((start-line (string-to-number (match-string-no-properties 1 resp)))
-                (start-col (string-to-number (match-string-no-properties 2 resp)))
-                (end-line (string-to-number (match-string-no-properties 3 resp)))
-                (end-col (string-to-number (match-string-no-properties 4 resp))))
-            (with-current-buffer memetalk-current-buffer
-              (memetalk-remove-overlays memetalk-current-buffer)
-              (goto-line  (+ 1 start-line))
-              (forward-char start-col)
-              (let ((begin (point)))
-                (goto-line (+ 1 end-line))
-                (forward-char end-col)
-                (let ((x (make-overlay begin (point))))
-                  (overlay-put x 'face '(:box "yellow")))))))))
-  (if (equal (string-match "show: \\(.*\\)" resp) 0)
-      (with-current-buffer memetalk-current-buffer
-        (let ((b64text (match-string-no-properties 1 resp))
-              (cur-pos (point)))
-          (deactivate-mark)
-          (set-mark-command nil)
-          (insert (base64-decode-string b64text))))))
+  (when (equal (string-match "module: \\(.*\\)@" resp) 0)
+    (memetalk-process-module-response resp (match-string-no-properties 1 resp)))
+  (when (equal (string-match "show: \\(.*\\)" resp) 0)
+    (memetalk-process-show-response resp (match-string-no-properties 1 resp)))
+  (when (equal (string-match "locals: \\(.*\\)" resp) 0)
+      (memetalk-process-locals-response resp (match-string-no-properties 1 resp))))
 
 
 
 
 (defun memetalk-repl-change (begin end x)
-  (if (equal (buffer-name) "*mm-repl*")
-      (progn
-        (let ((content (buffer-substring-no-properties begin end)))
-          (setq memetalk-response-content
-                (concat memetalk-response-content content))
-          (if (equal (string-match ".*\n" memetalk-response-content) 0)
-              (progn
-              (memetalk-repl-dispatch-response
-               (memetalk-trim-r memetalk-response-content))
-              (setq memetalk-response-content ""))))))
+  (when (equal (buffer-name) "*mm-repl*")
+    (let ((content (buffer-substring-no-properties begin end)))
+      (setq memetalk-response-content
+            (concat memetalk-response-content content))
+      (when (equal (string-match ".*\n" memetalk-response-content) 0)
+        (memetalk-repl-dispatch-response
+         (memetalk-trim-r memetalk-response-content))
+        (setq memetalk-response-content ""))))
   t)
 
 ;; (remove-hook 'after-change-functions 'memetalk-after-change)
@@ -263,8 +294,9 @@
 (provide 'memetalk-mode)
 
 (defun memetalk-remove-overlays (buffer)
-  (with-current-buffer buffer
-    (remove-overlays (point-min) (point-max))))
+  (when (buffer-live-p buffer)
+    (with-current-buffer buffer
+      (remove-overlays (point-min) (point-max)))))
 
 (defun memetalk-get-last-procedure ()
   (interactive)
