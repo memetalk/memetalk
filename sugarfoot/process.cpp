@@ -420,6 +420,8 @@ bool Process::load_fun(oop recv, oop drecv, oop fun, bool should_allocate) {
     } else if (ret == PRIM_HALTED) {
       pop_frame();
       halt_and_debug();
+      //return value of calling "debug();"
+      stack_push(MM_NULL);
       return false;
     } else if (ret == PRIM_RAISED) {
       oop ex_oop = stack_pop(); //shit
