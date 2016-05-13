@@ -210,6 +210,8 @@ void Process::pop_frame() {
     _mp = _mmobj->mm_function_get_module(this, _cp, true);
   } else {
     DBG() << "MP unloaded is null! we should be in the first stack frame!" << endl;
+    _state = RUN_STATE; //without this, we end up debugging the printing of
+                        //failed stack trace and it sefgaults!
   }
   LOG_STATE();
 }
@@ -1107,7 +1109,11 @@ oop Process::unwind_with_exception(oop e) {
     // if (!(exc == 0)) {
     //     raise("InternalError", "Unable to get string representation from exception");
     // }
-  DBG() << "cp is NULL!" << endl;
+
+    _state = RUN_STATE; //without this, we end up debugging the printing of
+                        //failed stack trace and it sefgaults!
+
+    DBG() << "cp is NULL!" << endl;
     throw mm_exception_rewind(e);
   }
 
