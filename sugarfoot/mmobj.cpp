@@ -429,6 +429,7 @@ oop MMObj::mm_string_new(const char* str) {
                        mm_object_new(), //assuming String < Object
                        payload); //this is going to alloc more than we need as it
                                  //is payload * sizeof(oop)
+  DBG() << "string size: " << strlen(str) << " for: [[" << str << "]]" << endl;
   ((oop*)oop_str)[2] = (oop) strlen(str);
   strcpy((char*)(oop_str + 3), str);
   return oop_str;
