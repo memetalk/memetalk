@@ -424,6 +424,7 @@ oop Process::do_send(oop recv, oop selector, int num_args, int *exc) {
     DBG() << s << endl;
     *exc = 1;
     oop ex = mm_exception("DoesNotUnderstand", s.str().c_str());
+    WARNING() << "raising DoesNotUnderstand: " << s.str() << endl;
     DBG() << "-- end do_send returning exception object " << ex << endl;
     return ex;
   }
@@ -507,7 +508,7 @@ oop Process::call(oop fun, oop args, int* exc) {
     s << _mmobj->mm_string_cstr(this, _mmobj->mm_function_get_name(this, fun)) << ": expects " <<  arity << " but got " << num_args;
     DBG() << s << endl;
     oop ex = mm_exception("ArityError", s.str().c_str());
-    DBG() << "returning ArityError exception object " << ex << endl;
+    WARNING() << "returning ArityError exception object " << ex << endl;
     *exc = 1;
     return ex;
   }
@@ -733,7 +734,7 @@ void Process::handle_send(number num_args) {
     s << _mmobj->mm_string_cstr(this, _mmobj->mm_function_get_name(this, fun)) << ": expects " <<  arity << " but got " << num_args;
     DBG() << s << endl;
     oop ex = mm_exception("ArityError", s.str().c_str());
-    DBG() << "created exception " << ex << endl;
+    WARNING() << "will raise ArityError: " << s.str() << endl;
     maybe_debug_on_raise(ex);
     oop unwind_exc = unwind_with_exception(ex);
     if (unwind_exc) {
@@ -766,6 +767,7 @@ void Process::handle_super_ctor_send(number num_args) {
     DBG() << s << endl;
     //we rely on compiler generating a pop instruction to bind ex_oop to the catch var
     oop oo_ex = mm_exception("DoesNotUnderstand", s.str().c_str());
+    WARNING() << "will raise DoesNotUnderstand: " << s.str() << endl;
     maybe_debug_on_raise(oo_ex);
     oop unwind_exc = unwind_with_exception(oo_ex);
     if (unwind_exc != MM_NULL) {
@@ -783,6 +785,7 @@ void Process::handle_super_ctor_send(number num_args) {
     s << "arity and num_args differ: " << num_args << " != " << arity;
     DBG() << s << endl;
     oop oo_ex = mm_exception("ArityError", s.str().c_str());
+    WARNING() << "will raise ArityError: " << s.str() << endl;
     maybe_debug_on_raise(oo_ex);
     oop unwind_exc = unwind_with_exception(oo_ex);
     if (unwind_exc != MM_NULL) {
@@ -805,6 +808,7 @@ void Process::handle_call(number num_args) {
     s << _mmobj->mm_string_cstr(this, _mmobj->mm_function_get_name(this, fun)) << ": expects " <<  arity << " but got " << num_args;
     DBG() << s << endl;
     oop oo_ex = mm_exception("ArityError", s.str().c_str());
+    WARNING() << "will raise ArityError: " << s.str() << endl;
     maybe_debug_on_raise(oo_ex);
     oop unwind_exc = unwind_with_exception(oo_ex);
     if (unwind_exc != MM_NULL) {
@@ -1197,6 +1201,7 @@ bool Process::has_debugger_attached() {
 void Process::halt_and_debug() {
   DBG() << "starting new debugger? " << has_debugger_attached() << endl;
   if (!has_debugger_attached()) {
+    WARNING() << "starting debugger" << endl;
     _dbg_handler = _vm->start_debugger(this);
     DBG() << "got a _dbg_handler " << endl;
   }
