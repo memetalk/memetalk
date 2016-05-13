@@ -50,7 +50,6 @@ CoreImage::CoreImage(VM* vm, const char* filepath)
 
 bool CoreImage::is_prime(const char* name) {
   for (int i = 0; i < TOTAL_PRIMES; i++) {
-    DBG() << name << " =?= " <<  PRIMES_NAMES[i] << endl;
     if (strcmp(name, PRIMES_NAMES[i]) == 0) {
       return true;
     }
