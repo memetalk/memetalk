@@ -1,6 +1,7 @@
 .preamble(ometa,io)
  ometa : meme:ometa;
  io : meme:io;
+ [OMetaException] <= ometa;
 .code
 
 

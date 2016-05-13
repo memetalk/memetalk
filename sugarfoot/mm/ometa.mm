@@ -76,28 +76,61 @@ end
 
 
 class OMetaBase
-fields: input;
+fields: indent, input, error_pos, error_rules;
 init new: fun(input) {
+  @indent = "";
   @input = input;
+  @error_pos = 0;
+  @error_rules = [];
 }
 
+instance_method set_error: fun(rule, input) {
+  if (input.idx > @error_pos) {
+    @error_pos = input.idx;
+    @error_rules.append(rule);
+    // io.print("+set error: " + rule.toString + " " + input.idx.toString);
+  } else {
+    if (input.idx == @error_pos) {
+       @error_rules.append(rule);
+       // io.print("+add error: " + rule.toString + " " + input.idx.toString);
+     } else {
+       // io.print("-skip error: " + rule.toString + " " + input.idx.toString);
+     }
+  }
+}
+
+instance_method input: fun() {
+  return @input;
+}
+
+instance_method get_error: fun() {
+  return [@error_pos, @error_rules];
+}
 instance_method _apply: fun(rule) {
+  // @indent = @indent + " ";
   var memo = @input.memo;
   if (!memo.has(rule)) {
     var input = @input;
     try {
+      // io.print(@indent + "%try " + rule.toString + " on [" + input.toString + "]");
       var res = this.send(rule, []);
+      // io.print(@indent + "!matched " + rule.toString + " on [" + input.toString + "]");
       input.memo[rule] = {:input : @input, :ans : res};
     } catch(OMetaException e) {
+      // io.print(@indent + "FAIL " + rule.toString + " on [" + input.toString + "]");
+      // @indent = @indent.from(1);
       @input = input;
       input.memo[rule] = {:error : e};
+      this.set_error(rule.toString, input);
       e.throw();
     }
   } else {
     if (memo[rule].has(:error)) {
+      // @indent = @indent.from(1);
       memo[rule][:error].throw();
     }
   }
+  // @indent = @indent.from(1);
   @input = memo[rule][:input];
   return memo[rule][:ans];
 }
@@ -105,7 +138,12 @@ instance_method _apply_with_args: fun(rule, args) {
   args.reverse.each(fun(arg) {
     this.prepend_input(arg);
   });
-  return this._apply(rule);
+  try {
+    return this._apply(rule);
+  } catch(OMetaException e) {
+      this.set_error(rule.toString + "(" + args.toString + ")", @input);
+      e.throw();
+  }
 }
 
 instance_method prepend_input: fun(value) {
@@ -130,11 +168,11 @@ instance_method _not: fun(fn) {
   var input = @input;
   try {
     fn();
-    OMetaException.throw("ometa error");
   } catch(OMetaException e) {
     @input = input;
     return true;
   }
+  OMetaException.throw("ometa error");
 }
 
 instance_method _lookahead: fun(fn) {
@@ -242,6 +280,12 @@ instance_method exactly: fun() {
   } else {
     OMetaException.throw("ometa error");
   }
+}
+
+instance_method until: fun() {
+  var brk = this._apply(:anything);
+  return this._many1(fun() { this._not(fun() { this._apply_with_args(:exactly, [brk]) });
+                     return this._apply(:anything); });
 }
 
 // instance_method true: fun() {
@@ -374,11 +418,17 @@ end
 
 
 class OMeta < OMetaBase
+fields: current_production, local_vars;
+init new: fun(input) {
+  super.new(input);
+  @local_vars = [];
+}
+instance_method add_local_var: fun(name) {
+  @local_vars.append(name);
+}
 
 // rules...
 instance_method ometa: fun() {
-  this._apply(:spaces);
-
   this._apply_with_args(:keyword, ["ometa"]);
 
   var name = this._apply(:identifier);
@@ -389,8 +439,6 @@ instance_method ometa: fun() {
   var r = this._apply(:rules);
 
   this._apply_with_args(:token, ["}"]);
-
-  this._apply(:end);
   return [:grammar, name, i, r];
 }
 
@@ -427,6 +475,7 @@ instance_method rule_part: fun() {
   var rn = this._apply(:anything);
   var rname = this._apply(:rule_name);
   this._pred(rname == rn);
+  @current_production = rname;
   var r = this._apply(:rule_rest);
   this._apply_with_args(:token, [";"]);
   return r;
@@ -452,7 +501,7 @@ instance_method rule_rest: fun() {
 instance_method argument: fun() {
   return this._or([fun() { return this._apply(:bind_expression); },
                    fun() { var b = this._apply(:binding);
-                           return [:bind] + b + [:apply, :anything];}]);
+                           return [:bind, b] + [:apply, :anything];}]);
 }
 
 instance_method choices: fun() {
@@ -512,7 +561,8 @@ instance_method term: fun() {
 instance_method binding: fun() {
   this._apply_with_args(:token, [":"]);
   var i = this._apply(:identifier);
-  return this.add_local_var(i);
+  this.add_local_var(i);
+  return i;
 }
 
 instance_method element: fun() {
@@ -520,8 +570,9 @@ instance_method element: fun() {
   var c = null;
   return this._or([fun() { this._apply(:prod_app) },
                    fun() { this._apply(:data_element) },
-                   fun() { this._apply_with_args(:token, ["%"]);
-                           s = this._apply(:host_lang_expr);
+                   fun() { this._apply_with_args(:token, ["%("]);
+                           s = this._apply_with_args(:until, [")"]).join("");
+                           this._apply_with_args(:exactly, [")"]);
                            return [:sem_pred, s];},
                    fun() { this._apply_with_args(:token, ["{"]);
                            c = this._apply(:choices);
@@ -541,16 +592,8 @@ instance_method data_element: fun() {
 
 instance_method action: fun() {
   this._apply_with_args(:token, ["=>"]);
-  var s = this._apply(:host_lang_expr);
+  var s = this._apply_with_args(:until, [";"]).join("");
   return [:action, s];
-}
-
-instance_method host_lang_expr: fun() {
-//{~";" _}+
-  var expr = this._many1(fun() { this._not(fun() { this._apply_with_args(:token, [";"]) });
-                                 return this._apply(:anything); }, null);
-  return expr;
-
 }
 
 instance_method prod_app: fun() {
@@ -568,13 +611,13 @@ instance_method prod_app: fun() {
                            this._apply_with_args(:token, [">"]);
                            return [:apply_with_args, [:arguments] + args, p];},
                    fun() { this._apply_with_args(:token, ["^"]);
-                           return [:apply_super, this.current_production];}]);
+                           return [:apply_super, @current_production];}]);
 }
 
 instance_method prod_arg_list: fun() {
   var x = this._apply(:prod_arg);
   var xs = this._many(fun() { this._apply_with_args(:token, [","]);
-                              return this._apply(:prod_arg);});
+                              return this._apply(:prod_arg);}, null);
   return [x] + xs;
 }
 
@@ -584,34 +627,41 @@ instance_method prod_arg: fun() {
 }
 
 instance_method char_sequence: fun() {
+  this._apply(:spaces);
   this._apply_with_args(:exactly, ["'"]);
   var cs = this._many1(fun() {
         return this._or([fun() {
+                            this._not(fun() { this._apply_with_args(:exactly, ["'"]) });
                             this._apply_with_args(:exactly, ["\\"]);
-                            return this._apply(:char); },
+                            var c = this._apply(:char);
+                            return "\\" + c; },
                          fun() {
-                            this._not(fun() { this._apply_with_args(:exactly, ["\\"]) });
+                            this._not(fun() { this._apply_with_args(:exactly, ["'"]) });
                             return this._apply(:char); }]);
-  }, null);
+  });
   this._apply_with_args(:exactly, ["'"]);
   return [:seq, cs];
 }
 
 instance_method token_string: fun() {
+  this._apply(:spaces);
   this._apply_with_args(:exactly, ["\""]);
   var cs = this._many1(fun() {
         return this._or([fun() {
+                            this._not(fun() { this._apply_with_args(:exactly, ["\""]) });
                             this._apply_with_args(:exactly, ["\\"]);
-                            return this._apply(:char); },
+                            var c = this._apply(:char);
+                            return "\\" + c; },
                          fun() {
-                            this._not(fun() { this._apply_with_args(:exactly, ["\\"]) });
+                            this._not(fun() { this._apply_with_args(:exactly, ["\""]) });
                             return this._apply(:char); }]);
-  }, null);
+  });
   this._apply_with_args(:exactly, ["\""]);
   return [:token_string, cs];
 }
 
 instance_method string_object: fun() {
+  this._apply(:spaces);
   this._apply_with_args(:exactly, ["`"]);
   var cs = this._many1(fun() {
         return this._or([fun() {
@@ -645,7 +695,11 @@ end //end OMeta
 parse: fun(data, cls, rule) {
   var parser = cls.new(OMetaStream.with_data(data));
   parser.prepend_input(rule);
-  return parser.apply();
+  try {
+    return [null, parser.apply()];
+  } catch(OMetaException e) {
+    return [parser.get_error, null];
+  }
 }
 
 .endcode
