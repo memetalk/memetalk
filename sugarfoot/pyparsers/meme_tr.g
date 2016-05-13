@@ -58,9 +58,10 @@ class_method :klass = !(self.input.head()[0]):ast
                           :uses_env !(fnobj.uses_env(uses_env))
                           ['body' body(fnobj.body_processor())]]  !(fnobj.set_text(ast.text))
 
-params = ['params' []]  -> []
-       | ['params' :xs] -> xs
+params = ['params' [param*:x]] -> x
 
+param = ['var-arg' :x] -> x
+        | :x
 
 object_definition :modobj = ['object' :name !(modobj.new_object(name)):obj
                           [obj_slot(obj)+] [obj_function(obj)*]]
@@ -150,7 +151,7 @@ catch_decl = ['catch' ['id' :type] :id]  -> (type, id)
 
 dict_pairs :fnobj = (['pair' expr(fnobj) expr(fnobj)])*:e -> e
 
-funliteral :fnobj = !(self.input.head()[0]):ast ['fun-literal'  ['params' :p]
+funliteral :fnobj = !(self.input.head()[0]):ast ['fun-literal'  params:p
                        !(fnobj.new_closure(p)):fn
                        !(fn.set_line(ast))
                        ['body' [expr(fn)*]]]:ast
