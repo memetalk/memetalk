@@ -1194,6 +1194,9 @@ class CoreCompiledModule(CompiledModule):
         super(CoreCompiledModule, self).__init__('core')
         self.imod = CoreModule(self)
 
+    def label(self):
+        return 'CoreCompiledModule'
+
     def entry_labels(self):
         return self.imod.entry_labels()
 

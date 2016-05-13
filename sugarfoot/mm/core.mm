@@ -17,7 +17,7 @@
     _delegate: null;
     name: "Object";
     super_class_name: "";
-    compiled_module: null;
+    compiled_module: CoreCompiledModule;
     fields: [];
     methods: {};
     own_methods: {};
@@ -45,6 +45,9 @@
        }
        !=: fun(other) {
          return !(this == other);
+       }
+       fullName: fun() {
+         return "core:Behavior";
        }
     }
   end
@@ -75,6 +78,9 @@
        }
        send: fun(name, args) {
          <primitive "object_send">
+       }
+       fullName: fun() {
+         return "core:Object";
        }
     }
   end
