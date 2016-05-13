@@ -188,6 +188,17 @@ static int prim_string_from(Process* proc) {
   return 0;
 }
 
+static int prim_string_substr(Process* proc) {
+  oop self =  proc->dp();
+  oop from = proc->get_arg(0);
+  oop max = proc->get_arg(1);
+  std::string str = proc->mmobj()->mm_string_cstr(proc, self);
+  std::string sub = str.substr(untag_small_int(from), untag_small_int(max));
+  proc->stack_push(proc->mmobj()->mm_string_new(sub.c_str()));
+  return 0;
+}
+
+
 #include <boost/algorithm/string/replace.hpp>
 static int prim_string_replace_all(Process* proc) {
   oop self =  proc->dp();
@@ -602,12 +613,12 @@ static int prim_list_map(Process* proc) {
   oop ret = proc->mmobj()->mm_list_new();
   for (int i = 0; i < size; i++) {
     oop next = proc->mmobj()->mm_list_entry(proc, self, i);
-    DBG("list each[" << i << "] = " << next << endl);
+    DBG("map[" << i << "] = " << next << endl);
     proc->stack_push(next);
     int exc;
     oop val = proc->do_call(fun, &exc);
     if (exc != 0) {
-      DBG("prim_list_each raised" << endl);
+      DBG("raised" << endl);
       proc->stack_push(val);
       return PRIM_RAISED;
     }
@@ -617,6 +628,33 @@ static int prim_list_map(Process* proc) {
   proc->stack_push(ret);
   return 0;
 }
+
+static int prim_list_filter(Process* proc) {
+  oop self =  proc->dp();
+  oop fun = proc->get_arg(0);
+
+  number size = proc->mmobj()->mm_list_size(proc, self);
+  oop ret = proc->mmobj()->mm_list_new();
+  for (int i = 0; i < size; i++) {
+    oop next = proc->mmobj()->mm_list_entry(proc, self, i);
+    DBG("filter[" << i << "] = " << next << endl);
+    proc->stack_push(next);
+    int exc;
+    oop val = proc->do_call(fun, &exc);
+    if (exc != 0) {
+      DBG("raised" << endl);
+      proc->stack_push(val);
+      return PRIM_RAISED;
+    }
+    DBG("filter[" << i << "] fun returned " << val << endl);
+    if (val != MM_NULL && val != MM_FALSE) {
+      proc->mmobj()->mm_list_append(proc, ret, next);
+    }
+  }
+  proc->stack_push(ret);
+  return 0;
+}
+
 
 static int prim_list_size(Process* proc) {
   oop self =  proc->dp();
@@ -1822,6 +1860,7 @@ void init_primitives(VM* vm) {
   vm->register_primitive("list_index", prim_list_index);
   vm->register_primitive("list_each", prim_list_each);
   vm->register_primitive("list_map", prim_list_map);
+  vm->register_primitive("list_filter", prim_list_filter);
   vm->register_primitive("list_has", prim_list_has);
   vm->register_primitive("list_last", prim_list_last);
   vm->register_primitive("list_from", prim_list_from);
@@ -1852,6 +1891,7 @@ void init_primitives(VM* vm) {
   vm->register_primitive("string_index", prim_string_index);
 
   vm->register_primitive("string_from", prim_string_from);
+  vm->register_primitive("string_substr", prim_string_substr);
   vm->register_primitive("string_replace_all", prim_string_replace_all);
   vm->register_primitive("string_b64decode", prim_string_b64decode);
   vm->register_primitive("string_b64encode", prim_string_b64encode);

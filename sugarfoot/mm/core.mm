@@ -251,6 +251,9 @@
   instance_method from: fun(idx) {
     <primitive "string_from">
   }
+  instance_method substr: fun(from, max) {
+    <primitive "string_substr">
+  }
   instance_method b64encode: fun() {
     <primitive "string_b64encode">
   }
@@ -331,6 +334,9 @@
   }
   instance_method map: fun(fn) {
     <primitive "list_map">
+  }
+  instance_method filter: fun(fn) {
+    <primitive "list_filter">
   }
   instance_method has: fun(value) {
     <primitive "list_has">
