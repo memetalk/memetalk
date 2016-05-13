@@ -8,6 +8,7 @@
 #include "qt_prims.hpp"
 #include <string>
 #include <iostream>
+#include <fstream>
 #include <sstream>
 #include <boost/filesystem.hpp>
 
@@ -69,6 +70,18 @@ static int prim_io_print(Process* proc) {
   }
   std::cout << proc->mmobj()->mm_string_cstr(proc, res) << endl;
   proc->stack_push(MM_NULL);
+  return 0;
+}
+
+static int prim_io_read_file(Process* proc) {
+  oop oop_path = proc->get_arg(0);
+  char* path = proc->mmobj()->mm_string_cstr(proc, oop_path);
+
+  std::fstream file;
+  file.open(path, std::fstream::in | std::fstream::binary);
+  int fsize;
+  char* text = read_file(file, &fsize);
+  proc->stack_push(proc->mmobj()->mm_string_new(text));
   return 0;
 }
 
@@ -1771,6 +1784,7 @@ static int prim_modules_path(Process* proc) {
 
 void init_primitives(VM* vm) {
   vm->register_primitive("io_print", prim_io_print);
+  vm->register_primitive("io_read_file", prim_io_read_file);
 
   vm->register_primitive("remote_repl_compile_module", prim_remote_repl_compile_module);
   vm->register_primitive("remote_repl_instantiate_module", prim_remote_repl_instantiate_module);

@@ -648,8 +648,4 @@ parse: fun(data, cls, rule) {
   return parser.apply();
 }
 
-main: fun() {
-  io.print(parse("  ometa test { x = a | b; }", OMeta, :ometa));
-}
-
 .endcode
