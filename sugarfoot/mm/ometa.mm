@@ -16,7 +16,7 @@ instance_method tail: fun() {
 }
 end
 
-class OMetaStream < List
+class OMetaStream
 fields: memo, idx, hd, tl, data;
 init with_data: fun(data) {
   @memo = {};
@@ -39,7 +39,9 @@ init from_idx_and_data: fun(idx, data) {
   @hd = data[@idx];
   @tl = null;
 }
-
+instance_method remaining: fun() {
+  return "[" + @data.from(@idx) + "] pos: " + @idx.toString;
+}
 instance_method data: fun() {
   return @data;
 }
@@ -68,7 +70,7 @@ instance_method memo: fun() {
 }
 
 instance_method toString: fun() {
-  return "{" + @hd.toString + " " + @data.from(@idx).toString + " -- " + @idx.toString + "}";
+  return  "{" + @data.from(@idx).toString + " pos: " + @idx.toString + "}";
 }
 end
 
@@ -85,14 +87,19 @@ instance_method _apply: fun(rule) {
     var input = @input;
     try {
       var res = this.send(rule, []);
-      input.memo[rule] = {"input": @input, "ans": res};
+      input.memo[rule] = {:input : @input, :ans : res};
     } catch(OMetaException e) {
       @input = input;
+      input.memo[rule] = {:error : e};
       e.throw();
     }
+  } else {
+    if (memo[rule].has(:error)) {
+      memo[rule][:error].throw();
+    }
   }
-  @input = memo[rule]["input"];
-  return memo[rule]["ans"];
+  @input = memo[rule][:input];
+  return memo[rule][:ans];
 }
 instance_method _apply_with_args: fun(rule, args) {
   args.reverse.each(fun(arg) {
@@ -181,7 +188,7 @@ instance_method _many: fun(fn, first) {
 }
 
 instance_method _many1: fun(fn) {
-  return this.many(fn, fn());
+  return this._many(fn, fn());
 }
 
 instance_method _repeat: fun(n, fn) {
@@ -310,11 +317,6 @@ instance_method letter_or_digit: fun() {
                    fun() { this._apply(:digit) }]);
 }
 
-instance_method letter_or_digit_or_: fun() {
-  return this._or([fun() { this._apply(:letter_or_digit) },
-                   fun() { this._apply_with_args(:exactly, ['_'])}]);
-}
-
 instance_method first_and_rest: fun() {
   var first = this._apply(:anything);
   var rest = this._apply(:anything);
@@ -336,10 +338,26 @@ instance_method seq: fun() {
 // }
 
 instance_method token: fun() {
+  var tk = this._apply(:anything);
   this._apply(:spaces);
-  return this._apply_with_args(:first_and_rest, [:letter, :letter_or_digit_or_]);
+  return this._apply_with_args(:seq, [tk.split("")]);
 }
 
+instance_method identifier_first: fun() {
+  return this._or([fun() { this._apply_with_args(:exactly, ["_"]) },
+                   fun() { this._apply(:letter) }]);
+}
+
+instance_method identifier_rest: fun() {
+  return this._or([fun() { this._apply_with_args(:exactly, ["_"]) },
+                   fun() { this._apply(:letter_or_digit) }]);
+}
+
+instance_method identifier: fun() {
+  this._apply(:spaces);
+  var ident = this._apply_with_args(:first_and_rest, [:identifier_first, :identifier_rest]);
+  return ident.join("");
+}
 
 
 // (defmethod str-eq ((o ometa-base))
@@ -361,32 +379,266 @@ class OMeta < OMetaBase
 instance_method ometa: fun() {
   this._apply(:spaces);
 
-  this._apply_with_args(:seq, [["o", "m", "e", "t", "a"]]);
+  this._apply_with_args(:keyword, ["ometa"]);
 
-  var name = this._apply(:token);
+  var name = this._apply(:identifier);
   var i = this._apply(:inheritance);
 
-  this._apply_with_args(:exactly, ["{"]);
+  this._apply_with_args(:token, ["{"]);
+
   var r = this._apply(:rules);
 
-  this._apply_with_args(:exactly, ["}"]);
+  this._apply_with_args(:token, ["}"]);
 
   this._apply(:end);
-  return ["grammar", name, i, r];
+  return [:grammar, name, i, r];
+}
+
+instance_method keyword: fun() {
+  var xs = this._apply(:anything);
+  var ident = this._apply_with_args(:token, [xs]);
+  this._not(fun() { this._apply(:identifier_rest) });
+  return xs;
 }
 
 instance_method inheritance: fun() {
-  this._apply(:spaces);
   return this._or([fun() {
-                     this._apply_with_args(:exactly, ["<"]);
-                     return this._apply(:token);},
-                   fun() { return ["parent", "OMetaBase"]; }]);
+                     this._apply_with_args(:token, ["<"]);
+                     var ident = this._apply(:identifier);
+                     return [:parent, ident]; },
+                   fun() { return [:parent, "OMetaBase"]; }]);
 }
 
 instance_method rules: fun() {
-  this._apply(:spaces);
-  return ["rules"];
+  return this._many1(fun() { this._apply(:rule) });
 }
+
+instance_method rule: fun() {
+  var rname = this._lookahead(fun() { this._apply(:rule_name) });
+  var p = this._many1(fun() { return this._apply_with_args(:rule_part, [rname]); });
+  return [:rule, rname, [:or] + p];
+}
+
+instance_method rule_name: fun() {
+  return this._apply(:identifier);
+}
+
+instance_method rule_part: fun() {
+  var rn = this._apply(:anything);
+  var rname = this._apply(:rule_name);
+  this._pred(rname == rn);
+  var r = this._apply(:rule_rest);
+  this._apply_with_args(:token, [";"]);
+  return r;
+}
+
+instance_method rule_rest: fun() {
+  var args = null;
+  var c = null;
+  var ac = null;
+  return this._or([
+    fun() { this._apply(:action) },
+    fun() { this._apply_with_args(:token, ["="]);
+            return this._apply(:choices);},
+    fun() { args = this._many1(fun() { this._apply(:argument); });
+            this._apply_with_args(:token, ["="]);
+            c = this._apply(:choices);
+            return [:and] + args + [c];},
+    fun() { args = this._many1(fun() { this._apply(:argument); });
+            ac = this._apply(:action);
+            return [:and] + args + [ac];}]);
+}
+
+instance_method argument: fun() {
+  return this._or([fun() { return this._apply(:bind_expression); },
+                   fun() { var b = this._apply(:binding);
+                           return [:bind] + b + [:apply, :anything];}]);
+}
+
+instance_method choices: fun() {
+  var x = this._apply(:choice);
+  var xs = this._many(fun() { this._apply_with_args(:token, ["|"]);
+                              return this._apply(:choice);}, null);
+  return [:or, x] + xs;
+}
+
+
+instance_method choice: fun() {
+  var x = null;
+  return this._or([fun() { x = this._many(fun() { this._apply(:top_expression) }, null);
+                           var ac = this._apply(:action);
+                           return [:and] + x + [ac];},
+                   fun() { x = this._many(fun() { this._apply(:top_expression) }, null);
+                           return [:and] + [x];}]);
+}
+
+instance_method top_expression: fun() {
+  return this._or([fun() { this._apply(:bind_expression) },
+                  fun() { this._apply(:repeated_expression) }]);
+}
+
+instance_method bind_expression: fun() {
+  var e = this._apply(:repeated_expression);
+  var b = this._apply(:binding);
+  return [:bind, b, e];
+}
+
+instance_method repeated_expression: fun() {
+  var e = null;
+  return this._or([
+    fun() { e = this._apply(:term);
+            this._apply_with_args(:token, ["*"]);
+            return [:many, e];},
+    fun() { e = this._apply(:term);
+            this._apply_with_args(:token, ["+"]);
+            return [:many1, e];},
+    fun() { e = this._apply(:term);
+            this._apply_with_args(:token, ["?"]);
+            return [:optional, e];},
+    fun() { return this._apply(:term); }]);
+}
+
+instance_method term: fun() {
+  var e = null;
+  return this._or([fun() { this._apply_with_args(:token, ["~"]);
+                           e = this._apply(:element);
+                           return  [:not, e];},
+                   fun() { this._apply_with_args(:token, ["&"]);
+                           e = this._apply(:element);
+                           return [:lookahead, e];},
+                   fun() { return this._apply(:element); }]);
+}
+
+instance_method binding: fun() {
+  this._apply_with_args(:token, [":"]);
+  var i = this._apply(:identifier);
+  return this.add_local_var(i);
+}
+
+instance_method element: fun() {
+  var s = null;
+  var c = null;
+  return this._or([fun() { this._apply(:prod_app) },
+                   fun() { this._apply(:data_element) },
+                   fun() { this._apply_with_args(:token, ["%"]);
+                           s = this._apply(:host_lang_expr);
+                           return [:sem_pred, s];},
+                   fun() { this._apply_with_args(:token, ["{"]);
+                           c = this._apply(:choices);
+                           this._apply_with_args(:token, ["}"]);
+                           return c; }]);
+}
+
+instance_method data_element: fun() {
+  return this._or([fun() { this._apply(:char_sequence) },
+                   fun() { this._apply(:token_string) },
+                   fun() { this._apply(:string_object) },
+                   fun() { this._apply(:asymbol) },
+                   fun() { this._apply(:s_expr) },
+                   fun() { this._apply_with_args(:token, ["_"]) },
+                   fun() { this._apply_with_args(:token, ["$"]) }]);
+}
+
+instance_method action: fun() {
+  this._apply_with_args(:token, ["=>"]);
+  var s = this._apply(:host_lang_expr);
+  return [:action, s];
+}
+
+instance_method host_lang_expr: fun() {
+//{~";" _}+
+  var expr = this._many1(fun() { this._not(fun() { this._apply_with_args(:token, [";"]) });
+                                 return this._apply(:anything); }, null);
+  return expr;
+
+}
+
+instance_method prod_app: fun() {
+  var p = null;
+  var args = null;
+  return this._or([fun() { this._apply_with_args(:token, ["<"]);
+                           p = this._apply(:identifier);
+                           this._apply_with_args(:token, [">"]);
+                           return [:apply, p];},
+                   fun() { p = this._apply(:identifier);
+                           return [:apply, p];},
+                   fun() { this._apply_with_args(:token, ["<"]);
+                           p = this._apply(:identifier);
+                           args = this._apply(:prod_arg_list);
+                           this._apply_with_args(:token, [">"]);
+                           return [:apply_with_args, [:arguments] + args, p];},
+                   fun() { this._apply_with_args(:token, ["^"]);
+                           return [:apply_super, this.current_production];}]);
+}
+
+instance_method prod_arg_list: fun() {
+  var x = this._apply(:prod_arg);
+  var xs = this._many(fun() { this._apply_with_args(:token, [","]);
+                              return this._apply(:prod_arg);});
+  return [x] + xs;
+}
+
+instance_method prod_arg: fun() {
+  return this._or([fun() { this._apply(:data_element); },
+                   fun() { this._apply(:identifier); }]);
+}
+
+instance_method char_sequence: fun() {
+  this._apply_with_args(:exactly, ["'"]);
+  var cs = this._many1(fun() {
+        return this._or([fun() {
+                            this._apply_with_args(:exactly, ["\\"]);
+                            return this._apply(:char); },
+                         fun() {
+                            this._not(fun() { this._apply_with_args(:exactly, ["\\"]) });
+                            return this._apply(:char); }]);
+  }, null);
+  this._apply_with_args(:exactly, ["'"]);
+  return [:seq, cs];
+}
+
+instance_method token_string: fun() {
+  this._apply_with_args(:exactly, ["\""]);
+  var cs = this._many1(fun() {
+        return this._or([fun() {
+                            this._apply_with_args(:exactly, ["\\"]);
+                            return this._apply(:char); },
+                         fun() {
+                            this._not(fun() { this._apply_with_args(:exactly, ["\\"]) });
+                            return this._apply(:char); }]);
+  }, null);
+  this._apply_with_args(:exactly, ["\""]);
+  return [:token_string, cs];
+}
+
+instance_method string_object: fun() {
+  this._apply_with_args(:exactly, ["`"]);
+  var cs = this._many1(fun() {
+        return this._or([fun() {
+                            this._apply_with_args(:exactly, ["\\"]);
+                            this._apply(:char) },
+                         fun() {
+                            this._not(fun() { this._apply_with_args(:exactly, ["\\"]) });
+                            return this._apply(:char); }]);
+  }, null);
+  this._apply_with_args(:exactly, ["`"]);
+  return [:token_string, cs];
+}
+
+instance_method asymbol: fun() {
+  this._apply_with_args(:token, [":"]);
+  var s = this._apply(:identifier);
+  return [:symbol, s];
+}
+
+instance_method s_expr: fun() {
+  this._apply_with_args(:token, ["["]);
+  var s = this._apply(:choice);
+  this._apply_with_args(:token, ["]"]);
+  return [:form, s];
+}
+
+
 
 end //end OMeta
 
@@ -397,7 +649,7 @@ parse: fun(data, cls, rule) {
 }
 
 main: fun() {
-  io.print(parse("  ometa test {  }", OMeta, :ometa));
+  io.print(parse("  ometa test { x = a | b; }", OMeta, :ometa));
 }
 
 .endcode

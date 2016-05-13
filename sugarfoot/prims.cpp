@@ -643,6 +643,27 @@ static int prim_list_join(Process* proc) {
   return 0;
 }
 
+static int prim_list_plus(Process* proc) {
+  oop self =  proc->dp();
+  oop other = proc->get_arg(0);
+
+  number this_size = proc->mmobj()->mm_list_size(proc, self);
+  number other_size = proc->mmobj()->mm_list_size(proc, other);
+
+  oop res = proc->mmobj()->mm_list_new();
+  std::stringstream s;
+  for (int i = 0; i < this_size; i++) {
+    oop next = proc->mmobj()->mm_list_entry(proc, self, i);
+    proc->mmobj()->mm_list_append(proc, res, next);
+  }
+  for (int i = 0; i < other_size; i++) {
+    oop next = proc->mmobj()->mm_list_entry(proc, other, i);
+    proc->mmobj()->mm_list_append(proc, res, next);
+  }
+  proc->stack_push(res);
+  return 0;
+}
+
 static int prim_list_has(Process* proc) {
   oop self =  proc->dp();
   oop value = proc->get_arg(0);
@@ -1057,6 +1078,15 @@ static int prim_object_send(Process* proc) {
     return PRIM_RAISED;
   }
   proc->stack_push(res);
+  return 0;
+}
+
+static int prim_object_id(Process* proc) {
+  oop self =  proc->rp();
+  std::stringstream s;
+  s << self;
+  oop oop_str = proc->mmobj()->mm_string_new(s.str().c_str());
+  proc->stack_push(oop_str);
   return 0;
 }
 
@@ -1758,6 +1788,7 @@ void init_primitives(VM* vm) {
   vm->register_primitive("object_to_string", prim_object_to_string);
   vm->register_primitive("object_to_source", prim_object_to_source);
   vm->register_primitive("object_send", prim_object_send);
+  vm->register_primitive("object_id", prim_object_id);
 
   vm->register_primitive("symbol_to_string", prim_symbol_to_string);
 
@@ -1777,6 +1808,7 @@ void init_primitives(VM* vm) {
   vm->register_primitive("list_size", prim_list_size);
   vm->register_primitive("list_reverse", prim_list_reverse);
   vm->register_primitive("list_join", prim_list_join);
+  vm->register_primitive("list_plus", prim_list_plus);
 
 
   vm->register_primitive("dictionary_new", prim_dictionary_new);

@@ -79,6 +79,9 @@
        send: fun(name, args) {
          <primitive "object_send">
        }
+       id: fun() {
+         <primitive "object_id">
+       }
        fullName: fun() {
          return "core:Object";
        }
@@ -352,6 +355,9 @@
   }
   instance_method join: fun(sep) {
     <primitive "list_join">
+  }
+  instance_method +: fun(other) {
+    <primitive "list_plus">
   }
   class_method new: fun() {
     <primitive "list_new">
