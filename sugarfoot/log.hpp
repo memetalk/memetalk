@@ -7,29 +7,32 @@
 #define LOG_ALL "al"
 
 // debugging levels per module
-#define LOG_VM  "vm"
-#define LOG_CORE "co"
-#define LOG_LOADER "lo"
-#define LOG_MMOBJ "mo"
-#define LOG_MMCFUN "mf"
-#define LOG_MMCIMG "mi"
-#define LOG_PRIMS "pr"
-#define LOG_QTPRIMS "qp"
-#define LOG_CTRL "ct"
-#define LOG_UTILS "ut"
-#define LOG_REPL "rp"
-#define LOG_TARGET_PROC "tp"
-#define LOG_DBG_PROC "dp"
-#define LOG_TARGET_MMT "mt"
-#define LOG_DBG_MMT "md"
+#define LOG_VM  "vm"     //vm.cpp
+#define LOG_CORE "co"    //core_image.cpp
+#define LOG_MMOBJ "mo"   //mmobj.cpp
+#define LOG_MMCFUN "mf"  //mmc_fun.cpp
+#define LOG_MMCIMG "mi"  //mmc_image.cpp
+#define LOG_PRIMS "pr"   //prims.cpp
+#define LOG_QTPRIMS "qp" //qt_prims.cpp
+#define LOG_CTRL "ct"    //ctrl.cpp
+#define LOG_UTILS "ut"   //utils.cpp
+#define LOG_REPL "rp"    //remote_repl.cpp
+#define LOG_TARGET_PROC "tp" //process.cpp [main process]
+#define LOG_DBG_PROC "dp"    //process.cpp [dbg process]
 
 // debugging feature: registers
 #define LOG_TARGET_PROC_REG "tr"
 #define LOG_DBG_PROC_REG "dr"
 
+// debugging feature: code
+#define LOG_TARGET_PROC_BODY "tb"
+#define LOG_DBG_PROC_BODY "db"
+
 // debugging feature: stack
 #define LOG_TARGET_PROC_STACK "ts"
 #define LOG_DBG_PROC_STACK "ds"
+#define LOG_TARGET_PROC_TRACE "tt"
+#define LOG_DBG_PROC_TRACE "dt"
 
 // standard templates
 #define LOG_WARNING "wa"
@@ -39,10 +42,10 @@ using std::endl;
 
 class MMLog {
 private:
-  bool _enabled;
   bool _running;
   std::string _prefix;
 public:
+  bool _enabled;
   static std::string red;
   static std::string green;
   static std::string yellow;

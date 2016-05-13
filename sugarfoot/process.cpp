@@ -15,31 +15,47 @@
 #include "remote_repl.hpp"
 
 
-#define BCOLOR (_log.normal + (_debugger_id > 0? _log.bold + _log.cyan : _log.bold + _log.green))
-#define COLOR (_log.normal + (_debugger_id > 0?  _log.cyan : _log.green))
-#define DBG() _log << COLOR << "[" << log_label()  << "|" << BCOLOR + meme_curr_fname() << COLOR << "." << __FUNCTION__ << "] " << _log.normal
-#define WARNING() MMLog::warning() << COLOR << "[" << log_label() << "|" << BCOLOR + meme_curr_fname() << COLOR << "." << __FUNCTION__ << "] " << _log.normal
-#define ERROR() MMLog::error() << COLOR << "[" << log_label() << "|" << BCOLOR + meme_curr_fname() << COLOR << "." << __FUNCTION__ << "] " << _log.normal
+#define BCOLOR(log) (log.normal + (_debugger_id > 0? log.bold + log.cyan : log.bold + log.green))
+#define COLOR(log) (log.normal + (_debugger_id > 0?  log.cyan : log.green))
+#define LOG_HEAD(log) log << COLOR(log) << "[" << log_label()  << "|" << BCOLOR(log) + meme_curr_fname() << COLOR(log) << "." << __FUNCTION__ << "] " << log.normal
 
-#define LOG_REGISTERS() DBG() << "registers: " << endl  \
-                              << _log.yellow << "         SP: " << _sp << endl \
-                              << _log.yellow << "         FP: " << _fp << endl \
-                              << _log.yellow << "         BP: " << _bp << endl \
-                              << _log.yellow << "         IP: " << _ip << endl \
-                              << _log.yellow << "         MP: " << _mp << endl \
-                              << _log.yellow << "         CP: " << _cp << endl
+#define DBG() LOG_HEAD(_log)
+#define WARNING() MMLog::warning() << COLOR(_log) << "[" << log_label() << "|" << BCOLOR(_log) + meme_curr_fname() << COLOR(_log) << "." << __FUNCTION__ << "] " << _log.normal
+#define ERROR() MMLog::error() << COLOR(_log) << "[" << log_label() << "|" << BCOLOR(_log) + meme_curr_fname() << COLOR(_log) << "." << __FUNCTION__ << "] " << _log.normal
 
-#define LOG_STACK_TOP() DBG() << "state: " << _state << " - stack:" << endl \
-                              << _log.yellow << dump_stack_top() << endl
+#define LOG_REGISTERS() LOG_HEAD(_log_registers) << _log_registers.yellow << "registers: " << endl \
+                                      << _log_registers.yellow << "         SP: " << _sp << endl \
+                                      << _log_registers.yellow << "         FP: " << _fp << endl \
+                                      << _log_registers.yellow << "         BP: " << _bp << endl \
+                                      << _log_registers.yellow << "         IP: " << _ip << endl \
+                                      << _log_registers.yellow << "         MP: " << _mp << endl \
+                                      << _log_registers.yellow << "         CP: " << _cp << endl \
+                                      << _log_registers.normal
 
-#define LOG_BODY() DBG() << "code body: " << endl << dump_code_body() << endl
+#define LOG_STACK() LOG_HEAD(_log_stack) << "state: " << _state << " - stack:" << endl \
+                              << _log_stack.yellow << dump_stack_top(_log_stack._enabled) << endl
 
-#define LOG_STATE() LOG_REGISTERS(); LOG_STACK_TOP(); LOG_BODY();
+#define LOG_BODY() LOG_HEAD(_log_body) << "code body: " << endl << dump_code_body(_log_body._enabled) << endl
+
+#define LOG_TRACE() LOG_HEAD(_log_stack_trace) << dump_stack_trace(_log_stack_trace._enabled) << endl;
+
+#define LOG_ENTER_FRAME() LOG_TRACE(); LOG_REGISTERS(); LOG_STACK(); LOG_BODY();
+#define LOG_EXIT_FRAME()  LOG_TRACE(); LOG_REGISTERS(); LOG_STACK(); LOG_BODY();
 
 #define CTXNAME(ctx) _mmobj->mm_string_cstr(this, _mmobj->mm_function_get_name(this, ctx), true)
 
 Process::Process(VM* vm, int debugger_id)
-  : _log(debugger_id > 0?LOG_DBG_PROC:LOG_TARGET_PROC), _debugger_id(debugger_id), _vm(vm), _mmobj(vm->mmobj()), _control(new ProcessControl()), _dbg_handler(NULL, MM_NULL) {
+  : _log(debugger_id > 0?LOG_DBG_PROC:LOG_TARGET_PROC),
+ _log_registers(debugger_id > 0?LOG_TARGET_PROC_REG:LOG_TARGET_PROC_REG),
+ _log_stack(debugger_id > 0? LOG_DBG_PROC_STACK:LOG_TARGET_PROC_STACK),
+ _log_stack_trace(debugger_id > 0? LOG_DBG_PROC_TRACE:LOG_TARGET_PROC_TRACE),
+ _log_body(debugger_id > 0? LOG_DBG_PROC_BODY:LOG_TARGET_PROC_BODY),
+ _debugger_id(debugger_id),
+ _vm(vm),
+ _mmobj(vm->mmobj()),
+ _control(new ProcessControl()),
+ _dbg_handler(NULL, MM_NULL) {
+
   init();
   _state = RUN_STATE;
   _unwinding_exception = false;
@@ -47,7 +63,27 @@ Process::Process(VM* vm, int debugger_id)
   _current_exception = MM_NULL;
 }
 
-std::string Process::dump_code_body() {
+std::string Process::dump_stack_trace(bool enabled) {
+  if (!enabled) {
+    return std::string("");
+  }
+  std::stringstream s;
+  oop bp = _bp;
+  while (bp) {
+    oop cp = cp_from_base(bp);
+    if (!cp) break;
+    s << _mmobj->mm_string_cstr(this, _mmobj->mm_function_get_name(this, cp), true);
+    s << "():" << (_mmobj->mm_function_get_line_for_instruction(
+                     this, cp, ip_from_base(bp), true) + 1) << endl;
+    bp = *(oop*)bp;
+  }
+  return s.str();
+}
+
+std::string Process::dump_code_body(bool enabled) {
+  if (!enabled) {
+    return std::string("");
+  }
   std::stringstream s;
   if (!_cp) {
     return s.str();
@@ -66,30 +102,60 @@ std::string Process::dump_code_body() {
     ip++;
   }
 
-  oop bp = _bp;
-  while(true) {
-    s << "X_BP: " << bp << endl;
-    if (bp > (oop)10)
-      bp = *(oop*) bp;
-    else
-      break;
-  }
+  // int i = 0;
+  // oop bp = _bp;
+  // s << "ORIGINAL _BP: " << _bp << std::endl;
+  // while(true) {
+  //   s << "X_BP: " << bp << endl;
+  //   if (bp > (oop)10)
+  //     bp = *(oop*) bp;
+  //   else
+  //     break;
+  //   i++;
+  //   if (i > 50) break;
+  // }
   return s.str();
 }
 
 
-std::string Process::dump_stack_top() {
+std::string Process::dump_stack_top(bool enabled) {
+  if (!enabled) {
+    return std::string("");
+  }
   std::stringstream s;
+  s << " starting with _bp: " << _bp << std::endl;
   s << "[";
-  std::string comma = "";
 
-  word* sp = _sp - 10;
-  while (sp <= _sp) {
-    if (sp >= _stack) {
-      s << comma << sp << "\n";
-      comma = ", ";
+  word* sp = _sp;
+  oop bp = _bp;
+  // oop cp = _cp;
+  // oop fp = _fp;
+  // oop mp = _mp;
+  while (sp >= _stack) {
+    if (bp == sp) {
+      s <<  sp << " [BP] " << *(oop*)sp << "\n";
+      number ss = *(number*)(sp-1);
+      s << (sp-1) << " [SS] " << ss << "\n";
+      s << (sp-2) << " [IP] " << *(bytecode*)(sp-2) << "\n";
+      s << (sp-3) << " [CP] " << *(oop*)(sp-3);
+      if (*(oop*)(sp-3)) {
+        s << " - " << CTXNAME(*(oop*)(sp-3)) << "()\n";
+      } else {
+        s << "\n";
+      }
+      s << (sp-4) << " [FP] " << *(oop*)(sp-4) << "\n";
+      s << (sp-5) << " [DP] " << *(oop*)(sp-5) << "\n";
+      s << (sp-6) << " [RP] " << *(oop*)(sp-6) << "\n";
+      // number j = 7;
+      // for (; j < (ss+7); j++) {
+      //   s << (sp-j) << " [LOCAL] " << *(oop*)(sp-j) << "\n";
+      // }
+      bp = *(oop*)bp;
+      sp = sp-6;
+    } else {
+      s << sp << " " << *(oop*)sp << "\n";
+      sp--;
     }
-    sp++;
   }
   s << "]";
   return s.str();
@@ -118,7 +184,6 @@ void Process::init() {
   _mp = NULL; //module
   _cp = NULL; //context
   _ss = 0; //local storage
-  LOG_STATE();
 }
 
 oop Process::get_arg(number idx) {
@@ -187,13 +252,13 @@ void Process::push_frame(oop recv, oop drecv, number arity, number storage_size)
 
   _ss = storage_size;
 
-  LOG_STATE();
+  LOG_ENTER_FRAME();
 }
 
 void Process::pop_frame() {
   number storage_size = _ss;
 
-  // DBG() << "pop_frame begin SP: " << _sp << endl;
+  DBG() << "pop_frame begin SP: " << _sp << endl;
 
 
   _sp = _bp; //restore sp, ignoring frame data. push_frame/pop_frame are always in sync.
@@ -213,7 +278,7 @@ void Process::pop_frame() {
     _state = RUN_STATE; //without this, we end up debugging the printing of
                         //failed stack trace and it sefgaults!
   }
-  LOG_STATE();
+  LOG_EXIT_FRAME();
 }
 
 void Process::unload_fun_and_return(oop retval) {
@@ -629,7 +694,7 @@ void Process::tick() {
     _volatile_breakpoints.clear();
     _step_bp = MM_NULL;
     _control->pause();
-    LOG_STATE();
+
     DBG() << "resuming! state == rewind? " << (_state == REWIND_STATE) << endl;
     if (_state == REWIND_STATE) {
       throw mm_frame_rewind(_unwind_to_bp);
@@ -699,8 +764,6 @@ void Process::reload_frame() {
   _ip = _mmobj->mm_function_get_code(this, _cp, true);
 
   DBG() << " reloading frame back to " << _bp << ", IP: " << _ip << endl;
-
-  LOG_STATE();
 }
 
 void Process::handle_send(number num_args) {

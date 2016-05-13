@@ -124,10 +124,12 @@ public:
   oop protected_fetch_cycle(oop recv, oop drecv, oop fun, int* exc, bool should_allocate);
   void unwind_with_frame(oop frame);
 
+  std::string dump_code_body(bool);
+  std::string dump_stack_top(bool);
+  std::string dump_stack_trace(bool);
+
 private:
   std::string log_label();
-  std::string dump_code_body();
-  std::string dump_stack_top();
   const char* meme_curr_fname();
 
   void init();
@@ -163,6 +165,11 @@ private:
   void maybe_break_on_exception();
 
   MMLog _log;
+  MMLog _log_registers;
+  MMLog _log_stack;
+  MMLog _log_stack_trace;
+  MMLog _log_body;
+
   int _debugger_id;
   VM* _vm;
   MMObj* _mmobj;

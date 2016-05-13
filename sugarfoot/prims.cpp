@@ -1645,17 +1645,17 @@ static int prim_exception_constructor(Process* proc) {
   oop bp = proc->bp();
   std::stringstream s;
   s << "Uncaugh exception: " << proc->mmobj()->mm_string_cstr(proc, msg) << endl;
-
-  while (bp) {
-    oop cp = proc->cp_from_base(bp);
-    if (!cp) break;
-    s << proc->mmobj()->mm_string_cstr(proc,
-                                  proc->mmobj()->mm_function_get_name(
-                                    proc, cp), true);
-    s << "():" << (proc->mmobj()->mm_function_get_line_for_instruction(
-                     proc, cp, proc->ip_from_base(bp), true) + 1) << endl;
-    bp = *(oop*)bp;
-  }
+  s << proc->dump_stack_trace(true);
+  // while (bp) {
+  //   oop cp = proc->cp_from_base(bp);
+  //   if (!cp) break;
+  //   s << proc->mmobj()->mm_string_cstr(proc,
+  //                                 proc->mmobj()->mm_function_get_name(
+  //                                   proc, cp), true);
+  //   s << "():" << (proc->mmobj()->mm_function_get_line_for_instruction(
+  //                    proc, cp, proc->ip_from_base(bp), true) + 1) << endl;
+  //   bp = *(oop*)bp;
+  // }
 
   oop st = proc->mmobj()->mm_string_new(s.str().c_str());
   proc->mmobj()->mm_exception_set_st(proc, dself, st);
