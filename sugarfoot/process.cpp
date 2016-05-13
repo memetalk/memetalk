@@ -994,7 +994,7 @@ int Process::execute_primitive(std::string name) {
 }
 
 
-bool Process::exception_has_handler(oop e, oop cp, oop next_bp) {
+bool Process::exception_has_handler(oop e, oop cp, bytecode* ip, oop next_bp) {
   DBG() << "** exception_has_handler e: " << e <<
     " on cp: " << cp <<
     ", next_bp:" << next_bp << endl;
@@ -1006,7 +1006,9 @@ bool Process::exception_has_handler(oop e, oop cp, oop next_bp) {
   DBG() << "exception_has_handler: " << _mmobj->mm_string_cstr(this, _mmobj->mm_function_get_name(this, cp, true), true) << endl;
 
   if (_mmobj->mm_function_is_prim(this, cp, true)) {
-    return exception_has_handler(e, cp_from_base(next_bp), *(oop*)next_bp);
+    cp = cp_from_base(next_bp);
+    ip = ip_from_base(next_bp);
+    return exception_has_handler(e, cp, ip, *(oop*)next_bp);
   }
 
   bytecode* code = _mmobj->mm_function_get_code(this, cp, true);
@@ -1014,7 +1016,9 @@ bool Process::exception_has_handler(oop e, oop cp, oop next_bp) {
   number exception_frames_count = _mmobj->mm_function_exception_frames_count(this, cp, true);
   DBG() << "exception frames: " << exception_frames_count << endl;
   if (exception_frames_count == 0) { //cp is unable to handle
-    return exception_has_handler(e, cp_from_base(next_bp), *(oop*)next_bp);
+    cp = cp_from_base(next_bp);
+    ip = ip_from_base(next_bp);
+    return exception_has_handler(e, cp, ip, *(oop*)next_bp);
   }
 
   //exception frames are lexically ordered,
@@ -1049,8 +1053,6 @@ bool Process::exception_has_handler(oop e, oop cp, oop next_bp) {
     // DBG() << "_ip: " << _ip << endl;
     // DBG() << "ip from next_bp: " << ip_from_base(next_bp) << " " << next_bp << endl;
 
-    bytecode* ip = next_bp == _bp ? _ip : ip_from_base(next_bp);
-
     unsigned long instr = ip - code;
 
     DBG() << "RAISE instr: " << instr << " at ip: " << ip << " try: " << try_block
@@ -1069,7 +1071,9 @@ bool Process::exception_has_handler(oop e, oop cp, oop next_bp) {
     }
   }
 
-  return exception_has_handler(e, cp_from_base(next_bp), *(oop*)next_bp);
+  cp = cp_from_base(next_bp);
+  ip = ip_from_base(next_bp);
+  return exception_has_handler(e, cp, ip, *(oop*)next_bp);
 }
 
 void Process::fail(oop e) {
@@ -1210,11 +1214,11 @@ void Process::halt_and_debug() {
 }
 
 void Process::maybe_debug_on_raise(oop ex_oop) {
-  if (has_debugger_attached() && !exception_has_handler(ex_oop, _cp, _bp)) {
+  if (has_debugger_attached() && !exception_has_handler(ex_oop, _cp, _ip, _bp)) {
     DBG() << "we have a debugger and this exception does not have handler. state=halt" << endl;
     _state = HALT_STATE;
   } else if (_vm->running_online() &&
-             !exception_has_handler(ex_oop, _cp, _bp)) {
+             !exception_has_handler(ex_oop, _cp, _ip, _bp)) {
 
     DBG() << "running online and there's no handler for exception "
           << ex_oop << "; calling halt_and_debug()" << endl;

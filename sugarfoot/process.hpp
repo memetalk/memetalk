@@ -155,7 +155,7 @@ private:
   void handle_return(oop);
   void basic_new_and_load(oop);
 
-  bool exception_has_handler(oop e, oop bp);
+  bool exception_has_handler(oop e, oop cp, bytecode* ip, oop bp);
 
   void tick();
   void maybe_break_on_call();
