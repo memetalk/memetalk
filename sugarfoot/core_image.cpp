@@ -2,6 +2,7 @@
 #include "core_image.hpp"
 #include "utils.hpp"
 #include "vm.hpp"
+#include <cstring>
 
 using namespace std;
 

@@ -24,7 +24,6 @@ public:
 
   MMObj* mmobj();
 
-  int remote_repl();
 
   int start();
   oop new_symbol(const char*);

@@ -7,6 +7,10 @@
 #include "utils.hpp"
 #include <assert.h>
 #include <map>
+#include <stdlib.h>
+#include <cstring>
+#include <limits.h>
+
 
 #define DBG(...) if(_log._enabled) { _log << _log.yellow + _log.bold + "[MMOBJ|" << __FUNCTION__ << "] " << _log.normal << __VA_ARGS__; }
 

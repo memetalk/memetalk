@@ -1,12 +1,9 @@
 #ifndef QSC_HPP
 #define QSC_HPP
-#include <qsciscintilla.h>
-#include <qscicommand.h>
-#include <qscilexerjavascript.h>
-
-
-
-#include <qsciscintilla.h>
+#include <Qsci/qsciscintilla.h>
+#include <Qsci/qscicommand.h>
+#include <Qsci/qscilexerjavascript.h>
+#include <Qsci/qsciscintilla.h>
 #include <QColor>
 #include <map>
 

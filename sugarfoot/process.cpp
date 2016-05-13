@@ -12,7 +12,6 @@
 #include "ctrl.hpp"
 #include <sstream>
 #include <assert.h>
-#include "remote_repl.hpp"
 
 
 #define BCOLOR(log) (log.normal + (_debugger_id > 0? log.bold + log.cyan : log.bold + log.green))
@@ -162,11 +161,6 @@ std::string Process::dump_stack_top(bool enabled) {
   return s.str();
 }
 
-int Process::read_eval_loop() {
-  Repl repl(this);
-  repl.start_read_eval_loop();
-  return 0;
-}
 
 oop Process::run(oop recv, oop selector_sym, int* exc) {
   //atm, we don't need to check exc

@@ -1,4 +1,5 @@
 #include "log.hpp"
+#include <stdlib.h>
 
 std::string MMLog::red = "\x1b[31m";
 std::string MMLog::green = "\x1b[32m";

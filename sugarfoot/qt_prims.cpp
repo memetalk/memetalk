@@ -17,7 +17,7 @@ Q_DECLARE_METATYPE (Process*);
 #include <QLabel>
 #include <QLineEdit>
 #include <QListWidget>
-#include <QListWidgetitem>
+//#include <QListWidgetitem>
 #include <QMainWindow>
 #include <QMenuBar>
 #include <QStatusBar>

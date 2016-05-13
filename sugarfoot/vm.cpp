@@ -69,10 +69,6 @@ Process* VM::init() {
   return proc;
 }
 
-int VM::remote_repl() {
-  Process* proc = init();
-  return proc->read_eval_loop();
-}
 
 
 int VM::start() {
