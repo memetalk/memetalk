@@ -184,7 +184,6 @@ private:
   word* _sp;
 
   word* _stack;
-  unsigned int _stack_depth;
   number _code_size;
   std::list<bytecode_range_t> _volatile_breakpoints;
   oop _step_bp;

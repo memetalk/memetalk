@@ -29,7 +29,7 @@
                               << _log.yellow << "         MP: " << _mp << endl \
                               << _log.yellow << "         CP: " << _cp << endl
 
-#define LOG_STACK_TOP() DBG() << "stack_depth: " << _stack_depth << ", state: " << _state << " - stack:" << endl \
+#define LOG_STACK_TOP() DBG() << "state: " << _state << " - stack:" << endl \
                               << _log.yellow << dump_stack_top() << endl
 
 #define LOG_BODY() DBG() << "code body: " << endl << dump_code_body() << endl
@@ -110,7 +110,6 @@ oop Process::run(oop recv, oop selector_sym, int* exc) {
 
 void Process::init() {
   _stack = (word*) malloc(DEFAULT_STACK_SIZE);
-  _stack_depth = 0;
   _state = INVALID_STATE;
   _sp = _stack; //stack
   _fp = NULL;
@@ -158,7 +157,6 @@ void Process::push_frame(oop recv, oop drecv, number arity, number storage_size)
   DBG() << " recv: " << recv << ", drecv: " << drecv << ", arity: " << arity << ", storage_size: " << storage_size << endl;
 
   // oop curr_sp = _sp;
-  _stack_depth++;
 
   //BEGIN stack frame layout
   //---- if you change this, change pop_frame() and the frame accessor methods
@@ -197,7 +195,6 @@ void Process::pop_frame() {
 
   // DBG() << "pop_frame begin SP: " << _sp << endl;
 
-  _stack_depth--;
 
   _sp = _bp; //restore sp, ignoring frame data. push_frame/pop_frame are always in sync.
 
@@ -1224,9 +1221,6 @@ void Process::maybe_debug_on_raise(oop ex_oop) {
   }
 }
 
-unsigned int Process::stack_depth() {
-  return  _stack_depth;
-}
 
 // oop Process::bp_at(unsigned int idx) { //backwards 0 is current
 //   if (idx == 0) {
