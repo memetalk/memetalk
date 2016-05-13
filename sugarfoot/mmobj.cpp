@@ -1266,15 +1266,15 @@ oop MMObj::mm_exception_get_message(Process* p, oop ex, bool should_assert) {
     return ((oop*)ex)[2];
 }
 
-void MMObj::mm_exception_set_bp(Process* p, oop ex, oop bp, bool should_assert) {
+void MMObj::mm_exception_set_st(Process* p, oop ex, oop st, bool should_assert) {
   TYPE_CHECK(!( *(oop*) ex == _core_image->get_prime("Exception")),
              "TypeError","Expected Exception")
 
-  ((oop*)ex)[3] = bp;
+  ((oop*)ex)[3] = st;
 }
 
-oop MMObj::mm_exception_get_bp(Process* p, oop ex, bool should_assert) {
-  TYPE_CHECK(!( *(oop*) ex == _core_image->get_prime("Exception")),
-             "TypeError","Expected Exception")
-    return ((oop*)ex)[3];
-}
+// oop MMObj::mm_exception_get_bp(Process* p, oop ex, bool should_assert) {
+//   TYPE_CHECK(!( *(oop*) ex == _core_image->get_prime("Exception")),
+//              "TypeError","Expected Exception")
+//     return ((oop*)ex)[3];
+// }

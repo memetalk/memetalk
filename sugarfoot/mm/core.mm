@@ -424,7 +424,7 @@
   end
 
 class Exception
-  fields: message, bp;
+  fields: message, stack_trace;
   init new: fun(message) {
     <primitive "exception_constructor">
   }
@@ -432,7 +432,7 @@ class Exception
     return @message;
   }
   instance_method stack_trace: fun() {
-    <primitive "exception_stack_trace">
+    return @stack_trace;
   }
   instance_method throw: fun() {
     <primitive "exception_throw">

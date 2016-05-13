@@ -189,8 +189,8 @@ public:
 
   void mm_exception_set_message(Process* proc, oop ex, oop msg, bool should_assert = false);
   oop mm_exception_get_message(Process* proc, oop ex, bool should_assert = false);
-  void mm_exception_set_bp(Process* proc, oop ex, oop bp, bool should_assert = false);
-  oop mm_exception_get_bp(Process* proc, oop ex, bool should_assert = false);
+  void mm_exception_set_st(Process* proc, oop ex, oop st, bool should_assert = false);
+  // oop mm_exception_get_bp(Process* proc, oop ex, bool should_assert = false);
 
   CoreImage* core() { return _core_image; };
 
