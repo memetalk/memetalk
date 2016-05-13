@@ -381,7 +381,7 @@ bool Process::load_fun(oop recv, oop drecv, oop fun, bool should_allocate) {
   // DBG() << "load_fun: is ctor? " << _mmobj->mm_function_is_ctor(fun) << " alloc? " << should_allocate << endl;
   _ip = _mmobj->mm_function_get_code(this, fun, true);
   // DBG() << "first instruction " << decode_opcode(*_ip) << endl;
-  _code_size = _mmobj->mm_function_get_code_size(this, fun);
+  _code_size = _mmobj->mm_function_get_code_size(this, fun, true);
   maybe_break_on_call();
   return true;
 }

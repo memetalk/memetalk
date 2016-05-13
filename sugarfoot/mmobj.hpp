@@ -178,7 +178,7 @@ public:
 
   oop mm_class_behavior_new(Process*, oop super_class, oop funs_dict, bool should_assert = false);
   oop mm_class_new(Process*, oop class_behavior, oop super_class, oop dict, oop compiled_class, number payload, bool should_assert = false);
-  oop mm_class_name(Process*, oop klass);
+  oop mm_class_name(Process*, oop klass, bool should_assert = false);
   oop mm_class_get_compiled_class(Process*, oop klass, bool should_assert = false);
   oop mm_class_dict(oop);
 
