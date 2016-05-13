@@ -763,6 +763,53 @@ void Process::reload_frame() {
   DBG(" reloading frame back to " << _bp << ", IP: " << _ip << endl);
 }
 
+void Process::handle_super_send(number num_args) {
+  oop recv = rp();
+  oop selector = _vm->new_symbol(this, _mmobj->mm_function_get_name(this, _cp));
+
+  oop vt = _mmobj->mm_object_vt(recv);
+
+  oop pklass = _mmobj->mm_object_delegate(vt);
+  oop delegate = _mmobj->mm_object_delegate(dp());
+
+  std::pair<oop,oop> res = lookup(delegate, pklass, selector);
+  oop drecv = res.first;
+  oop fun = res.second;
+  DBG("super lookup FOUND " << fun << endl);
+
+  if (!fun) {
+    std::stringstream s;
+    s << _mmobj->mm_symbol_cstr(this, selector) << " not found in object " << delegate;
+    //we rely on compiler generating a pop instruction to bind ex_oop to the catch var
+    WARNING() << "will raise DoesNotUnderstand: " << s.str() << endl;
+    oop oo_ex = mm_exception("DoesNotUnderstand", s.str().c_str());
+    DBG("created exception object " << oo_ex << " on bp: " << _bp << endl);
+    maybe_debug_on_raise(oo_ex);
+    oop unwind_exc = unwind_with_exception(oo_ex);
+    if (unwind_exc != MM_NULL) {
+      stack_push(unwind_exc);
+    }
+    return;
+  }
+
+  number arity = _mmobj->mm_function_get_num_params(this, fun);
+  if (num_args != arity) {
+    std::stringstream s;
+    s << _mmobj->mm_string_cstr(this, _mmobj->mm_function_get_name(this, fun)) << ": expects " <<  arity << " but got " << num_args;
+    DBG(s << endl);
+    oop ex = mm_exception("ArityError", s.str().c_str());
+    WARNING() << "will raise ArityError: " << s.str() << endl;
+    maybe_debug_on_raise(ex);
+    oop unwind_exc = unwind_with_exception(ex);
+    if (unwind_exc) {
+      DBG("unwinded ex. returning exception " << ex << endl);
+      stack_push(unwind_exc);
+    }
+    return;
+  }
+  load_fun(recv, drecv, fun, true);
+}
+
 void Process::handle_send(number num_args) {
   oop selector = stack_pop();
   oop recv = stack_pop(); //(oop) * _sp;
@@ -980,9 +1027,9 @@ void Process::dispatch(int opcode, int arg) {
           _ip += (arg -1); //_ip already suffered a ++ in dispatch
         }
         break;
-      // case SUPER_SEND:
-      //   handle_super_send(arg);
-      //   break;
+      case SUPER_SEND:
+        handle_super_send(arg);
+        break;
       // case RETURN_THIS:
       //   break;
       default:

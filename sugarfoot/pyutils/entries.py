@@ -841,6 +841,10 @@ class CompiledFunction(Entry):
         self.bytecodes.append('send', arity)
 
     @emitter
+    def emit_super_send(self, _, arity):
+        self.bytecodes.append('super_send', arity)
+
+    @emitter
     def emit_super_ctor_send(self, _, selector, arity):
         idx = self.create_and_register_symbol_literal(selector)
         self.bytecodes.append('push_literal', idx)

@@ -151,6 +151,7 @@ private:
 
   void dispatch(int, int);
   void handle_send(number);
+  void handle_super_send(number num_arg);
   void handle_super_ctor_send(number);
   void handle_call(number);
   void handle_return(oop);
