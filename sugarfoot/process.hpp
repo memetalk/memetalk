@@ -70,6 +70,7 @@ public:
   oop fp_from_base(oop bp);
   bytecode* ip_from_base(oop bp);
 
+  oop top_frame() { return (oop) &_bp; };
   // oop get_rp() { return _rp; };
   // oop get_dp() { return _dp; };
 
@@ -107,8 +108,6 @@ public:
   void reload_frame();
 
   word* stack() { return _stack; };
-  unsigned int stack_depth();
-  oop bp_at(unsigned int);
 
   void bail(const std::string& msg);
   void bail();

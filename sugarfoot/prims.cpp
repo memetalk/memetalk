@@ -1617,13 +1617,20 @@ static int prim_process_frames(Process* proc) {
 
   oop frames = proc->mmobj()->mm_list_new();
   // DBG() << "prim_process_frames: stack deph: " << target_proc->stack_depth() << endl;
-  for (unsigned int i = 0; i < target_proc->stack_depth(); i++) {
-    // DBG() << "getting bp " << endl;
-    oop bp = target_proc->bp_at(i);
-    // DBG() << "prim_process_frames bp: " << bp << endl;
-    oop frame = proc->mmobj()->mm_frame_new(proc, bp);
-    // DBG() << "appending frame to list " << endl;
-    proc->mmobj()->mm_list_append(proc, frames, frame);
+
+  oop bp = target_proc->top_frame();
+  DBG() << "cp from bp " << bp << ": " << target_proc->cp_from_base(bp) << endl;
+  while(bp > (oop) 2) { //??
+    DBG() << "loop on bp: " << bp << endl;
+    oop cp = target_proc->cp_from_base(bp);
+    DBG() << "cp: " << cp << endl;
+    if (cp) {
+      proc->mmobj()->mm_list_append(proc, frames, proc->mmobj()->mm_frame_new(proc, bp));
+    } else {
+      break;
+    }
+    bp = *(oop*) bp;
+    DBG() << "new bp " << bp << endl;
   }
   proc->stack_push(frames);
   return 0;

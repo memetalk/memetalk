@@ -65,6 +65,15 @@ std::string Process::dump_code_body() {
     }
     ip++;
   }
+
+  oop bp = _bp;
+  while(true) {
+    s << "X_BP: " << bp << endl;
+    if (bp > (oop)10)
+      bp = *(oop*) bp;
+    else
+      break;
+  }
   return s.str();
 }
 
@@ -824,8 +833,12 @@ void Process::dispatch(int opcode, int arg) {
         stack_push(*(_fp + arg));
         break;
       case PUSH_LITERAL:
-        DBG() << "PUSH_LITERAL " << arg << " " << _mmobj->mm_function_get_literal_by_index(this, _cp, arg) << endl;
-        stack_push(_mmobj->mm_function_get_literal_by_index(this, _cp, arg));
+        try {
+          DBG() << "PUSH_LITERAL " << arg << " " << _mmobj->mm_function_get_literal_by_index(this, _cp, arg, true) << endl;
+          stack_push(_mmobj->mm_function_get_literal_by_index(this, _cp, arg, true));
+        } catch(...) {
+          assert(0);
+        }
         break;
       case PUSH_MODULE:
         DBG() << "PUSH_MODULE " << arg << " " << _mp << endl;
@@ -1215,19 +1228,19 @@ unsigned int Process::stack_depth() {
   return  _stack_depth;
 }
 
-oop Process::bp_at(unsigned int idx) { //backwards 0 is current
-  if (idx == 0) {
-    // DBG() << "Process::bp_at BP[" << idx << "] ret&: " << &_bp << endl;
-    return (oop) &_bp;
-  }
-  oop bp = _bp;
-  for (unsigned int i = 0; i < idx-1; i++) {
-    bp = *(oop*) bp;
-    // DBG() << "Process::bp_at " << i << " = " << bp << endl;
-  }
-  // DBG() << "Process::bp_at BP[" << idx << "] ret: " << bp << endl;
-  return bp;
-}
+// oop Process::bp_at(unsigned int idx) { //backwards 0 is current
+//   if (idx == 0) {
+//     // DBG() << "Process::bp_at BP[" << idx << "] ret&: " << &_bp << endl;
+//     return (oop) &_bp;
+//   }
+//   oop bp = _bp;
+//   for (unsigned int i = 0; i < idx-1; i++) {
+//     bp = *(oop*) bp;
+//     // DBG() << "Process::bp_at " << i << " = " << bp << endl;
+//   }
+//   // DBG() << "Process::bp_at BP[" << idx << "] ret: " << bp << endl;
+//   return bp;
+// }
 
 // void Process::eval_in_frame(const char* text, number frame_idx) {
 //   // oop bp = bt_at(frame_idx);
