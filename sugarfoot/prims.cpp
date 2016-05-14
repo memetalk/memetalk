@@ -331,6 +331,12 @@ static int prim_string_split(Process* proc) {
   return 0;
 }
 
+static int prim_string_to_symbol(Process* proc) {
+  oop self =  proc->dp();
+  proc->stack_push(proc->vm()->new_symbol(proc, self));
+  return 0;
+}
+
 
 static int prim_string_b64decode(Process* proc) {
   oop self =  proc->dp();
@@ -1901,6 +1907,7 @@ void init_primitives(VM* vm) {
   vm->register_primitive("string_is_lower", prim_string_is_lower);
   vm->register_primitive("string_is_upper", prim_string_is_upper);
   vm->register_primitive("string_split", prim_string_split);
+  vm->register_primitive("string_to_symbol", prim_string_to_symbol);
 
 
   vm->register_primitive("mirror_entries", prim_mirror_entries);

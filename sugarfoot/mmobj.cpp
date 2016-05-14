@@ -210,6 +210,9 @@ oop MMObj::mm_list_entry(Process* p, oop list, number idx, bool should_assert) {
   TYPE_CHECK(!( mm_object_vt(list) == _core_image->get_prime("List")),
              "TypeError","Expected List")
     std::vector<oop>* elements = mm_list_frame(p, list, should_assert);
+  if (idx >= elements->size()) {
+    p->raise("IndexError", "out of bounds index");
+  }
   return (*elements)[idx];
 }
 

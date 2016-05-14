@@ -225,7 +225,10 @@
     return this;
   }
   instance_method toSource: fun() {
-    return "\"" + this.replace_all("\"", "\\\"") + "\"";
+    return "\"" + this.replace_all("\\", "\\\\").replace_all("\"", "\\\"").replace_all("\n", "\\n") + "\"";
+  }
+  instance_method toSymbol: fun() {
+    <primitive "string_to_symbol">
   }
   instance_method +: fun(other) {
     <primitive "string_append">
@@ -241,6 +244,9 @@
   }
   instance_method find: fun(arg) {
     <primitive "string_find">
+  }
+  instance_method contains: fun(arg) {
+    <primitive "string_contains">
   }
   instance_method index: fun(arg) {
     <primitive "string_index">

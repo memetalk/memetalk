@@ -225,7 +225,7 @@
 (defvar commands (list))
 
 (defun memetalk-process-module-response (res file-part)
-  (string-match "\\([a-zA-Z0-9]+\\)[:/]" file-part)
+  (string-match "\\([a-zA-Z0-9_]+\\)[:/]" file-part)
   (let ((mod-name (concat (match-string-no-properties 1 file-part) ".mm")))
     (message (format "mattched module '%s'" mod-name))
     (let ((mod-path (concat (file-name-as-directory memetalk-path) mod-name)))

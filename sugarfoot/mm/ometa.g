@@ -1,116 +1,110 @@
 ometa OMeta {
 
-  spacing = '/*' { ~'*/' _ }* '*/'
-          | ^
-          ;
-
-
-
-  ometa = spaces "ometa" identifier:name inheritance:i  "{"
+  ometa = keyword("ometa") identifier:name inheritance:i  "{"
+              inline:code
               rules:r
-          "}" $;
+          "}" => [:grammar, name, i, r];
 
 
-  inheritance = "<:" identifier:i
-              |
+  inline = "{{" { ~"}}" _ }*:c "}}" => c.join("");
+
+  keyword :xs = token(xs):i ~identifier_rest => xs;
+
+  inheritance = "<:" identifier:i => [:parent, i]
+              | => [:parent, "OMetaBase"]
               ;
-
 
   rules = rule+;
 
 
-  rule = &{rule_name:rname} <rule_part rname>+:p;
+  rule = identifier:name !{@current_production = name} rule_rest(name):r ";" => r;
+
+  rule_rest :name =  action:ac                    => [:rule, name, ac]
+                  |  "=" choices:c                => [:rule, name, c]
+                  |  argument+:args  action:ac    => [:rule, [:args] + args] + ac
+                  |  argument+:args "=" choices:c => [:rule, [:args] + args, c]
+                  ;
 
 
-  rule_part :rn = rule_name:rname %(eq rname rn) rule_rest:r ";";
+  choices  = choice:x { "|" choice }*:xs => [:or, x] + xs;
 
-  rule_rest =  action
-            |  "="  choices
-            |  argument+:args "=" choices:c
-            |  argument+:args  action:ac
-            ;
-
-  rule_name =  identifier:rname
-            ;
-
-
-  argument = bind_expression
-           | binding
+  choice   = top_expression*:x action:ac => [:and] + x + [ac]
+           | top_expression*:x => [:and] + x
            ;
 
-  choices  = choice:x { "|" choice}*:xs;
-
-  choice   = top_expression*:x action:ac
-           | top_expression*:x
-           ;
 
   top_expression =   bind_expression
                  |   repeated_expression
                  ;
 
-  bind_expression = repeated_expression:e binding:b
+
+  bind_expression = repeated_expression:e binding:b => [:bind, b, e]
                   ;
 
-  repeated_expression = term:e "*"
-                      | term:e "+"
-                      | term:e "?"
-                      | term:e '[' str_number:rep ']'
+
+  repeated_expression = term:e '*' => [:many, e]
+                      | term:e '+' => [:many1, e]
+                      | term:e '?' => [:optional, e]
                       | term
                       ;
 
-  term  = '~'  element:e
-        |  '&'  element:e
+  term  = '~'  element:e => [:not, e]
+        |  '&'  element:e => [:lookahead, e]
         |  element
         ;
 
-  binding = ':' identifier:i
+  binding = ':' identifier:i => this.add_local_var(i)
           ;
+
 
   element =  prod_app
           |  data_element
-          |  '%' host_lang_expr:s
-          |  "{" choices:c "}"
+          |  "?{" until("}"):s "}" => [:sem_pred, s.join("")]
+          |  "!{" until("}"):s "}" => [:sem_action, s.join("")]
+          |  "{" choices:c "}" => c
           ;
 
+
   data_element =  char_sequence
-               |  char_sequence_s
+               |  token_string
                |  string_object
                |  asymbol
                |  s_expr
-               |  any_symb
-               |  end_symb
-               |  s_number
                ;
 
 
-  action  = "=>" host_lang_expr:s;
+  action  = "=>" until("}",";","\n"):s => [:action, s];
 
 
-  host_lang_expr  = todo   ;
-
-  prod_app = "<" identifier:p ">"
-            |  identifier:p
-            | "<" identifier:p prod_arg_list:args ">"
-            | "^"
-            | "<^" prod_arg_list:args ">"
+  prod_app =  keyword("_") => [:apply, :anything]
+            | keyword("$") => [:apply, :end]
+            | identifier:p "(" prod_args:args ")" => [:apply_with_args, args, p.toSymbol]
+            | identifier:p => [:apply, p.toSymbol]
+            | "^" => [:apply_super, this.current_production]
             ;
 
-  prod_arg_list = prod_arg:x {"," prod_arg}*:xs;
+  prod_args = prod_arg:x {"," prod_arg}*:xs => [x] + xs;
 
-  prod_arg = data_element | identifier;
+  prod_arg = data_element | identifier:i => [:id, i];
 
-  char_sequence  = '\'' todo;
+  char_sequence = spaces '\'' {~'\'' '\\' char:c => escaped(c) | ~'\'' char}*:cs '\''
+                  => [:seq, cs.join("")]
+                ;
 
-  string_object = '``' todo;
+  token_string = spaces '"' {~'"' '\\' char:c => escape(c) | ~'"' char}*:cs '"'
+                  => [:token_string, cs.join("")]
+               ;
 
-  asymbol     =  '#' identifier;
+  string_object = spaces '`' {~'`' '\\' char:c => escape(c) | ~'`' char}*:cs '`'
+                  => [:string_object, cs.join("")]
+                ;
 
-  s_expr    =  "(" choice:s ")";
+  asymbol = ":" identifier:s => [:symbol, s];
 
-  la_prefix    = "&";
+  s_expr = "[" choice:s "]" => [:form, s];
 
-  not_prefix     = "~";
-  sem_prefix     = "%";
-  end_symb       = "$";
-  any_symb       = "_";
+  space = '/*' { ~'*/' _ }* '*/'
+          | '//' { ~'\n' _}* '\n'
+          | ^
+          ;
 }
