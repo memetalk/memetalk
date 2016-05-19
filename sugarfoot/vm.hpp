@@ -9,6 +9,7 @@
 
 
 class CoreImage;
+class MMCImage;
 class MMObj;
 class Process;
 
@@ -68,6 +69,7 @@ private:
   std::map<std::string, oop> _symbols;
 
   std::map<std::string, prim_function_t> _primitives;
+  std::map<std::string, MMCImage*> _modules;
 };
 
 #endif

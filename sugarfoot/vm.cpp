@@ -159,8 +159,18 @@ prim_function_t VM::get_primitive(Process* proc, std::string name) {
 }
 
 oop VM::instantiate_module(Process* proc, const char* name_or_path, oop module_args_list) {
-  MMCImage* mmc = new MMCImage(proc, _core_image, name_or_path);
-  mmc->load();
+  DBG( "instantiating module " << name_or_path << endl);
+  MMCImage* mmc;
+  std::map<std::string, MMCImage*>::iterator it = _modules.find(name_or_path);
+  if (it == _modules.end()) {
+    DBG("loading new module " << name_or_path << endl);
+    mmc = new MMCImage(proc, _core_image, name_or_path);
+    _modules[name_or_path] = mmc;
+    mmc->load();
+  } else {
+    DBG("module already loaded " << name_or_path << endl);
+    mmc = it->second;
+  }
   return mmc->instantiate_module(module_args_list);
 }
 
