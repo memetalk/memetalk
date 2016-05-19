@@ -150,7 +150,7 @@ void VM::register_primitive(std::string name, prim_function_t fun) {
 }
 
 prim_function_t VM::get_primitive(Process* proc, std::string name) {
-  DBG("VM::get_primitive " << name << endl)
+  // DBG("VM::get_primitive " << name << endl)
   if (!(_primitives.find(name) != _primitives.end())) {
     ERROR() << "did not find primitive with name:" << name << endl;
     proc->raise("InternalError", (std::string("primitive not found: ") + name).c_str());

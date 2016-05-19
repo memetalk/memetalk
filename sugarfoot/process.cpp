@@ -43,6 +43,7 @@
 #define LOG_EXIT_FRAME()  LOG_TRACE(); LOG_REGISTERS(); LOG_STACK(); LOG_BODY();
 
 #define CTXNAME(ctx) _mmobj->mm_string_cstr(this, _mmobj->mm_function_get_name(this, ctx), true)
+#define TO_C_STR(str) _mmobj->mm_string_cstr(this, str, true)
 
 Process::Process(VM* vm, int debugger_id)
   : _log(debugger_id > 0?LOG_DBG_PROC:LOG_TARGET_PROC),
@@ -1275,7 +1276,13 @@ oop Process::unwind_with_exception(oop e) {
     DBG("RAISE instr: " << instr << " ip: " << _ip << " try: " << try_block
         << " catch: " << catch_block << " type: " << type_oop << endl);
 
-    bool delegates_to = _mmobj->delegates_to(_mmobj->mm_object_vt(e), type_oop);
+    //matching on compiled class, because different module instances
+    //have different Class instances for the same CompiledClass
+    oop type_cclass = _mmobj->mm_class_get_compiled_class(this, type_oop);
+    oop ex_cclass = _mmobj->mm_class_get_compiled_class(this, _mmobj->mm_object_vt(e));
+    DBG("execption clause cclass: " << type_cclass << " [" << TO_C_STR(_mmobj->mm_compiled_class_name(this, type_cclass, true))
+        << "] exception object cclass: " << ex_cclass << " [" << TO_C_STR(_mmobj->mm_compiled_class_name(this, ex_cclass, true)) << "]" << endl);
+    bool delegates_to = _mmobj->delegates_to(ex_cclass, type_cclass);
     DBG("delegates_to == " << delegates_to  << endl);
     if (instr >= try_block && instr < catch_block &&
         (type_oop == MM_NULL || delegates_to)) {
