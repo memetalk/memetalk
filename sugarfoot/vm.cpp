@@ -281,3 +281,10 @@ void VM::bail(const std::string& msg) {
 void VM::bail() {
   exit(1);
 }
+
+oop VM::get_compiled_module(Process* proc, std::string name) {
+  if (_modules.find(name) == _modules.end()) {
+    proc->raise("KeyError", "module not found");
+  }
+  return _modules[name]->compiled_module();
+}

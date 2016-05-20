@@ -118,6 +118,8 @@ public:
   void clear_exception_state();
 
   void break_at_addr(bytecode*);
+  void run_until(oop);
+
   void rewind_to_frame_and_continue(oop frame);
 
   oop protected_fetch_cycle(oop recv, oop drecv, oop fun, int* exc, bool should_allocate);
@@ -193,6 +195,7 @@ private:
   word* _stack;
   number _code_size;
   std::list<bytecode_range_t> _volatile_breakpoints;
+  std::list<oop> _volatile_cfun_breakpoints;
   oop _step_bp;
   oop _unwind_to_bp;
   oop _current_exception;

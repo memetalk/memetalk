@@ -1,19 +1,22 @@
+;; M-x toggle-debug-on-error
+
 (defvar memetalk-mode-hook nil)
 
 ; "If your keymap will have very few entries, then you may want to consider
 ; ‘make-sparse-keymap’ rather than ‘make-keymap’."
 (defvar memetalk-mode-map
   (let ((map (make-keymap)))
-    (define-key map "\M-e" 'memetalk-do-it)
-    (define-key map "\M-p" 'memetalk-print-it)
-    (define-key map "\C-i" 'memetalk-step-into)
-    (define-key map "\C-o" 'memetalk-step-over)
-    (define-key map "\C-u" 'memetalk-step-out)
-    (define-key map "\C-l" 'memetalk-step-line)
-    (define-key map "\M-r" 'memetalk-continue)
-    (define-key map (kbd "<M-down>") 'memetalk-bt-up)
-    (define-key map (kbd "<M-up>") 'memetalk-bt-down)
-    (define-key map (kbd "C-c C-v") 'memetalk-locals)
+    (define-key map (kbd "s-d") 'memetalk-do-it)
+    (define-key map (kbd "s-p") 'memetalk-print-it)
+    (define-key map (kbd "s-i") 'memetalk-step-into)
+    (define-key map (kbd "s-o") 'memetalk-step-over)
+    (define-key map (kbd "s-u") 'memetalk-step-out)
+    (define-key map (kbd "s-l") 'memetalk-step-line)
+    (define-key map (kbd "s-c") 'memetalk-continue)
+    (define-key map (kbd "s-r") 'memetalk-run-until)
+    (define-key map (kbd "<s-down>") 'memetalk-bt-up)
+    (define-key map (kbd "<s-up>") 'memetalk-bt-down)
+    (define-key map (kbd "s-v") 'memetalk-locals)
     map)
   "Keymap for memetalk major mode")
 
@@ -87,6 +90,10 @@
   (unless memetalk-repl-recon-timer
     (setq memetalk-repl-recon-timer (run-at-time "1 second" 1 'memetalk-repl-connect))))
 
+(defun memetalk-repl-clear-reconnection-timer ()
+  (cancel-timer memetalk-repl-recon-timer)
+  (setq memetalk-repl-recon-timer nil))
+
 (defun memetalk-repl-detect-disconnect (process event)
   (message (format "%s %s" process (memetalk-trim-r event)))
   (memetalk-clear-current-buffer)
@@ -118,6 +125,9 @@
 (defun memetalk-repl-print-it (code)
   (memetalk-repl-send (concat "print-it " (base64-encode-string code))))
 
+(defun memetalk-repl-run-until (loc)
+  (memetalk-repl-send (concat "run-until " (base64-encode-string loc))))
+
 
 (defvar memetalk-current-module-filepath nil)
 
@@ -130,28 +140,29 @@
       (progn
         (setq mm-repl-socket (open-network-stream "mm-repl"
                                                   "*mm-repl*" "localhost" 4200))
-        (message "memetalk repl connected")
         (set-process-sentinel mm-repl-socket 'memetalk-repl-detect-disconnect)
-        (cancel-timer memetalk-repl-recon-timer)
-        (setq memetalk-repl-recon-timer nil))
+        (memetalk-repl-clear-reconnection-timer)
+        (message "memetalk repl connected"))
         ;; (if memetalk-current-module-filepath
         ;;     (memetalk-instantiate-module memetalk-current-module-filepath)))
     (error nil))
   mm-repl-socket)
 
-(defun memetalk-work-on-current-module ()
-  (interactive)
-  (memetalk-instantiate-module (buffer-file-name)))
+;; (defun memetalk-work-on-current-module ()
+;;   (interactive)
+;;   (memetalk-instantiate-module (buffer-file-name)))
 
 (defun memetalk-do-it ()
   (interactive)
   (let ((code (memetalk-current-selection)))
-    (memetalk-repl-do-it code)))
+    (when (stringp code)
+      (memetalk-repl-do-it code))))
 
 (defun memetalk-print-it ()
   (interactive)
   (let ((code (memetalk-current-selection)))
-    (memetalk-repl-print-it code)))
+    (when (stringp code)
+      (memetalk-repl-print-it code))))
 
 (defun memetalk-step-into ()
   (interactive)
@@ -185,29 +196,68 @@
   (interactive)
   (memetalk-repl-send "bt-down"))
 
+(defun memetalk-run-until ()
+  (interactive)
+  (memetalk-repl-run-until (memetalk-current-location)))
+
 
 ;; utils
 (defun memetalk-current-selection ()
   (condition-case nil
       (with-current-buffer (current-buffer)
-        (buffer-substring-no-properties (mark) (point)))))
+        (buffer-substring-no-properties (mark) (point)))
+    (error nil)))
 
-(defun memetalk-instantiate-module (filepath)
-  (setq memetalk-current-module-filepath filepath)
-  (when (memetalk-repl-is-open)
-    (let ((module-name (memetalk-module-name-from-path filepath)))
-      (memetalk-repl-load module-name))))
+;; (defun memetalk-instantiate-module (filepath)
+;;   (setq memetalk-current-module-filepath filepath)
+;;   (when (memetalk-repl-is-open)
+;;     (let ((module-name (memetalk-module-name-from-path filepath)))
+;;       (memetalk-repl-load module-name))))
 
 ;; hooks
 
-(defun memetalk-after-save ()
-  (when (equal (buffer-file-name) memetalk-current-module-filepath)
-    (memetalk-instantiate-module memetalk-current-module-filepath)))
+;; (defun memetalk-after-save ()
+;;   (when (equal (buffer-file-name) memetalk-current-module-filepath)
+;;     (memetalk-instantiate-module memetalk-current-module-filepath)))
+
+
+(defun memetalk-current-buffer-module-name ()
+  (car (split-string (buffer-name) "\\.")))
+
+(defun memetalk-current-location ()
+  (interactive)
+  (with-current-buffer (current-buffer)
+    (condition-case nil
+        (save-excursion
+          (let ((current-line (line-number-at-pos (point)))
+                (current-pos (point)))
+            (re-search-backward
+             "^\\s-*\\(init\\s-+\\|instance_method\\s-+\\|class_method\\s-+\\|\\)\\(\\w+\\): fun")
+            (let ((fname (match-string-no-properties 2))
+                  (ftype (match-string-no-properties 1))
+                  (begin (match-beginning 0)))
+              (cond
+               ((equal ftype "")
+                (format "%s:%s@%s"
+                        (memetalk-current-buffer-module-name)
+                        fname
+                        current-line))
+               ((or (equal ftype "instance_method ")
+                    (equal ftype "class_method ")
+                    (equal ftype "init "))
+                (re-search-backward "^class \\(\\w+\\)")
+                (let ((class-name (match-string-no-properties 1)))
+                  (format "%s/%s:%s@%s"
+                          (memetalk-current-buffer-module-name)
+                          class-name
+                          fname
+                          current-line)))
+               (t
+                (message "unknown ftype"))))))
+      ((debug error) nil))))
 
 
 (defvar memetalk-response-content "")
-;; (message memetalk-response-content)
-;; (setq memetalk-response-content "")
 
 (defvar memetalk-current-buffer nil)
 
@@ -273,17 +323,17 @@
 
 
 
-
 (defun memetalk-repl-change (begin end x)
-  (when (equal (buffer-name) "*mm-repl*")
-    (let ((content (buffer-substring-no-properties begin end)))
-      (setq memetalk-response-content
-            (concat memetalk-response-content content))
-      (when (equal (string-match ".*\n" memetalk-response-content) 0)
-        (memetalk-repl-dispatch-response
-         (memetalk-trim-r memetalk-response-content))
-        (setq memetalk-response-content ""))))
-  t)
+  (condition-case nil
+      (when (equal (buffer-name) "*mm-repl*")
+        (let ((content (buffer-substring-no-properties begin end)))
+          (setq memetalk-response-content
+                (concat memetalk-response-content content))
+          (when (equal (string-match ".*\n" memetalk-response-content) 0)
+            (memetalk-repl-dispatch-response
+             (memetalk-trim-r memetalk-response-content))
+            (setq memetalk-response-content ""))))
+    ((debug error t))))
 
 ;; (remove-hook 'after-change-functions 'memetalk-after-change)
 ;; (add-hook 'after-change-functions 'memetalk-after-change)
@@ -316,4 +366,4 @@
               (overlay-put x 'face '(:box "yellow"))
               (run-at-time "0.2 second" nil
                            #'memetalk-remove-overlays (current-buffer)))))
-      (error (message "No procedure before point :(")))))
+      ((debug error) nil))))

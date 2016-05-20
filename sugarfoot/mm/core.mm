@@ -191,6 +191,12 @@
   instance_method fullName: fun() {
     return @name;
   }
+  instance_method functions: fun() {
+    return @functions;
+  }
+  instance_method classes: fun() {
+    return @classes;
+  }
   end
 
   class Null
@@ -500,6 +506,12 @@ class IndexError < Exception
   }
 end
 
+class KeyError < Exception
+  instance_method toString: fun() {
+    return "KeyError: " + this.message.toString();
+  }
+end
+
 class InternalError < Exception
   instance_method toString: fun() {
     return "InternalError: " + this.message.toString();
@@ -578,6 +590,9 @@ end
   instance_method rewindAndContinue: fun(frame) {
     <primitive "process_rewind_and_continue">
   }
+  instance_method runUntil: fun(cfun) {
+    <primitive "process_run_until">
+  }
   instance_method currentException: fun() {
     <primitive "process_current_exception">
   }
@@ -636,6 +651,10 @@ end
 
   get_compiled_module: fun(module) {
     <primitive "get_compiled_module">
+  }
+
+  get_compiled_module_by_name: fun(name) {
+    <primitive "get_compiled_module_by_name">
   }
 
   get_module: fun(name) {

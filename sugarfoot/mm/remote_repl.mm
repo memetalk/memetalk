@@ -101,6 +101,37 @@ instance_method printIt: fun(socket, text) {
   }
 }
 
+instance_method run_until: fun(socket, location) {
+  io.print("run until: " + location);
+  var splt = location.split(":");
+  var mod_part = splt[0];
+  var fun_part = splt[1].split("@");
+  var fun_name = fun_part[0];
+  var fun_pos = fun_part[1];
+  var module_name = null;
+  var class_name = null;
+  var cmod = null;
+  var cclass = null;
+  var cfun = null;
+  if (mod_part.find("/") >= 0) {
+    var class_part = mod_part.split("/");
+    module_name = class_part[0];
+    class_name = class_part[1];
+    cmod = get_compiled_module_by_name(module_name);
+    cclass = cmod.classes[class_name.toSymbol];
+    cfun = cclass.methods[fun_name.toSymbol]; //todo: class methods
+  } else {
+    module_name = mod_part;
+    cmod = get_compiled_module_by_name(module_name);
+    cfun = cmod.functions[fun_name.toSymbol];
+  }
+  io.print("run until: " + cfun.name + " at " + fun_pos);
+  @process.runUntil(cfun);
+}
+
+instance_method set_module_entry_break_mode: fun(socket, module_name) {
+  io.print("Breaking on all functions/methods entered in module " + module_name);
+}
 
 instance_method dispatch: fun(socket, command) {
   // if (command.find("load") == 0) {
@@ -146,8 +177,20 @@ instance_method dispatch: fun(socket, command) {
     this.send_location(socket, this.get_frame(@current_frame_idx));
     return null;
   }
-  if (command.find("test") == 0) {
-    @process.test();
+  if (command.find("run-until") == 0) {
+    this.run_until(socket, command.from(10).b64decode());
+    return null;
+  }
+  if (command.find("clear-breaks") == 0) {
+    this.clear_break_points();
+    return null;
+  }
+  if (command.find("module-entry-break-mode") == 0) {
+    this.set_module_entry_break_mode(socket, command.from(24).b64decode());
+    return null;
+  }
+  if (command.find("clear-module-entry-break-mode") == 0) {
+    this.clear_module_entry_break_mode(socket);
     return null;
   }
   io.print("Unknown command " + command);

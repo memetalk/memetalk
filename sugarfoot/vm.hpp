@@ -52,6 +52,8 @@ public:
 
   void print_error(Process* proc, oop retval);
 
+  oop get_compiled_module(Process* proc, std::string name);
+
 private:
   // void dump_prime_info();
   // void dictionary_dump(oop dict);

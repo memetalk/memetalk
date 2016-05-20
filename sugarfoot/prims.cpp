@@ -312,20 +312,39 @@ static int prim_string_split(Process* proc) {
   oop self =  proc->dp();
   oop sep = proc->get_arg(0);
 
-  char* sep_str = proc->mmobj()->mm_string_cstr(proc, sep);
-  char* self_str = proc->mmobj()->mm_string_cstr(proc, self);
+  std::string sep_str = proc->mmobj()->mm_string_cstr(proc, sep);
+  std::string self_str = proc->mmobj()->mm_string_cstr(proc, self);
 
   oop ret = proc->mmobj()->mm_list_new();
 
-  if (strlen(sep_str) == 0) {
-    for (number i = 0; i < strlen(self_str); i++) {
+  if (sep_str.size() == 0) {
+    for (number i = 0; i < self_str.size(); i++) {
       std::stringstream s;
       s << self_str[i];
       oop chr = proc->mmobj()->mm_string_new(s.str().c_str());
       proc->mmobj()->mm_list_append(proc, ret, chr);
     }
   } else {
-    assert(0); //todo
+    std::size_t prev_pos = 0;
+    std::size_t pos = self_str.find(sep_str);
+    DBG("string: " << self_str << " split: " << sep_str << " pos: " << pos << endl);
+    if (pos == std::string::npos) {
+      proc->mmobj()->mm_list_append(proc, ret, self);
+    } else {
+      std::size_t pos, prev_pos = 0;
+      while ((pos = self_str.find(sep_str, prev_pos)) != std::string::npos) {
+        std::string str1 = self_str.substr(prev_pos, pos);
+        DBG("string: " << self_str << " str1: '" << str1 << "'" << endl);
+        oop oop_str1 = proc->mmobj()->mm_string_new(str1.c_str());
+        proc->mmobj()->mm_list_append(proc, ret, oop_str1);
+
+        prev_pos = pos + 1;
+      }
+      std::string str1 = self_str.substr(prev_pos);
+      DBG("string: " << self_str << " str1: '" << str1 << "'" << endl);
+      oop oop_str1 = proc->mmobj()->mm_string_new(str1.c_str());
+      proc->mmobj()->mm_list_append(proc, ret, oop_str1);
+    }
   }
   proc->stack_push(ret);
   return 0;
@@ -1442,6 +1461,13 @@ static int prim_get_compiled_module(Process* proc) {
   return 0;
 }
 
+static int prim_get_compiled_module_by_name(Process* proc) {
+  oop name = proc->get_arg(0);
+  char* str_name = proc->mmobj()->mm_string_cstr(proc, name);
+  proc->stack_push(proc->vm()->get_compiled_module(proc, str_name));
+  return 0;
+}
+
 static int prim_get_current_process(Process* proc) {
   proc->stack_push(proc->mmobj()->mm_process_new(proc, proc));
   return 0;
@@ -1753,6 +1779,17 @@ static int prim_process_current_exception(Process* proc) {
   return 0;
 }
 
+static int prim_process_run_until(Process* proc) {
+  oop oop_target_proc = proc->rp();
+  oop cfun = proc->get_arg(0);
+
+  Process* target_proc = proc->mmobj()->mm_process_get_proc(proc, oop_target_proc);
+  target_proc->run_until(cfun);
+  proc->stack_push(oop_target_proc);
+  return 0;
+}
+
+
 // static int prim_process_apply(Process* proc) {
 //   oop oop_target_proc = proc->rp();
 //   oop fn = proc->get_arg(0);
@@ -1951,6 +1988,7 @@ void init_primitives(VM* vm) {
   vm->register_primitive("process_break_at_addr", prim_process_break_at_addr);
   vm->register_primitive("process_rewind_and_continue", prim_process_rewind_and_continue);
   vm->register_primitive("process_current_exception", prim_process_current_exception);
+  vm->register_primitive("process_run_until", prim_process_run_until);
   vm->register_primitive("process_cp", prim_process_cp);
   vm->register_primitive("process_fp", prim_process_fp);
   vm->register_primitive("process_mp", prim_process_mp);
@@ -1972,6 +2010,7 @@ void init_primitives(VM* vm) {
   vm->register_primitive("get_current_process", prim_get_current_process);
   vm->register_primitive("get_current_frame", prim_get_current_frame);
   vm->register_primitive("get_compiled_module", prim_get_compiled_module);
+  vm->register_primitive("get_compiled_module_by_name", prim_get_compiled_module_by_name);
 
   vm->register_primitive("modules_path", prim_modules_path);
 

@@ -664,6 +664,13 @@ void Process::tick() {
         goto do_pause;
       }
     }
+    for(std::list<oop>::iterator it = _volatile_cfun_breakpoints.begin(); it != _volatile_cfun_breakpoints.end(); it++) {
+      if ((*it) == _mmobj->mm_function_get_cfun(this, _cp)) {
+        DBG("BREAK on function "  << _cp << endl);
+        _volatile_cfun_breakpoints.erase(it);
+        goto do_pause;
+      }
+    }
     if (_step_bp >= _bp) {
       DBG("_step_bp >= _bp, lets break" << endl);
       goto do_pause;
@@ -1405,6 +1412,12 @@ void Process::break_at_addr(bytecode* addr) {
   DBG("break_at_addr: " << addr << endl);
   bytecode* last = _ip + _mmobj->mm_function_get_code_size(this, _cp, true);
   _volatile_breakpoints.push_back(bytecode_range_t(addr, last));
+}
+
+void Process::run_until(oop cfun) {
+  DBG("run_until: " << cfun);
+  _volatile_cfun_breakpoints.push_back(cfun);
+  resume();
 }
 
 void Process::rewind_to_frame_and_continue(oop bp) {

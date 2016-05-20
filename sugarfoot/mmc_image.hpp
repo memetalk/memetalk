@@ -17,6 +17,9 @@ public:
   MMCImage(Process*, CoreImage*, const std::string&);
   oop load();
   oop instantiate_module(oop);
+
+  oop compiled_module() { return _compiled_module; }
+
 private:
   void check_module_arity(oop module_arguments_list);
   oop instantiate_class(oop, oop, oop, std::map<std::string, oop>&, oop);
