@@ -106,6 +106,8 @@ public:
   void resume();
   void reload_frame();
 
+  bool toggle_module_break_mode();
+
   word* stack() { return _stack; };
 
   void bail(const std::string& msg);
@@ -197,6 +199,7 @@ private:
   number _code_size;
   std::list<bytecode_range_t> _volatile_breakpoints;
   std::list<bytecode*> _breakpoints;
+  oop _break_only_on_this_module;
   oop _step_bp;
   oop _unwind_to_bp;
   oop _current_exception;

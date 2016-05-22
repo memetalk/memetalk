@@ -18,6 +18,7 @@
     (define-key map (kbd "<s-down>") 'memetalk-bt-up)
     (define-key map (kbd "<s-up>") 'memetalk-bt-down)
     (define-key map (kbd "s-v") 'memetalk-locals)
+    (define-key map (kbd "s-m") 'memetalk-toggle-module-step-mode)
     map)
   "Keymap for memetalk major mode")
 
@@ -207,6 +208,10 @@
 (defun memetalk-break-at ()
   (interactive)
   (memetalk-repl-break-at (memetalk-current-location)))
+
+(defun memetalk-toggle-module-step-mode ()
+  (interactive)
+  (memetalk-repl-send "toggle-module-step-mode"))
 
 
 ;; utils

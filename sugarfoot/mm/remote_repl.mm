@@ -174,8 +174,9 @@ instance_method break_at: fun(socket, location) {
   @process.add_breakpoint(cfun, loc[:line]);
 }
 
-instance_method set_module_entry_break_mode: fun(socket, module_name) {
-  io.print("Breaking on all functions/methods entered in module " + module_name);
+instance_method toggle_module_break_mode: fun(socket) {
+  var res = @process.toggle_module_break_mode();
+  io.print("Breaking only on functions/methods entered in current module: " + res.toString);
 }
 
 instance_method dispatch: fun(socket, command) {
@@ -234,12 +235,12 @@ instance_method dispatch: fun(socket, command) {
     this.clear_break_points();
     return null;
   }
-  if (command.find("module-entry-break-mode") == 0) {
-    this.set_module_entry_break_mode(socket, command.from(24).b64decode());
+  if (command.find("toggle-module-step-mode") == 0) {
+    this.toggle_module_break_mode(socket);
     return null;
   }
-  if (command.find("clear-module-entry-break-mode") == 0) {
-    this.clear_module_entry_break_mode(socket);
+  if (command.find("clear-module-break-mode") == 0) {
+    this.clear_module_break_mode(socket);
     return null;
   }
   io.print("Unknown command " + command);

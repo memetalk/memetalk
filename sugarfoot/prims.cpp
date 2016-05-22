@@ -1847,6 +1847,17 @@ static int prim_process_add_breakpoint(Process* proc) {
   return 0;
 }
 
+static int prim_process_toggle_module_break_mode(Process* proc) {
+  oop oop_target_proc = proc->rp();
+
+  Process* target_proc = proc->mmobj()->mm_process_get_proc(proc, oop_target_proc);
+  if (target_proc->toggle_module_break_mode()) {
+    proc->stack_push(MM_TRUE);
+  } else {
+    proc->stack_push(MM_FALSE);
+  }
+  return 0;
+}
 
 // static int prim_process_apply(Process* proc) {
 //   oop oop_target_proc = proc->rp();
@@ -2052,6 +2063,8 @@ void init_primitives(VM* vm) {
   vm->register_primitive("process_current_exception", prim_process_current_exception);
   vm->register_primitive("process_run_until", prim_process_run_until);
   vm->register_primitive("process_add_breakpoint", prim_process_add_breakpoint);
+  vm->register_primitive("process_toggle_module_break_mode", prim_process_toggle_module_break_mode);
+
   vm->register_primitive("process_cp", prim_process_cp);
   vm->register_primitive("process_fp", prim_process_fp);
   vm->register_primitive("process_mp", prim_process_mp);

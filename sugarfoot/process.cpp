@@ -62,6 +62,7 @@ Process::Process(VM* vm, int debugger_id)
   _unwinding_exception = false;
   _step_bp = MM_NULL;
   _current_exception = MM_NULL;
+  _break_only_on_this_module = MM_NULL;
 }
 
 std::string Process::dump_stack_trace(bool enabled) {
@@ -627,7 +628,8 @@ void Process::fetch_cycle(void* stop_at_bp) {
 }
 
 void Process::maybe_break_on_return() {
-  if (_state == STEP_INTO_STATE) {
+  if (_state == STEP_INTO_STATE &&
+      (_break_only_on_this_module == MM_NULL || _break_only_on_this_module == _mp)) {
     bytecode* last = _ip + _mmobj->mm_function_get_code_size(this, _cp, true);
     _volatile_breakpoints.push_back(bytecode_range_t(_ip,last));
   }
@@ -635,7 +637,8 @@ void Process::maybe_break_on_return() {
 }
 
 void Process::maybe_break_on_call() {
-  if (_state == STEP_INTO_STATE) {
+  if (_state == STEP_INTO_STATE &&
+      (_break_only_on_this_module == MM_NULL || _break_only_on_this_module == _mp)) {
     bytecode* last = _ip + _mmobj->mm_function_get_code_size(this, _cp, true);
     _volatile_breakpoints.push_back(bytecode_range_t(_ip, last));
   }
@@ -1440,6 +1443,15 @@ void Process::add_breakpoint(oop cfun, number lineno) {
   }
 }
 
+bool Process::toggle_module_break_mode() {
+  if (_break_only_on_this_module == MM_NULL) {
+    _break_only_on_this_module = _mp;
+    return true;
+  } else {
+    _break_only_on_this_module = MM_NULL;
+    return false;
+  }
+}
 
 void Process::rewind_to_frame_and_continue(oop bp) {
   DBG("rewind to bp: " << bp << endl);
