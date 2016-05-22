@@ -126,7 +126,7 @@
            literal_frame_addr, bytecode_size, bytecode_addr,
            exception_frames_len, exception_frame_addr,
            env_table, text, line_mappings,
-           loc_mappings;
+           loc_mappings, closures;
     init withEnv: fun(text, scope_names, cmod) {
       <primitive "compiled_function_with_env">
     }
@@ -179,6 +179,12 @@
     }
     instance_method bytecode_addr: fun() {
       return @bytecode_addr;
+    }
+    instance_method line_mappings: fun() {
+      return @line_mappings;
+    }
+    instance_method closures: fun() {
+      return @closures;
     }
     instance_method recompile: fun(text) {
       <primitive "compiled_function_recompile">
@@ -326,6 +332,9 @@
   instance_method keys: fun() {
     <primitive "dictionary_keys">
   }
+  instance_method values: fun() {
+    <primitive "dictionary_values">
+  }
   instance_method size: fun() {
     <primitive "dictionary_size">
   }
@@ -352,6 +361,9 @@
   }
   instance_method filter: fun(fn) {
     <primitive "list_filter">
+  }
+  instance_method detect: fun(fn) {
+    <primitive "list_detect">
   }
   instance_method has: fun(value) {
     <primitive "list_has">
@@ -595,6 +607,9 @@ end
   }
   instance_method runUntil: fun(cfun, line) {
     <primitive "process_run_until">
+  }
+  instance_method add_breakpoint: fun(cfun, line) {
+    <primitive "process_add_breakpoint">
   }
   instance_method currentException: fun() {
     <primitive "process_current_exception">

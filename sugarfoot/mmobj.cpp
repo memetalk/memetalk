@@ -361,6 +361,18 @@ oop MMObj::mm_dictionary_keys(Process* p, oop dict, bool should_assert) {
   return lst;
 }
 
+oop MMObj::mm_dictionary_values(Process* p, oop dict, bool should_assert) {
+  TYPE_CHECK(!( mm_object_vt(dict) == _core_image->get_prime("Dictionary")),
+             "TypeError","Expected Dictionary")
+  oop lst = mm_list_new();
+  std::map<oop, oop>* elements = mm_dictionary_frame(p, dict, should_assert);
+  for (std::map<oop, oop>::iterator it = elements->begin(); it != elements->end(); it++) {
+    mm_list_append(p, lst, it->second, should_assert);
+  }
+  return lst;
+}
+
+
 oop MMObj::mm_dictionary_get(Process* p, oop dict, oop key, bool should_assert) {
   TYPE_CHECK(!( mm_object_vt(dict) == _core_image->get_prime("Dictionary")),
              "TypeError","Expected Dictionary")
@@ -1015,11 +1027,7 @@ bytecode* MMObj::mm_compiled_function_get_instruction_for_line(Process* p, oop c
       return b_offset + base_ip;
     }
   }
-  if (should_assert) {
-    assert(0);
-  } else {
-    p->raise("IndexError", "could not find instruction offset for line");
-  }
+  return 0;
 }
 
 

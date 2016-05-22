@@ -655,7 +655,7 @@ void Process::tick() {
 
   if (_state == RUN_STATE || _state == STEP_INTO_STATE || _state == STEP_OVER_STATE) {
     for(std::list<bytecode_range_t>::iterator it = _volatile_breakpoints.begin(); it != _volatile_breakpoints.end(); it++) {
-      DBG("tick: looking for breakpoint "
+      DBG("tick: looking for volatile breakpoint "
             << (*it).first << " <= " << _ip << " <= " << (*it).second
           << " -- opcode: " << decode_opcode(*_ip) << endl);
       if ((*it).first <= _ip && (*it).second >= _ip) {
@@ -664,6 +664,16 @@ void Process::tick() {
         goto do_pause;
       }
     }
+
+    for(std::list<bytecode*>::iterator it = _breakpoints.begin(); it != _breakpoints.end(); it++) {
+      DBG("tick: looking for breakpoint "
+            << (*it) << " <= " << _ip << " -- opcode: " << decode_opcode(*_ip) << endl);
+      if ((*it) == _ip) {
+        DBG("BREAK on "  << _ip << " " << decode_opcode(*_ip) << endl);
+        goto do_pause;
+      }
+    }
+
     if (_step_bp >= _bp) {
       DBG("_step_bp >= _bp, lets break" << endl);
       goto do_pause;
@@ -1410,10 +1420,25 @@ void Process::break_at_addr(bytecode* addr) {
 void Process::run_until(oop cfun, number lineno) {
   DBG("run_until: " << cfun << " " << lineno);
   bytecode* b = _mmobj->mm_compiled_function_get_instruction_for_line(this, cfun, lineno);
-  number size = _mmobj->mm_compiled_function_get_code_size(this, cfun);
-  _volatile_breakpoints.push_back(bytecode_range_t(b, b+size));
-  resume();
+  if (b) {
+    number size = _mmobj->mm_compiled_function_get_code_size(this, cfun);
+    _volatile_breakpoints.push_back(bytecode_range_t(b, b+size));
+    resume();
+  } else {
+    WARNING() << "could not bytecode for line " << lineno << endl;
+  }
 }
+
+void Process::add_breakpoint(oop cfun, number lineno) {
+  DBG("add breakpoint: " << cfun << " " << lineno);
+  bytecode* b = _mmobj->mm_compiled_function_get_instruction_for_line(this, cfun, lineno);
+  if (b) {
+    _breakpoints.push_back(b);
+  } else {
+    WARNING() << "could not bytecode for line " << lineno << endl;
+  }
+}
+
 
 void Process::rewind_to_frame_and_continue(oop bp) {
   DBG("rewind to bp: " << bp << endl);

@@ -67,6 +67,7 @@ public:
   void mm_dictionary_set(Process*, oop dict, oop key, oop value, bool should_assert = false);
   bool mm_dictionary_has_key(Process*, oop dict, oop key, bool should_assert = false);
   oop mm_dictionary_keys(Process*, oop dict, bool should_assert = false);
+  oop mm_dictionary_values(Process*, oop dict, bool should_assert = false);
   oop mm_dictionary_get(Process*, oop dict, oop key, bool should_assert = false);
   std::map<oop,oop>* mm_dictionary_frame(Process*, oop, bool should_assert = false);
   std::map<oop,oop>::iterator mm_dictionary_begin(Process*, oop, bool should_assert = false);

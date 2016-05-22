@@ -692,6 +692,34 @@ static int prim_list_filter(Process* proc) {
   return 0;
 }
 
+static int prim_list_detect(Process* proc) {
+  oop self =  proc->dp();
+  oop fun = proc->get_arg(0);
+
+  number size = proc->mmobj()->mm_list_size(proc, self);
+  for (int i = 0; i < size; i++) {
+    oop next = proc->mmobj()->mm_list_entry(proc, self, i);
+    DBG("detect[" << i << "] = " << next << endl);
+    proc->stack_push(next);
+    int exc;
+    //TODO: we are not checking arity!
+    oop val = proc->do_call(fun, &exc);
+    if (exc != 0) {
+      DBG("raised" << endl);
+      proc->stack_push(val);
+      return PRIM_RAISED;
+    }
+    DBG("detect[" << i << "] fun returned " << val << endl);
+    if (val != MM_NULL && val != MM_FALSE) {
+      proc->stack_push(next);
+      return 0;
+    }
+  }
+  proc->stack_push(MM_NULL);
+  return 0;
+}
+
+
 
 static int prim_list_size(Process* proc) {
   oop self =  proc->dp();
@@ -964,6 +992,12 @@ static int prim_dictionary_has(Process* proc) {
 static int prim_dictionary_keys(Process* proc) {
   oop self =  proc->dp();
   proc->stack_push(proc->mmobj()->mm_dictionary_keys(proc, self));
+  return 0;
+}
+
+static int prim_dictionary_values(Process* proc) {
+  oop self =  proc->dp();
+  proc->stack_push(proc->mmobj()->mm_dictionary_values(proc, self));
   return 0;
 }
 
@@ -1802,6 +1836,17 @@ static int prim_process_run_until(Process* proc) {
   return 0;
 }
 
+static int prim_process_add_breakpoint(Process* proc) {
+  oop oop_target_proc = proc->rp();
+  oop cfun = proc->get_arg(0);
+  oop lineno = proc->get_arg(1);
+
+  Process* target_proc = proc->mmobj()->mm_process_get_proc(proc, oop_target_proc);
+  target_proc->add_breakpoint(cfun, untag_small_int(lineno));
+  proc->stack_push(oop_target_proc);
+  return 0;
+}
+
 
 // static int prim_process_apply(Process* proc) {
 //   oop oop_target_proc = proc->rp();
@@ -1918,6 +1963,7 @@ void init_primitives(VM* vm) {
   vm->register_primitive("list_each", prim_list_each);
   vm->register_primitive("list_map", prim_list_map);
   vm->register_primitive("list_filter", prim_list_filter);
+  vm->register_primitive("list_detect", prim_list_detect);
   vm->register_primitive("list_has", prim_list_has);
   vm->register_primitive("list_last", prim_list_last);
   vm->register_primitive("list_from", prim_list_from);
@@ -1935,6 +1981,7 @@ void init_primitives(VM* vm) {
   vm->register_primitive("dictionary_plus", prim_dictionary_plus);
   vm->register_primitive("dictionary_has", prim_dictionary_has);
   vm->register_primitive("dictionary_keys", prim_dictionary_keys);
+  vm->register_primitive("dictionary_values", prim_dictionary_values);
   vm->register_primitive("dictionary_size", prim_dictionary_size);
   vm->register_primitive("dictionary_to_string", prim_dictionary_to_string);
   vm->register_primitive("dictionary_to_source", prim_dictionary_to_source);
@@ -2004,6 +2051,7 @@ void init_primitives(VM* vm) {
   vm->register_primitive("process_rewind_and_continue", prim_process_rewind_and_continue);
   vm->register_primitive("process_current_exception", prim_process_current_exception);
   vm->register_primitive("process_run_until", prim_process_run_until);
+  vm->register_primitive("process_add_breakpoint", prim_process_add_breakpoint);
   vm->register_primitive("process_cp", prim_process_cp);
   vm->register_primitive("process_fp", prim_process_fp);
   vm->register_primitive("process_mp", prim_process_mp);

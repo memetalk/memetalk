@@ -106,7 +106,7 @@ instance_method parse_location: fun(location) {
   var mod_part = splt[0];
   var fun_part = splt[1].split("@");
   var fun_name = fun_part[0];
-  var fun_line = fun_part[1].toInteger;
+  var fun_line = fun_part[1].toInteger - 1; //emacs is 1-based, we are 0-based
   var module_name = null;
   var class_name = null;
   var cmod = null;
@@ -144,29 +144,34 @@ instance_method get_cfun_from_location: fun(loc) {
 }
 
 instance_method run_until: fun(socket, location) {
-  io.print("run until: " + location);
+  // io.print("run until: " + location);
   var loc = this.parse_location(location);
-  io.print("run until loc: " + loc.toString);
+  // io.print("run until loc: " + loc.toString);
   var cfun = this.get_cfun_from_location(loc);
-  io.print("run until: " + cfun.name + " at " + loc[:line].toString);
-  @process.runUntil(cfun, loc[:line] - 1);//internally, numbers are 0-based
+  // io.print("run until: " + cfun.name + " at " + loc[:line].toString);
+  @process.runUntil(cfun, loc[:line]);
 }
 
 instance_method break_at: fun(socket, location) {
-  io.print("break at: " + location);
+  // io.print("break at: " + location);
   var loc = this.parse_location(location);
-  io.print("break-at loc: " + loc.toString);
+  // io.print("break-at loc: " + loc.toString);
   var top_level_cfun = this.get_cfun_from_location(loc);
+  // io.print("break-at top_level: " + top_level_cfun.name);
   var cfun = null;
-  if (top_level_cfun.line_mappings.values().has(fun_line)) {
+  if (top_level_cfun.line_mappings.values().has(loc[:line])) {
     cfun = top_level_cfun;
+    // io.print("break-at is on toplevel");
   } else {
-    cfun = top_level_cfun.closues.detect(fun(closure) {
-      closure.line_mappings.values().has(lineno)
-   });
+    // io.print("break-at is on closure: " + top_level_cfun.closures.toString);
+    cfun = top_level_cfun.closures.detect(fun(closure) {
+      io.print(closure.line_mappings);
+      closure.line_mappings.values().has(loc[:line])
+    });
+    // io.print("break-at closure: " + cfun.name);
   }
-  io.print("break at: " + cfun.name + " at " + loc[:line]);
-  @process.runUntil(cfun);
+  // io.print("break at: " + cfun.name + " at " + loc[:line].toString);
+  @process.add_breakpoint(cfun, loc[:line]);
 }
 
 instance_method set_module_entry_break_mode: fun(socket, module_name) {
