@@ -719,6 +719,7 @@ void Process::step_into() {
     bytecode* last = _ip + _mmobj->mm_function_get_code_size(this, _cp, true);
     _volatile_breakpoints.push_back(bytecode_range_t(next, last));
   }
+  // ? _step_bp = *(oop*)_bp; //previous bp
   _state = STEP_INTO_STATE;
   _control->resume();
 }
@@ -733,7 +734,7 @@ void Process::step_over() {
     _volatile_breakpoints.push_back(bytecode_range_t(next, last));
   }
   _step_bp = *(oop*)_bp; //previous bp
-  DBG("ste_over will br on: " << _step_bp << " " << std::endl);
+  DBG("step_over will br on: " << _step_bp << " " << std::endl);
   _state = STEP_OVER_STATE;
   _control->resume();
 }
