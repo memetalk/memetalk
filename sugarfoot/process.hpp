@@ -118,7 +118,7 @@ public:
   void clear_exception_state();
 
   void break_at_addr(bytecode*);
-  void run_until(oop);
+  void run_until(oop, number line);
 
   void rewind_to_frame_and_continue(oop frame);
 
@@ -195,7 +195,6 @@ private:
   word* _stack;
   number _code_size;
   std::list<bytecode_range_t> _volatile_breakpoints;
-  std::list<oop> _volatile_cfun_breakpoints;
   oop _step_bp;
   oop _unwind_to_bp;
   oop _current_exception;

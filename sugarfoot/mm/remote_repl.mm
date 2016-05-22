@@ -101,31 +101,71 @@ instance_method printIt: fun(socket, text) {
   }
 }
 
-instance_method run_until: fun(socket, location) {
-  io.print("run until: " + location);
+instance_method parse_location: fun(location) {
   var splt = location.split(":");
   var mod_part = splt[0];
   var fun_part = splt[1].split("@");
   var fun_name = fun_part[0];
-  var fun_pos = fun_part[1];
+  var fun_line = fun_part[1].toInteger;
   var module_name = null;
   var class_name = null;
   var cmod = null;
   var cclass = null;
+  var top_level_cfun = null;
   var cfun = null;
   if (mod_part.find("/") >= 0) {
     var class_part = mod_part.split("/");
     module_name = class_part[0];
     class_name = class_part[1];
-    cmod = get_compiled_module_by_name(module_name);
-    cclass = cmod.classes[class_name.toSymbol];
-    cfun = cclass.methods[fun_name.toSymbol]; //todo: class methods
+    return {:module_name: module_name,
+            :class_name: class_name,
+            :function_name: fun_name,
+            :line: fun_line};
   } else {
     module_name = mod_part;
-    cmod = get_compiled_module_by_name(module_name);
-    cfun = cmod.functions[fun_name.toSymbol];
+    return {:module_name: module_name,
+            :class_name: null,
+            :function_name: fun_name,
+            :line: fun_line};
   }
-  io.print("run until: " + cfun.name + " at " + fun_pos);
+}
+
+instance_method get_cfun_from_location: fun(loc) {
+  var cmod = null;
+  var cfun = null;
+  if (loc[:class_name]) {
+    cmod = get_compiled_module_by_name(loc[:module_name]);
+    var cclass = cmod.classes[loc[:class_name].toSymbol];
+    return cclass.methods[loc[:function_name].toSymbol]; //todo: own methods
+  } else {
+    cmod = get_compiled_module_by_name(loc[:module_name]);
+    return cmod.functions[loc[:function_name].toSymbol];
+  }
+}
+
+instance_method run_until: fun(socket, location) {
+  io.print("run until: " + location);
+  var loc = this.parse_location(location);
+  io.print("run until loc: " + loc.toString);
+  var cfun = this.get_cfun_from_location(loc);
+  io.print("run until: " + cfun.name + " at " + loc[:line].toString);
+  @process.runUntil(cfun, loc[:line] - 1);//internally, numbers are 0-based
+}
+
+instance_method break_at: fun(socket, location) {
+  io.print("break at: " + location);
+  var loc = this.parse_location(location);
+  io.print("break-at loc: " + loc.toString);
+  var top_level_cfun = this.get_cfun_from_location(loc);
+  var cfun = null;
+  if (top_level_cfun.line_mappings.values().has(fun_line)) {
+    cfun = top_level_cfun;
+  } else {
+    cfun = top_level_cfun.closues.detect(fun(closure) {
+      closure.line_mappings.values().has(lineno)
+   });
+  }
+  io.print("break at: " + cfun.name + " at " + loc[:line]);
   @process.runUntil(cfun);
 }
 
@@ -179,6 +219,10 @@ instance_method dispatch: fun(socket, command) {
   }
   if (command.find("run-until") == 0) {
     this.run_until(socket, command.from(10).b64decode());
+    return null;
+  }
+  if (command.find("break-at") == 0) {
+    this.break_at(socket, command.from(9).b64decode());
     return null;
   }
   if (command.find("clear-breaks") == 0) {

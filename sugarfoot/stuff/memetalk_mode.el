@@ -14,6 +14,7 @@
     (define-key map (kbd "s-l") 'memetalk-step-line)
     (define-key map (kbd "s-c") 'memetalk-continue)
     (define-key map (kbd "s-r") 'memetalk-run-until)
+    (define-key map (kbd "s-b") 'memetalk-break-at)
     (define-key map (kbd "<s-down>") 'memetalk-bt-up)
     (define-key map (kbd "<s-up>") 'memetalk-bt-down)
     (define-key map (kbd "s-v") 'memetalk-locals)
@@ -128,6 +129,9 @@
 (defun memetalk-repl-run-until (loc)
   (memetalk-repl-send (concat "run-until " (base64-encode-string loc))))
 
+(defun memetalk-repl-break-at (loc)
+  (memetalk-repl-send (concat "break-at " (base64-encode-string loc))))
+
 
 (defvar memetalk-current-module-filepath nil)
 
@@ -199,6 +203,10 @@
 (defun memetalk-run-until ()
   (interactive)
   (memetalk-repl-run-until (memetalk-current-location)))
+
+(defun memetalk-break-at ()
+  (interactive)
+  (memetalk-repl-break-at (memetalk-current-location)))
 
 
 ;; utils

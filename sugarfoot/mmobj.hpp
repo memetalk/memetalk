@@ -127,6 +127,7 @@ public:
   oop mm_function_get_text(Process*, oop fun, bool should_assert = false);
   oop mm_function_get_line_mapping(Process*, oop fun, bool should_assert = false);
   oop mm_function_get_loc_mapping(Process*, oop fun, bool should_assert = false);
+  oop mm_function_get_closures(Process*, oop fun, bool should_assert = false);
   bytecode* mm_function_next_expr(Process*, oop fun, bytecode* ip, bool should_assert = false);
   bytecode* mm_function_next_line_expr(Process*, oop fun, bytecode* ip, bool should_assert = false);
   number mm_function_get_line_for_instruction(Process*, oop fun, bytecode* ip, bool should_assert = false);
@@ -152,10 +153,13 @@ public:
   oop mm_compiled_function_get_text(Process*, oop cfun, bool should_assert = false);
   oop mm_compiled_function_get_line_mapping(Process*, oop cfun, bool should_assert = false);
   oop mm_compiled_function_get_loc_mapping(Process*, oop cfun, bool should_assert = false);
+  oop mm_compiled_function_get_closures(Process*, oop cfun, bool should_assert = false);
   // oop mm_compiled_function_get_cmod(Process*, oop cfun, bool should_assert = false);
   void mm_compiled_function_set_cmod(Process*, oop cfun, oop cmod, bool should_assert = false);
 
   number mm_compiled_function_get_line_for_instruction(Process*, oop fun, bytecode* ip, bool should_assert = false);
+
+  bytecode* mm_compiled_function_get_instruction_for_line(Process* p, oop cfun, number lineno, bool should_assert = false);
 
   // bool mm_compiled_function_loc_mapping_matches_ip(Process*, oop, bytecode*, bool should_assert = false);
   bytecode* mm_compiled_function_next_expr(Process*, oop cfun, bytecode* ip, bool should_assert = false);

@@ -675,6 +675,14 @@ oop MMObj::mm_function_get_loc_mapping(Process* p, oop fun, bool should_assert) 
   return mm_compiled_function_get_loc_mapping(p, cfun, should_assert);
 }
 
+oop MMObj::mm_function_get_closures(Process* p, oop fun, bool should_assert) {
+  TYPE_CHECK(!( mm_object_vt(fun) == _core_image->get_prime("Function") ||
+                mm_object_vt(fun) == _core_image->get_prime("Context")),
+             "TypeError","Expected Function or Context")
+  oop cfun = mm_function_get_cfun(p, fun, should_assert);
+  return mm_compiled_function_get_closures(p, cfun, should_assert);
+}
+
 bytecode* MMObj::mm_function_next_expr(Process* p, oop fun, bytecode* ip, bool should_assert) {
   TYPE_CHECK(!( mm_object_vt(fun) == _core_image->get_prime("Function") ||
                 mm_object_vt(fun) == _core_image->get_prime("Context")),
@@ -722,6 +730,7 @@ void MMObj::mm_overwrite_compiled_function(Process* p, oop target_cfun, oop orig
                     23, //text
                     24, //line_mapping
                     25, //loc_mapping
+                    26, //closures
                     0};
 
   int i = 0;
@@ -879,6 +888,12 @@ oop MMObj::mm_compiled_function_get_loc_mapping(Process* p, oop cfun, bool shoul
   return ((oop*)cfun)[25];
 }
 
+oop MMObj::mm_compiled_function_get_closures(Process* p, oop cfun, bool should_assert) {
+  TYPE_CHECK(!( *(oop*) cfun == _core_image->get_prime("CompiledFunction")),
+             "TypeError","Expected CompiledFunction")
+  return ((oop*)cfun)[26];
+}
+
 // oop MMObj::mm_compiled_function_get_cmod(Process* p, oop cfun, bool should_assert) {
 //   if (!( *(oop*) cfun == _core_image->get_prime("CompiledFunction"))) {
 //      p->raise("TypeError", "Expected CompiledFunction");
@@ -983,6 +998,30 @@ number MMObj::mm_compiled_function_get_line_for_instruction(Process* p, oop cfun
   }
   return current_line;
 }
+
+bytecode* MMObj::mm_compiled_function_get_instruction_for_line(Process* p, oop cfun, number lineno, bool should_assert) {
+  TYPE_CHECK(!( *(oop*) cfun == _core_image->get_prime("CompiledFunction")),
+             "TypeError","Expected CompiledFunction")
+  bytecode* base_ip = mm_compiled_function_get_code(p, cfun, should_assert);
+
+  oop mapping = mm_compiled_function_get_line_mapping(p, cfun, should_assert);
+  std::map<oop, oop>::iterator it = mm_dictionary_begin(p, mapping, should_assert);
+  std::map<oop, oop>::iterator end = mm_dictionary_end(p, mapping, should_assert);
+  for ( ; it != end; it++) {
+    word line = untag_small_int(it->second);
+    DBG("line: " << line << "=" << lineno << endl);
+    if (line == lineno) {
+      word b_offset = untag_small_int(it->first);
+      return b_offset + base_ip;
+    }
+  }
+  if (should_assert) {
+    assert(0);
+  } else {
+    p->raise("IndexError", "could not find instruction offset for line");
+  }
+}
+
 
 // bool MMObj::mm_compiled_function_loc_mapping_matches_ip(oop cfun, bytecode* ip, bool should_assert) {
 //   if (!( *(oop*) cfun == _core_image->get_prime("CompiledFunction"))) {

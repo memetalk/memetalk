@@ -99,6 +99,15 @@ static int prim_string_append(Process* proc) {
   return 0;
 }
 
+static int prim_string_to_integer(Process* proc) {
+  oop self =  proc->dp();
+
+  char* str_1 = proc->mmobj()->mm_string_cstr(proc, self);
+  number s = std::atol(str_1); //TODO: check bounds
+  proc->stack_push(tag_small_int(s));
+  return 0;
+}
+
 static int prim_string_equal(Process* proc) {
   oop self =  proc->dp();
   oop other = proc->get_arg(0);
@@ -618,6 +627,7 @@ static int prim_list_each(Process* proc) {
     proc->stack_push(tag_small_int(i));
     proc->stack_push(next);
     int exc;
+    //TODO: we are not checking arity!
     oop val = proc->do_call(fun, &exc);
     if (exc != 0) {
       DBG("prim_list_each raised" << endl);
@@ -641,6 +651,7 @@ static int prim_list_map(Process* proc) {
     DBG("map[" << i << "] = " << next << endl);
     proc->stack_push(next);
     int exc;
+    //TODO: we are not checking arity!
     oop val = proc->do_call(fun, &exc);
     if (exc != 0) {
       DBG("raised" << endl);
@@ -665,6 +676,7 @@ static int prim_list_filter(Process* proc) {
     DBG("filter[" << i << "] = " << next << endl);
     proc->stack_push(next);
     int exc;
+    //TODO: we are not checking arity!
     oop val = proc->do_call(fun, &exc);
     if (exc != 0) {
       DBG("raised" << endl);
@@ -1782,9 +1794,10 @@ static int prim_process_current_exception(Process* proc) {
 static int prim_process_run_until(Process* proc) {
   oop oop_target_proc = proc->rp();
   oop cfun = proc->get_arg(0);
+  oop lineno = proc->get_arg(1);
 
   Process* target_proc = proc->mmobj()->mm_process_get_proc(proc, oop_target_proc);
-  target_proc->run_until(cfun);
+  target_proc->run_until(cfun, untag_small_int(lineno));
   proc->stack_push(oop_target_proc);
   return 0;
 }
@@ -1796,6 +1809,7 @@ static int prim_process_run_until(Process* proc) {
 
 //   Process* target_proc = proc->mmobj()->mm_process_get_proc(oop_target_proc);
 //   int exc;
+    //TODO: we are not checking arity!
 //   oop res = target_proc->do_call_protected(fn, &exc);
 //   if (exc != 0) {
 //     proc->stack_push(res);
@@ -1925,6 +1939,7 @@ void init_primitives(VM* vm) {
   vm->register_primitive("dictionary_to_string", prim_dictionary_to_string);
   vm->register_primitive("dictionary_to_source", prim_dictionary_to_source);
 
+  vm->register_primitive("string_to_integer", prim_string_to_integer);
   vm->register_primitive("string_append", prim_string_append);
   vm->register_primitive("string_equal", prim_string_equal);
   vm->register_primitive("string_count", prim_string_count);

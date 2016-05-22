@@ -413,6 +413,8 @@ class CompiledFunction(Entry):
         self.accessor_flag = 0
         self.accessor_field = 0
 
+        self.closures = []
+
         self.should_wrap_catch_for_non_local_return = False
 
         self._label = None
@@ -575,8 +577,10 @@ class CompiledFunction(Entry):
         bytecode_size = self.fill_bytecodes(vmem)
         exception_frames = self.fill_exceptions_frame(vmem)
 
+        oop_closures = vmem.append_list_of_oops_for_labels([x.label() for x in self.closures])
+
         vmem.append_int(FRAME_TYPE_OBJECT)
-        vmem.append_int(26 * bits.WSIZE)
+        vmem.append_int(27 * bits.WSIZE)
 
         oop = vmem.append_external_ref('CompiledFunction', self.label()) # CompiledFunction vt
         vmem.append_pointer_to(oop_delegate)
@@ -632,6 +636,7 @@ class CompiledFunction(Entry):
         vmem.append_pointer_to(oop_text)
         vmem.append_pointer_to(oop_line_mappings)
         vmem.append_pointer_to(oop_loc_mappings)
+        vmem.append_pointer_to(oop_closures)
 
         # vmem.append_label_ref(self.cmod.label())
         self.oop = oop
@@ -646,10 +651,13 @@ class CompiledFunction(Entry):
         else:
             top_level_cfun = self.top_level_cfun
 
-        return CompiledFunction(self.cmod, self.owner, closure_name(), params,
+        cfun = CompiledFunction(self.cmod, self.owner, closure_name(), params,
                                 env_storage=self.var_declarations,
                                 is_top_level=False, outer_cfun=self,
                                 top_level_cfun=top_level_cfun)
+        if self.is_top_level:
+            self.closures.append(cfun)
+        return cfun
 
     def add_exception_entry(self, label_begin_try, label_begin_catch, catch_type):
         self.exceptions_frame.append({
@@ -1020,7 +1028,7 @@ class Function(Entry):
         delegate = vmem.append_object_instance()
 
         vmem.append_int(FRAME_TYPE_OBJECT)
-        vmem.append_int(5 * bits.WSIZE)
+        vmem.append_int(4 * bits.WSIZE)
 
         oop = vmem.append_label_ref('Function', self.label())   # vt
         vmem.append_pointer_to(delegate)                        # delegate

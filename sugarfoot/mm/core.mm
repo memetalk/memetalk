@@ -227,6 +227,9 @@
   end
 
   class String
+  instance_method toInteger: fun() {
+    <primitive "string_to_integer">
+  }
   instance_method toString: fun() {
     return this;
   }
@@ -590,7 +593,7 @@ end
   instance_method rewindAndContinue: fun(frame) {
     <primitive "process_rewind_and_continue">
   }
-  instance_method runUntil: fun(cfun) {
+  instance_method runUntil: fun(cfun, line) {
     <primitive "process_run_until">
   }
   instance_method currentException: fun() {
