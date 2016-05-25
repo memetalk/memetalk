@@ -28,7 +28,7 @@
 
 (setq memetalk-keywords '("preamble" "code" "endcode" "class" "fields"
                           "init" "fun" "super" "instance_method" "class_method"
-                          "if" "else" "try" "end" "catch" "var" "primitive" "return"))
+                          "if" "elif" "else" "try" "end" "catch" "var" "primitive" "return"))
 
 (setq memetalk-constants '("true" "false" "null"))
 
