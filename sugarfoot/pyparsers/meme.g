@@ -148,14 +148,16 @@ control_expr = expr_if
              | expr_while
              | expr_try
 
-expr_if =  spaces !(self.input.position):begin token("if") token("(") expr:e token(")") token("{")
-           stmts:xs
-           token("}") token("else") token("{") stmts:ys token("}")
-          -> self.i.ast(begin,['if/else', e, xs, ys])
-        |  spaces !(self.input.position):begin token("if") token("(") expr:e token(")") token("{")
-           stmts:xs
-           token("}")
-          -> self.i.ast(begin,['if', e, xs])
+expr_if = spaces !(self.input.position):begin token("if") token("(") expr:e token(")") token("{")
+           stmts:body
+          token("}")
+          expr_elif*:elif_
+          (expr_else)?:else_ -> self.i.ast(begin, ["if", e, body, elif_, else_ or self.i.ast(begin,[])])
+
+expr_elif = !(self.input.position):begin token("elif") token("(") expr:e token(")") token("{") stmts:body token("}") -> self.i.ast(begin, ["elif", e, body])
+
+expr_else = !(self.input.position):begin token("else") token("{") stmts:body token("}") -> body
+
 
 expr_while = spaces !(self.input.position):begin token("while") token("(") expr:e token(")") token("{")
              stmts:xs

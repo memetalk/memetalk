@@ -95,6 +95,9 @@ class ASTNode():
         # it should be used for stack traces and AST debugging
         return self.lst.__repr__()
 
+    def __nonzero__(self):
+        return not not(self.lst)
+
     def __eq__(self, other):
         return id(other) == id(self) or\
             id(other) == id(self.lst) or\

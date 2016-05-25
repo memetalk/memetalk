@@ -84,7 +84,9 @@ body :fnobj = [(expr(fnobj)*) ['end-body']]:ast -> fnobj.emit_return_this(ast)
 
 exprs :fnobj = [expr(fnobj)*]
 
-foo :fnobj :ast = 'var-def' :id expr(fnobj) ->  fnobj.emit_var_decl(ast, id)
+expr_elif :fnobj :lb = ['elif' expr(fnobj) !(fnobj.emit_jz()):label [expr(fnobj)* !(fnobj.emit_jmp(lb=lb))]] !(label.as_current())
+
+stm :fnobj :ast = 'var-def' :id expr(fnobj) ->  fnobj.emit_var_decl(ast, id)
                | 'return' expr(fnobj)       ->  fnobj.emit_return_top(ast)
                | 'return-null' -> fnobj.emit_return_null(ast)
                | 'return-top' -> fnobj.emit_return_top(ast)
@@ -108,12 +110,7 @@ foo :fnobj :ast = 'var-def' :id expr(fnobj) ->  fnobj.emit_var_decl(ast, id)
                | '>=' :e expr(fnobj) apply('expr' fnobj e) -> fnobj.emit_binary(ast, '>=')
                | '==' :e expr(fnobj) apply('expr' fnobj e) -> fnobj.emit_binary(ast, '==')
                | '!=' :e expr(fnobj) apply('expr' fnobj e) -> fnobj.emit_binary(ast, '!=')
-               | 'if' expr(fnobj)
-                   !(fnobj.emit_jz()):label [expr(fnobj)*] -> label.as_current()
-               | 'if/else' expr(fnobj)
-                  !(fnobj.emit_jz()):lb1 [expr(fnobj)*]
-                  !(fnobj.emit_jmp()):lb2 !(lb1.as_current())
-                  [expr(fnobj)*] -> lb2.as_current()
+               | 'if' expr(fnobj) !(fnobj.emit_jz()):label [expr(fnobj)* !(fnobj.emit_jmp()):lb2] !(label.as_current()) [expr_elif(fnobj lb2)*] [expr(fnobj)*] !(lb2.as_current())
                | 'while' !(fnobj.current_label(False)):lbcond
                    expr(fnobj)
                    !(fnobj.emit_jz()):lbend [expr(fnobj)*] !(fnobj.emit_jmp_back(lbcond.as_current())) -> lbend.as_current()
@@ -143,7 +140,7 @@ foo :fnobj :ast = 'var-def' :id expr(fnobj) ->  fnobj.emit_var_decl(ast, id)
                | 'literal-dict'   dict_pairs(fnobj):p   -> fnobj.emit_push_dict(ast, len(p))
                | 'index' :e expr(fnobj) apply('expr' fnobj e)    -> fnobj.emit_push_index(ast)
 
-expr :fnobj = !(self.input.head()[0]):ast [foo(fnobj ast)]
+expr :fnobj = !(self.input.head()[0]):ast [stm(fnobj ast)]
             | funliteral(fnobj)
 
 
