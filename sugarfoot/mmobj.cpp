@@ -1252,6 +1252,22 @@ bool MMObj::delegates_to(oop sub_type, oop super_type) {
   }
 }
 
+bool MMObj::delegates_or_is_subclass(Process* p, oop subclass, oop superclass) {
+  if (subclass == NULL) {
+    return false;
+  } else if (delegates_to(subclass, superclass)) {
+    return true;
+  } else {
+    oop super_cclass = mm_class_get_compiled_class(p, superclass);
+    oop sub_cclaass = mm_class_get_compiled_class(p, subclass);
+    if (super_cclass == sub_cclaass) {
+      return true;
+    } else {
+      return delegates_or_is_subclass(p, mm_object_delegate(subclass), superclass);
+    }
+  }
+}
+
 
 oop MMObj::mm_new(oop vt, oop delegate, number payload) {
   oop obj = (oop) calloc(sizeof(word), (2 + payload)); // vt, delegate

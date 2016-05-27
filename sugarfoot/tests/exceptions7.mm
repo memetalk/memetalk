@@ -42,7 +42,7 @@ main: fun() {
   }
 
   try {
-    Fail.throw("msg4");
+    Fail.throw("msg5");
   } catch(Exception e) {
     //
   }

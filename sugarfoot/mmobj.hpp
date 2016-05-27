@@ -38,6 +38,7 @@ public:
   number mm_behavior_size(Process*, oop, bool should_assert = false);
 
   bool delegates_to(oop, oop);
+  bool delegates_or_is_subclass(Process* p, oop subclass, oop superclass);
 
   oop mm_module_new(int num_fields, oop cmod, oop delegate);
 

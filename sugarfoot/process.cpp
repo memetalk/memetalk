@@ -1182,7 +1182,10 @@ bool Process::exception_has_handler(oop e, oop cp, bytecode* ip, oop next_bp) {
     DBG("RAISE instr: " << instr << " at ip: " << ip << " try: " << try_block
         << " catch: " << catch_block << " type: " << type_oop << endl);
 
-    bool delegates_to = _mmobj->delegates_to(_mmobj->mm_object_vt(e), type_oop);
+    bool delegates_to = false;
+    if (type_oop) {
+      delegates_to = _mmobj->delegates_or_is_subclass(this, _mmobj->mm_object_vt(e), type_oop);
+    }
     DBG("delegates_to == " << delegates_to  << endl);
 
     DBG("::" <<  (instr >= try_block) << " " << (instr < catch_block)
@@ -1290,13 +1293,13 @@ oop Process::unwind_with_exception(oop e) {
     DBG("RAISE instr: " << instr << " ip: " << _ip << " try: " << try_block
         << " catch: " << catch_block << " type: " << type_oop << endl);
 
-    //matching on compiled class, because different module instances
-    //have different Class instances for the same CompiledClass
-    oop type_cclass = _mmobj->mm_class_get_compiled_class(this, type_oop);
-    oop ex_cclass = _mmobj->mm_class_get_compiled_class(this, _mmobj->mm_object_vt(e));
-    DBG("execption clause cclass: " << type_cclass << " [" << TO_C_STR(_mmobj->mm_compiled_class_name(this, type_cclass, true))
-        << "] exception object cclass: " << ex_cclass << " [" << TO_C_STR(_mmobj->mm_compiled_class_name(this, ex_cclass, true)) << "]" << endl);
-    bool delegates_to = _mmobj->delegates_to(ex_cclass, type_cclass);
+    //we need to also account for different module instances
+    //having different Class instances for the same CompiledClass
+
+    bool delegates_to = false;
+    if (type_oop) {
+      delegates_to = _mmobj->delegates_or_is_subclass(this, _mmobj->mm_object_vt(e), type_oop);
+    }
     DBG("delegates_to == " << delegates_to  << endl);
     if (instr >= try_block && instr < catch_block &&
         (type_oop == MM_NULL || delegates_to)) {
