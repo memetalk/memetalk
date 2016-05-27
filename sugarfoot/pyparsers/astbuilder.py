@@ -116,3 +116,12 @@ class ASTNode():
     # ...and this hack...
     def __setattr__(self, name, val):
         self.__dict__[name] = val
+
+    def append(self, x):
+        self.lst.append(x)
+
+    def get(self, idx, default):
+        try:
+            return self.lst[idx]
+        except IndexError:
+            return default

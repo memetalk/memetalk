@@ -129,7 +129,7 @@ stmt = control_expr
 non_control_expr = expr_ret
                  | expr_non_local_ret
                  | expr_attr
-                 | expr:e -> ['pop', e]
+                 | expr:e -> ['expression', e]
                  | expr_decl
 
 expr_ret =  spaces !(self.input.position):begin token("return") expr:e -> self.i.ast(begin,['return', e])
@@ -258,13 +258,18 @@ literal = lit_number
 
 funliteral = spaces !(self.input.position):begin token("fun") params:p token("{")
                funliteral_body:body
-             token("}") -> self.i.ast(begin, ['fun-literal', ["params", p],
-                            ['body', body]])
+             token("}") -> self.i.ast(begin, ['fun-literal', ["params", p], ["body", body]])
 
-funliteral_body = !(self.input.position):begin stmt:x stmts:xs expr:e -> self.i.ast(begin, [x] + xs + [e] + [['return-top']])
-                | !(self.input.position):begin stmt:x stmts:xs -> self.i.ast(begin, [x] + xs + [['return-null']])
-                | !(self.input.position):begin expr:e          -> self.i.ast(begin, [e, ['return-top']])
-                |  -> self.i.sint_ast(self.input.position,[self.i.sint_ast(self.input.position,['return-null'])])
+funliteral_body = !(self.input.position):begin
+                  stmts:body
+                    expr?:no_semicol_expr !(not no_semicol_expr or body.append(['expression', no_semicol_expr]))
+                    !(body.get(-1, [])):last
+                    rewrite_last_stmt(last)
+                -> self.i.ast(begin, body + self.i.sint_ast(self.input.position,[self.i.sint_ast(self.input.position,['return-null'])]))
+
+
+rewrite_last_stmt = ['expression' :x]:c -> c.__setitem__(0, 'return')
+                  | :x
 
 cfunliteral_body = funliteral_body:x spaces ~anything -> x
 
