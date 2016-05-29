@@ -11,16 +11,39 @@ ometa_generate: fun() {
   var maybe_ast = ometa_base.parse(text, ometa.OMeta, :ometa);
   io.print(maybe_ast.toSource);
   if (maybe_ast[0]) {
-    io.print("ometa.g error: " + maybe_ast[0].toString);
+    io.print("parse error: " + maybe_ast[0].toString);
   } else {
     io.print("\n\ntranslating...\n\n");
     maybe_ast = ometa_base.parse([maybe_ast[1]], ometa_tr.OMetaTranslator, :ometa);
-    io.print(maybe_ast);
+    if (maybe_ast[0]) {
+      io.print("translation error: " + maybe_ast[0].toString);
+    } else {
+      io.print(maybe_ast[1]);
+    }
   }
 }
 
+ometatr_generate: fun() {
+  var text = io.read_file("mm/ometa_tr.g");
+  var maybe_ast = ometa_base.parse(text, ometa.OMeta, :ometa);
+  io.print(maybe_ast.toSource);
+  if (maybe_ast[0]) {
+    io.print("parse error: " + maybe_ast[0].toString);
+  } else {
+    io.print("\n\ntranslating...\n\n");
+    maybe_ast = ometa_base.parse([maybe_ast[1]], ometa_tr.OMetaTranslator, :ometa);
+    if (maybe_ast[0]) {
+      io.print("translation error: " + maybe_ast[0].toString);
+    } else {
+      io.print(maybe_ast[1]);
+    }
+  }
+}
+
+
 main: fun() {
   ometa_generate();
+  ometatr_generate();
 }
 
 xmain: fun() {

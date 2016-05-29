@@ -784,11 +784,27 @@ static int prim_list_plus(Process* proc) {
 static int prim_list_has(Process* proc) {
   oop self =  proc->dp();
   oop value = proc->get_arg(0);
-  if (proc->mmobj()->mm_list_index_of(proc, self, value) == -1) {
-    proc->stack_push(MM_FALSE);
-  } else {
+
+  if (proc->mmobj()->mm_list_index_of(proc, self, value) != -1) {
     proc->stack_push(MM_TRUE);
+    return 0;
   }
+
+  for (number i = 0; i < proc->mmobj()->mm_list_size(proc, self); i++) {
+    oop entry = proc->mmobj()->mm_list_entry(proc, self, i);
+    int exc;
+    oop res = proc->send_1(entry, proc->vm()->new_symbol("=="), value, &exc);
+    if (exc != 0) {
+      proc->stack_push(res);
+      return exc;
+    }
+    if (res == MM_TRUE) {
+      proc->stack_push(MM_TRUE);
+      return 0;
+    }
+  }
+
+  proc->stack_push(MM_FALSE);
   return 0;
 }
 

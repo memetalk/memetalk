@@ -260,9 +260,6 @@
   instance_method find: fun(arg) {
     <primitive "string_find">
   }
-  instance_method contains: fun(arg) {
-    <primitive "string_contains">
-  }
   instance_method index: fun(arg) {
     <primitive "string_index">
   }

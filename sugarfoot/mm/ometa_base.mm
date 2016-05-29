@@ -291,6 +291,12 @@ instance_method string: fun() {
   return r;
 }
 
+instance_method symbol: fun() {
+  var r = this._apply(:anything);
+  this._pred(Mirror.vtFor(r) == Symbol);
+  return r;
+}
+
 instance_method char: fun() {
   var r = this._apply(:anything);
   this._pred(Mirror.vtFor(r) == String and r.size() == 1);
@@ -382,7 +388,7 @@ instance_method until: fun() {
   var acc = [];
   while (true) {
     r = this._lookahead(fun() { this._apply(:anything) });
-    if (brks.has(r)) {
+    if (brks.find(r) >= 0) {
       return acc;
     }
     acc.append(r);
