@@ -74,7 +74,11 @@ std::string Process::dump_stack_trace(bool enabled) {
   while (bp) {
     oop cp = cp_from_base(bp);
     if (!cp) break;
-    s << _mmobj->mm_string_cstr(this, _mmobj->mm_function_get_name(this, cp), true);
+
+    oop mp = _mmobj->mm_function_get_module(this, cp, true);
+    oop cmod = _mmobj->mm_module_get_cmod(mp);
+    s << _mmobj->mm_string_cstr(this, _mmobj->mm_compiled_module_name(this, cmod, true), true);
+    s << ":" << _mmobj->mm_string_cstr(this, _mmobj->mm_function_get_name(this, cp), true);
     s << "():" << (_mmobj->mm_function_get_line_for_instruction(
                      this, cp, ip_from_base(bp), true) + 1) << endl;
     bp = *(oop*)bp;
