@@ -1,4 +1,36 @@
-ometa OMeta {
+.preamble(io, ometa_base)
+  io: meme:io;
+  ometa_base: meme:ometa_base;
+  [OMetaBase, OMetaException] <= ometa_base;
+.code
+
+escaped: fun(chr) {
+  if (chr == "b") { return  "\b"; }
+  if (chr == "f") { return  "\f"; }
+  if (chr == "n") { return  "\n"; }
+  if (chr == "r") { return  "\r"; }
+  if (chr == "t") { return  "\t"; }
+  if (chr == "v") { return  "\v"; }
+  return chr;
+}
+
+
+class OMeta < OMetaBase
+fields: current_production, local_vars;
+init new: fun(input) {
+  super.new(input);
+  @local_vars = [];
+}
+
+<ometa>
+
+  mm_module = prologue_code:p rules:r epilogue_code:e
+            => [:module, p, r, e]
+            ;
+
+  prologue_code = {~'<ometa>' _}*:x '<ometa>' spaces => x.join("");
+
+  epilogue_code = "</ometa>" _*:r => r.join("");
 
   ometa = keyword("ometa") identifier:name inheritance:i  "{"
               rules:r
@@ -100,4 +132,8 @@ ometa OMeta {
 
   s_expr = "[" choice:s "]" => [:form, s];
 
-}
+</ometa>
+
+end //OMeta
+
+.endcode

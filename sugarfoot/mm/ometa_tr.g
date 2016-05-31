@@ -1,4 +1,50 @@
-ometa OMetaTranslator {
+.preamble(io, ometa_base)
+  io: meme:io;
+  ometa_base: meme:ometa_base;
+  [OMetaBase] <= ometa_base;
+.code
+
+class OMetaTranslator < OMetaBase
+fields: vars, indent;
+init new: fun(input) {
+  super.new(input);
+  @indent = "  ";
+  @vars = [];
+}
+instance_method incr_indent: fun() {
+  @indent = @indent + "  ";
+}
+instance_method decr_indent: fun() {
+  @indent = @indent.from(2);
+}
+instance_method _add_local_var: fun(name) {
+  if (!@vars.has(name)) {
+    @vars.append(name);
+  }
+}
+
+instance_method _local_vars: fun() {
+  var locals = @vars.map(fun(name) { ["  var ", name, " = null;\n"].join("") });
+  @vars = [];
+  return locals;
+}
+
+instance_method _endfun: fun() {
+ return "\n}";
+}
+
+instance_method _clbracket: fun() {
+ return "}";
+}
+
+instance_method _semicol: fun() {
+ return ";";
+}
+
+<ometa>
+  mm_module = [:module string:p rules:r string:e]
+            => [p, r.join("\n"), e].join("\n")
+            ;
 
   ometa = [:grammar string:name inheritance:base rules:r]
           => ["class ", name, " < ", base, "\n", r.join("\n"), "\nend"].join("")
@@ -69,4 +115,8 @@ ometa OMetaTranslator {
              | [:lookahead !{this.incr_indent()} body:x !{this.decr_indent()}]
                => [@indent, "this._lookahead(fun() {\n",la,"})"].join("")
              ;
-}
+</ometa>
+
+end //OMetaTranslator
+
+.endcode

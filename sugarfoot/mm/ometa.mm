@@ -22,7 +22,37 @@ init new: fun(input) {
   @local_vars = [];
 }
 
-// rules...
+
+instance_method mm_module: fun() {
+  var p = null;
+  var r = null;
+  var e = null;
+  return this._or([fun() {
+    p =     this._apply(:prologue_code);
+    r =     this._apply(:rules);
+    e =     this._apply(:epilogue_code);
+    return  [:module, p, r, e];  }]);
+}
+instance_method prologue_code: fun() {
+  var x = null;
+  return this._or([fun() {
+    x =     this._many(fun() {
+      return this._or([fun() {
+        this._not(fun() {
+          this._apply_with_args(:seq, [["<","o","m","e","t","a",">"]])});
+        this._apply(:anything);      }]);}, null);
+    this._apply_with_args(:seq, [["<","o","m","e","t","a",">"]]);
+    this._apply(:spaces);
+    return  x.join("");  }]);
+}
+instance_method epilogue_code: fun() {
+  var r = null;
+  return this._or([fun() {
+    this._apply_with_args(:token, ["</ometa>"]);
+    r =     this._many(fun() {
+      this._apply(:anything)}, null);
+    return  r.join("");  }]);
+}
 instance_method ometa: fun() {
   var name = null;
   var i = null;
@@ -328,7 +358,8 @@ instance_method s_expr: fun() {
     this._apply_with_args(:token, ["]"]);
     return  [:form, s];  }]);
 }
-end //OMeta
 
+
+end //OMeta
 
 .endcode

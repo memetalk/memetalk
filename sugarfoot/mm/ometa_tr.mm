@@ -41,7 +41,19 @@ instance_method _semicol: fun() {
  return ";";
 }
 
-//rules...
+
+instance_method mm_module: fun() {
+  var p = null;
+  var r = null;
+  var e = null;
+  return this._or([fun() {
+    this._form(fun() {
+      this._apply_with_args(:exactly, [:module]);
+      p =       this._apply(:string);
+      r =       this._apply(:rules);
+      e =       this._apply(:string);});
+    return  [p, r.join("\n"), e].join("\n");  }]);
+}
 instance_method ometa: fun() {
   var name = null;
   var base = null;
@@ -263,6 +275,8 @@ instance_method expression: fun() {
       this.decr_indent();});
     return  [@indent, "this._lookahead(fun() {\n",la,"})"].join("");  }]);
 }
+
+
 end //OMetaTranslator
 
 .endcode

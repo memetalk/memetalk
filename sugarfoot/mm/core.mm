@@ -686,4 +686,11 @@ end
   debug: fun() {
      <primitive "test_debug">
   }
+
+  compile_module: fun(mm_name) {
+     <primitive "remote_repl_compile_module">
+  }
+  instantiate_module: fun(mm_name) {
+     <primitive "remote_repl_instantiate_module">
+  }
 .end

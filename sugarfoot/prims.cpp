@@ -85,6 +85,20 @@ static int prim_io_read_file(Process* proc) {
   return 0;
 }
 
+static int prim_io_write_file(Process* proc) {
+  oop oop_path = proc->get_arg(0);
+  oop oop_text = proc->get_arg(1);
+  char* path = proc->mmobj()->mm_string_cstr(proc, oop_path);
+  char* text = proc->mmobj()->mm_string_cstr(proc, oop_text);
+
+  std::fstream file;
+  file.open(path, std::fstream::out | std::fstream::binary);
+  file << text;
+  file.close();
+  proc->stack_push(proc->mp());
+  return 0;
+}
+
 static int prim_string_append(Process* proc) {
   oop self =  proc->dp();
   oop other = proc->get_arg(0);
@@ -1952,6 +1966,7 @@ static int prim_modules_path(Process* proc) {
 void init_primitives(VM* vm) {
   vm->register_primitive("io_print", prim_io_print);
   vm->register_primitive("io_read_file", prim_io_read_file);
+  vm->register_primitive("io_write_file", prim_io_write_file);
 
   vm->register_primitive("remote_repl_compile_module", prim_remote_repl_compile_module);
   vm->register_primitive("remote_repl_instantiate_module", prim_remote_repl_instantiate_module);
