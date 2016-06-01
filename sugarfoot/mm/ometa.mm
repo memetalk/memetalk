@@ -23,6 +23,26 @@ init new: fun(input) {
 }
 
 
+instance_method space: fun() {
+  return this._or([fun() {
+    this._apply_with_args(:seq, [["/","*"]]);
+    this._many(fun() {
+      return this._or([fun() {
+        this._not(fun() {
+          this._apply_with_args(:seq, [["*","/"]])});
+        this._apply(:anything);      }]);}, null);
+    this._apply_with_args(:seq, [["*","/"]]);  },
+  fun() {
+    this._apply_with_args(:seq, [["/","/"]]);
+    this._many(fun() {
+      return this._or([fun() {
+        this._not(fun() {
+          this._apply_with_args(:seq, [["\n"]])});
+        this._apply(:anything);      }]);}, null);
+    this._apply_with_args(:seq, [["\n"]]);  },
+  fun() {
+    this._apply_super(:space);  }]);
+}
 instance_method mm_module: fun() {
   var p = null;
   var r = null;

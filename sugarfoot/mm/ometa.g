@@ -23,6 +23,10 @@ init new: fun(input) {
 }
 
 <ometa>
+  space = '/*' { ~'*/' _ }* '*/'
+          | '//' { ~'\n' _}* '\n'
+          | ^
+          ;
 
   mm_module = prologue_code:p rules:r epilogue_code:e
             => [:module, p, r, e]
