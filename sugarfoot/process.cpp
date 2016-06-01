@@ -479,6 +479,46 @@ oop Process::send(oop recv, oop selector, oop args, int* exc) {
   return do_send(recv, selector, num_args, exc);
 }
 
+oop Process::super_send(oop recv, oop selector, oop args, int* exc) {
+  number num_args = _mmobj->mm_list_size(this, args);
+  for (int i = 0; i < num_args; i++) {
+    stack_push(_mmobj->mm_list_entry(this, args, i));
+  }
+  DBG("-- begin super_send, recv: " << recv
+      << ", selector: " << _mmobj->mm_symbol_cstr(this, selector, true) << " #args: " << num_args << endl);
+
+  *exc = 0;
+  std::pair<oop, oop> res = lookup(_mmobj->mm_object_delegate(recv),
+                                   _mmobj->mm_object_delegate(_mmobj->mm_object_vt(recv)), selector);
+
+  oop drecv = res.first;
+  oop fun = res.second;
+  if (!fun) {
+    std::stringstream s;
+    s << _mmobj->mm_symbol_cstr(this, selector, true) << " not found in object " << recv;
+    DBG(s << endl);
+    *exc = 1;
+    oop ex = mm_exception("DoesNotUnderstand", s.str().c_str());
+    WARNING() << "raising DoesNotUnderstand: " << s.str() << endl;
+    DBG("-- end do_send returning exception object " << ex << endl);
+    return ex;
+  }
+
+  number arity = _mmobj->mm_function_get_num_params(this, fun);
+  if (num_args != arity) {
+    std::stringstream s;
+    s << _mmobj->mm_symbol_cstr(this, selector, true) << ": expects " <<  arity << " but got " << num_args;
+    DBG(s << endl);
+    *exc = 1;
+    WARNING() << "wrong arity: " << s.str() << endl;
+    oop ex = mm_exception("ArityError", s.str().c_str());
+    DBG("-- end do_send returning exception object " << ex << endl);
+    return ex;
+  }
+
+  return protected_fetch_cycle(recv, drecv, fun, exc, true);
+}
+
 oop Process::do_send(oop recv, oop selector, int num_args, int *exc) {
   DBG("-- begin do_send, recv: " << recv
       << ", selector: " << _mmobj->mm_symbol_cstr(this, selector, true) << " #args: " << num_args << endl);

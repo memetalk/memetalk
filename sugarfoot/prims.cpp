@@ -1234,6 +1234,21 @@ static int prim_object_send(Process* proc) {
   return 0;
 }
 
+static int prim_object_super_send(Process* proc) {
+  oop self =  proc->rp();
+  oop name = proc->get_arg(0);
+  oop args_list = proc->get_arg(1);
+
+  int exc;
+  oop res = proc->super_send(self, name, args_list, &exc);
+  if (exc != 0) {
+    proc->stack_push(res);
+    return PRIM_RAISED;
+  }
+  proc->stack_push(res);
+  return 0;
+}
+
 static int prim_object_id(Process* proc) {
   oop self =  proc->rp();
   std::stringstream s;
@@ -1992,6 +2007,7 @@ void init_primitives(VM* vm) {
   vm->register_primitive("object_to_string", prim_object_to_string);
   vm->register_primitive("object_to_source", prim_object_to_source);
   vm->register_primitive("object_send", prim_object_send);
+  vm->register_primitive("object_super_send", prim_object_super_send);
   vm->register_primitive("object_id", prim_object_id);
 
   vm->register_primitive("symbol_to_string", prim_symbol_to_string);

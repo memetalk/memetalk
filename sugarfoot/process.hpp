@@ -92,6 +92,7 @@ public:
   oop send(oop recv, oop selector, oop args, int* exc);
   oop do_send(oop recv, oop selector, int num_args, int *exc);
 
+  oop super_send(oop recv, oop selector, oop args, int* exc);
   std::pair<oop,oop> lookup(oop, oop, oop);
 
   void raise(const char*, const char*);

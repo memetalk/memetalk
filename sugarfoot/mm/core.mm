@@ -79,6 +79,9 @@
        send: fun(name, args) {
          <primitive "object_send">
        }
+       super_send: fun(name, args) {
+         <primitive "object_super_send">
+       }
        id: fun() {
          <primitive "object_id">
        }
