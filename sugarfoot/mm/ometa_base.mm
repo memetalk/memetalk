@@ -142,6 +142,11 @@ instance_method _apply_with_args: fun(rule, args) {
   }
 }
 
+instance_method _apply_super: fun(rule) {
+  //non-memoized
+  return this.super_send(rule, []);
+}
+
 instance_method prepend_input: fun(value) {
   @input = OMetaStream.with_head_and_tail(value, @input);
 }
