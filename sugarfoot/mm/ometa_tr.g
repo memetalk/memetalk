@@ -67,12 +67,12 @@ instance_method _semicol: fun() {
            !{this.incr_indent()}
              body+:p
            !{this.decr_indent()}]
-        => [@indent,"return this._or([", p.map(fun(x) { ["fun() {\n", x, @indent, "}"].join("") }).join(",\n" + @indent), "])"].join("") + this._semicol
+        => [@indent,"return this._or([", p.map(fun(x) { ["fun() {\n", x, "\n", @indent, "}"].join("") }).join(", "), "])", this._semicol].join("")
        | pattern
        ;
 
   pattern = [:bind string:name body:e] !{this._add_local_var(name)}
-             => [@indent, name, " = ", e].join("")
+             => [@indent, name, " = ", e.trim()].join("")
           | [:action _:ac] => [@indent, "return ", ac].join("")
           | expression
           ;

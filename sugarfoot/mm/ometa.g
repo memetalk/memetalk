@@ -138,11 +138,10 @@ init new: fun(input) {
                | host_paren
                | host_sq_brk
                | host_c_brk
-               | space => "" //while we lack String.trim()
                | _
                ;
 
-  host_expr = {~{';'|'}'|'|'} host_element}+:x => x.join("");
+  host_expr = {~{';'|'}'|'|'} host_element}+:x => x.join("").trim();
 
   action  = "=>" host_expr:s => [:action, s];
 

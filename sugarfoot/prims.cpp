@@ -379,6 +379,36 @@ static int prim_string_to_symbol(Process* proc) {
   return 0;
 }
 
+#include <algorithm>
+#include <functional>
+#include <cctype>
+#include <locale>
+
+// trim from start
+static inline std::string &ltrim(std::string &s) {
+        s.erase(s.begin(), std::find_if(s.begin(), s.end(), std::not1(std::ptr_fun<int, int>(std::isspace))));
+        return s;
+}
+
+// trim from end
+static inline std::string &rtrim(std::string &s) {
+        s.erase(std::find_if(s.rbegin(), s.rend(), std::not1(std::ptr_fun<int, int>(std::isspace))).base(), s.end());
+        return s;
+}
+
+// trim from both ends
+static inline std::string &trim(std::string &s) {
+        return ltrim(rtrim(s));
+}
+
+static int prim_string_trim(Process* proc) {
+  oop self =  proc->dp();
+  std::string str = proc->mmobj()->mm_string_cstr(proc, self);
+  std::string res = trim(str);
+  oop oop_res = proc->mmobj()->mm_string_new(res.c_str());
+  proc->stack_push(oop_res);
+  return 0;
+}
 
 static int prim_string_b64decode(Process* proc) {
   oop self =  proc->dp();
@@ -2065,6 +2095,7 @@ void init_primitives(VM* vm) {
   vm->register_primitive("string_is_upper", prim_string_is_upper);
   vm->register_primitive("string_split", prim_string_split);
   vm->register_primitive("string_to_symbol", prim_string_to_symbol);
+  vm->register_primitive("string_trim", prim_string_trim);
 
 
   vm->register_primitive("mirror_entries", prim_mirror_entries);

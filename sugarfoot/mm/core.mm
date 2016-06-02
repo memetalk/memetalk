@@ -299,6 +299,9 @@
   instance_method split: fun(sep) {
     <primitive "string_split">
   }
+  instance_method trim: fun() {
+    <primitive "string_trim">
+  }
   end
 
   class Symbol
