@@ -324,7 +324,7 @@ instance_method digit: fun() {
   return r;
 }
 
-instance_method str_digits: fun() {
+instance_method digits: fun() {
   var ds = this._many1(fun() { this._apply(:digit) });
   return ds.join("");
 }

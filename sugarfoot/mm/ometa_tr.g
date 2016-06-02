@@ -114,6 +114,8 @@ instance_method _semicol: fun() {
              | [:sem_action string:s] => [@indent, s].join("")
              | [:lookahead !{this.incr_indent()} body:x !{this.decr_indent()}]
                => [@indent, "this._lookahead(fun() {\n",la,"})"].join("")
+             | [:keyword_string string:s]
+               => [@indent, "this._apply_with_args(:keyword,[",s.toSource,"])"].join("")
              ;
 </ometa>
 

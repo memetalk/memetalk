@@ -1,7 +1,6 @@
-.preamble(io, ometa_base)
-  io: meme:io;
+.preamble(ometa_base)
   ometa_base: meme:ometa_base;
-  [OMetaBase, OMetaException] <= ometa_base;
+  [OMetaBase] <= ometa_base;
 .code
 
 escaped: fun(chr) {
@@ -28,6 +27,29 @@ init new: fun(input) {
           | ^
           ;
 
+  keyword :xs = token(xs) ~identifier_rest => xs;
+
+  char_sequence = "'" {~'\'' '\\' char:c => escaped(c) | ~'\'' char}+:cs '\''
+                  => [:seq, cs.join("")]
+                ;
+
+  token_string = "\"" {~'"' '\\' char:c => escaped(c) | ~'"' char}+:cs '"'
+                  => [:token_string, cs.join("")]
+               ;
+
+  keyword_string = "``" {~'`' '\\' char:c => escaped(c) | ~'`' char}+:cs '``'
+                  => [:keyword_string, cs.join("")]
+                ;
+
+  string_object = "`" {~'`' '\\' char:c => escaped(c) | ~'`' char}+:cs '`'
+                  => [:string_object, cs.join("")]
+                ;
+
+
+  asymbol = ":" identifier:s => [:symbol, s];
+
+  s_expr = "[" choice:s "]" => [:form, s];
+
   mm_module = prologue_code:p rules:r epilogue_code:e
             => [:module, p, r, e]
             ;
@@ -36,12 +58,10 @@ init new: fun(input) {
 
   epilogue_code = "</ometa>" _*:r => r.join("");
 
-  ometa = keyword("ometa") identifier:name inheritance:i  "{"
-              rules:r
+  ometa = ``ometa`` identifier:name inheritance:i  "{"
+            rules:r
           "}"
         => [:grammar, name, i, r];
-
-  keyword :xs = token(xs) ~identifier_rest => xs;
 
   inheritance = "<:" identifier:i => [:parent, i]
               | => [:parent, "OMetaBase"]
@@ -100,6 +120,7 @@ init new: fun(input) {
 
   data_element =  char_sequence
                |  token_string
+               |  keyword_string
                |  string_object
                |  asymbol
                |  s_expr
@@ -109,8 +130,10 @@ init new: fun(input) {
   action  = "=>" until(";|\n"):s => [:action, s.join("")];
 
 
-  prod_app =  keyword("_") => [:apply, :anything]
-            | keyword("$") => [:apply, :end]
+  action  = "=>" until(";|\n"):s => [:action, s.join("")];
+
+  prod_app =  ``_`` => [:apply, :anything]
+            | ``$`` => [:apply, :end]
             | identifier:p "(" prod_args:args ")" => [:apply_with_args, args, p.toSymbol]
             | identifier:p => [:apply, p.toSymbol]
             | "^" => [:apply_super, @current_production]
@@ -119,22 +142,6 @@ init new: fun(input) {
   prod_args = prod_arg:x {"," prod_arg}*:xs => [x] + xs;
 
   prod_arg = data_element | identifier:i => [:id, i];
-
-  char_sequence = "'" {~'\'' '\\' char:c => escaped(c) | ~'\'' char}+:cs '\''
-                  => [:seq, cs.join("")]
-                ;
-
-  token_string = "\"" {~'"' '\\' char:c => escaped(c) | ~'"' char}+:cs '"'
-                  => [:token_string, cs.join("")]
-               ;
-
-  string_object = "`" {~'`' '\\' char:c => escaped(c) | ~'`' char}+:cs '`'
-                  => [:token_string, cs.join("")]
-                ;
-
-  asymbol = ":" identifier:s => [:symbol, s];
-
-  s_expr = "[" choice:s "]" => [:form, s];
 
 </ometa>
 

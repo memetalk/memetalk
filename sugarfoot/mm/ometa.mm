@@ -252,6 +252,8 @@ instance_method data_element: fun() {
   fun() {
     this._apply(:token_string);  },
   fun() {
+    this._apply(:keyword_string);  },
+  fun() {
     this._apply(:string_object);  },
   fun() {
     this._apply(:asymbol);  },
@@ -344,6 +346,25 @@ instance_method token_string: fun() {
     this._apply_with_args(:seq, [["\""]]);
     return  [:token_string, cs.join("")];  }]);
 }
+instance_method keyword_string: fun() {
+  var c = null;
+  var cs = null;
+  return this._or([fun() {
+    this._apply_with_args(:token, ["``"]);
+    cs =     this._many1(fun() {
+      return this._or([fun() {
+        this._not(fun() {
+          this._apply_with_args(:seq, [["`"]])});
+        this._apply_with_args(:seq, [["\\"]]);
+        c =         this._apply(:char);
+        return  escaped(c) ;      },
+      fun() {
+        this._not(fun() {
+          this._apply_with_args(:seq, [["`"]])});
+        this._apply(:char);      }]);});
+    this._apply_with_args(:seq, [["`","`"]]);
+    return  [:keyword_string, cs.join("")];  }]);
+}
 instance_method string_object: fun() {
   var c = null;
   var cs = null;
@@ -361,7 +382,7 @@ instance_method string_object: fun() {
           this._apply_with_args(:seq, [["`"]])});
         this._apply(:char);      }]);});
     this._apply_with_args(:seq, [["`"]]);
-    return  [:token_string, cs.join("")];  }]);
+    return  [:string_object, cs.join("")];  }]);
 }
 instance_method asymbol: fun() {
   var s = null;

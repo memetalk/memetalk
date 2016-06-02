@@ -1,5 +1,4 @@
-.preamble(io, ometa_base)
-  io: meme:io;
+.preamble(ometa_base)
   ometa_base: meme:ometa_base;
   [OMetaBase] <= ometa_base;
 .code
@@ -273,7 +272,12 @@ instance_method expression: fun() {
       this.incr_indent();
       x =       this._apply(:body);
       this.decr_indent();});
-    return  [@indent, "this._lookahead(fun() {\n",la,"})"].join("");  }]);
+    return  [@indent, "this._lookahead(fun() {\n",la,"})"].join("");  },
+  fun() {
+    this._form(fun() {
+      this._apply_with_args(:exactly, [:keyword_string]);
+      s =       this._apply(:string);});
+    return  [@indent, "this._apply_with_args(:keyword,[",s.toSource,"])"].join("");  }]);
 }
 
 
