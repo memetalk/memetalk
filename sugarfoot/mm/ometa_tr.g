@@ -29,18 +29,6 @@ instance_method _local_vars: fun() {
   return locals;
 }
 
-instance_method _endfun: fun() {
- return "\n}";
-}
-
-instance_method _clbracket: fun() {
- return "}";
-}
-
-instance_method _semicol: fun() {
- return ";";
-}
-
 <ometa>
   mm_module = [:module string:p rules:r string:e]
             => [p, r.join("\n"), e].join("\n")
@@ -54,20 +42,20 @@ instance_method _semicol: fun() {
 
   rules = [rule+];
 
-  rule = [:rule _:name rule_args:args body:p] => (["instance_method ", name, ": fun() {\n"] + this._local_vars() + [args, p, this._endfun()]).join("");
+  rule = [:rule _:name rule_args:args body:p] => (["instance_method ", name, ": fun() {\n"] + this._local_vars() + [args, p, "\n}"]).join("");
 
   rule_args = [:args _+:args]
-       => args.map(fun(name) { ["  var ", name, " = this._apply(:anything)", this._semicol].join("") }).join("\n") + "\n"
+       => args.map(fun(name) { ["  var ", name, " = this._apply(:anything)", ";"].join("") }).join("\n") + "\n"
             | => ""
             ;
 
-  body = [:and body+:p] => p.join(this._semicol + "\n") + this._semicol
+  body = [:and body+:p] => p.join(";\n") + ";"
        | [:and]
        | [:or
            !{this.incr_indent()}
              body+:p
            !{this.decr_indent()}]
-        => [@indent,"return this._or([", p.map(fun(x) { ["fun() {\n", x, "\n", @indent, "}"].join("") }).join(", "), "])", this._semicol].join("")
+        => [@indent,"return this._or([", p.map(fun(x) { ["fun() {\n", x, "\n", @indent, "}"].join("") }).join(", "), "])", ";"].join("")
        | pattern
        ;
 
