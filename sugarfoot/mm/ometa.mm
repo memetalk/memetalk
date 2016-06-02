@@ -1,7 +1,6 @@
-.preamble(io, ometa_base)
-  io: meme:io;
+.preamble(ometa_base)
   ometa_base: meme:ometa_base;
-  [OMetaBase, OMetaException] <= ometa_base;
+  [OMetaBase] <= ometa_base;
 .code
 
 escaped: fun(chr) {
@@ -43,6 +42,105 @@ instance_method space: fun() {
   fun() {
     this._apply_super(:space);  }]);
 }
+instance_method keyword: fun() {
+  var xs = this._apply(:anything);
+  return this._or([fun() {
+    this._apply_with_args(:token, [xs]);
+    this._not(fun() {
+      this._apply(:identifier_rest)});
+    return xs;  }]);
+}
+instance_method char_sequence: fun() {
+  var c = null;
+  var cs = null;
+  return this._or([fun() {
+    this._apply_with_args(:token, ["'"]);
+    cs =     this._many1(fun() {
+      return this._or([fun() {
+        this._not(fun() {
+          this._apply_with_args(:seq, [["'"]])});
+        this._apply_with_args(:seq, [["\\"]]);
+        c =         this._apply(:char);
+        return escaped(c);      },
+      fun() {
+        this._not(fun() {
+          this._apply_with_args(:seq, [["'"]])});
+        this._apply(:char);      }]);});
+    this._apply_with_args(:seq, [["'"]]);
+    return [:seq,cs.join("")];  }]);
+}
+instance_method token_string: fun() {
+  var c = null;
+  var cs = null;
+  return this._or([fun() {
+    this._apply_with_args(:token, ["\""]);
+    cs =     this._many1(fun() {
+      return this._or([fun() {
+        this._not(fun() {
+          this._apply_with_args(:seq, [["\""]])});
+        this._apply_with_args(:seq, [["\\"]]);
+        c =         this._apply(:char);
+        return escaped(c);      },
+      fun() {
+        this._not(fun() {
+          this._apply_with_args(:seq, [["\""]])});
+        this._apply(:char);      }]);});
+    this._apply_with_args(:seq, [["\""]]);
+    return [:token_string,cs.join("")];  }]);
+}
+instance_method keyword_string: fun() {
+  var c = null;
+  var cs = null;
+  return this._or([fun() {
+    this._apply_with_args(:token, ["``"]);
+    cs =     this._many1(fun() {
+      return this._or([fun() {
+        this._not(fun() {
+          this._apply_with_args(:seq, [["`"]])});
+        this._apply_with_args(:seq, [["\\"]]);
+        c =         this._apply(:char);
+        return escaped(c);      },
+      fun() {
+        this._not(fun() {
+          this._apply_with_args(:seq, [["`"]])});
+        this._apply(:char);      }]);});
+    this._apply_with_args(:seq, [["`","`"]]);
+    return [:keyword_string,cs.join("")];  }]);
+}
+instance_method string_object: fun() {
+  var c = null;
+  var cs = null;
+  return this._or([fun() {
+    this._apply_with_args(:token, ["`"]);
+    cs =     this._many1(fun() {
+      return this._or([fun() {
+        this._not(fun() {
+          this._apply_with_args(:seq, [["`"]])});
+        this._apply_with_args(:seq, [["\\"]]);
+        c =         this._apply(:char);
+        return escaped(c);      },
+      fun() {
+        this._not(fun() {
+          this._apply_with_args(:seq, [["`"]])});
+        this._apply(:char);      }]);});
+    this._apply_with_args(:seq, [["`"]]);
+    return [:string_object,cs.join("")];  }]);
+}
+instance_method asymbol: fun() {
+  var s = null;
+  return this._or([fun() {
+    this._apply_with_args(:token, [":"]);
+    s =     this._apply(:identifier);
+    return [:symbol,s];  }]);
+}
+instance_method s_expr: fun() {
+  var s = null;
+  return this._or([fun() {
+    this._apply_with_args(:token, ["["]);
+    s =     this._apply(:choice);
+    this._apply_with_args(:token, ["]"]);
+    return [:form,s];  }]);
+}
 instance_method mm_module: fun() {
   var p = null;
   var r = null;
@@ -51,7 +149,7 @@ instance_method mm_module: fun() {
     p =     this._apply(:prologue_code);
     r =     this._apply(:rules);
     e =     this._apply(:epilogue_code);
-    return  [:module, p, r, e];  }]);
+    return [:module,p,r,e];  }]);
 }
 instance_method prologue_code: fun() {
   var x = null;
@@ -63,7 +161,7 @@ instance_method prologue_code: fun() {
         this._apply(:anything);      }]);}, null);
     this._apply_with_args(:seq, [["<","o","m","e","t","a",">"]]);
     this._apply(:spaces);
-    return  x.join("");  }]);
+    return x.join("");  }]);
 }
 instance_method epilogue_code: fun() {
   var r = null;
@@ -71,37 +169,29 @@ instance_method epilogue_code: fun() {
     this._apply_with_args(:token, ["</ometa>"]);
     r =     this._many(fun() {
       this._apply(:anything)}, null);
-    return  r.join("");  }]);
+    return r.join("");  }]);
 }
 instance_method ometa: fun() {
   var name = null;
   var i = null;
   var r = null;
   return this._or([fun() {
-    this._apply_with_args(:keyword, ["ometa"]);
+    this._apply_with_args(:keyword,["ometa"]);
     name =     this._apply(:identifier);
     i =     this._apply(:inheritance);
     this._apply_with_args(:token, ["{"]);
     r =     this._apply(:rules);
     this._apply_with_args(:token, ["}"]);
-    return  [:grammar, name, i, r];  }]);
-}
-instance_method keyword: fun() {
-  var xs = this._apply(:anything);
-  return this._or([fun() {
-    this._apply_with_args(:token, [xs]);
-    this._not(fun() {
-      this._apply(:identifier_rest)});
-    return  xs;  }]);
+    return [:grammar,name,i,r];  }]);
 }
 instance_method inheritance: fun() {
   var i = null;
   return this._or([fun() {
     this._apply_with_args(:token, ["<:"]);
     i =     this._apply(:identifier);
-    return  [:parent, i];  },
+    return [:parent,i];  },
   fun() {
-    return  [:parent, "OMetaBase"];  }]);
+    return [:parent,"OMetaBase"];  }]);
 }
 instance_method rules: fun() {
   return this._or([fun() {
@@ -116,7 +206,7 @@ instance_method rule: fun() {
     @current_production = name;
     r =     this._apply_with_args(:rule_rest, [name]);
     this._apply_with_args(:token, [";"]);
-    return  r;  }]);
+    return r;  }]);
 }
 instance_method rule_rest: fun() {
   var ac = null;
@@ -125,22 +215,22 @@ instance_method rule_rest: fun() {
   var name = this._apply(:anything);
   return this._or([fun() {
     ac =     this._apply(:action);
-    return  [:rule, name, ac];  },
+    return [:rule,name,ac];  },
   fun() {
     this._apply_with_args(:token, ["="]);
     c =     this._apply(:choices);
-    return  [:rule, name, c];  },
+    return [:rule,name,c];  },
   fun() {
     args =     this._many1(fun() {
       this._apply(:binding)});
     ac =     this._apply(:action);
-    return  [:rule, name, [:args] + args, ac];  },
+    return [:rule,name,[:args]+args,ac];  },
   fun() {
     args =     this._many1(fun() {
       this._apply(:binding)});
     this._apply_with_args(:token, ["="]);
     c =     this._apply(:choices);
-    return  [:rule, name, [:args] + args, c];  }]);
+    return [:rule,name,[:args]+args,c];  }]);
 }
 instance_method choices: fun() {
   var x = null;
@@ -151,7 +241,7 @@ instance_method choices: fun() {
       return this._or([fun() {
         this._apply_with_args(:token, ["|"]);
         this._apply(:choice);      }]);}, null);
-    return  [:or, x] + xs;  }]);
+    return [:or,x]+xs;  }]);
 }
 instance_method choice: fun() {
   var x = null;
@@ -160,11 +250,11 @@ instance_method choice: fun() {
     x =     this._many(fun() {
       this._apply(:top_expression)}, null);
     ac =     this._apply(:action);
-    return  [:and] + x + [ac];  },
+    return [:and]+x+[ac];  },
   fun() {
     x =     this._many(fun() {
       this._apply(:top_expression)}, null);
-    return  [:and] + x;  }]);
+    return [:and]+x;  }]);
 }
 instance_method top_expression: fun() {
   return this._or([fun() {
@@ -178,22 +268,22 @@ instance_method bind_expression: fun() {
   return this._or([fun() {
     e =     this._apply(:repeated_expression);
     b =     this._apply(:binding);
-    return  [:bind, b, e];  }]);
+    return [:bind,b,e];  }]);
 }
 instance_method repeated_expression: fun() {
   var e = null;
   return this._or([fun() {
     e =     this._apply(:term);
     this._apply_with_args(:seq, [["*"]]);
-    return  [:many, e];  },
+    return [:many,e];  },
   fun() {
     e =     this._apply(:term);
     this._apply_with_args(:seq, [["+"]]);
-    return  [:many1, e];  },
+    return [:many1,e];  },
   fun() {
     e =     this._apply(:term);
     this._apply_with_args(:seq, [["?"]]);
-    return  [:optional, e];  },
+    return [:optional,e];  },
   fun() {
     this._apply(:term);  }]);
 }
@@ -202,11 +292,11 @@ instance_method term: fun() {
   return this._or([fun() {
     this._apply_with_args(:token, ["~"]);
     e =     this._apply(:element);
-    return  [:not, e];  },
+    return [:not,e];  },
   fun() {
     this._apply_with_args(:token, ["&"]);
     e =     this._apply(:element);
-    return  [:lookahead, e];  },
+    return [:lookahead,e];  },
   fun() {
     this._apply(:element);  }]);
 }
@@ -230,7 +320,7 @@ instance_method element: fun() {
           this._apply_with_args(:seq, [["}"]])});
         this._apply(:anything);      }]);}, null);
     this._apply_with_args(:seq, [["}"]]);
-    return  [:sem_pred, s.join("")];  },
+    return [:sem_pred,s.join("")];  },
   fun() {
     this._apply_with_args(:token, ["!{"]);
     s =     this._many(fun() {
@@ -239,12 +329,12 @@ instance_method element: fun() {
           this._apply_with_args(:seq, [["}"]])});
         this._apply(:anything);      }]);}, null);
     this._apply_with_args(:seq, [["}"]]);
-    return  [:sem_action, s.join("")];  },
+    return [:sem_action,s.join("")];  },
   fun() {
     this._apply_with_args(:token, ["{"]);
     c =     this._apply(:choices);
     this._apply_with_args(:token, ["}"]);
-    return  c;  }]);
+    return c;  }]);
 }
 instance_method data_element: fun() {
   return this._or([fun() {
@@ -260,34 +350,119 @@ instance_method data_element: fun() {
   fun() {
     this._apply(:s_expr);  }]);
 }
+instance_method host_str: fun() {
+  var c = null;
+  var cs = null;
+  return this._or([fun() {
+    this._apply_with_args(:token, ["\""]);
+    cs =     this._many(fun() {
+      return this._or([fun() {
+        this._not(fun() {
+          this._apply_with_args(:seq, [["\""]])});
+        this._apply_with_args(:seq, [["\\"]]);
+        c =         this._apply(:char);
+        return "\\"+c;      },
+      fun() {
+        this._not(fun() {
+          this._apply_with_args(:seq, [["\""]])});
+        this._apply(:char);      }]);}, null);
+    this._apply_with_args(:seq, [["\""]]);
+    return "\""+cs.join("")+"\"";  }]);
+}
+instance_method host_paren: fun() {
+  var e = null;
+  return this._or([fun() {
+    this._apply_with_args(:seq, [["("]]);
+    e =     this._many(fun() {
+      return this._or([fun() {
+        this._not(fun() {
+          this._apply_with_args(:seq, [[")"]])});
+        this._apply(:host_element);      }]);}, null);
+    this._apply_with_args(:seq, [[")"]]);
+    return ["(",e.join(""),")"].join("");  }]);
+}
+instance_method host_sq_brk: fun() {
+  var e = null;
+  return this._or([fun() {
+    this._apply_with_args(:seq, [["["]]);
+    e =     this._many(fun() {
+      return this._or([fun() {
+        this._not(fun() {
+          this._apply_with_args(:seq, [["]"]])});
+        this._apply(:host_element);      }]);}, null);
+    this._apply_with_args(:seq, [["]"]]);
+    return ["[",e.join(""),"]"].join("");  }]);
+}
+instance_method host_c_brk: fun() {
+  var e = null;
+  return this._or([fun() {
+    this._apply_with_args(:seq, [["{"]]);
+    e =     this._many(fun() {
+      return this._or([fun() {
+        this._not(fun() {
+          this._apply_with_args(:seq, [["}"]])});
+        this._apply(:host_element);      }]);}, null);
+    this._apply_with_args(:seq, [["}"]]);
+    return ["{",e.join(""),"}"].join("");  }]);
+}
+instance_method host_element: fun() {
+  return this._or([fun() {
+    this._apply(:host_str);  },
+  fun() {
+    this._apply(:host_paren);  },
+  fun() {
+    this._apply(:host_sq_brk);  },
+  fun() {
+    this._apply(:host_c_brk);  },
+  fun() {
+    this._apply(:space);
+    return "";  },
+  fun() {
+    this._apply(:anything);  }]);
+}
+instance_method host_expr: fun() {
+  var x = null;
+  return this._or([fun() {
+    x =     this._many1(fun() {
+      return this._or([fun() {
+        this._not(fun() {
+          return this._or([fun() {
+            this._apply_with_args(:seq, [[";"]]);          },
+          fun() {
+            this._apply_with_args(:seq, [["}"]]);          },
+          fun() {
+            this._apply_with_args(:seq, [["|"]]);          }]);});
+        this._apply(:host_element);      }]);});
+    return x.join("");  }]);
+}
 instance_method action: fun() {
   var s = null;
   return this._or([fun() {
     this._apply_with_args(:token, ["=>"]);
-    s =     this._apply_with_args(:until, [";|\n"]);
-    return  [:action, s.join("")];  }]);
+    s =     this._apply(:host_expr);
+    return [:action,s];  }]);
 }
 instance_method prod_app: fun() {
   var p = null;
   var args = null;
   return this._or([fun() {
-    this._apply_with_args(:keyword, ["_"]);
-    return  [:apply, :anything];  },
+    this._apply_with_args(:keyword,["_"]);
+    return [:apply,:anything];  },
   fun() {
-    this._apply_with_args(:keyword, ["$"]);
-    return  [:apply, :end];  },
+    this._apply_with_args(:keyword,["$"]);
+    return [:apply,:end];  },
   fun() {
     p =     this._apply(:identifier);
     this._apply_with_args(:token, ["("]);
     args =     this._apply(:prod_args);
     this._apply_with_args(:token, [")"]);
-    return  [:apply_with_args, args, p.toSymbol];  },
+    return [:apply_with_args,args,p.toSymbol];  },
   fun() {
     p =     this._apply(:identifier);
-    return  [:apply, p.toSymbol];  },
+    return [:apply,p.toSymbol];  },
   fun() {
     this._apply_with_args(:token, ["^"]);
-    return  [:apply_super, @current_production];  }]);
+    return [:apply_super,@current_production];  }]);
 }
 instance_method prod_args: fun() {
   var x = null;
@@ -298,7 +473,7 @@ instance_method prod_args: fun() {
       return this._or([fun() {
         this._apply_with_args(:token, [","]);
         this._apply(:prod_arg);      }]);}, null);
-    return  [x] + xs;  }]);
+    return [x]+xs;  }]);
 }
 instance_method prod_arg: fun() {
   var i = null;
@@ -306,98 +481,7 @@ instance_method prod_arg: fun() {
     this._apply(:data_element);  },
   fun() {
     i =     this._apply(:identifier);
-    return  [:id, i];  }]);
-}
-instance_method char_sequence: fun() {
-  var c = null;
-  var cs = null;
-  return this._or([fun() {
-    this._apply_with_args(:token, ["'"]);
-    cs =     this._many1(fun() {
-      return this._or([fun() {
-        this._not(fun() {
-          this._apply_with_args(:seq, [["'"]])});
-        this._apply_with_args(:seq, [["\\"]]);
-        c =         this._apply(:char);
-        return  escaped(c) ;      },
-      fun() {
-        this._not(fun() {
-          this._apply_with_args(:seq, [["'"]])});
-        this._apply(:char);      }]);});
-    this._apply_with_args(:seq, [["'"]]);
-    return  [:seq, cs.join("")];  }]);
-}
-instance_method token_string: fun() {
-  var c = null;
-  var cs = null;
-  return this._or([fun() {
-    this._apply_with_args(:token, ["\""]);
-    cs =     this._many1(fun() {
-      return this._or([fun() {
-        this._not(fun() {
-          this._apply_with_args(:seq, [["\""]])});
-        this._apply_with_args(:seq, [["\\"]]);
-        c =         this._apply(:char);
-        return  escaped(c) ;      },
-      fun() {
-        this._not(fun() {
-          this._apply_with_args(:seq, [["\""]])});
-        this._apply(:char);      }]);});
-    this._apply_with_args(:seq, [["\""]]);
-    return  [:token_string, cs.join("")];  }]);
-}
-instance_method keyword_string: fun() {
-  var c = null;
-  var cs = null;
-  return this._or([fun() {
-    this._apply_with_args(:token, ["``"]);
-    cs =     this._many1(fun() {
-      return this._or([fun() {
-        this._not(fun() {
-          this._apply_with_args(:seq, [["`"]])});
-        this._apply_with_args(:seq, [["\\"]]);
-        c =         this._apply(:char);
-        return  escaped(c) ;      },
-      fun() {
-        this._not(fun() {
-          this._apply_with_args(:seq, [["`"]])});
-        this._apply(:char);      }]);});
-    this._apply_with_args(:seq, [["`","`"]]);
-    return  [:keyword_string, cs.join("")];  }]);
-}
-instance_method string_object: fun() {
-  var c = null;
-  var cs = null;
-  return this._or([fun() {
-    this._apply_with_args(:token, ["`"]);
-    cs =     this._many1(fun() {
-      return this._or([fun() {
-        this._not(fun() {
-          this._apply_with_args(:seq, [["`"]])});
-        this._apply_with_args(:seq, [["\\"]]);
-        c =         this._apply(:char);
-        return  escaped(c) ;      },
-      fun() {
-        this._not(fun() {
-          this._apply_with_args(:seq, [["`"]])});
-        this._apply(:char);      }]);});
-    this._apply_with_args(:seq, [["`"]]);
-    return  [:string_object, cs.join("")];  }]);
-}
-instance_method asymbol: fun() {
-  var s = null;
-  return this._or([fun() {
-    this._apply_with_args(:token, [":"]);
-    s =     this._apply(:identifier);
-    return  [:symbol, s];  }]);
-}
-instance_method s_expr: fun() {
-  var s = null;
-  return this._or([fun() {
-    this._apply_with_args(:token, ["["]);
-    s =     this._apply(:choice);
-    this._apply_with_args(:token, ["]"]);
-    return  [:form, s];  }]);
+    return [:id,i];  }]);
 }
 
 

@@ -23,9 +23,9 @@ init new: fun(input) {
 
 <ometa>
   space = '/*' { ~'*/' _ }* '*/'
-          | '//' { ~'\n' _}* '\n'
-          | ^
-          ;
+        | '//' { ~'\n' _}* '\n'
+        | ^
+        ;
 
   keyword :xs = token(xs) ~identifier_rest => xs;
 
@@ -126,11 +126,25 @@ init new: fun(input) {
                |  s_expr
                ;
 
+  host_str = "\"" {~'"' '\\' char:c => "\\" + c | ~'"' char}*:cs '"'
+           => "\"" + cs.join("") + "\""
+           ;
 
-  action  = "=>" until(";|\n"):s => [:action, s.join("")];
+  host_paren  = '(' { ~')' host_element }*:e ')' => ["(", e.join(""), ")"].join("");
+  host_sq_brk = '[' { ~']' host_element }*:e ']' => ["[", e.join(""), "]"].join("");
+  host_c_brk  = '{' { ~'}' host_element }*:e '}' => ["{", e.join(""), "}"].join("");
 
+  host_element = host_str
+               | host_paren
+               | host_sq_brk
+               | host_c_brk
+               | space => "" //while we lack String.trim()
+               | _
+               ;
 
-  action  = "=>" until(";|\n"):s => [:action, s.join("")];
+  host_expr = {~{';'|'}'|'|'} host_element}+:x => x.join("");
+
+  action  = "=>" host_expr:s => [:action, s];
 
   prod_app =  ``_`` => [:apply, :anything]
             | ``$`` => [:apply, :end]

@@ -100,7 +100,7 @@ instance_method _semicol: fun() {
                => [@indent, "this._many(fun() {\n", b, "}, null)"].join("")
              | [:many1 !{this.incr_indent()} body:b !{this.decr_indent()}]
                => [@indent, "this._many1(fun() {\n", b, "})"].join("")
-             | [:not !{this.incr_indent()} expression:e !{this.decr_indent()}]
+             | [:not !{this.incr_indent()} body:e !{this.decr_indent()}]
                => [@indent, "this._not(fun() {\n", e, "})"].join("")
              | [:optional !{this.incr_indent()} body:x !{this.decr_indent()}]
                => [@indent, "this._opt(fun() {\n", x, "})"].join("")
