@@ -12,13 +12,16 @@
 #include <limits.h>
 
 
-#define DBG(...) if(_log._enabled) { _log << _log.yellow + _log.bold + "[MMOBJ|" << __FUNCTION__ << "] " << _log.normal << __VA_ARGS__; }
-
-#define WARNING() MMLog::warning() << "[MMOBJ|" << __FUNCTION__ << "] " << _log.normal
-#define ERROR() MMLog::error() << "[MMOBJ|" << __FUNCTION__ << "] " << _log.normal
-
-
-#define TYPE_CHECK(invalid_condition, ex_type, ex_msg)       \
+#ifdef MM_NO_DEBUG
+  #define DBG(...)
+  #define WARNING()
+  #define ERROR()
+  #define TYPE_CHECK(invalid_condition, ex_type, ex_msg)
+#else
+  #define DBG(...) if(_log._enabled) { _log << _log.yellow + _log.bold + "[MMOBJ|" << __FUNCTION__ << "] " << _log.normal << __VA_ARGS__; }
+  #define WARNING() MMLog::warning() << "[MMOBJ|" << __FUNCTION__ << "] " << _log.normal
+  #define ERROR() MMLog::error() << "[MMOBJ|" << __FUNCTION__ << "] " << _log.normal
+  #define TYPE_CHECK(invalid_condition, ex_type, ex_msg)       \
   if (invalid_condition) {                                   \
     if(should_assert) {                                      \
       assert(!(invalid_condition));                          \
@@ -26,6 +29,7 @@
       p->raise(ex_type, ex_msg);                             \
     }                                                        \
   }
+#endif
 
 
 MMObj::MMObj(CoreImage* core)
