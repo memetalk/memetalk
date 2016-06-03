@@ -17,7 +17,7 @@ class CoreImage {
 public:
   CoreImage(VM*, const char*);
   void load();
-  oop get_prime(const char*);
+  inline oop get_prime(const char* name) { return _primes.at(name); }
   bool has_class(const char*);
   oop get_module_instance();
   std::map<std::string, oop>& get_primes() { return _primes; }

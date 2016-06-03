@@ -101,13 +101,13 @@ void CoreImage::load_prime_objects_table() {
   }
 }
 
-oop CoreImage::get_prime(const char* name) {
-  // debug() << "getting prime [" << name << "]" << endl;
-  if (!is_prime(name)) {
-    ERROR() << "We will crash: " << name << " is not prime" << endl;
-  }
-  return _primes.at(name);
-}
+// oop CoreImage::get_prime(const char* name) {
+//   // debug() << "getting prime [" << name << "]" << endl;
+//   // if (!is_prime(name)) {
+//   //   ERROR() << "We will crash: " << name << " is not prime" << endl;
+//   // }
+//   return _primes.at(name);
+// }
 
 oop CoreImage::get_module_instance() {
   return _core_imod;
