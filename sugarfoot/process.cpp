@@ -1013,12 +1013,8 @@ void Process::dispatch(int opcode, int arg) {
         stack_push(*(_fp + arg));
         break;
       case PUSH_LITERAL:
-        try {
-          DBG("PUSH_LITERAL " << arg << " " << _mmobj->mm_function_get_literal_by_index(this, _cp, arg, true) << endl);
-          stack_push(_mmobj->mm_function_get_literal_by_index(this, _cp, arg, true));
-        } catch(...) {
-          assert(0);
-        }
+        DBG("PUSH_LITERAL " << arg << " " << _mmobj->mm_function_get_literal_by_index(this, _cp, arg, true) << endl);
+        stack_push(_mmobj->mm_function_get_literal_by_index(this, _cp, arg, true));
         break;
       case PUSH_MODULE:
         DBG("PUSH_MODULE " << arg << " " << _mp << endl);
