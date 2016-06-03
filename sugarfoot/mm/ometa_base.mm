@@ -2,7 +2,14 @@
   io: meme:io;
 .code
 
-class OMetaException < Exception
+class OMetaException
+instance_method throw: fun() {
+  <primitive "exception_throw">
+}
+class_method throw: fun() {
+  this.new.throw;
+}
+
 end
 
 
@@ -75,10 +82,10 @@ init from_idx_and_data: fun(idx, data) {
   super.from_idx_and_data(idx, data);
 }
 instance_method head: fun() {
-  OMetaException.throw("ometa error");
+  OMetaException.throw();
 }
 instance_method tail: fun() {
-  OMetaException.throw("ometa error");
+  OMetaException.throw();
 }
 end
 
@@ -161,7 +168,7 @@ instance_method _pred: fun(x) {
   if (x) {
      return true;
   } else {
-    OMetaException.throw("ometa error");
+    OMetaException.throw();
   }
 }
 
@@ -174,7 +181,7 @@ instance_method _not: fun(fn) {
     @input = input;
     return true;
   }
-  OMetaException.throw("ometa error");
+  OMetaException.throw();
 }
 
 instance_method _lookahead: fun(fn) {
@@ -195,7 +202,7 @@ instance_method _or: fun(fns) {
        @input = input;
     }
   });
-  OMetaException.throw("ometa error");
+  OMetaException.throw();
 }
 
 instance_method _opt: fun(fn) {
@@ -279,7 +286,7 @@ instance_method exactly: fun() {
   if (wanted == this._apply(:anything)) {
      return wanted;
   } else {
-    OMetaException.throw("ometa error");
+    OMetaException.throw();
   }
 }
 
