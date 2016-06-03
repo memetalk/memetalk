@@ -15,6 +15,7 @@ typedef struct {} InternalError;
 class MMObj {
 public:
   MMObj(CoreImage*);
+  void init();
 
   oop mm_process_new(Process*, Process* proc);
   Process* mm_process_get_proc(Process*, oop, bool should_assert = false);
@@ -81,21 +82,39 @@ public:
   oop mm_module_get_cmod(oop imodule);
   oop mm_module_get_param(oop imodule, number idx);
 
-  bool mm_is_string(oop);
+  inline bool mm_is_string(oop obj) {
+    return *(oop*) obj == _cached_string;
+  }
+
   oop mm_string_new(const char*);
-  char* mm_string_cstr(Process*, oop, bool should_assert = false);
+  inline char* mm_string_cstr(Process* p, oop str, bool should_assert = false) {
+    // TYPE_CHECK(!( mm_object_vt(str) == _core_image->get_prime("String")),
+    //          "TypeError","Expected String")
+    //0: vt
+    //1: delegate
+    //2: size
+    //3: <str> ...
+    return (char*) &(str[3]);
+  }
 
 
   bool mm_is_list(oop);
   bool mm_is_dictionary(oop);
 
   oop mm_symbol_new(const char* str);
-  bool mm_is_symbol(oop);
+
+  inline bool mm_is_symbol(oop sym) {
+    return *(oop*) sym == _cached_context;
+  }
+
   char* mm_symbol_cstr(Process*, oop, bool should_assert = false);
   oop mm_symbol_to_string(Process*, oop, bool should_assert = false);
 
   bool mm_is_function(oop);
-  bool mm_is_context(oop);
+
+  inline bool mm_is_context(oop obj) {
+    return *(oop*) obj == _cached_context;
+  }
 
   void mm_context_set_cfun(Process*, oop, oop, bool should_assert = false);
   void mm_context_set_env(Process*, oop, oop, bool should_assert = false);
@@ -204,6 +223,9 @@ private:
   MMLog _log;
   // VM* _vm;
   CoreImage* _core_image;
+  oop _cached_context;
+  oop _cached_symbol;
+  oop _cached_string;
 };
 
 #endif

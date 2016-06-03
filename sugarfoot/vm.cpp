@@ -66,6 +66,7 @@ Process* VM::init() {
   Process* proc = new Process(this);
   init_primitives(this); //module initialization could execute primitives
   _core_image->load();
+  _mmobj->init();
   return proc;
 }
 

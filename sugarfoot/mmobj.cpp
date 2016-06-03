@@ -34,6 +34,13 @@
 
 MMObj::MMObj(CoreImage* core)
 : _log(LOG_MMOBJ), _core_image(core) {
+
+}
+
+void MMObj::init() {
+  _cached_context = _core_image->get_prime("Context");
+  _cached_symbol = _core_image->get_prime("Symbol");
+  _cached_string = _core_image->get_prime("String");
 }
 
 oop MMObj::mm_process_new(Process* p, Process* proc) {
@@ -438,14 +445,6 @@ oop MMObj::mm_module_get_cmod(oop imodule) {
 }
 
 
-bool MMObj::mm_is_string(oop obj) {
-  if (is_small_int(obj)) {
-    return false;
-  }
-  return *(oop*) obj == _core_image->get_prime("String");
-}
-
-
 oop MMObj::mm_string_new(const char* str) {
   number payload = sizeof(oop) + strlen(str) + 1; //size, <str ...>, \0
 
@@ -459,22 +458,9 @@ oop MMObj::mm_string_new(const char* str) {
   return oop_str;
 }
 
-char* MMObj::mm_string_cstr(Process* p, oop str, bool should_assert) {
-  TYPE_CHECK(!( mm_object_vt(str) == _core_image->get_prime("String")),
-             "TypeError","Expected String")
-  //0: vt
-  //1: delegate
-  //2: size
-  //3: <str> ...
-  return (char*) &(str[3]);
-}
 
 bool MMObj::mm_is_function(oop obj) {
   return *(oop*) obj == _core_image->get_prime("Function");
-}
-
-bool MMObj::mm_is_context(oop obj) {
-  return *(oop*) obj == _core_image->get_prime("Context");
 }
 
 void MMObj::mm_context_set_cfun(Process* p, oop ctx, oop cfun, bool should_assert) {
@@ -1204,9 +1190,6 @@ oop MMObj::mm_symbol_new(const char* str) {
   return symb;
 }
 
-bool MMObj::mm_is_symbol(oop sym) {
-  return *(oop*) sym == _core_image->get_prime("Symbol");
-}
 
 char* MMObj::mm_symbol_cstr(Process* p, oop sym, bool should_assert) {
   TYPE_CHECK(!( *(oop*) sym == _core_image->get_prime("Symbol")),
