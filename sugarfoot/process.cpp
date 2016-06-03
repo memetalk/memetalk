@@ -13,15 +13,19 @@
 #include <sstream>
 #include <assert.h>
 
-
-#define BCOLOR(log) (log.normal + (_debugger_id > 0? log.bold + log.cyan : log.bold + log.green))
-#define COLOR(log) (log.normal + (_debugger_id > 0?  log.cyan : log.green))
+#ifdef MM_NO_DEBUG
+  #define LOG_HEAD(log)
+  #define DBG(...)
+  #define LOG_REGISTERS()
+  #define LOG_STACK()
+  #define LOG_BODY()
+  #define LOG_TRACE()
+  #define LOG_ENTER_FRAME()
+  #define LOG_EXIT_FRAME()
+#else
 #define LOG_HEAD(log) log << COLOR(log) << "[" << log_label()  << "|" << BCOLOR(log) + meme_curr_fname() << COLOR(log) << "." << __FUNCTION__ << "] " << log.normal
 
 #define DBG(...) if(_log._enabled) { LOG_HEAD(_log) << __VA_ARGS__; }
-
-#define WARNING() MMLog::warning() << COLOR(_log) << "[" << log_label() << "|" << BCOLOR(_log) + meme_curr_fname() << COLOR(_log) << "." << __FUNCTION__ << "] " << _log.normal
-#define ERROR() MMLog::error() << COLOR(_log) << "[" << log_label() << "|" << BCOLOR(_log) + meme_curr_fname() << COLOR(_log) << "." << __FUNCTION__ << "] " << _log.normal
 
 #define LOG_REGISTERS() if(_log_registers._enabled) { LOG_HEAD(_log_registers) << _log_registers.yellow << "registers: " << endl \
                                       << _log_registers.yellow << "         SP: " << _sp << endl \
@@ -42,6 +46,13 @@
 #define LOG_ENTER_FRAME() LOG_TRACE(); LOG_REGISTERS(); LOG_STACK(); LOG_BODY();
 #define LOG_EXIT_FRAME()  LOG_TRACE(); LOG_REGISTERS(); LOG_STACK(); LOG_BODY();
 
+#endif
+
+#define BCOLOR(log) (log.normal + (_debugger_id > 0? log.bold + log.cyan : log.bold + log.green))
+#define COLOR(log) (log.normal + (_debugger_id > 0?  log.cyan : log.green))
+
+#define WARNING() MMLog::warning() << COLOR(_log) << "[" << log_label() << "|" << BCOLOR(_log) + meme_curr_fname() << COLOR(_log) << "." << __FUNCTION__ << "] " << _log.normal
+#define ERROR() MMLog::error() << COLOR(_log) << "[" << log_label() << "|" << BCOLOR(_log) + meme_curr_fname() << COLOR(_log) << "." << __FUNCTION__ << "] " << _log.normal
 #define CTXNAME(ctx) _mmobj->mm_string_cstr(this, _mmobj->mm_function_get_name(this, ctx), true)
 #define TO_C_STR(str) _mmobj->mm_string_cstr(this, str, true)
 
