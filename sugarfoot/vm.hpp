@@ -74,7 +74,7 @@ private:
   MMObj* _mmobj;
 //  std::list<Process*> _processes;
 
-  std::map<std::string, oop> _symbols;
+  boost::unordered_map<std::string, oop> _symbols;
 
   boost::unordered_map<oop, prim_function_t> _primitives;
   std::map<std::string, MMCImage*> _modules;

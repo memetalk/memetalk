@@ -129,13 +129,14 @@ std::pair<Process*, oop> VM::start_debugger(Process* target) {
 
 oop VM::new_symbol(const char* cstr) {
   std::string s = cstr;
-  if (_symbols.find(s) == _symbols.end()) {
-    _symbols[s] = _mmobj->mm_symbol_new(cstr);
-    // DBG("Creating new symbol " << cstr << " = " << _symbols[s] << endl)
+  boost::unordered_map<std::string, oop>::iterator it = _symbols.find(s);
+  if (it == _symbols.end()) {
+    oop sym = _mmobj->mm_symbol_new(cstr);
+    _symbols[s] = sym;
+    return sym;
   } else {
-    // DBG("returning existing symbol " << cstr << " = " << _symbols[s] << endl);
+    return _symbols[s];
   }
-  return _symbols[s];
 }
 
 oop VM::new_symbol(Process* p, oop str) {
