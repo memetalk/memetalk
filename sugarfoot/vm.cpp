@@ -21,9 +21,9 @@ VM::VM(int argc, char** argv, bool online, const char* core_img_filepath)
     _core_image(new CoreImage(this, core_img_filepath)), _mmobj(new MMObj(_core_image)) {
 }
 
-MMObj* VM::mmobj() {
-  return _mmobj;
-}
+// MMObj* VM::mmobj() {
+//   return _mmobj;
+// }
 
 // void VM::dictionary_dump(oop dict) {
 //   number size = _mmobj->mm_dictionary_size(dict);

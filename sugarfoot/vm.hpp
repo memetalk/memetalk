@@ -24,9 +24,9 @@ public:
   int& argc() { return _argc; };
   char** argv() { return _argv; };
 
-  bool running_online() { return _online; };
+  inline bool running_online() { return _online; };
 
-  MMObj* mmobj();
+  inline MMObj* mmobj() { return _mmobj; };
 
 
   int start();
