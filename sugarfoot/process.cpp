@@ -700,7 +700,103 @@ void Process::fetch_cycle(void* stop_at_bp) {
     //   char* name = _mmobj->mm_string_cstr(_mmobj->mm_function_get_name(_cp));
     //   DBG(" [dispatching] " << name << " " << (_ip-1) << " " << opcode << endl);
     // }
-    dispatch(opcode, arg);
+    //dispatch(opcode, arg);
+    oop val;
+    switch(opcode) {
+      case PUSH_LOCAL:
+        DBG("PUSH_LOCAL " << arg << " " << (oop) *(_fp + arg) << endl);
+        stack_push(*(_fp + arg));
+        break;
+      case PUSH_LITERAL:
+        DBG("PUSH_LITERAL " << arg << " " << _mmobj->mm_function_get_literal_by_index(this, _cp, arg, true) << endl);
+        stack_push(_mmobj->mm_function_get_literal_by_index(this, _cp, arg, true));
+        break;
+      case PUSH_MODULE:
+        DBG("PUSH_MODULE " << arg << " " << _mp << endl);
+        stack_push(_mp);
+        break;
+      case PUSH_FIELD:
+        DBG("PUSH_FIELD " << arg << " " << (oop) *(dp() + arg + 2) <<  " dp: " << dp() << endl);
+        stack_push(*(dp() + arg + 2));
+        break;
+      case PUSH_THIS:
+        DBG("PUSH_THIS " << rp() << endl);
+        stack_push(rp());
+        break;
+      case PUSH_FP:
+        DBG("PUSH_FP " << arg << " -- " << _fp << endl);
+        stack_push(_fp);
+        break;
+
+      case PUSH_CONTEXT:
+        DBG("PUSH_CONTEXT " << arg << endl);
+        stack_push(_cp);
+        break;
+      case PUSH_BIN:
+        DBG("PUSH_BIN " << arg << endl);
+        stack_push(arg);
+        break;
+      case RETURN_TOP:
+        val = stack_pop();
+        DBG("RETURN_TOP " << arg << " " << val << endl);
+        handle_return(val);
+        break;
+      case RETURN_THIS:
+        DBG("RETURN_THIS " << rp() << endl);
+        handle_return(rp());
+        break;
+      case POP:
+        val =stack_pop();
+        DBG("POP " << arg << " = " << val << endl);
+        break;
+      case POP_LOCAL:
+        val = stack_pop();
+        DBG("POP_LOCAL " << arg << " on " << (oop) (_fp + arg) << " -- "
+            << (oop) *(_fp + arg) << " = " << val << endl);
+        *(_fp + arg) = (word) val;
+        break;
+      case POP_FIELD:
+        val = stack_pop();
+        DBG("POP_FIELD " << arg << " on " << (oop) (dp() + arg + 2) << " dp: " << dp() << " -- "
+            << (oop) *(dp() + arg + 2) << " = " << val << endl); //2: vt, delegate
+        *(dp() + arg + 2) = (word) val;
+        break;
+      case SEND:
+        DBG("SEND " << arg << endl);
+        handle_send(arg);
+        break;
+      case SUPER_CTOR_SEND:
+        handle_super_ctor_send(arg);
+        break;
+      case CALL:
+        DBG("CALL " << arg << endl);
+        handle_call(arg);
+        break;
+      case JMP:
+        DBG("JMP " << arg << " " << endl);
+        _ip += (arg -1); //_ip already suffered a ++ in dispatch
+        break;
+      case JMPB:
+        DBG("JMPB " << arg << " " << endl);
+        _ip -= (arg+1); //_ip already suffered a ++ in dispatch
+        break;
+
+      case JZ:
+        val = stack_pop();
+        DBG("JZ " << arg << " " << val << endl);
+        if ((val == MM_FALSE) || (val == MM_NULL)) {
+          _ip += (arg -1); //_ip already suffered a ++ in dispatch
+        }
+        break;
+      case SUPER_SEND:
+        handle_super_send(arg);
+        break;
+      // case RETURN_THIS:
+      //   break;
+      default:
+        ERROR() << "Unknown opcode " << opcode << endl;
+        _vm->bail("opcode not implemented");
+    }
     // DBG(" [end of dispatch] " << opcode << endl);
   }
   DBG("end" << endl);
@@ -1023,105 +1119,105 @@ void Process::handle_return(oop val) {
   maybe_break_on_return();
 }
 
-void Process::dispatch(int opcode, int arg) {
-    // DBG(" executing " << opcode << " " << arg << endl);
-    oop val;
-    switch(opcode) {
-      case PUSH_LOCAL:
-        DBG("PUSH_LOCAL " << arg << " " << (oop) *(_fp + arg) << endl);
-        stack_push(*(_fp + arg));
-        break;
-      case PUSH_LITERAL:
-        DBG("PUSH_LITERAL " << arg << " " << _mmobj->mm_function_get_literal_by_index(this, _cp, arg, true) << endl);
-        stack_push(_mmobj->mm_function_get_literal_by_index(this, _cp, arg, true));
-        break;
-      case PUSH_MODULE:
-        DBG("PUSH_MODULE " << arg << " " << _mp << endl);
-        stack_push(_mp);
-        break;
-      case PUSH_FIELD:
-        DBG("PUSH_FIELD " << arg << " " << (oop) *(dp() + arg + 2) <<  " dp: " << dp() << endl);
-        stack_push(*(dp() + arg + 2));
-        break;
-      case PUSH_THIS:
-        DBG("PUSH_THIS " << rp() << endl);
-        stack_push(rp());
-        break;
-      case PUSH_FP:
-        DBG("PUSH_FP " << arg << " -- " << _fp << endl);
-        stack_push(_fp);
-        break;
+// void Process::dispatch(int opcode, int arg) {
+//     // DBG(" executing " << opcode << " " << arg << endl);
+//     oop val;
+//     switch(opcode) {
+//       case PUSH_LOCAL:
+//         DBG("PUSH_LOCAL " << arg << " " << (oop) *(_fp + arg) << endl);
+//         stack_push(*(_fp + arg));
+//         break;
+//       case PUSH_LITERAL:
+//         DBG("PUSH_LITERAL " << arg << " " << _mmobj->mm_function_get_literal_by_index(this, _cp, arg, true) << endl);
+//         stack_push(_mmobj->mm_function_get_literal_by_index(this, _cp, arg, true));
+//         break;
+//       case PUSH_MODULE:
+//         DBG("PUSH_MODULE " << arg << " " << _mp << endl);
+//         stack_push(_mp);
+//         break;
+//       case PUSH_FIELD:
+//         DBG("PUSH_FIELD " << arg << " " << (oop) *(dp() + arg + 2) <<  " dp: " << dp() << endl);
+//         stack_push(*(dp() + arg + 2));
+//         break;
+//       case PUSH_THIS:
+//         DBG("PUSH_THIS " << rp() << endl);
+//         stack_push(rp());
+//         break;
+//       case PUSH_FP:
+//         DBG("PUSH_FP " << arg << " -- " << _fp << endl);
+//         stack_push(_fp);
+//         break;
 
-      case PUSH_CONTEXT:
-        DBG("PUSH_CONTEXT " << arg << endl);
-        stack_push(_cp);
-        break;
-      case PUSH_BIN:
-        DBG("PUSH_BIN " << arg << endl);
-        stack_push(arg);
-        break;
-      case RETURN_TOP:
-        val = stack_pop();
-        DBG("RETURN_TOP " << arg << " " << val << endl);
-        handle_return(val);
-        break;
-      case RETURN_THIS:
-        DBG("RETURN_THIS " << rp() << endl);
-        handle_return(rp());
-        break;
-      case POP:
-        val =stack_pop();
-        DBG("POP " << arg << " = " << val << endl);
-        break;
-      case POP_LOCAL:
-        val = stack_pop();
-        DBG("POP_LOCAL " << arg << " on " << (oop) (_fp + arg) << " -- "
-            << (oop) *(_fp + arg) << " = " << val << endl);
-        *(_fp + arg) = (word) val;
-        break;
-      case POP_FIELD:
-        val = stack_pop();
-        DBG("POP_FIELD " << arg << " on " << (oop) (dp() + arg + 2) << " dp: " << dp() << " -- "
-            << (oop) *(dp() + arg + 2) << " = " << val << endl); //2: vt, delegate
-        *(dp() + arg + 2) = (word) val;
-        break;
-      case SEND:
-        DBG("SEND " << arg << endl);
-        handle_send(arg);
-        break;
-      case SUPER_CTOR_SEND:
-        handle_super_ctor_send(arg);
-        break;
-      case CALL:
-        DBG("CALL " << arg << endl);
-        handle_call(arg);
-        break;
-      case JMP:
-        DBG("JMP " << arg << " " << endl);
-        _ip += (arg -1); //_ip already suffered a ++ in dispatch
-        break;
-      case JMPB:
-        DBG("JMPB " << arg << " " << endl);
-        _ip -= (arg+1); //_ip already suffered a ++ in dispatch
-        break;
+//       case PUSH_CONTEXT:
+//         DBG("PUSH_CONTEXT " << arg << endl);
+//         stack_push(_cp);
+//         break;
+//       case PUSH_BIN:
+//         DBG("PUSH_BIN " << arg << endl);
+//         stack_push(arg);
+//         break;
+//       case RETURN_TOP:
+//         val = stack_pop();
+//         DBG("RETURN_TOP " << arg << " " << val << endl);
+//         handle_return(val);
+//         break;
+//       case RETURN_THIS:
+//         DBG("RETURN_THIS " << rp() << endl);
+//         handle_return(rp());
+//         break;
+//       case POP:
+//         val =stack_pop();
+//         DBG("POP " << arg << " = " << val << endl);
+//         break;
+//       case POP_LOCAL:
+//         val = stack_pop();
+//         DBG("POP_LOCAL " << arg << " on " << (oop) (_fp + arg) << " -- "
+//             << (oop) *(_fp + arg) << " = " << val << endl);
+//         *(_fp + arg) = (word) val;
+//         break;
+//       case POP_FIELD:
+//         val = stack_pop();
+//         DBG("POP_FIELD " << arg << " on " << (oop) (dp() + arg + 2) << " dp: " << dp() << " -- "
+//             << (oop) *(dp() + arg + 2) << " = " << val << endl); //2: vt, delegate
+//         *(dp() + arg + 2) = (word) val;
+//         break;
+//       case SEND:
+//         DBG("SEND " << arg << endl);
+//         handle_send(arg);
+//         break;
+//       case SUPER_CTOR_SEND:
+//         handle_super_ctor_send(arg);
+//         break;
+//       case CALL:
+//         DBG("CALL " << arg << endl);
+//         handle_call(arg);
+//         break;
+//       case JMP:
+//         DBG("JMP " << arg << " " << endl);
+//         _ip += (arg -1); //_ip already suffered a ++ in dispatch
+//         break;
+//       case JMPB:
+//         DBG("JMPB " << arg << " " << endl);
+//         _ip -= (arg+1); //_ip already suffered a ++ in dispatch
+//         break;
 
-      case JZ:
-        val = stack_pop();
-        DBG("JZ " << arg << " " << val << endl);
-        if ((val == MM_FALSE) || (val == MM_NULL)) {
-          _ip += (arg -1); //_ip already suffered a ++ in dispatch
-        }
-        break;
-      case SUPER_SEND:
-        handle_super_send(arg);
-        break;
-      // case RETURN_THIS:
-      //   break;
-      default:
-        ERROR() << "Unknown opcode " << opcode << endl;
-        _vm->bail("opcode not implemented");
-    }
-}
+//       case JZ:
+//         val = stack_pop();
+//         DBG("JZ " << arg << " " << val << endl);
+//         if ((val == MM_FALSE) || (val == MM_NULL)) {
+//           _ip += (arg -1); //_ip already suffered a ++ in dispatch
+//         }
+//         break;
+//       case SUPER_SEND:
+//         handle_super_send(arg);
+//         break;
+//       // case RETURN_THIS:
+//       //   break;
+//       default:
+//         ERROR() << "Unknown opcode " << opcode << endl;
+//         _vm->bail("opcode not implemented");
+//     }
+// }
 
 std::pair<oop, oop> Process::lookup(oop drecv, oop vt, oop selector) {
   // assert( *(oop*) selector == _core_image->get_prime("Symbol"));
