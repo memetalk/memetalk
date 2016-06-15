@@ -152,7 +152,7 @@ private:
 
 
   oop stack_pop();
-  int execute_primitive(std::string);
+  int execute_primitive(oop);
   void fetch_cycle(void*);
 
   void push_frame(oop,oop,number, number);

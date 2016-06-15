@@ -147,17 +147,19 @@ oop VM::new_symbol(Process* p, oop str) {
 }
 
 void VM::register_primitive(std::string name, prim_function_t fun) {
-  _primitives[name] = fun;
+  _primitives[new_symbol(name.c_str())] = fun;
 }
 
-prim_function_t VM::get_primitive(Process* proc, std::string name) {
-  // DBG("VM::get_primitive " << name << endl)
-  if (!(_primitives.find(name) != _primitives.end())) {
-    ERROR() << "did not find primitive with name:" << name << endl;
-    proc->raise("InternalError", (std::string("primitive not found: ") + name).c_str());
-  }
-  return _primitives[name];
-}
+// prim_function_t VM::get_primitive(Process* proc, oop name) {
+//   // DBG("VM::get_primitive " << name << endl)
+//   // boost::unordered_map<std::string, prim_function_t>::iterator it = _primitives.find(name);
+//   // if (it == _primitives.end()) {
+//   //   ERROR() << "did not find primitive with name:" << name << endl;
+//   //   proc->raise("InternalError", (std::string("primitive not found: ") + name).c_str());
+//   // }
+//   // return it->second;;
+//   return _primitives.at(name);
+// }
 
 oop VM::instantiate_module(Process* proc, const char* name_or_path, oop module_args_list) {
   DBG( "instantiating module " << name_or_path << endl);

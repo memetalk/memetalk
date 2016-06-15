@@ -446,8 +446,8 @@ bool Process::load_fun(oop recv, oop drecv, oop fun, bool should_allocate) {
 
   if (_mmobj->mm_function_is_prim(this, fun, true)) {
     oop prim_name = _mmobj->mm_function_get_prim_name(this, fun, true);
-    std::string str_prim_name = _mmobj->mm_string_cstr(this, prim_name, true);
-    int ret = execute_primitive(str_prim_name);
+    //std::string str_prim_name = _mmobj->mm_string_cstr(this, prim_name, true);
+    int ret = execute_primitive(prim_name);
     if (ret == 0) {
       oop value = stack_pop(); //shit
       unload_fun_and_return(value);
@@ -1175,13 +1175,13 @@ oop Process::stack_pop() {
 // }
 
 
-int Process::execute_primitive(std::string name) {
+int Process::execute_primitive(oop name) {
   try {
     int val = _vm->get_primitive(this, name)(this);
-    DBG("primitive " << name << " returned " << val << endl);
+    DBG("primitive " << SYM_TO_STR(name) << " returned " << val << endl);
     return val;
   } catch(mm_exception_rewind e) {
-    DBG("primitive " << name << " raised " << e.mm_exception << endl);
+    DBG("primitive " << SYM_TO_STR(name) << " raised " << e.mm_exception << endl);
     stack_push(e.mm_exception);
     return PRIM_RAISED;
   }
