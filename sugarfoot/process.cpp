@@ -684,7 +684,7 @@ void Process::fetch_cycle(void* stop_at_bp) {
     //Because debugger may interfere with _ip,
     //we must take the code from _ip, decode and dispatch
     //*after* the tick()
-    tick();
+    if (_vm->running_online()) tick();
 
     bytecode code = *_ip;
 
@@ -1421,11 +1421,12 @@ void Process::halt_and_debug() {
 }
 
 void Process::maybe_debug_on_raise(oop ex_oop) {
+  if (!_vm->running_online()) return;
+
   if (has_debugger_attached() && !exception_has_handler(ex_oop, _cp, _ip, _bp)) {
     DBG("we have a debugger and this exception does not have handler. state=halt" << endl);
     _state = HALT_STATE;
-  } else if (_vm->running_online() &&
-             !exception_has_handler(ex_oop, _cp, _ip, _bp)) {
+  } else if (!exception_has_handler(ex_oop, _cp, _ip, _bp)) {
 
     DBG("running online and there's no handler for exception "
         << ex_oop << "; calling halt_and_debug()" << endl);
