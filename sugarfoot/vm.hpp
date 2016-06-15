@@ -30,6 +30,7 @@ public:
 
 
   int start();
+
   oop new_symbol(const char*);
   oop new_symbol(Process*, oop);
 
