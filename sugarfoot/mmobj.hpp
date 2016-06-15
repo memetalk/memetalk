@@ -70,7 +70,10 @@ public:
   bool mm_dictionary_has_key(Process*, oop dict, oop key, bool should_assert = false);
   oop mm_dictionary_keys(Process*, oop dict, bool should_assert = false);
   oop mm_dictionary_values(Process*, oop dict, bool should_assert = false);
-  oop mm_dictionary_get(Process*, oop dict, oop key, bool should_assert = false);
+
+ oop mm_dictionary_get(Process*, oop dict, oop key, bool should_assert = false);
+ oop mm_dictionary_fast_get(Process*, oop dict, oop key);
+
   boost::unordered_map<oop,oop>* mm_dictionary_frame(Process*, oop, bool should_assert = false);
   boost::unordered_map<oop,oop>::iterator mm_dictionary_begin(Process*, oop, bool should_assert = false);
   boost::unordered_map<oop,oop>::iterator mm_dictionary_end(Process*, oop, bool should_assert = false);

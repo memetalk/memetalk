@@ -68,8 +68,8 @@
     }                                                                   \
     oop dict = _mmobj->mm_behavior_get_dict(vt);                        \
                                                                         \
-    if (_mmobj->mm_dictionary_has_key(this, dict, selector, true)) {    \
-      fun = _mmobj->mm_dictionary_get(this, dict, selector, true);      \
+    fun = _mmobj->mm_dictionary_fast_get(this, dict, selector);         \
+    if (fun) {                                                          \
       break;                                                            \
     } else {                                                            \
       vt = _mmobj->mm_object_delegate(vt);                              \

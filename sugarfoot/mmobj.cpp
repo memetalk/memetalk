@@ -384,6 +384,15 @@ oop MMObj::mm_dictionary_values(Process* p, oop dict, bool should_assert) {
   return lst;
 }
 
+oop MMObj::mm_dictionary_fast_get(Process* p, oop dict, oop key) {
+    boost::unordered_map<oop, oop>* elements = mm_dictionary_frame(p, dict, true);
+  boost::unordered_map<oop, oop>::iterator it = elements->find(key);
+  if (it != elements->end()) {
+    return it->second;
+  } else {
+    return MM_NULL;
+  }
+}
 
 oop MMObj::mm_dictionary_get(Process* p, oop dict, oop key, bool should_assert) {
   TYPE_CHECK(!( mm_object_vt(dict) == _core_image->get_prime("Dictionary")),
@@ -391,6 +400,10 @@ oop MMObj::mm_dictionary_get(Process* p, oop dict, oop key, bool should_assert) 
 
     boost::unordered_map<oop, oop>* elements = mm_dictionary_frame(p, dict, should_assert);
 
+  boost::unordered_map<oop, oop>::iterator it = elements->find(key);
+  if (it != elements->end()) {
+    return it->second;
+  }
   DBG(dict << "(" << elements->size() << ") get " << key << endl);
   for (boost::unordered_map<oop, oop>::iterator it = elements->begin(); it != elements->end(); it++) {
     // DBG(dict << "(" << elements->size() << ") get direct? " << (it->first == key) << endl);
