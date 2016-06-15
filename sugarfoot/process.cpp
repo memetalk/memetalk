@@ -221,9 +221,9 @@ void Process::init() {
   _ss = 0; //local storage
 }
 
-oop Process::get_arg(number idx) {
-  return * ((oop*)_fp + idx);
-};
+// oop Process::get_arg(number idx) {
+//   return * ((oop*)_fp + idx);
+// };
 
 oop Process::set_rp(oop rp) {
   return * (oop*) (_fp + _ss) = rp;
@@ -233,13 +233,13 @@ oop Process::set_dp(oop dp) {
   return * (oop*) (_fp + _ss + 1) = dp;
 }
 
-oop Process::rp() {
-  return * (oop*) (_fp + _ss );
-}
+// oop Process::rp() {
+//   return * (oop*) (_fp + _ss );
+// }
 
-oop Process::dp() {
-  return * (oop*) (_fp + _ss + 1);
-}
+// oop Process::dp() {
+//   return * (oop*) (_fp + _ss + 1);
+// }
 
 oop Process::cp_from_base(oop bp) {
   return * ((oop*)bp - 3);
@@ -1156,23 +1156,23 @@ oop Process::stack_pop() {
   return val;
 }
 
-void Process::stack_push(oop data) {
-  _sp++;
-  DBG("PUSH " << data << " -> " << _sp << endl);
-  * (word*) _sp = (word) data;
-}
+// void Process::stack_push(oop data) {
+//   _sp++;
+//   DBG("PUSH " << data << " -> " << _sp << endl);
+//   * (word*) _sp = (word) data;
+// }
 
-void Process::stack_push(word data) {
-  _sp++;
-  DBG("PUSH " << (oop) data << " -> " << _sp << endl);
-  * (word*) _sp = data;
-}
+// void Process::stack_push(word data) {
+//   _sp++;
+//   DBG("PUSH " << (oop) data << " -> " << _sp << endl);
+//   * (word*) _sp = data;
+// }
 
-void Process::stack_push(bytecode* data) {
-  _sp++;
-  DBG("PUSH " << data << " -> " << _sp << endl);
-  * (word*) _sp = (word) data;
-}
+// void Process::stack_push(bytecode* data) {
+//   _sp++;
+//   DBG("PUSH " << data << " -> " << _sp << endl);
+//   * (word*) _sp = (word) data;
+// }
 
 
 int Process::execute_primitive(std::string name) {
