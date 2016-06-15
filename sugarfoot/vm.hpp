@@ -42,7 +42,10 @@ public:
 
   oop instantiate_module(Process*, const char* name, oop module_args_list);
 
-  oop get_prime(const char* name);
+//  oop get_prime(const char* name);
+  inline oop get_prime(const char* name) {
+    return _core_image->get_prime(name);
+  }
 
   CoreImage* core() { return _core_image; };
 

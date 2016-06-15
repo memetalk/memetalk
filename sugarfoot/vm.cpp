@@ -178,9 +178,9 @@ oop VM::instantiate_module(Process* proc, const char* name_or_path, oop module_a
   return mmc->instantiate_module(module_args_list);
 }
 
-oop VM::get_prime(const char* name) {
-  return _core_image->get_prime(name);
-}
+// oop VM::get_prime(const char* name) {
+//   return _core_image->get_prime(name);
+// }
 
 #include <iostream>
 #include <cstdio>
