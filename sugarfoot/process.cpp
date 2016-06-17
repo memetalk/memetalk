@@ -704,84 +704,102 @@ void Process::fetch_cycle(void* stop_at_bp) {
     oop val;
     switch(opcode) {
       case PUSH_LOCAL:
+        // _PUSH_LOCAL++;
         DBG("PUSH_LOCAL " << arg << " " << (oop) *(_fp + arg) << endl);
         stack_push(*(_fp + arg));
         break;
       case PUSH_LITERAL:
+        // _PUSH_LITERAL++;
         DBG("PUSH_LITERAL " << arg << " " << _mmobj->mm_function_get_literal_by_index(this, _cp, arg, true) << endl);
         stack_push(_mmobj->mm_function_get_literal_by_index(this, _cp, arg, true));
         break;
       case PUSH_MODULE:
+        // _PUSH_MODULE++;
         DBG("PUSH_MODULE " << arg << " " << _mp << endl);
         stack_push(_mp);
         break;
       case PUSH_FIELD:
+        // _PUSH_FIELD++;
         DBG("PUSH_FIELD " << arg << " " << (oop) *(dp() + arg + 2) <<  " dp: " << dp() << endl);
         stack_push(*(dp() + arg + 2));
         break;
       case PUSH_THIS:
+        // _PUSH_THIS++;
         DBG("PUSH_THIS " << rp() << endl);
         stack_push(rp());
         break;
       case PUSH_FP:
+        // _PUSH_FP++;
         DBG("PUSH_FP " << arg << " -- " << _fp << endl);
         stack_push(_fp);
         break;
-
       case PUSH_CONTEXT:
+        // _PUSH_CONTEXT++;
         DBG("PUSH_CONTEXT " << arg << endl);
         stack_push(_cp);
         break;
       case PUSH_BIN:
+        // _PUSH_BIN++;
         DBG("PUSH_BIN " << arg << endl);
         stack_push(arg);
         break;
       case RETURN_TOP:
+        // _RETURN_TOP++;
         val = stack_pop();
         DBG("RETURN_TOP " << arg << " " << val << endl);
         handle_return(val);
         break;
       case RETURN_THIS:
+        // _RETURN_THIS++;
         DBG("RETURN_THIS " << rp() << endl);
         handle_return(rp());
         break;
       case POP:
+        // _POP++;
         val =stack_pop();
         DBG("POP " << arg << " = " << val << endl);
         break;
       case POP_LOCAL:
+        // _POP_LOCAL++;
         val = stack_pop();
         DBG("POP_LOCAL " << arg << " on " << (oop) (_fp + arg) << " -- "
             << (oop) *(_fp + arg) << " = " << val << endl);
         *(_fp + arg) = (word) val;
         break;
       case POP_FIELD:
+        // _POP_FIELD++;
         val = stack_pop();
         DBG("POP_FIELD " << arg << " on " << (oop) (dp() + arg + 2) << " dp: " << dp() << " -- "
             << (oop) *(dp() + arg + 2) << " = " << val << endl); //2: vt, delegate
         *(dp() + arg + 2) = (word) val;
         break;
       case SEND:
+        // _SEND++;
         DBG("SEND " << arg << endl);
         handle_send(arg);
         break;
       case SUPER_CTOR_SEND:
+        // _SUPER_CTOR_SEND++;
         handle_super_ctor_send(arg);
         break;
       case CALL:
+        // _CALL++;
         DBG("CALL " << arg << endl);
         handle_call(arg);
         break;
       case JMP:
+        // _JMP++;
         DBG("JMP " << arg << " " << endl);
         _ip += (arg -1); //_ip already suffered a ++ in dispatch
         break;
       case JMPB:
+        // _JMPB++;
         DBG("JMPB " << arg << " " << endl);
         _ip -= (arg+1); //_ip already suffered a ++ in dispatch
         break;
 
       case JZ:
+        // _JZ++;
         val = stack_pop();
         DBG("JZ " << arg << " " << val << endl);
         if ((val == MM_FALSE) || (val == MM_NULL)) {
@@ -789,6 +807,7 @@ void Process::fetch_cycle(void* stop_at_bp) {
         }
         break;
       case SUPER_SEND:
+        // _SUPER_SEND++;
         handle_super_send(arg);
         break;
       // case RETURN_THIS:
@@ -1660,4 +1679,28 @@ std::string Process::log_label() {
     s << "DBGProc{" << _debugger_id << "}";
     return s.str();
   }
+}
+
+
+void Process::report_profile() {
+  std::cerr << "_PUSH_LOCAL: " << _PUSH_LOCAL << endl;
+  std::cerr << "_PUSH_LITERAL: " << _PUSH_LITERAL << endl;
+  std::cerr << "_PUSH_MODULE: " << _PUSH_MODULE << endl;
+  std::cerr << "_PUSH_FIELD: " << _PUSH_FIELD << endl;
+  std::cerr << "_PUSH_THIS: " << _PUSH_THIS << endl;
+  std::cerr << "_PUSH_FP: " << _PUSH_FP << endl;
+  std::cerr << "_PUSH_CONTEXT: " << _PUSH_CONTEXT << endl;
+  std::cerr << "_PUSH_BIN: " << _PUSH_BIN << endl;
+  std::cerr << "_RETURN_TOP: " << _RETURN_TOP << endl;
+  std::cerr << "_RETURN_THIS: " << _RETURN_THIS << endl;
+  std::cerr << "_POP: " << _POP << endl;
+  std::cerr << "_POP_LOCAL: " << _POP_LOCAL << endl;
+  std::cerr << "_POP_FIELD: " << _POP_FIELD << endl;
+  std::cerr << "_SEND: " << _SEND << endl;
+  std::cerr << "_SUPER_CTOR_SEND: " << _SUPER_CTOR_SEND << endl;
+  std::cerr << "_CALL: " << _CALL << endl;
+  std::cerr << "_JMP: " << _JMP << endl;
+  std::cerr << "_JMPB: " << _JMPB << endl;
+  std::cerr << "_JZ: " << _JZ << endl;
+  std::cerr << "_SUPER_SEND: " << _SUPER_SEND << endl;
 }

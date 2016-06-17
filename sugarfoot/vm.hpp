@@ -19,7 +19,7 @@ class Process;
 class VM {
 
 public:
-  VM(int argc, char** argv, bool online, const char* core_img_filepath);
+  VM(int argc, char** argv, bool online, bool profile, const char* core_img_filepath);
 
   int& argc() { return _argc; };
   char** argv() { return _argv; };
@@ -74,6 +74,7 @@ private:
   int _argc;
   char** _argv;
   bool _online;
+  bool _profile;
   CoreImage* _core_image;
   MMObj* _mmobj;
 //  std::list<Process*> _processes;

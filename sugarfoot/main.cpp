@@ -5,8 +5,9 @@
 
 int main(int argc, char** argv) {
   char* online = getenv("ONLINE");
+  char* profile = getenv("PROFILE");
   try {
-    VM* vm = new VM(argc, argv, !!online, "core.img");
+    VM* vm = new VM(argc, argv, !!online, !!profile, "core.img");
     return vm->start();
   } catch(const std::exception& e) {
     std::cerr << "Uncaugh C++ exception: " << e.what() << std::endl;

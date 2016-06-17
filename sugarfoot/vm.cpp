@@ -16,8 +16,8 @@
 #define ERROR() MMLog::error() << "[VM|" << __FUNCTION__ << "] " << _log.normal
 
 
-VM::VM(int argc, char** argv, bool online, const char* core_img_filepath)
-  : _log(LOG_VM), _argc(argc), _argv(argv), _online(online),
+VM::VM(int argc, char** argv, bool online, bool profile, const char* core_img_filepath)
+  : _log(LOG_VM), _argc(argc), _argv(argv), _online(online), _profile(profile),
     _core_image(new CoreImage(this, core_img_filepath)), _mmobj(new MMObj(_core_image)) {
 }
 
@@ -98,6 +98,9 @@ int VM::start() {
     proc->fail(retval);
   } else {
     print_retval(proc, retval);
+  }
+  if (_profile) {
+    proc->report_profile();
   }
   return * (int*) (void*) &retval;
 }

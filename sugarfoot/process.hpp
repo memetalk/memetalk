@@ -142,6 +142,7 @@ public:
   std::string dump_stack_top(bool);
   std::string dump_stack_trace(bool);
 
+  void report_profile();
 private:
   std::string log_label();
   const char* meme_curr_fname();
@@ -213,6 +214,29 @@ private:
   oop _step_bp;
   oop _unwind_to_bp;
   oop _current_exception;
+
+//profiling
+  long _PUSH_LOCAL;
+  long _PUSH_LITERAL;
+  long _PUSH_MODULE;
+  long _PUSH_FIELD;
+  long _PUSH_THIS;
+  long _PUSH_FP;
+  long _PUSH_CONTEXT;
+  long _PUSH_BIN;
+  long _RETURN_TOP;
+  long _RETURN_THIS;
+  long _POP;
+  long _POP_LOCAL;
+  long _POP_FIELD;
+  long _SEND;
+  long _SUPER_CTOR_SEND;
+  long _CALL;
+  long _JMP;
+  long _JMPB;
+  long _JZ;
+  long _SUPER_SEND;
+
 };
 
 #endif
