@@ -8,42 +8,39 @@
 #   -test: runs all memetalk tests
 #
 
-
 ############ VM Section ############
 
-# brew install boost155
-LDFLAGS =  -L/usr/local/opt/boost155/lib
-CPPFLAGS = -I/usr/local/opt/boost155/include
+BIN = sf-vm
 
-LIB_PATHS = -L/usr/local/Cellar/boost/1.54.0/lib $(LDFLAGS)
-INC_PATHS = -I/usr/local/Cellar/qscintilla2/2.7.1/include/Qsci $(CPPFLAGS)
+PKGLIBS = QtCore QtGui QtScript QtWebKit QtNetwork
 
-CPP_FILES =  mmc_image.cpp core_image.cpp vm.cpp log.cpp utils.cpp mmobj.cpp main.cpp process.cpp prims.cpp mmc_fun.cpp ctrl.cpp qt_prims.cpp qsc.cpp remote_repl.cpp
+CXXFLAGS = -Wall -g -DMM_NO_DEBUG $(shell pkg-config --cflags $(PKGLIBS))
 
-HPP_FILES = mmc_image.hpp core_image.hpp vm.hpp log.hpp utils.hpp defs.hpp mmobj.hpp process.hpp prims.hpp mmc_fun.hpp ctrl.hpp qt_prims.hpp qsc.hpp remote_repl.hpp
+LDFLAGS = $(shell pkg-config --libs $(PKGLIBS)) -lqscintilla2	\
+	-lboost_system -lboost_iostreams -lboost_filesystem
 
-LIBS = -lboost_system-mt -lboost_iostreams-mt -lboost_filesystem-mt -lqscintilla2
+CPP_FILES = log.cpp mmc_image.cpp core_image.cpp vm.cpp utils.cpp	\
+	mmobj.cpp main.cpp process.cpp prims.cpp mmc_fun.cpp ctrl.cpp	\
+	qt_prims.cpp qsc.cpp remote_repl.cpp
 
-QT_FLAGS = -pipe -g -arch x86_64 -W \
-	-DQT_NO_DEBUG -DQT_WEBKIT_LIB -DQT_SCRIPT_LIB -DQT_GUI_LIB -DQT_CORE_LIB -DQT_SHARED \
-	-I/usr/local/Cellar/qt/4.8.5/mkspecs/unsupported/macx-clang \
-	-I. -I/usr/local/Cellar/qt/4.8.5/lib/QtCore.framework/Versions/4/Headers \
-	-I/usr/local/Cellar/qt/4.8.5/lib/QtCore.framework/Versions/4/Headers \
-	-I/usr/local/Cellar/qt/4.8.5/lib/QtGui.framework/Versions/4/Headers \
-	-I/usr/local/Cellar/qt/4.8.5/lib/QtScript.framework/Versions/4/Headers \
-	-I/usr/local/Cellar/qt/4.8.5/lib/QtWebKit.framework/Versions/4/Headers \
-	-I/usr/local/Cellar/qt/4.8.5/lib/QtNetwork.framework/Versions/4/Headers \
-	-I/usr/local/Cellar/qt/4.8.5/include \
-	-I. \
-	-F/usr/local/Cellar/qt/4.8.5/lib \
-	-headerpad_max_install_names -arch x86_64 \
-	-F/usr/local/Cellar/qt/4.8.5/lib -L/usr/local/Cellar/qt/4.8.5/lib \
-	-framework QtScript -L/opt/X11/lib -L/usr/local/Cellar/qt/4.8.5/lib \
-	-F/usr/local/Cellar/qt/4.8.5/lib -framework QtCore -framework QtGui -framework QtWebKit -framework QtNetwork
+HPP_FILES = mmc_image.hpp core_image.hpp vm.hpp log.hpp utils.hpp	\
+	defs.hpp mmobj.hpp process.hpp prims.hpp mmc_fun.hpp ctrl.hpp	\
+	qt_prims.hpp qsc.hpp remote_repl.hpp
 
-sf-vm: $(CPP_FILES) $(HPP_FILES)
-	moc qsc.hpp > qsc.moc.cpp
-	g++ -Wall -g $(CPP_FILES) $(LIBS) $(LIB_PATHS) $(INC_PATHS)  -o sf-vm $(QT_FLAGS) -DMM_NO_DEBUG
+OBJS = $(CPP_FILES:%.cpp=%.o)
+
+all: $(BIN)
+
+qsc.moc.cpp: qsc.hpp
+	moc $< > $@
+
+%.o: %.cpp
+	g++ $(CXXFLAGS) -c -o $@ $<
+
+$(OBJS): qsc.moc.cpp $(CPP_FILES) $(HPP_FILES)
+
+$(BIN): $(OBJS)
+	g++ $(OBJS) $(LDFLAGS) -o $@
 
 clean:
 	rm -f sf-vm
