@@ -1,3 +1,4 @@
+*.o
 *.pyc
 *.mmc
 src/evaluator.py
@@ -6,3 +7,5 @@ src/parser.py
 src/core_module.py
 src/coreparser.py
 src/coretr.py
+sugarfoot/qsc.moc.cpp
+sugarfoot/sf-vm
