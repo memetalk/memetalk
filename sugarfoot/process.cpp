@@ -55,6 +55,7 @@
 #define ERROR() MMLog::error() << COLOR(_log) << "[" << log_label() << "|" << BCOLOR(_log) + meme_curr_fname() << COLOR(_log) << "." << __FUNCTION__ << "] " << _log.normal
 #define CTXNAME(ctx) _mmobj->mm_string_cstr(this, _mmobj->mm_function_get_name(this, ctx), true)
 #define TO_C_STR(str) _mmobj->mm_string_cstr(this, str, true)
+#define SYM_TO_STR(sym) _mmobj->mm_symbol_cstr(this, sym, true)
 
 //#include <boost/unordered_map.hpp>
 //typedef boost::unordered_map<unsigned long, entry_t> cache_t;
