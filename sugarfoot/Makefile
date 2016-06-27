@@ -12,9 +12,13 @@
 
 BIN = sf-vm
 
+INC_DIRS = /usr/include /usr/local/include
+
+QSCI_INC ?= $(dir $(foreach i,$(INC_DIRS),$(shell find -L $(i) -name qscicommandset.h)))
+
 PKGLIBS = QtCore QtGui QtScript QtWebKit QtNetwork
 
-CXXFLAGS = -Wall -g -DMM_NO_DEBUG $(shell pkg-config --cflags $(PKGLIBS))
+CXXFLAGS = -Wall -g -DMM_NO_DEBUG $(shell pkg-config --cflags $(PKGLIBS)) -I$(QSCI_INC)
 
 LDFLAGS = $(shell pkg-config --libs $(PKGLIBS)) -lqscintilla2	\
 	-lboost_system -lboost_iostreams -lboost_filesystem
