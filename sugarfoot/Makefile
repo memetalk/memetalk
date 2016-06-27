@@ -43,9 +43,9 @@ $(BIN): $(OBJS)
 	g++ $(OBJS) $(LDFLAGS) -o $@
 
 clean:
-	rm -f sf-vm
-	rm mm/*.mmc
-	rm tests/*.mmc
+	-rm -f $(BIN) $(OBJS) qsc.moc.cpp
+	-rm mm/*.mmc
+	-rm tests/*.mmc
 
 ############ Compiler Section ############
 
