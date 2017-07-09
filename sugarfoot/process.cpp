@@ -82,7 +82,7 @@
 
 Process::Process(VM* vm, int debugger_id)
   : _log(debugger_id > 0?LOG_DBG_PROC:LOG_TARGET_PROC),
- _log_registers(debugger_id > 0?LOG_TARGET_PROC_REG:LOG_TARGET_PROC_REG),
+ _log_registers(debugger_id > 0?LOG_DBG_PROC_REG:LOG_TARGET_PROC_REG),
  _log_stack(debugger_id > 0? LOG_DBG_PROC_STACK:LOG_TARGET_PROC_STACK),
  _log_stack_trace(debugger_id > 0? LOG_DBG_PROC_TRACE:LOG_TARGET_PROC_TRACE),
  _log_body(debugger_id > 0? LOG_DBG_PROC_BODY:LOG_TARGET_PROC_BODY),
