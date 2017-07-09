@@ -161,7 +161,8 @@
   (interactive)
   (let ((code (memetalk-current-selection)))
     (when (stringp code)
-      (memetalk-repl-do-it code))))
+      (memetalk-repl-do-it code)
+      (deactivate-mark))))
 
 (defun memetalk-print-it ()
   (interactive)
