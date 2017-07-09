@@ -1491,16 +1491,19 @@ static int prim_compiled_function_loc_for(Process* proc) {
   boost::unordered_map<oop, oop>::iterator it = proc->mmobj()->mm_dictionary_begin(proc, mapping);
   boost::unordered_map<oop, oop>::iterator end = proc->mmobj()->mm_dictionary_end(proc, mapping);
   oop the_lst = MM_NULL;
+  word next_offset = INT_MAX;
   for ( ; it != end; it++) {
-    word b_offset = untag_small_int(it->first);
-    DBG(" -- " << b_offset << " " <<  idx << std::endl);
-    if (b_offset == idx) {
+    word b_offset = untag_small_int(it->first); //11, 8, 7, 4, 0
+    if (idx == b_offset) {
+      DBG(" -- eq " << b_offset << " " <<  idx << std::endl);
+      next_offset = b_offset; //7
       the_lst = it->second;
-      break;
-    } else if(b_offset > idx) {
-      break;
+    } else if ((idx < b_offset) && (next_offset > b_offset)) {
+      DBG(" -- " << b_offset << " " <<  idx << std::endl);
+      next_offset = b_offset; //7
+      the_lst = it->second;
     } else {
-      the_lst = it->second;
+      DBG(" -- ignored: " << b_offset << " " <<  idx << std::endl);
     }
   }
   proc->stack_push(the_lst);
