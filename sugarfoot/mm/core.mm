@@ -506,7 +506,7 @@ class Exception
     return "Exception: " + this.message.toString();
   }
   class_method throw: fun(msg) {
-    this.new(msg).throw;
+    return this.new(msg).throw;
   }
 end
 

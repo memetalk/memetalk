@@ -1533,7 +1533,10 @@ void Process::halt_and_debug() {
     DBG("got a _dbg_handler " << endl);
   }
   DBG("pausing... " << endl);
-  step_over();
+  //step_over();
+    _state = HALT_STATE;
+  // _state = STEP_OVER_STATE;
+  // _control->resume();
 }
 
 void Process::maybe_debug_on_raise(oop ex_oop) {
