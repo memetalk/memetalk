@@ -274,9 +274,9 @@ class Compiler(ASTBuilder):
         mmc = MMC_Fun(cmod, cfun)
         mmc.dump()
 
-    def recompile_function(self, text):
+    def recompile_function(self, line, text):
         self.filepath = '<???>'
-        self.line_offset = 0
+        self.line_offset = int(line)
 
         self.parser = MemeParser(text)
         self.parser.i = self
@@ -312,7 +312,7 @@ def compile_lambda(js):
 def recompile_fun(js):
     # python -m pycompiler.compiler recompile-fun '{"text":"fun() {X.z}"}'
     js = ejson.loads(js)
-    Compiler().recompile_function(js['text'])
+    Compiler().recompile_function(js["start_line"], js['text'])
 
 if __name__ == '__main__':
     from clime import Program

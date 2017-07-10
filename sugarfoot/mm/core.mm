@@ -198,7 +198,7 @@
     instance_method closures: fun() {
       return @closures;
     }
-    instance_method recompile: fun(text) {
+    instance_method recompile: fun(line, text) {
       <primitive "compiled_function_recompile">
     }
   end

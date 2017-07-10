@@ -1511,10 +1511,11 @@ static int prim_compiled_function_loc_for(Process* proc) {
 }
 
 static int prim_compiled_function_recompile(Process* proc) {
-  oop text = proc->get_arg(0);
+  oop line = proc->get_arg(0);
+  oop text = proc->get_arg(1);
   oop self = proc->dp();
   int exc;
-  oop cfun = proc->vm()->recompile_fun(proc, self, proc->mmobj()->mm_string_cstr(proc, text), &exc);
+  oop cfun = proc->vm()->recompile_fun(proc, self, untag_small_int(line), proc->mmobj()->mm_string_cstr(proc, text), &exc);
   DBG("cfun: " << cfun << " " << exc << endl);
   if (exc != 0) {
     proc->stack_push(cfun);

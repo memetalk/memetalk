@@ -204,7 +204,7 @@ using boost::property_tree::read_json;
 using boost::property_tree::write_json;
 
 static
-std::string get_compile_fun_json(const char* text, std::list<std::string> vars) {
+std::string get_compile_fun_json(const char* text, int line, std::list<std::string> vars) {
   ptree pt;
   ptree env;
 
@@ -213,16 +213,18 @@ std::string get_compile_fun_json(const char* text, std::list<std::string> vars) 
   }
 
   pt.put ("text", text);
+  pt.put("start_line", line);
   pt.add_child("env_names",  env);
   std::ostringstream buf;
   write_json (buf, pt, false);
   return buf.str();
 }
 
-oop VM::recompile_fun(Process* proc, oop cfun, const char* text, int* exc) {
+oop VM::recompile_fun(Process* proc, oop cfun, int line, const char* text, int* exc) {
   std::list<std::string> vars;
   std::stringstream s;
-  std::string json = get_compile_fun_json(text, vars);
+  DBG("recompiling line " << line << " code: " << text << endl);
+  std::string json = get_compile_fun_json(text, line, vars);
 
   s << "python -m pycompiler.compiler recompile-fun '" << json << "'";
   DBG("Executing python compiler: " << s.str() << endl);
@@ -255,7 +257,7 @@ oop VM::recompile_fun(Process* proc, oop cfun, const char* text, int* exc) {
 
 oop VM::compile_fun(Process* proc, const char* text, std::list<std::string> vars, oop cmod, int* exc) {
   std::stringstream s;
-  std::string json = get_compile_fun_json(text, vars);
+  std::string json = get_compile_fun_json(text, 0, vars);
 
   s << "python -m pycompiler.compiler compile-lambda '" << json << "'";
   DBG("Executing python compiler: " << s.str() << endl);

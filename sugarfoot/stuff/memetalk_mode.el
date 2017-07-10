@@ -16,6 +16,7 @@
     (define-key map (kbd "s-r") 'memetalk-run-until)
     (define-key map (kbd "s-f") 'memetalk-reload-frame)
     (define-key map (kbd "s-e") 'memetalk-return-value)
+    (define-key map (kbd "s-w") 'memetalk-recompile)
     (define-key map (kbd "s-b") 'memetalk-break-at)
     (define-key map (kbd "<s-down>") 'memetalk-bt-up)
     (define-key map (kbd "<s-up>") 'memetalk-bt-down)
@@ -138,6 +139,11 @@
 (defun memetalk-repl-break-at (loc)
   (memetalk-repl-send (concat "break-at " (base64-encode-string loc t))))
 
+(defun memetalk-repl-recompile (text)
+  (memetalk-repl-send
+   (format "recompile %d|%s"
+           (memetalk-get-begin-procedure-line) (base64-encode-string text t))))
+
 
 (defvar memetalk-current-module-filepath nil)
 
@@ -214,6 +220,10 @@
 (defun memetalk-reload-frame ()
   (interactive)
   (memetalk-repl-send "reload-frame"))
+
+(defun memetalk-recompile ()
+  (interactive)
+  (memetalk-repl-recompile (memetalk-get-last-procedure)))
 
 (defun memetalk-return-value ()
   (interactive)
@@ -378,7 +388,7 @@
     (with-current-buffer buffer
       (remove-overlays (point-min) (point-max)))))
 
-(defun memetalk-get-last-procedure ()
+(defun memetalk-get-last-procedure () ;works only with module functions for now
   (interactive)
   (with-current-buffer (current-buffer)
     (condition-case nil
@@ -388,12 +398,26 @@
           (let ((fname (match-string-no-properties 2))
                 (ftype (match-string-no-properties 1))
                 (begin (match-beginning 0)))
-            (goto-char begin)
-            (search-forward "{")
-            (backward-char)
-            (forward-sexp)
-            (let ((x (make-overlay begin (point))))
-              (overlay-put x 'face '(:box "yellow"))
-              (run-at-time "0.2 second" nil
-                           #'memetalk-remove-overlays (current-buffer)))))
-      ((debug error) nil))))
+            (search-forward ":")
+            (let ((begin-f (point)))
+              (goto-char begin)
+              (search-forward "{")
+              (backward-char)
+              (forward-sexp)
+              (let ((x (make-overlay begin (point))))
+                (overlay-put x 'face '(:box "yellow"))
+                (run-at-time "0.01 second" nil
+                             #'memetalk-remove-overlays (current-buffer)))
+              (buffer-substring-no-properties begin-f (point)))))
+          ((debug error) nil))))
+
+
+(defun memetalk-get-begin-procedure-line ()
+  (interactive)
+  (with-current-buffer (current-buffer)
+    (condition-case nil
+        (save-excursion
+          (re-search-backward
+           "^\\s-*\\(init\\s-+\\|instance_method\\s-+\\|class_method\\s-+\\|\\)\\(\\w+\\): fun")
+          (let ((current-line (line-number-at-pos (point))))
+                current-line)))))

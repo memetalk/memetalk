@@ -267,8 +267,25 @@ instance_method dispatch: fun(socket, command) {
     this.clear_module_break_mode(socket);
     return null;
   }
+  if (command.find("recompile") == 0) {
+    this.recompile(this.get_frame(@current_frame_idx), command.from(10));
+    @process.reloadFrame();
+    this.send_location(socket, this.get_frame(@current_frame_idx));
+    return null;
+  }
   io.print("Unknown command " + command);
   socket.write_line("* ERR");
+}
+
+instance_method recompile: fun(frame, text) {
+  var splt = text.split("|");
+  var line = splt[0];
+  var txt = splt[1].b64decode();
+  //io.print("recompiling [" + txt + "]");
+  ///io.print("line: " + line.toString);
+  var cf = frame.cp().compiledFunction();
+  // io.print("recompiling function name: " + cf.name());
+  cf.recompile(line.toInteger - 1, txt);
 }
 
 instance_method move_back_trace_up: fun() {
