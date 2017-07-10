@@ -124,19 +124,19 @@
   (memetalk-repl-send (concat "load " module-name)))
 
 (defun memetalk-repl-do-it (code)
-  (memetalk-repl-send (concat "do-it " (base64-encode-string code))))
+  (memetalk-repl-send (concat "do-it " (base64-encode-string code t))))
 
 (defun memetalk-repl-print-it (code)
-  (memetalk-repl-send (concat "print-it " (base64-encode-string code))))
+  (memetalk-repl-send (concat "print-it " (base64-encode-string code t))))
 
 (defun memetalk-repl-return-value (code)
-  (memetalk-repl-send (concat "return-value " (base64-encode-string code))))
+  (memetalk-repl-send (concat "return-value " (base64-encode-string code t))))
 
 (defun memetalk-repl-run-until (loc)
-  (memetalk-repl-send (concat "run-until " (base64-encode-string loc))))
+  (memetalk-repl-send (concat "run-until " (base64-encode-string loc t))))
 
 (defun memetalk-repl-break-at (loc)
-  (memetalk-repl-send (concat "break-at " (base64-encode-string loc))))
+  (memetalk-repl-send (concat "break-at " (base64-encode-string loc t))))
 
 
 (defvar memetalk-current-module-filepath nil)
