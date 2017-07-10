@@ -101,6 +101,18 @@ instance_method printIt: fun(socket, text) {
   }
 }
 
+instance_method return_value: fun(socket, text) {
+  try {
+    var ctx = Context.withFrame(text, this.get_frame(@current_frame_idx), @process.mp);
+    var res = ctx();
+    io.print(res.toString);
+    return res;
+  } catch(ex) {
+    socket.write_line("* ERR");
+    return null;
+  }
+}
+
 instance_method parse_location: fun(location) {
   var splt = location.split(":");
   var mod_part = splt[0];
@@ -187,6 +199,13 @@ instance_method dispatch: fun(socket, command) {
   // }
   if (command.find("do-it") == 0) {
     this.doIt(socket, command.from(6).b64decode());
+    return null;
+  }
+  if (command.find("return-value") == 0) {
+    io.print("return-value: " + command.from(13).b64decode());
+    var res = this.return_value(socket, command.from(13).b64decode());
+    @process.returnFromFrame(res);
+    this.send_location(socket, this.get_frame(@current_frame_idx));
     return null;
   }
   if (command.find("print-it") == 0) {

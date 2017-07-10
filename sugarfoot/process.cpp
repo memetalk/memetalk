@@ -322,9 +322,12 @@ void Process::unload_fun_and_return(oop retval) {
   stack_push(retval);
 }
 
-void Process::clear_exception_state() {
+void Process::clear_exception_state(bool halt) {
     _unwinding_exception = false;
     _current_exception = MM_NULL;
+    if (halt) {
+      _state = HALT_STATE;
+    }
 }
 
 oop Process::ctor_rdp_for(oop rp, oop cp) {
@@ -1413,6 +1416,8 @@ oop Process::unwind_with_exception(oop e) {
 
   DBG("ticking..." << endl);
   tick();
+  DBG("returned from tick 1. _unwinding_exception? " << _unwinding_exception << endl);
+  if (!_unwinding_exception) return MM_NULL;
 
   if (_cp == NULL) {
     //we are already unwinding exception e.
@@ -1442,6 +1447,7 @@ oop Process::unwind_with_exception(oop e) {
   if (exception_frames_count == 0) { //_cp is unable to handle
     pop_frame();
     tick();
+    DBG("returned from tick 2. _unwinding_exception?" << _unwinding_exception << endl);
     if (_unwinding_exception) {
       return unwind_with_exception(e);
     } else {

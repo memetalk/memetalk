@@ -15,6 +15,7 @@
     (define-key map (kbd "s-c") 'memetalk-continue)
     (define-key map (kbd "s-r") 'memetalk-run-until)
     (define-key map (kbd "s-f") 'memetalk-reload-frame)
+    (define-key map (kbd "s-e") 'memetalk-return-value)
     (define-key map (kbd "s-b") 'memetalk-break-at)
     (define-key map (kbd "<s-down>") 'memetalk-bt-up)
     (define-key map (kbd "<s-up>") 'memetalk-bt-down)
@@ -128,6 +129,9 @@
 (defun memetalk-repl-print-it (code)
   (memetalk-repl-send (concat "print-it " (base64-encode-string code))))
 
+(defun memetalk-repl-return-value (code)
+  (memetalk-repl-send (concat "return-value " (base64-encode-string code))))
+
 (defun memetalk-repl-run-until (loc)
   (memetalk-repl-send (concat "run-until " (base64-encode-string loc))))
 
@@ -210,6 +214,13 @@
 (defun memetalk-reload-frame ()
   (interactive)
   (memetalk-repl-send "reload-frame"))
+
+(defun memetalk-return-value ()
+  (interactive)
+  (let ((code (memetalk-current-selection)))
+    (when (stringp code)
+      (memetalk-repl-return-value code)
+      (deactivate-mark))))
 
 (defun memetalk-break-at ()
   (interactive)

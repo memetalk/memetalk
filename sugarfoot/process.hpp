@@ -127,7 +127,7 @@ public:
 
   bool has_debugger_attached();
 
-  void clear_exception_state();
+  void clear_exception_state(bool halt = false);
 
   void break_at_addr(bytecode*);
   void run_until(oop, number line);
