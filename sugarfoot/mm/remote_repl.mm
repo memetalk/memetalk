@@ -213,6 +213,11 @@ instance_method dispatch: fun(socket, command) {
     this.send_locals(socket, this.get_frame(@current_frame_idx));
     return null;
   }
+  if (command.find("reload-frame") == 0) {
+    @process.reloadFrame();
+    this.send_location(socket, this.get_frame(@current_frame_idx));
+    return null;
+  }
   if (command.find("bt-up") == 0) {
     this.move_back_trace_up();
     this.send_location(socket, this.get_frame(@current_frame_idx));

@@ -14,6 +14,7 @@
     (define-key map (kbd "s-l") 'memetalk-step-line)
     (define-key map (kbd "s-c") 'memetalk-continue)
     (define-key map (kbd "s-r") 'memetalk-run-until)
+    (define-key map (kbd "s-f") 'memetalk-reload-frame)
     (define-key map (kbd "s-b") 'memetalk-break-at)
     (define-key map (kbd "<s-down>") 'memetalk-bt-up)
     (define-key map (kbd "<s-up>") 'memetalk-bt-down)
@@ -205,6 +206,10 @@
 (defun memetalk-run-until ()
   (interactive)
   (memetalk-repl-run-until (memetalk-current-location)))
+
+(defun memetalk-reload-frame ()
+  (interactive)
+  (memetalk-repl-send "reload-frame"))
 
 (defun memetalk-break-at ()
   (interactive)
