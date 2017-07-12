@@ -34,6 +34,8 @@ class CompVirtualMemory(vmemory.VirtualMemory):
         return oop
 
     def append_symbol_instance(self, string):
+        if string == '':
+            return self.append_null()
         oop = self.append_int(0xBBBB)
         self.symb_table.append((string, oop))
         return oop
