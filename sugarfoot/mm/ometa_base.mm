@@ -9,7 +9,25 @@ instance_method throw: fun() {
 class_method throw: fun() {
   this.new.throw;
 }
+end
 
+class OMetaLeftRecursion
+fields: used;
+init new: fun() {
+  @used = false;
+}
+instance_method set_used: fun() {
+  @used = true;
+}
+instance_method used: fun() {
+  return @used;
+}
+instance_method throw: fun() {
+  <primitive "exception_throw">
+}
+class_method throw: fun() {
+  this.new.throw;
+}
 end
 
 
@@ -45,6 +63,10 @@ instance_method data: fun() {
 
 instance_method idx: fun() {
   return @idx;
+}
+
+instance_method equals: fun(other) {
+  return @idx == other.idx and @data == other.data;
 }
 
 instance_method head: fun() {
@@ -120,19 +142,34 @@ instance_method _apply: fun(rule) {
   var memo = @input.memo;
   if (!memo.has(rule)) {
     var input = @input;
-    try {
-      var res = this.send(rule, []);
-      input.memo[rule] = {:input : @input, :ans : res};
-    } catch(OMetaException e) {
-      @input = input;
-      input.memo[rule] = {:error : e};
-      this.set_error(rule.toString, input);
-      e.throw();
+    var lr = OMetaLeftRecursion.new;
+    memo[rule] = {:fail : lr};
+    var res = this.send(rule, []);
+    var zz = @input;
+    //debug(); //io.print(@input)
+    memo[rule] = {:input : @input, :ans : res, :fail : null};
+    if (lr.used) {
+      var sentinel = @input;
+      var loop = true;
+      while (loop) {
+        try {
+          @input = input;
+          res = this.send(rule, []);
+          var xx = @input;
+          if (@input.equals(sentinel)) {
+             //io.print(@input == sentinel);
+             OMetaException.throw;
+          }
+          memo[rule] = {:input : @input, :ans : res, :fail : null};
+        } catch(OMetaException e) {
+          loop = false; // break is not implemented yet :/
+        }
+      }
     }
-  } else {
-    if (memo[rule].has(:error)) {
-      memo[rule][:error].throw();
-    }
+  } elif (memo[rule][:fail]) {
+    lr = memo[rule][:fail]   ;
+    lr.set_used();
+    OMetaException.throw();
   }
   @input = memo[rule][:input];
   return memo[rule][:ans];
