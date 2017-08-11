@@ -126,11 +126,14 @@ static int prim_string_equal(Process* proc) {
   oop self =  proc->dp();
   oop other = proc->get_arg(0);
 
-  char* str_1 = proc->mmobj()->mm_string_cstr(proc, self);
-  char* str_2 = proc->mmobj()->mm_string_cstr(proc, other);
-
-  if (strcmp(str_1, str_2) == 0) {
-    proc->stack_push(MM_TRUE);
+  if (proc->mmobj()->mm_is_string(other)) {
+      char* str_1 = proc->mmobj()->mm_string_cstr(proc, self);
+      char* str_2 = proc->mmobj()->mm_string_cstr(proc, other);
+      if (strcmp(str_1, str_2) == 0) {
+        proc->stack_push(MM_TRUE);
+      } else {
+        proc->stack_push(MM_FALSE);
+      }
   } else {
     proc->stack_push(MM_FALSE);
   }

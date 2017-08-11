@@ -10,6 +10,18 @@ init new: fun(input) {
   super.new(input);
   @has_fun_literal = false;
 }
+instance_method last_or_empty: fun(lst) {
+  if (lst.size > 0) {
+    return lst.last;
+  } else {
+    return [];
+  }
+}
+instance_method maybe_append_semicol_expr: fun(body, no_semicol_expr) {
+  if(no_semicol_expr) {
+    body.append([:expression, no_semicol_expr]);
+  }
+}
 
 <ometa>
 alpha =  '+' | '*' | '-' | '/' | '=' | '<' | '>' | '?' | '!';
@@ -20,7 +32,7 @@ id = ~meme_keyword identifier;
 
 alpha_name = spaces ~meme_keyword {alpha | letter | '_'}:x {identifier_rest|alpha}*:xs => ([x] + xs).join("");
 
-symbol_name = spaces {alpha | letter | '_'}:x {identifier_rest|'_'|alpha}*:xs !{xs.insert(0, x)} => xs.join("");
+symbol_name = spaces {alpha | letter | '_'}:x {identifier_rest|'_'|alpha}*:xs !{xs.prepend(x)} => xs.join("");
 
 space =  _:c ?{c.onlySpaces} => c
       | comment;
@@ -52,15 +64,15 @@ start = license:lic
 module_params = params
               | => [];
 
-preamble_entry = identifier:name ":" module_spec:s ";" => [:param, name, s];
+preamble_entry = id:name ":" module_spec:s ";" => [:param, name, s];
 
-module_spec = identifier:ns ":" identifier:mname => [:library, ns, mname];
+module_spec = id:ns ":" id:mname => [:library, ns, mname];
 
-module_alias = "[" idlist:lst "]" "<=" identifier:x ";" => [:alias, x, lst];
+module_alias = "[" idlist:lst "]" "<=" id:x ";" => [:alias, x, lst];
 
 module_decl = obj_decl | class_decl | top_level_fun | top_level_fn;
 
-obj_decl = ``object`` identifier:name
+obj_decl = ``object`` id:name
              object_slot+:s
              obj_fun:f
            ``end``  => [:object, name, s, f];
@@ -70,9 +82,9 @@ obj_fun =  ``functions`` "{"
            "}" => f
         | => [];
 
-object_slot = identifier:name  ":" { literal | identifier }:value ";" => [:slot, name, value];
+object_slot = id:name  ":" { literal | id }:value ";" => [:slot, name, value];
 
-class_decl = ``class`` identifier:name { "<" identifier | "<" "null" | => "Object" }:parent
+class_decl = ``class`` id:name { "<" id | "<" "null" | => "Object" }:parent
                 fields_:f
                 constructors:c
                 instance_method_decl*:im
@@ -119,13 +131,13 @@ class_method_decl = !{@has_fun_literal = false}
 params = "(" idlist:xs ")" => xs;
 
 fparams = "(" ")" => []
-        | "("  "*" identifier:x ")" => [[:var-arg, x]]
-        | "("  identifier:x { "," identifier }*:xs ")" => [x] + xs
-        | "("  identifier:x { "," identifier }*:xs pvar:y ")" => [x] + xs + [y];
+        | "("  "*" id:x ")" => [[:var-arg, x]]
+        | "("  id:x { "," id }*:xs ")" => [x] + xs
+        | "("  id:x { "," id }*:xs pvar:y ")" => [x] + xs + [y];
 
-pvar = "," "*" identifier:x => [:var-arg, x];
+pvar = "," "*" id:x => [:var-arg, x];
 
-idlist = identifier:x {"," identifier}*:xs => [x] + xs
+idlist = id:x {"," id}*:xs => [x] + xs
           | => [];
 
 top_fun_body = primitive
@@ -149,7 +161,7 @@ expr_ret =  ``return`` expr:e => [:return, e];
 expr_non_local_ret =  "^" expr:e => [:non-local-return, e];
 
 expr_decl =  ``var``
-              identifier:name "=" expr:e => [:var-def, name, e];
+              id:name "=" expr:e => [:var-def, name, e];
 
 expr_attr =  spaces  lhs:a "=" expr:b => [:=, a, b];
 
@@ -237,7 +249,7 @@ call_expr =   call_expr:r args:p
             => [:call, r, [:args, p]]
           |   ``super`` args:p
             => [:super-send, [:args, p]]
-          |    identifier:r args:p
+          |    id:r args:p
             => [:send-or-local-call, r, [:args, p]]
           | prim_expr;
 
@@ -275,13 +287,14 @@ funliteral = ``fun`` params:p "{"
 
 funliteral_body =
                   stmts:body
-                    expr?:no_semicol_expr !{!no_semicol_expr or body.append([:expression, no_semicol_expr])}
-                    !{body.from(-1)}:last
+                    expr?:no_semicol_expr
+                   !{this.maybe_append_semicol_expr(body, no_semicol_expr)}
+                   !{this.last_or_empty(body)}:last
                     rewrite_last_stmt(last)
                 => body + [[:return-null]];
 
 
-rewrite_last_stmt = [[:expression _]:c] => c.prepend(:return)
+rewrite_last_stmt = [:expression _]:c => c.prepend(:return)
                   | _;
 
 cfunliteral_body = funliteral_body:x spaces ~_ => x;
@@ -296,7 +309,7 @@ lit_string  = '"' { lit_escaped | ~'"' _}*:xs '"'
 
 lit_escaped = ~'"' '\\' _:x => "\\" + x;
 
-field_name = "@" identifier;
+field_name = "@" id;
 
 
 single_top_level_fun :name = ``fun``

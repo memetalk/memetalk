@@ -295,10 +295,10 @@ instance_method _form: fun(fn) {
   this._pred([String, List].has(Mirror.vtFor(r))); //enumerable?sequenceable?
   var input = @input;
   @input = OMetaStream.with_data(r);
-  var res = fn();
+  var res = fn(); //ignore the last element in the list.
   this._apply(:end);
   @input = input;
-  return res;
+  return r;
 }
 
 // *************************** basic rules
