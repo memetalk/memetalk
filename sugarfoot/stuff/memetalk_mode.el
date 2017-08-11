@@ -310,15 +310,23 @@
   (memetalk-remove-overlays memetalk-current-buffer)
   (setq memetalk-current-buffer nil))
 
-(defvar memetalk-path (or  (getenv "MEME_PATH") "/Users/jester/src/memetalk/sugarfoot/mm/"))
+(defvar memetalk-path (or  (getenv "MEME_PATH") "/Users/thiago/src/memetalk/sugarfoot/"))
+
+(defun memetalk-get-module-file-path (mod-name)
+  (let ((mm-path (concat (file-name-as-directory memetalk-path) "mm/" mod-name))
+        (test-path (concat (file-name-as-directory memetalk-path) "tests/" mod-name)))
+    (cond
+     ((file-exists-p mm-path) mm-path)
+     ((file-exists-p test-path) test-path)
+     (t (error (format "can't open file %s" mod-name))))))
 
 (defvar commands (list))
 
 (defun memetalk-process-module-response (res file-part)
   (string-match "\\([a-zA-Z0-9_]+\\)[:/]" file-part)
   (let ((mod-name (concat (match-string-no-properties 1 file-part) ".mm")))
-    (message (format "mattched module '%s'" mod-name))
-    (let ((mod-path (concat (file-name-as-directory memetalk-path) mod-name)))
+    (message (format "mattched module '%s', path: %s" mod-name (memetalk-get-module-file-path mod-name)))
+    (let ((mod-path (memetalk-get-module-file-path mod-name)))
       (with-current-buffer (find-file mod-path)
         (message (format "opened file '%s'" mod-path))
         (widen) ;this shit keep being opened narrowed, god damn it!
