@@ -13,11 +13,11 @@ main: fun() {
 
   var f3 = f1();
   var f4 = f2();
-  test.assert(f3(10) == 10, "local f1::z receives 10");
-  test.assert(f3(10) == 20, "local f1::z receives 20");
+  test.assertEqual(f3(10), 10, "local f1::z receives 10");
+  test.assertEqual(f3(10), 20, "local f1::z receives 20");
 
-  test.assert(f4(10) == 10, "local f2::z receives 10");
-  test.assert(f4(10) == 20, "local f2::z receives 20");
+  test.assertEqual(f4(10), 10, "local f2::z receives 10");
+  test.assertEqual(f4(10), 20, "local f2::z receives 20");
 }
 
 .end

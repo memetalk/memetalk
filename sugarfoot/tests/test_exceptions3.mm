@@ -15,7 +15,7 @@ main: fun() {
     a = a + 1;
   }
   a = a + 1;
-  test.assert(a == 2, "Core Exception class");
+  test.assertEqual(a, 2, "Core Exception class");
 }
 
 // -- module classes --

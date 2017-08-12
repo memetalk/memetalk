@@ -22,7 +22,7 @@ main: fun() {
   } else {
     a = 1;
   }
-  test.assert(a == 1, "Simple if");
+  test.assertEqual(a, 1, "Simple if");
 }
 
 // -- module classes --

@@ -37,7 +37,7 @@ main: fun() {
   var x = 0;
   var fn = fun() { x = x + 1; };
   a(fn);
-  test.assert(x == 9, "Multiple try/catches");
+  test.assertEqual(x, 9, "Multiple try/catches");
 }
 
 r: fun(fn) {

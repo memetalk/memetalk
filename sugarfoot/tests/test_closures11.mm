@@ -17,7 +17,7 @@ main: fun() {
       });
     }
   });
-  test.assert(res == 3, "if inside nested closures triggered by methods");
+  test.assertEqual(res, 3, "if inside nested closures triggered by methods");
 }
 
 // -- module classes --

@@ -18,7 +18,8 @@
 
 VM::VM(int argc, char** argv, bool online, bool profile, const char* core_img_filepath)
   : _log(LOG_VM), _argc(argc), _argv(argv), _online(online), _profile(profile),
-    _core_image(new CoreImage(this, core_img_filepath)), _mmobj(new MMObj(_core_image)) {
+    _core_image(new CoreImage(this, core_img_filepath)), _mmobj(new MMObj(_core_image)),
+    _debugger_module(MM_NULL) {
 }
 
 // MMObj* VM::mmobj() {
@@ -63,7 +64,7 @@ void VM::print_error(Process* proc, oop retval) {
 }
 
 Process* VM::init() {
-  Process* proc = new Process(this);
+  Process* proc = new Process(this, 0, _online);
   _core_image->load();
   init_primitives(this); //module initialization could execute primitives but
                          //now we are using Symbol objects as entries in the
@@ -117,13 +118,17 @@ std::pair<Process*, oop> VM::start_debugger(Process* target) {
 
   oop imod;
   Process* dbg_proc = new Process(this, ++debugger_id);
-  try {
-    imod = instantiate_module(dbg_proc, "remote_repl", _mmobj->mm_list_new());
-  } catch(mm_exception_rewind e) {
-    ERROR() << "uncaught exception while instantiating debugger module :(" << endl;
-    dbg_proc->fail(e.mm_exception);
-    // print_retval(e.mm_exception);
-    // return * (int*) (void*) &(e.mm_exception);
+  if (_debugger_module != MM_NULL) {
+    imod = _debugger_module;
+  } else {
+    try {
+      imod = instantiate_module(dbg_proc, "remote_repl", _mmobj->mm_list_new());
+    } catch(mm_exception_rewind e) {
+      ERROR() << "uncaught exception while instantiating debugger module :(" << endl;
+      dbg_proc->fail(e.mm_exception);
+      // print_retval(e.mm_exception);
+      // return * (int*) (void*) &(e.mm_exception);
+    }
   }
 
   oop oop_target_proc = _mmobj->mm_process_new(target, target);

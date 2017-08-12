@@ -418,6 +418,9 @@
   instance_method +: fun(other) {
     <primitive "list_plus">
   }
+  instance_method ==: fun(other) {
+    <primitive "list_equals">
+  }
   class_method new: fun() {
     <primitive "list_new">
   }
@@ -664,6 +667,9 @@ end
   instance_method frames: fun() {
     <primitive "process_frames">
   }
+  instance_method detach_debugger: fun() {
+    <primitive "process_detach_debugger">
+  }
   // instance_method apply: fun(fn) {
   //   <primitive "process_apply">
   // }
@@ -718,10 +724,12 @@ end
      <primitive "modules_path">
   }
 
-  debug: fun() {
+  dbg: fun() {
      <primitive "test_debug">
   }
-
+  set_debugger_module: fun(filename) {
+     <primitive "set_debugger_module">
+  }
   compile_module: fun(mm_name) {
      <primitive "remote_repl_compile_module">
   }

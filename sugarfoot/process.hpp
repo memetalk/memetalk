@@ -41,7 +41,7 @@ class Process {
 
 
 public:
-  Process(VM*, int debugger_id = 0);
+  Process(VM*, int debugger_id = 0, bool online = false);
 
   oop run(oop, oop, int*);
 
@@ -130,7 +130,7 @@ public:
   void unload_fun_and_return(oop retval);
 
   bool has_debugger_attached();
-
+  void detach_debugger();
   void clear_exception_state(bool halt = false);
 
   void break_at_addr(bytecode*);
@@ -147,6 +147,8 @@ public:
   std::string dump_stack_trace(bool);
 
   void report_profile();
+
+  bool running_online() { return _online; }
 private:
   std::string log_label();
   const char* meme_curr_fname();
@@ -219,6 +221,7 @@ private:
   oop _step_bp;
   oop _unwind_to_bp;
   oop _current_exception;
+  bool _online;
 
 //profiling
   long _PUSH_LOCAL;

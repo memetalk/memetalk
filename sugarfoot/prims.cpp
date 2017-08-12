@@ -887,6 +887,32 @@ static int prim_list_plus(Process* proc) {
   return 0;
 }
 
+static int prim_list_equals(Process* proc) {
+  //shallow equals (for now, we are just comparing the oop of each element)
+
+  oop self =  proc->dp();
+  oop other = proc->get_arg(0);
+
+  number this_size = proc->mmobj()->mm_list_size(proc, self);
+  number other_size = proc->mmobj()->mm_list_size(proc, other);
+
+  if (this_size != other_size) {
+    proc->stack_push(MM_FALSE);
+    return 0;
+  }
+
+  for (int i = 0; i < this_size; i++) {
+    oop next_self = proc->mmobj()->mm_list_entry(proc, self, i);
+    oop next_other = proc->mmobj()->mm_list_entry(proc, other, i);
+    if (next_self != next_other) {
+      proc->stack_push(MM_FALSE);
+      return 0;
+    }
+  }
+  proc->stack_push(MM_TRUE);
+  return 0;
+}
+
 static int prim_list_has(Process* proc) {
   oop self =  proc->dp();
   oop value = proc->get_arg(0);
@@ -2009,6 +2035,15 @@ static int prim_process_toggle_module_break_mode(Process* proc) {
   return 0;
 }
 
+static int prim_process_detach_debugger(Process* proc) {
+  oop oop_target_proc = proc->rp();
+  Process* target_proc = proc->mmobj()->mm_process_get_proc(proc, oop_target_proc);
+
+  target_proc->detach_debugger();
+  proc->stack_push(proc->rp());
+  return 0;
+}
+
 // static int prim_process_apply(Process* proc) {
 //   oop oop_target_proc = proc->rp();
 //   oop fn = proc->get_arg(0);
@@ -2083,6 +2118,13 @@ static int prim_modules_path(Process* proc) {
   return 0;
 }
 
+static int prim_set_debugger_module(Process* proc) {
+  oop oop_imod = proc->get_arg(0);
+  proc->vm()->set_debugger_module(oop_imod);
+  proc->stack_push(proc->rp());
+  return 0;
+}
+
 void init_primitives(VM* vm) {
   vm->register_primitive("io_print", prim_io_print);
   vm->register_primitive("io_read_file", prim_io_read_file);
@@ -2138,6 +2180,7 @@ void init_primitives(VM* vm) {
   vm->register_primitive("list_reverse", prim_list_reverse);
   vm->register_primitive("list_join", prim_list_join);
   vm->register_primitive("list_plus", prim_list_plus);
+  vm->register_primitive("list_equals", prim_list_equals);
 
 
   vm->register_primitive("dictionary_new", prim_dictionary_new);
@@ -2221,6 +2264,7 @@ void init_primitives(VM* vm) {
   vm->register_primitive("process_run_until", prim_process_run_until);
   vm->register_primitive("process_add_breakpoint", prim_process_add_breakpoint);
   vm->register_primitive("process_toggle_module_break_mode", prim_process_toggle_module_break_mode);
+  vm->register_primitive("process_detach_debugger", prim_process_detach_debugger);
 
   vm->register_primitive("process_cp", prim_process_cp);
   vm->register_primitive("process_fp", prim_process_fp);
@@ -2246,6 +2290,7 @@ void init_primitives(VM* vm) {
   vm->register_primitive("get_compiled_module_by_name", prim_get_compiled_module_by_name);
 
   vm->register_primitive("modules_path", prim_modules_path);
+  vm->register_primitive("set_debugger_module", prim_set_debugger_module);
 
   qt_init_primitives(vm);
 }

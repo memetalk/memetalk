@@ -6,7 +6,7 @@
 .code
 
 main: fun() {
-  test.assert(X.new().bla() == 10, "Closure accessing instance field");
+  test.assertEqual(X.new().bla(), 10, "Closure accessing instance field");
 }
 
 class X

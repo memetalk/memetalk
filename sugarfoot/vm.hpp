@@ -24,8 +24,6 @@ public:
   int& argc() { return _argc; };
   char** argv() { return _argv; };
 
-  inline bool running_online() { return _online; };
-
   inline MMObj* mmobj() { return _mmobj; };
 
 
@@ -64,6 +62,8 @@ public:
 
   oop get_compiled_module(Process* proc, std::string name);
 
+  void set_debugger_module(oop module) { _debugger_module = module; };
+
 private:
   // void dump_prime_info();
   // void dictionary_dump(oop dict);
@@ -77,6 +77,7 @@ private:
   bool _profile;
   CoreImage* _core_image;
   MMObj* _mmobj;
+  oop _debugger_module;
 //  std::list<Process*> _processes;
 
   boost::unordered_map<std::string, oop> _symbols;

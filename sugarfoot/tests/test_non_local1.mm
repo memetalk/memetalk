@@ -14,7 +14,7 @@ f: fun() {
   return 99;
 }
 main: fun() {
-  test.assert(f() == 100, "");
+  test.assertEqual(f(), 100, "");
 }
 
 .endcode

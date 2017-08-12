@@ -9,7 +9,7 @@
 
 main: fun() {
   var x = Point3D.new(1,5,9);
-  test.assert(x.all() == 15, "Simple inheritance");
+  test.assertEqual(x.all(), 15, "Simple inheritance");
 }
 
 // -- module classes --

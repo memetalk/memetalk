@@ -23,7 +23,7 @@ f: fun() {
 }
 
 main: fun() {
-  test.assert(f() == 10, "f() != 10");
+  test.assertEqual(f(), 10, "f() != 10");
 }
 
 .end

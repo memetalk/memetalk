@@ -9,7 +9,7 @@
 
 main: fun() {
   var z = fun() {  };
-  test.assert(z() == null, "testing empty closure");
+  test.assertEqual(z(), null, "testing empty closure");
 }
 
 // -- module classes --

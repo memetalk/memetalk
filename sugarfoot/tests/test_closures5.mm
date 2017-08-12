@@ -17,7 +17,7 @@ main: fun() {
   };
   var j = w();
   var k = x(f);
-  test.assert(x(f) == 29, "Shadowing identifier with nested closures");
+  test.assertEqual(x(f), 29, "Shadowing identifier with nested closures");
 }
 
 x: fun(g) {

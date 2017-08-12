@@ -80,7 +80,7 @@
 
 
 
-Process::Process(VM* vm, int debugger_id)
+Process::Process(VM* vm, int debugger_id, bool online)
   : _log(debugger_id > 0?LOG_DBG_PROC:LOG_TARGET_PROC),
  _log_registers(debugger_id > 0?LOG_DBG_PROC_REG:LOG_TARGET_PROC_REG),
  _log_stack(debugger_id > 0? LOG_DBG_PROC_STACK:LOG_TARGET_PROC_STACK),
@@ -90,7 +90,8 @@ Process::Process(VM* vm, int debugger_id)
  _vm(vm),
  _mmobj(vm->mmobj()),
  _control(new ProcessControl()),
- _dbg_handler(NULL, MM_NULL) {
+ _dbg_handler(NULL, MM_NULL),
+ _online(online) {
 
   init();
   _state = RUN_STATE;
@@ -734,7 +735,7 @@ void Process::fetch_cycle(void* stop_at_bp) {
     //Because debugger may interfere with _ip,
     //we must take the code from _ip, decode and dispatch
     //*after* the tick()
-    if (_vm->running_online()) tick();
+    if (running_online()) tick();
 
     bytecode code = *_ip;
 
@@ -942,13 +943,29 @@ void Process::tick() {
     oop retval = _dbg_handler.first->send_0(_dbg_handler.second,
                                             _vm->new_symbol("process_paused"), &exc);
     check_and_print_exception(_dbg_handler.first, exc, retval);
-    // DBG("tick:HALT "
-    //           << _mmobj->mm_string_cstr(_mmobj->mm_function_get_name(_cp))
-    //           << " next opcode" <<  decode_opcode(*_ip) << endl);
-    _state = HALT_STATE;
+
+    if (exc != 0) {
+      bail("debugger raised on process_paused(). quitting...");
+    }
+    if (retval == _vm->new_symbol("exit")) {
+      bail("debugger quit");
+    }
+
     _volatile_breakpoints.clear();
     _step_bp = MM_NULL;
-    _control->pause();
+
+    if (has_debugger_attached()) { //maybe debugger dettached itself
+                                   //and already set a specific state
+      _state = HALT_STATE;
+
+      if (retval == _vm->new_symbol("wait")) {
+        // DBG("tick:HALT "
+        //           << _mmobj->mm_string_cstr(_mmobj->mm_function_get_name(_cp))
+        //           << " next opcode" <<  decode_opcode(*_ip) << endl);
+        _control->pause();
+      }
+    }
+
 
     DBG("resuming! state == rewind? " << (_state == REWIND_STATE) << endl);
     if (_state == REWIND_STATE) {
@@ -968,6 +985,7 @@ void Process::step_into() {
   }
   // ? _step_bp = *(oop*)_bp; //previous bp
   _state = STEP_INTO_STATE;
+   LOG_BODY();
   _control->resume();
 }
 
@@ -1574,14 +1592,21 @@ oop Process::mm_exception(const char* ex_type_name, const char* msg) {
   return exobj;
 }
 
+void Process::detach_debugger() {
+  _dbg_handler.second = MM_NULL;
+  _online = false;
+  _state = RUN_STATE;
+}
+
 bool Process::has_debugger_attached() {
-  return _dbg_handler.first != NULL;
+  return _dbg_handler.second != MM_NULL;
 }
 
 void Process::halt_and_debug() {
   DBG("starting new debugger? " << has_debugger_attached() << endl);
   if (!has_debugger_attached()) {
     WARNING() << "starting debugger" << endl;
+    _online = true;
     _dbg_handler = _vm->start_debugger(this);
     DBG("got a _dbg_handler " << endl);
   }
@@ -1593,7 +1618,7 @@ void Process::halt_and_debug() {
 }
 
 void Process::maybe_debug_on_raise(oop ex_oop) {
-  if (!_vm->running_online()) return;
+  if (!running_online()) return;
 
   if (has_debugger_attached() && !exception_has_handler(ex_oop, _cp, _ip, _bp)) {
     DBG("we have a debugger and this exception does not have handler. state=halt" << endl);

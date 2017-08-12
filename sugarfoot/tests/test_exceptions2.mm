@@ -19,7 +19,7 @@ main: fun() {
   } catch(Exception e) {
     test.assert(false, "Shouldn't execute catch");
   }
-  test.assert(a == 1, "Executing code after try/catch");
+  test.assertEqual(a, 1, "Executing code after try/catch");
 }
 
 // -- module classes --

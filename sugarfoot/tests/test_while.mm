@@ -10,7 +10,7 @@ main: fun() {
   while (i < 10) {
     i = i + 1;
   }
-  test.assert(i == 10, "i != 10");
+  test.assertEqual(i, 10, "i != 10");
 }
 
 

@@ -30,13 +30,13 @@ g: fun() {
 }
 
 main: fun() {
- test.assert(a() == 10, "expr without semicol");
- test.assert(b() == 20, "expr with semicol");
- test.assert(c() == 30, "non local return");
- test.assert(d() == 50, "multiple expr, last without semicol");
- test.assert(e() == 70, "multiple expr, last with semicol");
- test.assert(f() == 90, "statement and expr without semicol");
- test.assert(g() == null, "empty body");
+ test.assertEqual(a(), 10, "expr without semicol");
+ test.assertEqual(b(), 20, "expr with semicol");
+ test.assertEqual(c(), 30, "non local return");
+ test.assertEqual(d(), 50, "multiple expr, last without semicol");
+ test.assertEqual(e(), 70, "multiple expr, last with semicol");
+ test.assertEqual(f(), 90, "statement and expr without semicol");
+ test.assertEqual(g(), null, "empty body");
 }
 
 .endcode

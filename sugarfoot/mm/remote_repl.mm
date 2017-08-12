@@ -57,6 +57,7 @@ instance_method process_paused: fun() { //this is called from the vm
     this.send_location(@socket, this.get_frame(@current_frame_idx));
     io.print("process paused: nothing");
   }
+  return :wait;
 }
 
 instance_method compile_module: fun(module_name) {

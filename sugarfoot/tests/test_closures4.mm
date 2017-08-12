@@ -13,7 +13,7 @@ main: fun() {
     return fun(x) { x + y };
   };
   var k = x(f);
-  test.assert(k == 20, "manipulating returned closure");
+  test.assertEqual(k, 20, "manipulating returned closure");
 }
 
 x: fun(g) {

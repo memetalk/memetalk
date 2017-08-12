@@ -38,11 +38,11 @@ t6: fun() {
 }
 
 main: fun() {
-  test.assert(t1() == "10", "closure returning literal");
-  test.assert(t2() == 100, "closure acessing module entry");
-  test.assert(t3() == 3, "closure accessing this");
-  test.assert(t4() == 4, "closure accessing specified value");
-  test.assert(t5() == 105, "more complex expression in closure");
+  test.assertEqual(t1(), "10", "closure returning literal");
+  test.assertEqual(t2(), 100, "closure acessing module entry");
+  test.assertEqual(t3(), 3, "closure accessing this");
+  test.assertEqual(t4(), 4, "closure accessing specified value");
+  test.assertEqual(t5(), 105, "more complex expression in closure");
 
   try {
     t6();

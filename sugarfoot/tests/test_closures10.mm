@@ -18,7 +18,7 @@ foo: fun(fn) {
 main: fun() {
   foo(fun(x) {
     bar(fun(y) {
-      test.assert(x + y == 10, "Passing nested closures with parameters");
+      test.assertEqual(x + y, 10, "Passing nested closures with parameters");
     });
   });
 }

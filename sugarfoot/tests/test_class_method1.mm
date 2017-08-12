@@ -8,7 +8,7 @@
 // -- module functions --
 
 main: fun() {
-  test.assert(X.throw + X.new(2).x == 12, "Testing class method");
+  test.assertEqual(X.throw + X.new(2).x, 12, "Testing class method");
 }
 
 // -- module classes --

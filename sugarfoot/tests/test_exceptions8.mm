@@ -20,7 +20,7 @@ foo: fun() {
 }
 
 main: fun() {
-  test.assert(foo().message == "baz_ex", "Primitive handled exception");
+  test.assertEqual(foo().message, "baz_ex", "Primitive handled exception");
 }
 
 .end

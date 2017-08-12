@@ -23,7 +23,7 @@ main: fun() {
     a = a + 1;
   });
   a = a + 1;
-  test.assert(a == 3, "try/catch inside closure");
+  test.assertEqual(a, 3, "try/catch inside closure");
 }
 
 // -- module classes --

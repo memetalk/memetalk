@@ -33,7 +33,7 @@ main: fun() {
     test.assert(true, "a == 2");
     a = 3;
   }
-  test.assert(a == 3, "a == 3");
+  test.assertEqual(a, 3, "a == 3");
 }
 
 // -- module classes --
