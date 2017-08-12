@@ -1699,15 +1699,19 @@ static int prim_test_import(Process* proc) {
 // }
 
 static
-void get_mm_files(const fs::path& root, std::vector<std::string>& ret) {
+void get_mm_test_files(const fs::path& root, std::vector<std::string>& ret) {
   if (!fs::exists(root)) return;
 
+  std::string prefix = "test_";
   if (fs::is_directory(root)) {
     fs::directory_iterator it(root);
     fs::directory_iterator endit;
     while(it != endit) {
-      if (fs::is_regular_file(*it) and it->path().extension() == ".mmc")
+      if (fs::is_regular_file(*it)
+          and it->path().extension() == ".mmc"
+          and it->path().filename().string().compare(0, prefix.length(), prefix) == 0)
       {
+        //std::cerr << it->path() << endl;
         ret.push_back(it->path().string());
       }
       ++it;
@@ -1717,7 +1721,7 @@ void get_mm_files(const fs::path& root, std::vector<std::string>& ret) {
 
 static int prim_test_files(Process* proc) {
   std::vector<std::string> ret;
-  get_mm_files("./tests", ret);
+  get_mm_test_files("./tests", ret);
 
   oop list = proc->mmobj()-> mm_list_new();
 
