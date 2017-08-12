@@ -1,0 +1,84 @@
+.license
+.endlicense
+
+.preamble(test, io, qt)
+ io : meme:io;
+ qt : meme:qt;
+.code
+
+f: fun() {
+   return 10;
+}
+
+main: fun() {
+  set_debugger_module(thisModule);
+  dbg();
+  var a = 1 + 2;
+  return f();
+}
+
+class Tester
+fields: process;
+init new: fun(proc) {
+  @process = proc;
+}
+instance_method step0: fun() {
+  test.assertLocation(@process, "test_debugger_step_into1/main", [15, 14, 15, 15]);
+  @process.stepInto();  // step on POP for dbg() value.
+}
+
+instance_method step1: fun() {
+  //var a = 1 + {2};
+  test.assertLocation(@process, "test_debugger_step_into1/main", [15, 14, 15, 15]);
+  @process.stepInto();
+}
+
+instance_method step2: fun() {
+  //var a = {1} + 2;
+  test.assertLocation(@process, "test_debugger_step_into1/main", [15, 10, 15, 11]);
+  @process.stepInto();
+}
+
+instance_method step3: fun() {
+  //var a = {1 + 2};
+  test.assertLocation(@process, "test_debugger_step_into1/main", [15, 10, 15, 15]);
+  @process.stepInto();
+}
+
+instance_method step4: fun() {
+  //{var a = 1 + 2};
+  test.assertLocation(@process, "test_debugger_step_into1/main", [15, 2, 15, 15]);
+  @process.stepInto();
+}
+
+instance_method step5: fun() {
+  //{f()};
+  test.assertLocation(@process, "test_debugger_step_into1/main", [16, 9, 16, 12]);
+  @process.stepInto();
+}
+
+instance_method step6: fun() {
+  //return {10};
+  test.assertLocation(@process, "test_debugger_step_into1/f", [9, 10, 9, 12]);
+  @process.stepInto();
+}
+
+instance_method step7: fun() {
+  //{return 10};
+  test.assertLocation(@process, "test_debugger_step_into1/f", [9, 3, 9, 12]);
+  @process.stepInto();
+}
+
+instance_method step8: fun() {
+  //{return f()};
+  test.assertLocation(@process, "test_debugger_step_into1/main", [16, 2, 16, 12]);
+  @process.detach_debugger();
+}
+end
+
+debug: fun(proc) {
+  var app = qt.QApplication.new(); //in case target process didn't started it
+  test.set_debugger_tests(Tester.new(proc), 9);
+  return test;
+}
+.end

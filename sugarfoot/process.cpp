@@ -137,9 +137,9 @@ std::string Process::dump_code_body(bool enabled) {
   }
   for (number i = 0; i < size / 4; i++) {
     if (ip != _ip) {
-      s << _log.normal << "*** ip: " << ip << " [" << bytecode_to_str(*ip) << "]" << endl;
+      s << _log.normal << "*" << i << "* ip: " << ip << " [" << bytecode_to_str(*ip) << "]" << endl;
     } else {
-      s << _log.bold << "*** ip: " << ip << " [" << bytecode_to_str(*ip) << "]" << endl;
+      s << _log.bold << "*" << i << "* ip: " << ip << " [" << bytecode_to_str(*ip) << "]" << endl;
     }
     ip++;
   }
@@ -939,6 +939,11 @@ void Process::tick() {
 
   do_pause:
   DBG("do_pause" << endl);
+
+    _volatile_breakpoints.clear();
+    _step_bp = MM_NULL;
+    _state = HALT_STATE;
+
     int exc;
     oop retval = _dbg_handler.first->send_0(_dbg_handler.second,
                                             _vm->new_symbol("process_paused"), &exc);
@@ -955,12 +960,9 @@ void Process::tick() {
                                    //and already set a specific state
 
       if (retval == _vm->new_symbol("wait")) {
-        _volatile_breakpoints.clear();
-        _step_bp = MM_NULL;
-        _state = HALT_STATE;
-        // DBG("tick:HALT "
-        //           << _mmobj->mm_string_cstr(_mmobj->mm_function_get_name(_cp))
-        //           << " next opcode" <<  decode_opcode(*_ip) << endl);
+        // DBG("tick:HALT " <<
+        //     << _mmobj->mm_string_cstr(_mmobj->mm_function_get_name(_cp))
+        //     << " next opcode" <<  decode_opcode(*_ip) << endl);
         _control->pause();
       }
     }
@@ -970,7 +972,7 @@ void Process::tick() {
     if (_state == REWIND_STATE) {
       throw mm_frame_rewind(_unwind_to_bp);
     }
-    // DBG("Process::tick: resuming..." << endl);
+    DBG("Process::tick: resuming..." << endl);
 }
 
 void Process::step_into() {
@@ -984,7 +986,6 @@ void Process::step_into() {
   }
   // ? _step_bp = *(oop*)_bp; //previous bp
   _state = STEP_INTO_STATE;
-   LOG_BODY();
   _control->resume();
 }
 
@@ -1007,13 +1008,13 @@ void Process::step_over_line() {
   bytecode* next = _mmobj->mm_function_next_line_expr(this, _cp, _ip, true);
   DBG("step over line next instruction: " << next << endl);
   if (next) {
-    // DBG("step_over_line: BP on next op: " << next << " "
-    //           << decode_opcode(*next) << endl);
+    DBG("step_over_line: BP on next op: " << next << " "
+              << decode_opcode(*next) << endl);
     bytecode* last = _ip + _mmobj->mm_function_get_code_size(this, _cp, true);
     _volatile_breakpoints.push_back(bytecode_range_t(next, last));
   }
   _step_bp = *(oop*)_bp; //previous frame
-  // DBG("ste_over_line will br on FP: " << _step_bp << " " << *((oop*)_bp - 6) << std::endl);
+  DBG("ste_over_line will br on FP: " << _step_bp << " " << *((oop*)_bp - 6) << std::endl);
   _state = STEP_OVER_STATE;
   _control->resume();
 }

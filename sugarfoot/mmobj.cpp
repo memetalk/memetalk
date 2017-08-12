@@ -974,38 +974,45 @@ bytecode* MMObj::mm_compiled_function_next_line_expr(Process* p, oop cfun, bytec
   oop mapping = mm_compiled_function_get_line_mapping(p, cfun, should_assert);
   boost::unordered_map<oop, oop>::iterator it = mm_dictionary_begin(p, mapping, should_assert);
   boost::unordered_map<oop, oop>::iterator end = mm_dictionary_end(p, mapping, should_assert);
+  word line = 0;
+
+  word smallest_upper_bound_offset = 0;
   word current_line = 0;
+  //discover current line
   for ( ; it != end; it++) {
     word b_offset = untag_small_int(it->first);
     word line = untag_small_int(it->second);
-    // DBG(" SEARCH CURR LINE "
-    //           << idx << " " << b_offset << " " << line << endl);
-    if ((idx >= b_offset) && (current_line < line)) {
-      // DBG("GOT LINE " << line << endl);
+    DBG(" SEARCH CURR LINE "
+              << idx << " " << b_offset << " " << line << endl);
+
+    if (idx >= b_offset and current_line <= line) {
       current_line = line;
+      DBG(" best so far " << current_line << endl);
     }
   }
 
+
+  //discover first instr for next line
+  word next_line = current_line + 1;  //lowest upperbound line (next_line >= other)
+  word next_offset = INT_MAX;
   it = mm_dictionary_begin(p, mapping, should_assert);
-  word next_line = INT_MAX;
-  word next_offset = 0;
   for ( ; it != end; it++) {
+    word b_offset = untag_small_int(it->first);
     word line = untag_small_int(it->second);
-    // DBG("line: " << line << " " << current_line << " " << next_line << endl);
-    if (line > current_line && next_line > line) {
-      next_line = line;
-      next_offset = untag_small_int(it->first);
+    DBG("line: " << line << " current: " << current_line << " nextL: " << next_line << " b_offset:" << b_offset << endl);
+    if (next_line <= line and next_offset > b_offset) {
+      next_offset = b_offset;
     }
   }
 
   if (next_line == INT_MAX) {
-    DBG("next_line for " << idx << " is NULL" << endl);
+    // WARNING() << "next_line for bytecode index " << idx << " is NULL" << endl;
     return NULL;
   } else {
-    // DBG(" CURR LINE " << current_line << " NEXT: " << next_line
-    //           << " offset: " << next_offset << endl);
+    DBG(" NEXT LINE " << next_line << " offset: " << next_offset << endl);
     return base_ip + next_offset;
   }
+
 }
 
 number MMObj::mm_compiled_function_get_line_for_instruction(Process* p, oop cfun, bytecode* ip, bool should_assert) {
