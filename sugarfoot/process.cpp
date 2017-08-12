@@ -951,14 +951,13 @@ void Process::tick() {
       bail("debugger quit");
     }
 
-    _volatile_breakpoints.clear();
-    _step_bp = MM_NULL;
-
     if (has_debugger_attached()) { //maybe debugger dettached itself
                                    //and already set a specific state
-      _state = HALT_STATE;
 
       if (retval == _vm->new_symbol("wait")) {
+        _volatile_breakpoints.clear();
+        _step_bp = MM_NULL;
+        _state = HALT_STATE;
         // DBG("tick:HALT "
         //           << _mmobj->mm_string_cstr(_mmobj->mm_function_get_name(_cp))
         //           << " next opcode" <<  decode_opcode(*_ip) << endl);

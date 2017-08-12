@@ -34,7 +34,7 @@ class AssertionException
 end
 
 class Test
-fields: current_file, debugger_tests, test_idx;
+fields: current_file, total_debugger_tests, debugger_test_module, test_idx;
 instance_method test_files: fun() {
   <primitive "test_files">
 }
@@ -95,16 +95,18 @@ instance_method start: fun() {
 }
 
 instance_method process_paused: fun() {
-  var f = @debugger_tests[@test_idx];
   var name = @current_file + "[step " + @test_idx.toString + "]";
+  var idx = @test_idx;
   @test_idx = @test_idx + 1;
-  this.do_test(name, f);
+  var fname = "step" + idx.toString;
+  this.do_test(name, fun() { @debugger_test_module.send(fname.toSymbol, []) });
   return :resume;
 }
 
-instance_method set_debugger_tests: fun(tests) {
+instance_method set_debugger_tests: fun(mod, tests_number) {
   @test_idx = 0;
-  @debugger_tests = tests;
+  @debugger_test_module = mod;
+  @total_debugger_tests = tests_number;
 }
 
 end
