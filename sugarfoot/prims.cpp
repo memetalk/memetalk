@@ -541,11 +541,11 @@ static int prim_number_sum(Process* proc) {
   oop other = proc->get_arg(0);
 
   if (!(is_small_int(self))) {
-    proc->raise("TypeError", "Expectng small int");
+    proc->raise("TypeError", "Expecting small int");
   }
 
   if (!(is_small_int(other))) {
-    proc->raise("TypeError", "Expectng small int");
+    proc->raise("TypeError", "Expecting small int");
   }
 
   number res = untag_small_int(self) + untag_small_int(other);
@@ -558,11 +558,11 @@ static int prim_number_sub(Process* proc) {
   oop other = proc->get_arg(0);
 
   if (!(is_small_int(self))) {
-    proc->raise("TypeError", "Expectng small int");
+    proc->raise("TypeError", "Expecting small int");
   }
 
   if (!(is_small_int(other))) {
-    proc->raise("TypeError", "Expectng small int");
+    proc->raise("TypeError", "Expecting small int");
   }
 
   number res =  untag_small_int(self) - untag_small_int(other);
@@ -576,11 +576,11 @@ static int prim_number_mul(Process* proc) {
   oop other = proc->get_arg(0);
 
   if (!(is_small_int(self))) {
-    proc->raise("TypeError", "Expectng small int");
+    proc->raise("TypeError", "Expecting small int");
   }
 
   if (!(is_small_int(other))) {
-    proc->raise("TypeError", "Expectng small int");
+    proc->raise("TypeError", "Expecting small int");
   }
 
   number res =  untag_small_int(self) * untag_small_int(other);
@@ -593,11 +593,11 @@ static int prim_number_lt(Process* proc) {
   oop other = proc->get_arg(0);
 
   if (!(is_small_int(self))) {
-    proc->raise("TypeError", "Expectng small int");
+    proc->raise("TypeError", "Expecting small int");
   }
 
   if (!(is_small_int(other))) {
-    proc->raise("TypeError", "Expectng small int");
+    proc->raise("TypeError", "Expecting small int");
   }
 
   oop res =  (oop) (untag_small_int(self) < untag_small_int(other));
@@ -611,11 +611,11 @@ static int prim_number_gt(Process* proc) {
   oop other = proc->get_arg(0);
 
   if (!(is_small_int(self))) {
-    proc->raise("TypeError", "Expectng small int");
+    proc->raise("TypeError", "Expecting small int");
   }
 
   if (!(is_small_int(other))) {
-    proc->raise("TypeError", "Expectng small int");
+    proc->raise("TypeError", "Expecting small int");
   }
 
   oop res =  (oop) (untag_small_int(self) > untag_small_int(other));
@@ -629,11 +629,11 @@ static int prim_number_gteq(Process* proc) {
   oop other = proc->get_arg(0);
 
   if (!(is_small_int(self))) {
-    proc->raise("TypeError", "Expectng small int");
+    proc->raise("TypeError", "Expecting small int");
   }
 
   if (!(is_small_int(other))) {
-    proc->raise("TypeError", "Expectng small int");
+    proc->raise("TypeError", "Expecting small int");
   }
 
   oop res =  (oop) (untag_small_int(self) >= untag_small_int(other));
@@ -646,7 +646,7 @@ static int prim_number_neg(Process* proc) {
   oop self =  proc->dp();
 
   if (!(is_small_int(self))) {
-    proc->raise("TypeError", "Expectng small int");
+    proc->raise("TypeError", "Expecting small int");
   }
 
   number res =  - untag_small_int(self);
