@@ -113,7 +113,7 @@ bytecode* MMObj::mm_frame_get_ip(Process* p, oop frame, bool should_assert) {
 }
 
 oop MMObj::mm_module_new(int num_fields, oop cmod, oop delegate) {
-  oop imodule = (oop) calloc(4 + num_fields, sizeof(word)); //4: vt, delegate, dict, cmod
+  oop imodule = (oop) calloc(OO_MODULE_LEN + num_fields, sizeof(word)); //4: vt, delegate, dict, cmod
 
   ((word**) imodule)[0] = imodule; //imodule[vt] = imodule
   ((word**) imodule)[1] = delegate; // imodule[delegate]
@@ -172,7 +172,7 @@ bool MMObj::mm_boolean_cbool(Process* p, oop val, bool should_assert) {
 }
 
 oop MMObj::mm_object_new() {
-  oop obj = (oop) malloc(sizeof(word) * 2); // vt, delegate
+  oop obj = (oop) malloc(sizeof(word) * OO_OBJECT_LEN);
 
   ((word**) obj)[0] = _core_image->get_prime("Object");
   ((word**) obj)[1] = 0;
@@ -202,7 +202,7 @@ oop MMObj::mm_object_delegate(oop obj) {
 }
 
 oop MMObj::mm_list_new() {
-  oop obj = (oop) malloc(sizeof(word) * 4); // vt, delegate, size, elements frame
+  oop obj = (oop) malloc(sizeof(word) * OO_LIST_LEN);
 
   ((word**) obj)[0] = _core_image->get_prime("List");
   ((word**) obj)[1] = mm_object_new();
@@ -292,8 +292,7 @@ void MMObj::mm_list_append(Process* p, oop list, oop element, bool should_assert
 }
 
 oop MMObj::mm_dictionary_new() {
-  int basic = 4; //vt, delegate, size, frame
-  oop obj = (oop) malloc(sizeof(word) * basic);
+  oop obj = (oop) malloc(sizeof(word) * OO_DICT_LEN);
 
   ((word**) obj)[0] = _core_image->get_prime("Dictionary");
   ((word**) obj)[1] = mm_object_new();
@@ -514,7 +513,7 @@ oop MMObj::mm_function_from_cfunction(Process* p, oop cfun, oop imod, bool shoul
   TYPE_CHECK(!( mm_object_vt(cfun) == _core_image->get_prime("CompiledFunction")),
              "TypeError","Expected CompiledFunction")
 
-  oop fun = (oop) malloc(sizeof(word) * 4); //vt, delegate, cfun, module
+  oop fun = (oop) malloc(sizeof(word) * OO_FUN_LEN);
 
   * (oop*) fun = _core_image->get_prime("Function");
   * (oop*) &fun[1] = mm_object_new();
@@ -1147,7 +1146,7 @@ oop MMObj::mm_class_behavior_new(Process* p, oop super_class, oop funs_dict, boo
   //vt: Behavior
   //delegate:
   //dict
-  oop cbehavior = (oop) malloc(sizeof(word) * 4);
+  oop cbehavior = (oop) malloc(sizeof(word) * OO_CLASS_BEHAVIOR_LEN);
   * (oop*) cbehavior = _core_image->get_prime("Behavior");
   * (oop*) &cbehavior[1] = * (oop*) super_class; //super_class[vt]
   * (oop*) &cbehavior[2] = funs_dict;
@@ -1162,7 +1161,7 @@ oop MMObj::mm_class_new(Process* p, oop class_behavior, oop super_class, oop dic
   TYPE_CHECK(!( *(oop*) compiled_class == _core_image->get_prime("CompiledClass")),
              "TypeError","Expected CompiledClass")
 
-  oop klass = (oop) malloc(sizeof(word) * 5);
+  oop klass = (oop) malloc(sizeof(word) * OO_CLASS_LEN);
   * (oop*) klass = class_behavior;
   * (oop*) &klass[1] = super_class;
   * (oop*) &klass[2] = dict;
@@ -1194,7 +1193,7 @@ oop MMObj::mm_new_slot_getter(Process* p, oop imodule, oop owner, oop name, int 
   TYPE_CHECK(!( *(oop*) name == _core_image->get_prime("String")),
              "TypeError","Expected String")
 
-  oop cfun_getter = (oop) calloc(sizeof(word), 17);
+  oop cfun_getter = (oop) calloc(sizeof(word), OO_CFUN_LEN);
 
   * (oop*) cfun_getter = _core_image->get_prime("CompiledFunction");
   * (oop*) &cfun_getter[1] = mm_object_new();
@@ -1208,7 +1207,7 @@ oop MMObj::mm_new_slot_getter(Process* p, oop imodule, oop owner, oop name, int 
 }
 
 oop MMObj::mm_symbol_new(const char* str) {
-  oop symb = (oop) malloc((sizeof(word) * 3) + (strlen(str)+1));
+  oop symb = (oop) malloc((sizeof(word) * OO_SYMBOL_LEN) + (strlen(str)+1));
 
   * (oop*) symb = _core_image->get_prime("Symbol");
   * (oop*) &symb[1] = mm_object_new();

@@ -57,3 +57,14 @@ typedef int (*prim_function_t) (Process*);
 #define JZ 50
 #define JMP 51
 #define JMPB 52
+
+//
+#define OO_OBJECT_LEN 2 //vt, delegate
+#define OO_MODULE_LEN 4 //vt, delegate, dict, cmod
+#define OO_LIST_LEN 4   //vt, delegate, size, elements frame
+#define OO_DICT_LEN 4   //vt, delegate, size, frame
+#define OO_FUN_LEN 4    //vt, delegate, cfun, module
+#define OO_CLASS_BEHAVIOR_LEN 4
+#define OO_CLASS_LEN 5
+#define OO_CFUN_LEN 28
+#define OO_SYMBOL_LEN 3
