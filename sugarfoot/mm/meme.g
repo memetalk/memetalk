@@ -16,7 +16,7 @@ alpha =  '+' | '*' | '-' | '/' | '=' | '<' | '>' | '?' | '!';
 
 meme_keyword = ``fun`` | ``var`` | ``class`` | ``fields``;
 
-id = identifier:s ~meme_keyword(s) => s;
+id = ~meme_keyword identifier;
 
 alpha_name = spaces ~meme_keyword {alpha | letter | '_'}:x {identifier_rest|alpha}*:xs => ([x] + xs).join("");
 
@@ -41,7 +41,7 @@ preamble_section = ``.preamble`` module_params:params
 
 code_section = ``.code``
                module_decl*:d
-               ``.end`` => [:code, d];
+               ``.endcode`` => [:code, d];
 
 start = license:lic
         meta_section:meta
@@ -66,7 +66,7 @@ obj_decl = ``object`` identifier:name
            ``end``  => [:object, name, s, f];
 
 obj_fun =  ``functions`` "{"
-              {constructor|top_level_fun}+:f
+              {constructor | top_level_fun}+:f
            "}" => f
         | => [];
 
@@ -104,7 +104,7 @@ fun_rest :name =
                   top_fun_body:body
                 "}"
                   => [:fun, name, [:params, p], @has_fun_literal,
-                                              [:body,  body+ [[:end-body]]]];
+                                              [:body,  body + [[:end-body]]]];
 
 
 instance_method_decl = !{@has_fun_literal = false}
@@ -120,12 +120,12 @@ params = "(" idlist:xs ")" => xs;
 
 fparams = "(" ")" => []
         | "("  "*" identifier:x ")" => [[:var-arg, x]]
-        | "("  identifier:x { "," identifier }*:xs ")" => [x]+xs
-        | "("  identifier:x { "," identifier }*:xs pvar:y ")" => [x]+xs+[y];
+        | "("  identifier:x { "," identifier }*:xs ")" => [x] + xs
+        | "("  identifier:x { "," identifier }*:xs pvar:y ")" => [x] + xs + [y];
 
 pvar = "," "*" identifier:x => [:var-arg, x];
 
-idlist = identifier:x {"," identifier}*:xs => [x]+xs
+idlist = identifier:x {"," identifier}*:xs => [x] + xs
           | => [];
 
 top_fun_body = primitive
@@ -153,7 +153,7 @@ expr_decl =  ``var``
 
 expr_attr =  spaces  lhs:a "=" expr:b => [:=, a, b];
 
-lhs =  expr:r ?{len(r)>0 and r[0] == "index"} => r
+lhs =  expr:r ?{r.size > 0 and r[0] == "index"} => r
     |  alpha_name:x => [:id, x]
     |  field_name:x => [:field, x];
 
@@ -246,21 +246,21 @@ prim_expr = "(" expr:e ")" => e
           |  spaces  field_name:x => [:field, x]
           |  spaces  alpha_name:x => [:id, x];
 
-pair_list = pair:x {"," pair}*:xs => [x]+xs
+pair_list = pair:x {"," pair}*:xs => [x] + xs
           | => [];
 
 pair =  expr:key ":" expr:val => [:pair, key, val];
 
 args = "(" expr_list:p  ")" => p;
 
-expr_list = expr:x {"," expr}*:xs => [x]+xs
+expr_list = expr:x {"," expr}*:xs => [x] + xs
           | => [];
 
 literal = lit_number
         | lit_string
         | lit_symbol
-        | "[" expr_list:e "]"    => [:literal-array]+[e]
-        | "{" pair_list:e "}"    => [:literal-dict]+e
+        | "[" expr_list:e "]"    => [:literal-array] + [e]
+        | "{" pair_list:e "}"    => [:literal-dict] + e
         | ``thisModule`` => [:literal, :module]
         | ``thisContext`` => [:literal, :context]
         | ``this``   => [:literal, :this]
@@ -276,27 +276,27 @@ funliteral = ``fun`` params:p "{"
 funliteral_body =
                   stmts:body
                     expr?:no_semicol_expr !{!no_semicol_expr or body.append([:expression, no_semicol_expr])}
-                    !{body.get(-1, [])}:last
+                    !{body.from(-1)}:last
                     rewrite_last_stmt(last)
                 => body + [[:return-null]];
 
 
-rewrite_last_stmt = [:expression :x]:c => c.__setitem__(0, :return)
-                  | :x;
+rewrite_last_stmt = [[:expression _]:c] => c.prepend(:return)
+                  | _;
 
 cfunliteral_body = funliteral_body:x spaces ~_ => x;
 
 lit_symbol = ":" symbol_name:xs
            => [:literal-symbol, xs];
 
-lit_number = spaces  digit+:ds => [:literal-number, int(ds.join("").parseInt)];
+lit_number = spaces  digit+:ds => [:literal-number, ds.join("").toInteger];
 
-lit_string  = '"' { lit_escaped | ~'"' :x}*:xs '"'
-               => [:literal-string, xs.join("").decodeEscape];
+lit_string  = '"' { lit_escaped | ~'"' _}*:xs '"'
+               => [:literal-string, xs.join("")];
 
-lit_escaped = ~'"' '\\' :x => "\\" + x;
+lit_escaped = ~'"' '\\' _:x => "\\" + x;
 
-field_name = "@" identifier:x => x;
+field_name = "@" identifier;
 
 
 single_top_level_fun :name = ``fun``
@@ -304,7 +304,7 @@ single_top_level_fun :name = ``fun``
                          top_fun_body:body
                        "}"
                        => [:fun, name, [:params, p],
-                              [:body, body+ [:end-body]]];
+                              [:body, body + [:end-body]]];
 </ometa>
 
 end //OMeta

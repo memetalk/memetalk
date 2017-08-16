@@ -322,6 +322,9 @@
   instance_method trim: fun() {
     <primitive "string_trim">
   }
+  instance_method escape: fun() {
+    <primitive "string_escape">
+  }
   end
 
   class Symbol
@@ -441,6 +444,9 @@
     }
     instance_method >=: fun(arg) {
       <primitive "number_gteq">
+    }
+    instance_method neg: fun() {
+      <primitive "number_neg">
     }
     instance_method toString: fun() {
       <primitive "number_to_string">

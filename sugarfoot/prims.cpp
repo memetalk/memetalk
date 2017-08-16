@@ -331,6 +331,20 @@ static std::string base64_decode(std::string const& encoded_string) {
   return ret;
 }
 
+static int prim_string_escape(Process* proc) {
+  oop self =  proc->dp();
+
+  std::string str = proc->mmobj()->mm_string_cstr(proc, self);
+  // boost::replace_all(str, "\\", "\\\\");
+  // boost::replace_all(str, "\t",  "\\t");
+  // boost::replace_all(str, "\n",  "\\n");
+  // boost::replace_all(str, "\"",  "\\\"");
+
+  oop oop_ret = proc->mmobj()->mm_string_new(str.c_str());
+  proc->stack_push(oop_ret);
+  return 0;
+}
+
 static int prim_string_split(Process* proc) {
   oop self =  proc->dp();
   oop sep = proc->get_arg(0);
@@ -625,6 +639,19 @@ static int prim_number_gteq(Process* proc) {
   return 0;
 }
 
+static int prim_number_neg(Process* proc) {
+  oop self =  proc->dp();
+
+  if (!(is_small_int(self))) {
+    proc->raise("TypeError", "Expectng small int");
+  }
+
+  number res =  - untag_small_int(self);
+  DBG(" NEG " << untag_small_int(self) << " = " << res << endl);
+  proc->stack_push((oop) tag_small_int(res));
+  return 0;
+}
+
 static int prim_number_to_string(Process* proc) {
   oop self =  proc->dp();
   std::stringstream s;
@@ -906,14 +933,20 @@ static int prim_list_from(Process* proc) {
 
   number size = proc->mmobj()->mm_list_size(proc, self);
   oop ret = proc->mmobj()->mm_list_new();
-  for (number i = index; i < size; i++) {
-    oop next = proc->mmobj()->mm_list_entry(proc, self, i);
-    proc->mmobj()->mm_list_append(proc, ret, next);
+  if (index >= 0) {
+    for (number i = index; i < size; i++) {
+      oop next = proc->mmobj()->mm_list_entry(proc, self, i);
+      proc->mmobj()->mm_list_append(proc, ret, next);
+    }
+  } else if (size > 0) {
+    for (number i = size + index; i < size; i++) {
+      oop next = proc->mmobj()->mm_list_entry(proc, self, i);
+      proc->mmobj()->mm_list_append(proc, ret, next);
+    }
   }
   proc->stack_push(ret);
   return 0;
 }
-
 
 static int prim_list_to_string(Process* proc) {
   oop self =  proc->dp();
@@ -2060,6 +2093,7 @@ void init_primitives(VM* vm) {
   vm->register_primitive("number_lt", prim_number_lt);
   vm->register_primitive("number_gt", prim_number_gt);
   vm->register_primitive("number_gteq", prim_number_gteq);
+  vm->register_primitive("number_neg", prim_number_neg);
   vm->register_primitive("number_to_string", prim_number_to_string);
   vm->register_primitive("number_to_source", prim_number_to_source);
 
@@ -2133,6 +2167,7 @@ void init_primitives(VM* vm) {
   vm->register_primitive("string_to_symbol", prim_string_to_symbol);
   vm->register_primitive("string_trim", prim_string_trim);
   vm->register_primitive("string_each", prim_string_each);
+  vm->register_primitive("string_escape", prim_string_escape);
 
 
   vm->register_primitive("mirror_entries", prim_mirror_entries);
