@@ -60,7 +60,7 @@ class_method do_test: fun(mmc_test_file) {
   }
 }
 class_method start: fun() {
-  this.test_files().each(fun(mmc_test_file) {
+  this.test_files().each(fun(_, mmc_test_file) {
     this.do_test(mmc_test_file)
   });
 }

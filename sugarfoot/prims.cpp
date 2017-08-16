@@ -422,11 +422,8 @@ static int prim_string_each(Process* proc) {
     s << str[i];
     oop next = proc->mmobj()->mm_string_new(s.str().c_str());
     DBG("string each[" << i << "] = " << next << endl);
-    proc->stack_push(tag_small_int(i));
-    proc->stack_push(next);
     int exc;
-    //TODO: we are not checking arity!
-    oop val = proc->do_call(fun, &exc);
+    oop val = proc->call_2(fun, tag_small_int(i), next, &exc);
     if (exc != 0) {
       DBG("prim_string_each raised" << endl);
       proc->stack_push(val);
@@ -696,11 +693,8 @@ static int prim_list_each(Process* proc) {
   for (int i = 0; i < size; i++) {
     oop next = proc->mmobj()->mm_list_entry(proc, self, i);
     DBG("list each[" << i << "] = " << next << endl);
-    proc->stack_push(tag_small_int(i));
-    proc->stack_push(next);
     int exc;
-    //TODO: we are not checking arity!
-    oop val = proc->do_call(fun, &exc);
+    oop val = proc->call_2(fun, tag_small_int(i), next, &exc);
     if (exc != 0) {
       DBG("prim_list_each raised" << endl);
       proc->stack_push(val);
@@ -721,10 +715,8 @@ static int prim_list_map(Process* proc) {
   for (int i = 0; i < size; i++) {
     oop next = proc->mmobj()->mm_list_entry(proc, self, i);
     DBG("map[" << i << "] = " << next << endl);
-    proc->stack_push(next);
     int exc;
-    //TODO: we are not checking arity!
-    oop val = proc->do_call(fun, &exc);
+    oop val = proc->call_1(fun, next, &exc);
     if (exc != 0) {
       DBG("raised" << endl);
       proc->stack_push(val);
@@ -746,10 +738,8 @@ static int prim_list_filter(Process* proc) {
   for (int i = 0; i < size; i++) {
     oop next = proc->mmobj()->mm_list_entry(proc, self, i);
     DBG("filter[" << i << "] = " << next << endl);
-    proc->stack_push(next);
     int exc;
-    //TODO: we are not checking arity!
-    oop val = proc->do_call(fun, &exc);
+    oop val = proc->call_1(fun, next, &exc);
     if (exc != 0) {
       DBG("raised" << endl);
       proc->stack_push(val);
@@ -772,10 +762,8 @@ static int prim_list_detect(Process* proc) {
   for (int i = 0; i < size; i++) {
     oop next = proc->mmobj()->mm_list_entry(proc, self, i);
     DBG("detect[" << i << "] = " << next << endl);
-    proc->stack_push(next);
     int exc;
-    //TODO: we are not checking arity!
-    oop val = proc->do_call(fun, &exc);
+    oop val = proc->call_1(fun, next, &exc);
     if (exc != 0) {
       DBG("raised" << endl);
       proc->stack_push(val);

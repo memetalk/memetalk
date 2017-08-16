@@ -94,6 +94,8 @@ public:
 
   // oop do_call_protected(oop, int*);
   oop call(oop, oop, int*);
+  oop call_1(oop, oop, int*);
+  oop call_2(oop, oop, oop, int*);
   oop do_call(oop, int*);
 
   oop send_0(oop recv, oop selector, int* exc);

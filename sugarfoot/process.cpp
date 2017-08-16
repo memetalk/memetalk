@@ -668,6 +668,49 @@ oop Process::call(oop fun, oop args, int* exc) {
   return do_call(fun, exc);
 }
 
+oop Process::call_1(oop fun, oop arg, int* exc) {
+  if (!(_mmobj->mm_is_context(fun))) { //since we pass NULL to load_fun
+    WARNING() << "Will raise TypeError: Expecting Context" << endl;
+    raise("TypeError", "expecting Context");
+  }
+  number num_args = 1;
+  number arity = _mmobj->mm_function_get_num_params(this, fun);
+  if (num_args != arity) {
+    std::stringstream s;
+    s << _mmobj->mm_string_cstr(this, _mmobj->mm_function_get_name(this, fun)) << ": expects " <<  arity << " but got " << num_args;
+    DBG(s << endl);
+    oop ex = mm_exception("ArityError", s.str().c_str());
+    WARNING() << "returning ArityError exception object " << ex << endl;
+    *exc = 1;
+    return ex;
+  }
+
+  stack_push(arg);
+  return do_call(fun, exc);
+}
+
+oop Process::call_2(oop fun, oop arg0, oop arg1, int* exc) {
+  if (!(_mmobj->mm_is_context(fun))) { //since we pass NULL to load_fun
+    WARNING() << "Will raise TypeError: Expecting Context" << endl;
+    raise("TypeError", "expecting Context");
+  }
+  number num_args = 2;
+  number arity = _mmobj->mm_function_get_num_params(this, fun);
+  if (num_args != arity) {
+    std::stringstream s;
+    s << _mmobj->mm_string_cstr(this, _mmobj->mm_function_get_name(this, fun)) << ": expects " <<  arity << " but got " << num_args;
+    DBG(s << endl);
+    oop ex = mm_exception("ArityError", s.str().c_str());
+    WARNING() << "returning ArityError exception object " << ex << endl;
+    *exc = 1;
+    return ex;
+  }
+
+  stack_push(arg0);
+  stack_push(arg1);
+  return do_call(fun, exc);
+}
+
 void Process::fetch_cycle(void* stop_at_bp) {
   DBG("begin fp:" << _fp <<  " stop_fp:" <<  stop_at_bp
       << " ip: " << _ip << endl);

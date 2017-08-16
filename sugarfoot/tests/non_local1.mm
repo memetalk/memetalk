@@ -6,8 +6,8 @@
 .code
 
 f: fun() {
-  [2].each(fun(y) {
-    [1].each(fun(x) {
+  [2].each(fun(_, y) {
+    [1].each(fun(_, x) {
         ^ 100;
       });
   });
