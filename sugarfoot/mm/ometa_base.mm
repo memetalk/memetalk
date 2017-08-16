@@ -138,7 +138,7 @@ instance_method _apply: fun(rule) {
   return memo[rule][:ans];
 }
 instance_method _apply_with_args: fun(rule, args) {
-  args.reverse.each(fun(arg) {
+  args.reverse.each(fun(_, arg) {
     this.prepend_input(arg);
   });
   try {
@@ -195,7 +195,7 @@ instance_method _lookahead: fun(fn) {
 instance_method _or: fun(fns) {
 // return result of the first fn() success or fails if no success.
   var input = @input;
-  fns.each(fun (fn) {
+  fns.each(fun (_, fn) {
     try {
       ^ fn();
     } catch(OMetaException e) {
@@ -366,7 +366,7 @@ instance_method first_and_rest: fun() {
 
 instance_method seq: fun() {
   var xs = this._apply(:anything);
-  xs.each(fun(x) {
+  xs.each(fun(_, x) {
     this._apply_with_args(:exactly, [x]);
   });
   return xs;
