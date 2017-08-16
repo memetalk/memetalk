@@ -209,8 +209,8 @@ class Class(Entry):
         self.dictionary[name] = fun
         return fun
 
-    def new_class_method(self, name, params):
-        cfun = self.cclass.new_class_method(name, params)
+    def new_class_method(self, name):
+        cfun = self.cclass.new_class_method(name)
         fun = Function(self.imod, cfun)
         self.behavior.dictionary[name] = fun
         return fun
@@ -264,8 +264,8 @@ class CompiledClass(Entry):
         self.instance_methods[name] = fn
         return fn
 
-    def new_class_method(self, name, params):
-        fn = CompiledFunction(self.cmod, self, name, params)
+    def new_class_method(self, name):
+        fn = CompiledFunction(self.cmod, self, name)
         self.class_methods[name] = fn
         return fn
 
@@ -380,7 +380,7 @@ class VariableStorage(object):
         return self._flat(self.variables.values())
 
 class CompiledFunction(Entry):
-    def __init__(self, cmod, owner, name, params, ctor=False, env_storage=None, is_top_level=True, outer_cfun=None, top_level_cfun=None):
+    def __init__(self, cmod, owner, name, params = [], ctor=False, env_storage=None, is_top_level=True, outer_cfun=None, top_level_cfun=None):
         super(CompiledFunction, self).__init__()
         self.cmod = cmod
 
@@ -1005,6 +1005,9 @@ class Function(Entry):
         super(Function, self).__init__()
         self.imod = imod
         self.cfun = cfun
+
+    def set_params(self, params):
+        self.cfun.set_params(params)
 
     def body_processor(self):
         return self.cfun

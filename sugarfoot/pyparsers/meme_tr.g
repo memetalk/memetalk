@@ -53,10 +53,14 @@ instance_method :klass = !(self.input.head()[0]):ast
                                   ['body' body(fnobj.body_processor())]]  !(fnobj.set_text(ast.text))
 
 class_method :klass = !(self.input.head()[0]):ast
-                         ['fun' :name params:p  !(klass.new_class_method(name, p)):fnobj
+                         ['fun' :name  !(klass.new_class_method(name)):fnobj fparams(fnobj):p !(fnobj.set_params(p))
                           !(fnobj.set_line(ast))
                           :uses_env !(fnobj.uses_env(uses_env))
                           ['body' body(fnobj.body_processor())]]  !(fnobj.set_text(ast.text))
+
+fparams :obj = ['params' [fparam(obj)*:x]] -> x
+fparam :obj  = ['var-arg' :x !(obj.set_vararg(x))] -> x
+               | :x
 
 params = ['params' [param*:x]] -> x
 
