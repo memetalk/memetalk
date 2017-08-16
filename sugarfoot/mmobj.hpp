@@ -177,6 +177,7 @@ public:
   oop mm_function_get_line_mapping(Process*, oop fun, bool should_assert = false);
   oop mm_function_get_loc_mapping(Process*, oop fun, bool should_assert = false);
   oop mm_function_get_closures(Process*, oop fun, bool should_assert = false);
+  bool mm_function_get_vararg(Process*, oop fun, bool should_assert = false);
   bytecode* mm_function_next_expr(Process*, oop fun, bytecode* ip, bool should_assert = false);
   bytecode* mm_function_next_line_expr(Process*, oop fun, bytecode* ip, bool should_assert = false);
   number mm_function_get_line_for_instruction(Process*, oop fun, bytecode* ip, bool should_assert = false);
@@ -207,6 +208,7 @@ public:
   oop mm_compiled_function_get_line_mapping(Process*, oop cfun, bool should_assert = false);
   oop mm_compiled_function_get_loc_mapping(Process*, oop cfun, bool should_assert = false);
   oop mm_compiled_function_get_closures(Process*, oop cfun, bool should_assert = false);
+  bool mm_compiled_function_get_vararg(Process*, oop cfun, bool should_assert = false);
   // oop mm_compiled_function_get_cmod(Process*, oop cfun, bool should_assert = false);
   void mm_compiled_function_set_cmod(Process*, oop cfun, oop cmod, bool should_assert = false);
 

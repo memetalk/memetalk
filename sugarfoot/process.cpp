@@ -305,7 +305,8 @@ void Process::pop_frame() {
   _cp = stack_pop();
   _fp = stack_pop();
 
-  _sp = _sp - (storage_size + 2); //2: fp, dp
+  DBG("restoring _sp to: " << _sp - (storage_size + 2) << " bp: " << _bp << endl);
+  _sp = _sp - (storage_size + 2); //2: rp, dp
 
   if (_cp) {// first frame has _cp = null
     _mp = _mmobj->mm_function_get_module(this, _cp, true);
@@ -388,7 +389,7 @@ void Process::restore_fp(oop fp, number params, number env_offset) {
   _fp = fp;
 }
 
-bool Process::load_fun(oop recv, oop drecv, oop fun, bool should_allocate) {
+bool Process::load_fun(oop recv, oop drecv, oop fun, bool should_allocate, number arity) {
   if (!(_mmobj->mm_is_function(fun) || _mmobj->mm_is_context(fun))) {
     WARNING() << "Will raise TypeError: Expecting function or context" << endl;
     raise("TypeError", "Expecting function or context");
@@ -405,9 +406,11 @@ bool Process::load_fun(oop recv, oop drecv, oop fun, bool should_allocate) {
     return false;
   }
 
-  number num_params = _mmobj->mm_function_get_num_params(this, fun, true);
+  number org_num_params = _mmobj->mm_function_get_num_params(this, fun, true);
+  number num_params = arity != -1? arity : org_num_params;
+  _current_args_number = num_params;
   number storage_size = _mmobj->mm_function_get_num_locals_or_env(this, fun, true);
-  push_frame(recv, drecv, num_params, storage_size);
+  push_frame(recv, drecv, num_params, arity != -1? storage_size + (arity-org_num_params) : storage_size);
 
 
   DBG("storage: " << _ss << " " << _mmobj->mm_string_cstr(this, _mmobj->mm_function_get_name(this, fun, true), true) << endl);
@@ -593,10 +596,10 @@ oop Process::do_send(oop recv, oop selector, int num_args, int *exc) {
   return protected_fetch_cycle(recv, drecv, fun, exc, true);
 }
 
-oop Process::protected_fetch_cycle(oop recv, oop drecv, oop fun, int* exc, bool should_allocate) {
+oop Process::protected_fetch_cycle(oop recv, oop drecv, oop fun, int* exc, bool should_allocate, number arity) {
   try {
     try {
-      if (load_fun(recv, drecv, fun, should_allocate)) {
+      if (load_fun(recv, drecv, fun, should_allocate, arity)) {
         fetch_cycle(_bp);
       }
     } catch(mm_frame_rewind e) {
@@ -1092,8 +1095,9 @@ void Process::handle_send(number num_args) {
     return;
   }
 
+  bool vararg = _mmobj->mm_function_get_vararg(this, fun);
   number arity = _mmobj->mm_function_get_num_params(this, fun);
-  if (num_args != arity) {
+  if (!vararg && num_args != arity) {
     std::stringstream s;
     s << _mmobj->mm_string_cstr(this, _mmobj->mm_function_get_name(this, fun)) << ": expects " <<  arity << " but got " << num_args;
     DBG(s << endl);
@@ -1107,7 +1111,7 @@ void Process::handle_send(number num_args) {
     }
     return;
   }
-  load_fun(recv, drecv, fun, true);
+  load_fun(recv, drecv, fun, true, num_args);
 }
 
 void Process::handle_super_ctor_send(number num_args) {

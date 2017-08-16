@@ -418,6 +418,7 @@ class CompiledFunction(Entry):
         self.should_wrap_catch_for_non_local_return = False
 
         self._label = None
+        self.var_arg = False
 
     def set_text(self, text):
         self.text = text
@@ -428,6 +429,9 @@ class CompiledFunction(Entry):
     def set_params(self, params):
         self.params = params
         self.var_declarations.add_names(self, params)
+
+    def set_vararg(self, name):
+        self.var_arg = True
 
     def declare_var(self, name):
         self.var_declarations.add(self, name)
@@ -478,6 +482,8 @@ class CompiledFunction(Entry):
                 lit['oop'] = vmem.append_string_instance(lit['value'])
             elif lit['tag'] == 'cfun':
                 lit['oop'] = lit['value'].fill(vmem)
+            elif lit['tag'] == 'core':
+                pass
             else:
                 raise Exception('Todo')
 
@@ -501,6 +507,8 @@ class CompiledFunction(Entry):
                 vmem.append_pointer_to(lit['oop'])
             elif lit['tag'] == 'cfun':
                 vmem.append_pointer_to(lit['oop'])
+            elif lit['tag'] == 'core':
+                vmem.append_external_ref(lit['value']) # unusually reusing literal_frame to store core object references
             else:
                 raise Exception('Todo')
 
@@ -580,7 +588,7 @@ class CompiledFunction(Entry):
         oop_closures = vmem.append_list_of_oops_for_labels([x.label() for x in self.closures])
 
         vmem.append_int(FRAME_TYPE_OBJECT)
-        vmem.append_int(27 * bits.WSIZE)
+        vmem.append_int(28 * bits.WSIZE)
 
         oop = vmem.append_external_ref('CompiledFunction', self.label()) # CompiledFunction vt
         vmem.append_pointer_to(oop_delegate)
@@ -637,6 +645,7 @@ class CompiledFunction(Entry):
         vmem.append_pointer_to(oop_line_mappings)
         vmem.append_pointer_to(oop_loc_mappings)
         vmem.append_pointer_to(oop_closures)
+        vmem.append_int(self.var_arg)
 
         # vmem.append_label_ref(self.cmod.label())
         self.oop = oop
@@ -713,6 +722,11 @@ class CompiledFunction(Entry):
 
     def create_and_register_closure_literal(self, cfun):
         entry = {"tag": "cfun", "value": cfun}
+        return self.index_for_literal(entry)
+
+    def create_and_register_core(self, class_name):
+        # unusually reusing literal_frame to store core objects
+        entry = {'tag': 'core', 'value': class_name}
         return self.index_for_literal(entry)
 
 
@@ -960,21 +974,13 @@ class CompiledFunction(Entry):
 
     @emitter
     def emit_push_list(self, _, length):
-        idx_length = self.create_and_register_number_literal(length)
-        idx_selector = self.create_and_register_symbol_literal("new")
-        idx_append = self.create_and_register_symbol_literal("prepend")
-        idx_klass = self.create_and_register_symbol_literal("List")
+        #idx_length = self.create_and_register_number_literal(length)
+        idx_klass = self.create_and_register_core("List")
+        idx_new_from_stack = self.create_and_register_symbol_literal("new_from_stack")
 
-        self.bytecodes.append("push_module", 0)
-        self.bytecodes.append('push_literal', idx_klass)
-        self.bytecodes.append('send', 0)
-
-        self.bytecodes.append('push_literal', idx_selector)
-        self.bytecodes.append('send', 0)
-
-        for i in range(0, length):
-            self.bytecodes.append('push_literal', idx_append)
-            self.bytecodes.append('send', 1)
+        self.bytecodes.append('push_literal', idx_klass) # unusually reusing literal_frame to store core object references
+        self.bytecodes.append('push_literal', idx_new_from_stack)
+        self.bytecodes.append('send', length)
 
     @emitter
     def emit_push_dict(self, _, length):
@@ -1005,6 +1011,9 @@ class Function(Entry):
         super(Function, self).__init__()
         self.imod = imod
         self.cfun = cfun
+
+    def set_vararg(self, name):
+        self.cfun.set_vararg(name)
 
     def set_params(self, params):
         self.cfun.set_params(params)

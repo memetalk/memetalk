@@ -418,6 +418,9 @@
   class_method new: fun() {
     <primitive "list_new">
   }
+  class_method new_from_stack: fun(*args) {
+    <primitive "list_new_from_stack">
+  }
   end
 
   class Number

@@ -65,6 +65,8 @@ public:
   oop set_dp(oop);
 
   inline oop get_arg(number idx) { return * ((oop*)_fp + idx); }
+  inline number current_args_number() { return _current_args_number; }
+
   oop cp_from_base(oop bp);
   oop fp_from_base(oop bp);
   bytecode* ip_from_base(oop bp);
@@ -137,7 +139,7 @@ public:
 
   void rewind_to_frame_and_continue(oop frame);
 
-  oop protected_fetch_cycle(oop recv, oop drecv, oop fun, int* exc, bool should_allocate);
+  oop protected_fetch_cycle(oop recv, oop drecv, oop fun, int* exc, bool should_allocate, number = -1);
   void unwind_with_frame(oop frame);
 
   std::string dump_code_body(bool);
@@ -151,7 +153,7 @@ private:
 
   void init();
 
-  bool load_fun(oop, oop, oop, bool);
+  bool load_fun(oop, oop, oop, bool, number = -1);
 
 
   oop stack_pop();
@@ -197,6 +199,7 @@ private:
   ProcessControl* _control;
   std::pair<Process*, oop> _dbg_handler;
 
+  number _current_args_number;
   //this order is important: it reflects the order of registers
   //in the stack, and is used by bp_at()
   oop _fp;

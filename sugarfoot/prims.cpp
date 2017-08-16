@@ -652,6 +652,22 @@ static int prim_list_new(Process* proc) {
   return 0;
 }
 
+static int prim_list_new_from_stack(Process* proc) {
+  oop self = proc->mmobj()->mm_list_new();
+  // number length = proc->mmobj(length_oo);
+
+  DBG("appending " << proc->current_args_number() << " values" << endl);
+  for (number i = 0; i < proc->current_args_number(); i++) {
+    oop element = proc->get_arg(i);
+    DBG("appending " << element << endl);
+    proc->mmobj()->mm_list_append(proc, self, element);
+  }
+
+  // DBG("done new_from_stack" << endl);
+  proc->stack_push(self);
+  return 0;
+}
+
 static int prim_list_append(Process* proc) {
   oop self =  proc->dp();
   oop element = proc->get_arg(0);
@@ -2064,6 +2080,7 @@ void init_primitives(VM* vm) {
   vm->register_primitive("module_to_string", prim_module_to_string);
 
   vm->register_primitive("list_new", prim_list_new);
+  vm->register_primitive("list_new_from_stack", prim_list_new_from_stack);
   vm->register_primitive("list_append", prim_list_append);
   vm->register_primitive("list_prepend", prim_list_prepend);
   vm->register_primitive("list_index", prim_list_index);
