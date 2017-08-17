@@ -214,7 +214,7 @@ std::string get_compile_fun_json(const char* text, int line, std::list<std::stri
   ptree env;
 
   for (std::list<std::string>::iterator it = vars.begin(); it != vars.end(); it++) {
-    env.push_back(std::make_pair("", *it));
+    env.push_back(std::make_pair("", ptree(*it)));
   }
 
   pt.put ("text", text);
