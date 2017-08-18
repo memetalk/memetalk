@@ -12,31 +12,34 @@
 
 BIN = sf-vm
 
+# General flags
 INC_DIRS = /usr/include /usr/local/include
 
-QSCI_INC ?= $(dir $(foreach i,$(INC_DIRS),$(shell find -L $(i) -name qscicommandset.h)))
+# QT Flags
+INC_QSCI ?= $(dir $(foreach i,$(INC_DIRS),$(shell find -L $(i) -name qscicommandset.h)))
+QT_PKGLIBS = QtCore QtGui QtScript QtWebKit QtNetwork
+QT_CXXFLAGS = $(shell pkg-config --cflags $(QT_PKGLIBS)) -I$(INC_QSCI)
+QT_LIBS = $(shell pkg-config --libs $(QT_PKGLIBS)) -lqscintilla2
 
-PKGLIBS = QtCore QtGui QtScript QtWebKit QtNetwork
-
-CXXFLAGS = -Wall $(shell pkg-config --cflags $(PKGLIBS)) -I$(QSCI_INC)
-
-#CXXFLAGS = -Wall  -O2 -DMM_NO_DEBUG $(shell pkg-config --cflags $(PKGLIBS)) -I$(QSCI_INC)
-#CXXFLAGS = -Wall  -g $(shell pkg-config --cflags $(PKGLIBS)) -I$(QSCI_INC)
-
-LDFLAGS = $(shell pkg-config --libs $(PKGLIBS)) -lqscintilla2	\
-	-lboost_system -lboost_iostreams -lboost_filesystem
+CXXFLAGS = -Wall $(QT_CXXFLAGS)
+LIBS = -lboost_system -lboost_iostreams -lboost_filesystem $(QT_LIBS)
 
 CPP_FILES = log.cpp mmc_image.cpp core_image.cpp vm.cpp utils.cpp	\
-	mmobj.cpp main.cpp process.cpp prims.cpp mmc_fun.cpp ctrl.cpp	\
-	qt_prims.cpp qsc.cpp remote_repl.cpp
-
+	mmobj.cpp main.cpp process.cpp prims.cpp mmc_fun.cpp		\
+	remote_repl.cpp
 HPP_FILES = mmc_image.hpp core_image.hpp vm.hpp log.hpp utils.hpp	\
-	defs.hpp mmobj.hpp process.hpp prims.hpp mmc_fun.hpp ctrl.hpp	\
-	qt_prims.hpp qsc.hpp remote_repl.hpp
+	defs.hpp mmobj.hpp process.hpp prims.hpp mmc_fun.hpp		\
+	remote_repl.hpp
+
+CPP_FILES += qt_prims.cpp qsc.cpp ctrl.cpp
+HPP_FILES += qt_prims.hpp qsc.hpp ctrl.hpp
 
 OBJS = $(CPP_FILES:%.cpp=%.o)
 
+# Main targets
 all: release
+clean:; rm -f $(BIN) $(OBJS) qsc.moc.cpp
+build: $(BIN)
 
 debug: CXXFLAGS += -g
 debug: build
@@ -44,24 +47,14 @@ debug: build
 release: CXXFLAGS += -DMM_NO_DEBUG -O2
 release: build
 
-build: $(BIN)
+# Qsc file
+qsc.moc.cpp: qsc.hpp; moc $< > $@
 
-qsc.moc.cpp: qsc.hpp
-	moc $< > $@
-
-%.o: %.cpp
-	g++ $(CXXFLAGS) -c -o $@ $<
-
-$(OBJS): qsc.moc.cpp
-
-$(BIN): $(OBJS)
-	g++ $(OBJS) $(LDFLAGS) -o $@
-
-clean:
-	rm -f $(BIN) $(OBJS) qsc.moc.cpp
+# Output binary
+%.o: %.cpp; g++ $(CXXFLAGS) -c -o $@ $^
+$(BIN): qsc.moc.cpp $(OBJS); g++ $(OBJS) $(LIBS) -o $@
 
 ############ Compiler Section ############
-
 
 GRAMMARS = pyparsers/*.g
 PY_PARSER_FILES = pyparsers/memetr.py pyparsers/parser.py
