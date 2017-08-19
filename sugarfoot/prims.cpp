@@ -547,201 +547,242 @@ static int prim_string_is_upper(Process* proc) {
 }
 
 
-static int prim_number_sum(Process* proc) {
+/// numeric
+
+static inline bool is_numeric(Process* proc, oop o) {
+  return is_small_int(o) || proc->mmobj()->mm_object_vt(o) == proc->vm()->core()->get_prime("LongNum");
+}
+
+static inline number extract_number(Process* proc, oop o) {
+  if (is_small_int(o)) {
+    return untag_small_int(o);
+  } else if (proc->mmobj()->mm_object_vt(o) == proc->vm()->core()->get_prime("LongNum")) {
+    return proc->mmobj()->mm_longnum_get(proc, o);
+  } else {
+    proc->raise("TypeError", "Expecting numeric value");
+  }
+}
+
+static int prim_numeric_sum(Process* proc) {
   oop self =  proc->dp();
   oop other = proc->get_arg(0);
 
-  if (!(is_small_int(self))) {
-    proc->raise("TypeError", "Expecting small int");
-  }
+  number n_self = extract_number(proc, self);
+  number n_other = extract_number(proc, other);
+  number n_res;
 
-  if (!(is_small_int(other))) {
-    proc->raise("TypeError", "Expecting small int");
+  if (__builtin_add_overflow(n_self, n_other, &n_res)) {
+    proc->raise("Overflow", "result of + overflows");
+  } else {
+    if (n_res <= MM_INT_MAX and n_res >= MM_INT_MIN) {
+      proc->stack_push((oop) tag_small_int(n_res));
+    } else {
+      proc->stack_push(proc->mmobj()->mm_longnum_new(proc, n_res));
+    }
+    return 0;
   }
-
-  number res = untag_small_int(self) + untag_small_int(other);
-  proc->stack_push((oop) tag_small_int(res)); //TODO: check for overflow
-  return 0;
 }
 
-static int prim_number_sub(Process* proc) {
+static int prim_numeric_sub(Process* proc) {
   oop self =  proc->dp();
   oop other = proc->get_arg(0);
 
-  if (!(is_small_int(self))) {
-    proc->raise("TypeError", "Expecting small int");
-  }
+  number n_self = extract_number(proc, self);
+  number n_other = extract_number(proc, other);
+  number n_res;
 
-  if (!(is_small_int(other))) {
-    proc->raise("TypeError", "Expecting small int");
+  if (__builtin_sub_overflow(n_self, n_other, &n_res)) {
+    proc->raise("Overflow", "result of - overflows");
+  } else {
+    if (n_res <= MM_INT_MAX and n_res >= MM_INT_MIN) {
+      proc->stack_push((oop) tag_small_int(n_res));
+    } else {
+      proc->stack_push(proc->mmobj()->mm_longnum_new(proc, n_res));
+    }
+    return 0;
   }
-
-  number res =  untag_small_int(self) - untag_small_int(other);
-  DBG(" SUB " << untag_small_int(self) << " - " << untag_small_int(other) << " = " << res << endl);
-  proc->stack_push((oop) tag_small_int(res));
-  return 0;
 }
 
-static int prim_number_mul(Process* proc) {
+static int prim_numeric_mul(Process* proc) {
   oop self =  proc->dp();
   oop other = proc->get_arg(0);
 
-  if (!(is_small_int(self))) {
-    proc->raise("TypeError", "Expecting small int");
-  }
+  number n_self = extract_number(proc, self);
+  number n_other = extract_number(proc, other);
+  number n_res;
 
-  if (!(is_small_int(other))) {
-    proc->raise("TypeError", "Expecting small int");
+  if (__builtin_mul_overflow(n_self, n_other, &n_res)) {
+    proc->raise("Overflow", "result of * overflows");
+  } else {
+    if (n_res <= MM_INT_MAX and n_res >= MM_INT_MIN) {
+      proc->stack_push((oop) tag_small_int(n_res));
+    } else {
+      proc->stack_push(proc->mmobj()->mm_longnum_new(proc, n_res));
+    }
+    return 0;
   }
-
-  number res =  untag_small_int(self) * untag_small_int(other);
-  proc->stack_push((oop) tag_small_int(res));  //TODO: check for overflow
-  return 0;
 }
 
-static int prim_number_bit_and(Process* proc) {
+static int prim_numeric_bit_and(Process* proc) {
   oop self =  proc->dp();
   oop other = proc->get_arg(0);
 
-  if (!(is_small_int(self))) {
-    proc->raise("TypeError", "Expecting small int");
-  }
+  unsigned long n_self = extract_number(proc, self);
+  unsigned long n_other = extract_number(proc, other);
+  unsigned long n_res = n_self & n_other;
 
-  if (!(is_small_int(other))) {
-    proc->raise("TypeError", "Expecting small int");
+  if (n_res <= MM_INT_MAX and n_res >= MM_INT_MIN) {
+    proc->stack_push((oop) tag_small_int(n_res));
+  } else {
+    proc->stack_push(proc->mmobj()->mm_longnum_new(proc, n_res));
   }
-
-  number res =  untag_small_int(self) & untag_small_int(other);
-  proc->stack_push((oop) tag_small_int(res));  //TODO: check for overflow
   return 0;
 }
 
-static int prim_number_lt(Process* proc) {
+static int prim_numeric_bit_or(Process* proc) {
   oop self =  proc->dp();
   oop other = proc->get_arg(0);
 
-  if (!(is_small_int(self))) {
-    proc->raise("TypeError", "Expecting small int");
-  }
+  unsigned long n_self = extract_number(proc, self);
+  unsigned long n_other = extract_number(proc, other);
+  unsigned long n_res = n_self | n_other;
 
-  if (!(is_small_int(other))) {
-    proc->raise("TypeError", "Expecting small int");
+  if (n_res <= MM_INT_MAX and n_res >= MM_INT_MIN) {
+    proc->stack_push((oop) tag_small_int(n_res));
+  } else {
+    proc->stack_push(proc->mmobj()->mm_longnum_new(proc, n_res));
   }
-
-  oop res =  (oop) (untag_small_int(self) < untag_small_int(other));
-  DBG(" PRIM< " << untag_small_int(self) << " < " << untag_small_int(other) << " = " << (untag_small_int(self) < untag_small_int(other)) << endl);
-  proc->stack_push((oop)res);
   return 0;
 }
 
-static int prim_number_gt(Process* proc) {
+static int prim_numeric_lt(Process* proc) {
   oop self =  proc->dp();
   oop other = proc->get_arg(0);
 
-  if (!(is_small_int(self))) {
-    proc->raise("TypeError", "Expecting small int");
-  }
-
-  if (!(is_small_int(other))) {
-    proc->raise("TypeError", "Expecting small int");
-  }
-
-  oop res =  (oop) (untag_small_int(self) > untag_small_int(other));
-  DBG(" PRIM< " << untag_small_int(self) << " > " << untag_small_int(other) << " = " << (untag_small_int(self) < untag_small_int(other)) << endl);
-  proc->stack_push((oop)res);
+  number n_self = extract_number(proc, self);
+  number n_other = extract_number(proc, other);
+  oop res =  n_self < n_other ? MM_TRUE : MM_FALSE;
+  proc->stack_push(res);
   return 0;
 }
 
-static int prim_number_gteq(Process* proc) {
+static int prim_numeric_gt(Process* proc) {
   oop self =  proc->dp();
   oop other = proc->get_arg(0);
 
-  if (!(is_small_int(self))) {
-    proc->raise("TypeError", "Expecting small int");
-  }
+  number n_self = extract_number(proc, self);
+  number n_other = extract_number(proc, other);
+  oop res =  n_self > n_other ? MM_TRUE : MM_FALSE;
 
-  if (!(is_small_int(other))) {
-    proc->raise("TypeError", "Expecting small int");
-  }
-
-  oop res =  (oop) (untag_small_int(self) >= untag_small_int(other));
-  DBG(" PRIM< " << untag_small_int(self) << " >= " << untag_small_int(other) << " = " << (untag_small_int(self) < untag_small_int(other)) << endl);
-  proc->stack_push((oop)res);
+  proc->stack_push(res);
   return 0;
 }
 
-static int prim_number_rshift(Process* proc) {
+static int prim_numeric_gteq(Process* proc) {
   oop self =  proc->dp();
   oop other = proc->get_arg(0);
 
-  if (!(is_small_int(self))) {
-    proc->raise("TypeError", "Expecting small int");
-  }
-
-  if (!(is_small_int(other))) {
-    proc->raise("TypeError", "Expecting small int");
-  }
-
-  number res =  untag_small_int(self) >> untag_small_int(other);
-  proc->stack_push((oop) tag_small_int(res));  //TODO: check for overflow
+  number n_self = extract_number(proc, self);
+  number n_other = extract_number(proc, other);
+  oop res = n_self >= n_other ? MM_TRUE : MM_FALSE;
+  proc->stack_push(res);
   return 0;
 }
 
-static int prim_number_lshift(Process* proc) {
+static int prim_numeric_eq(Process* proc) {
   oop self =  proc->dp();
   oop other = proc->get_arg(0);
 
-  if (!(is_small_int(self))) {
-    proc->raise("TypeError", "Expecting small int");
-  }
+  if (is_numeric(proc, other)) {
+    number n_self = extract_number(proc, self);
+    number n_other = extract_number(proc, other);
 
-  if (!(is_small_int(other))) {
-    proc->raise("TypeError", "Expecting small int");
+    proc->stack_push(n_self == n_other ? MM_TRUE : MM_FALSE);
+    return 0;
+  } else {
+    proc->stack_push(MM_FALSE);
+    return 0;
   }
+}
 
-  number res =  untag_small_int(self) << untag_small_int(other);
-  proc->stack_push((oop) tag_small_int(res));  //TODO: check for overflow
+static int prim_numeric_rshift(Process* proc) {
+  oop self =  proc->dp();
+  oop other = proc->get_arg(0);
+
+  unsigned long n_self = extract_number(proc, self);
+  unsigned long n_other = extract_number(proc, other);
+  unsigned long n_res = n_self >> n_other;
+
+  if (n_res <= MM_INT_MAX and n_res >= MM_INT_MIN) {
+    proc->stack_push((oop) tag_small_int(n_res));
+  } else {
+    proc->stack_push(proc->mmobj()->mm_longnum_new(proc, n_res));
+  }
+  return 0;
+}
+
+static int prim_numeric_lshift(Process* proc) {
+  oop self =  proc->dp();
+  oop other = proc->get_arg(0);
+
+  unsigned long n_self = extract_number(proc, self);
+  unsigned long n_other = extract_number(proc, other);
+  unsigned long n_res = n_self << n_other;
+
+  if (n_res <= MM_INT_MAX and n_res >= MM_INT_MIN) {
+    proc->stack_push((oop) tag_small_int(n_res));
+  } else {
+    proc->stack_push(proc->mmobj()->mm_longnum_new(proc, n_res));
+  }
   return 0;
 }
 
 
-static int prim_number_neg(Process* proc) {
+static int prim_numeric_neg(Process* proc) {
   oop self =  proc->dp();
 
-  if (!(is_small_int(self))) {
-    proc->raise("TypeError", "Expecting small int");
+  number n_self = extract_number(proc, self);
+  number n_res = - n_self;
+  if (n_res <= MM_INT_MAX and n_res >= MM_INT_MIN) {
+    proc->stack_push((oop) tag_small_int(n_res));
+  } else {
+    proc->stack_push(proc->mmobj()->mm_longnum_new(proc, n_res));
   }
-
-  number res =  - untag_small_int(self);
-  DBG(" NEG " << untag_small_int(self) << " = " << res << endl);
-  proc->stack_push((oop) tag_small_int(res));
   return 0;
 }
 
-static int prim_number_to_string(Process* proc) {
+static int prim_numeric_to_string(Process* proc) {
   oop self =  proc->dp();
+
+  number n_self = extract_number(proc, self);
   std::stringstream s;
-  s << untag_small_int(self);
+  s << n_self;
   oop oop_str = proc->mmobj()->mm_string_new(s.str());
   proc->stack_push(oop_str);
   return 0;
 }
 
-static int prim_number_as_char(Process* proc) {
+static int prim_numeric_as_char(Process* proc) {
   oop self =  proc->rp();
 
-  number num = untag_small_int(self);
+  number n_self = extract_number(proc, self);
   std::string s = "";
-  s += (char) num;
+  s += (char) n_self;
   oop oop_str = proc->mmobj()->mm_string_new(s);
   proc->stack_push(oop_str);
   return 0;
 }
 
 
-static int prim_number_to_source(Process* proc) {
-  return prim_number_to_string(proc);
+static int prim_numeric_to_source(Process* proc) {
+  return prim_numeric_to_string(proc);
 }
+
+
+
+
+///end numeric
+
 
 static int prim_exception_throw(Process* proc) {
   oop self =  proc->rp();
@@ -2214,21 +2255,24 @@ void init_primitives(VM* vm) {
   vm->register_primitive("behavior_to_string", prim_behavior_to_string);
   vm->register_primitive("behavior_to_source", prim_behavior_to_source);
 
-  vm->register_primitive("number_sum", prim_number_sum);
-  vm->register_primitive("number_sub", prim_number_sub);
-  vm->register_primitive("number_mul", prim_number_mul);
-  vm->register_primitive("number_bit_and", prim_number_bit_and);
-  vm->register_primitive("number_lshift", prim_number_lshift);
-  vm->register_primitive("number_rshift", prim_number_rshift);
-  vm->register_primitive("number_lt", prim_number_lt);
-  vm->register_primitive("number_gt", prim_number_gt);
-  vm->register_primitive("number_lshift", prim_number_lshift);
-  vm->register_primitive("number_rshift", prim_number_rshift);
-  vm->register_primitive("number_gteq", prim_number_gteq);
-  vm->register_primitive("number_neg", prim_number_neg);
-  vm->register_primitive("number_to_string", prim_number_to_string);
-  vm->register_primitive("number_as_char", prim_number_as_char);
-  vm->register_primitive("number_to_source", prim_number_to_source);
+  vm->register_primitive("numeric_sum", prim_numeric_sum);
+  vm->register_primitive("numeric_sub", prim_numeric_sub);
+  vm->register_primitive("numeric_mul", prim_numeric_mul);
+  vm->register_primitive("numeric_bit_and", prim_numeric_bit_and);
+  vm->register_primitive("numeric_bit_or", prim_numeric_bit_or);
+  vm->register_primitive("numeric_lshift", prim_numeric_lshift);
+  vm->register_primitive("numeric_rshift", prim_numeric_rshift);
+  vm->register_primitive("numeric_lt", prim_numeric_lt);
+  vm->register_primitive("numeric_gt", prim_numeric_gt);
+  vm->register_primitive("numeric_lshift", prim_numeric_lshift);
+  vm->register_primitive("numeric_rshift", prim_numeric_rshift);
+  vm->register_primitive("numeric_gteq", prim_numeric_gteq);
+  vm->register_primitive("numeric_eq", prim_numeric_eq);
+  vm->register_primitive("numeric_neg", prim_numeric_neg);
+  vm->register_primitive("numeric_to_string", prim_numeric_to_string);
+  vm->register_primitive("numeric_as_char", prim_numeric_as_char);
+  vm->register_primitive("numeric_to_source", prim_numeric_to_source);
+
 
   vm->register_primitive("exception_throw", prim_exception_throw);
 

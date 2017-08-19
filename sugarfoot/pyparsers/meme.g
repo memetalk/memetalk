@@ -1,4 +1,4 @@
-alpha =  '+' | '*' | '-' | '/' | '=' | '<' | '>' | '?' | '!' | '&'
+alpha =  '+' | '*' | '-' | '/' | '=' | '<' | '>' | '?' | '!' | '&' | '|'
 
 keyword = (token("fun") | token("var")) ~letterOrDigit
 
@@ -203,6 +203,7 @@ expr_add =  !(self.input.position):begin expr_add:a token("++") expr_mul:b -> se
          |  !(self.input.position):begin expr_add:a token("<<") expr_mul:b -> self.i.ast(begin, ['<<', a, b])
          |  !(self.input.position):begin expr_add:a token(">>") expr_mul:b -> self.i.ast(begin, ['>>', a, b])
          |  !(self.input.position):begin expr_add:a token("&") expr_mul:b -> self.i.ast(begin, ['&', a, b])
+         |  !(self.input.position):begin expr_add:a token("|") expr_mul:b -> self.i.ast(begin, ['|', a, b])
          | expr_mul
 
 expr_mul =  !(self.input.position):begin expr_mul:a token("*") expr_unary:b -> self.i.ast(begin, ['*', a, b])

@@ -254,6 +254,9 @@ public:
   void mm_exception_set_st(Process* proc, oop ex, oop st, bool should_assert = false);
   // oop mm_exception_get_bp(Process* proc, oop ex, bool should_assert = false);
 
+  oop mm_longnum_new(Process* proc, number n, bool should_assert = false);
+  number mm_longnum_get(Process* proc, oop n, bool should_assert = false);
+
   CoreImage* core() { return _core_image; };
 
 private:

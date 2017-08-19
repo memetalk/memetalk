@@ -902,8 +902,11 @@ class CompiledFunction(Entry):
 
     @emitter
     def emit_push_num_literal(self, _, num):
-        idx = self.create_and_register_number_literal(num)
-        self.bytecodes.append("push_literal", idx)
+        if num <= 4611686018427387903:
+            idx = self.create_and_register_number_literal(num)
+            self.bytecodes.append("push_literal", idx)
+        else:
+            raise Exception('Integer is too big: ' + str(num))
 
     @emitter
     def emit_push_this(self, _):

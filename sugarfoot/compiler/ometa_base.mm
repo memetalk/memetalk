@@ -330,8 +330,8 @@ instance_method exactly: fun() {
 
 instance_method number: fun() {
   var r = this._apply(:anything);
-  this._pred(Mirror.vtFor(r) == Number);
-  return r;
+  var vt = this._pred(Mirror.vtFor(r));
+  return vt == Integer or vt == LongNum;
 }
 
 instance_method string: fun() {

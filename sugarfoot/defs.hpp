@@ -29,6 +29,8 @@ typedef int (*prim_function_t) (Process*);
 #define MM_FALSE (oop) 2
 #define MM_NULL (oop) 0
 
+#define MM_INT_MAX        0x3fffffffffffffff
+#define MM_INT_MIN (long) 0xc000000000000000 // -4611686018427387904
 // bytecodes
 
 //#define PUSH_PARAM 1

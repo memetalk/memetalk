@@ -432,45 +432,100 @@
   }
   end
 
-  class Number
+  class LongNum
+    fields: self;
     instance_method +: fun(arg) {
-      <primitive "number_sum">
+      <primitive "numeric_sum">
     }
     instance_method -: fun(arg) {
-      <primitive "number_sub">
+      <primitive "numeric_sub">
     }
     instance_method *: fun(arg) {
-      <primitive "number_mul">
+      <primitive "numeric_mul">
     }
     instance_method <: fun(arg) {
-      <primitive "number_lt">
+      <primitive "numeric_lt">
     }
     instance_method >: fun(arg) {
-      <primitive "number_gt">
+      <primitive "numeric_gt">
     }
     instance_method >=: fun(arg) {
-      <primitive "number_gteq">
+      <primitive "numeric_gteq">
+    }
+    instance_method ==: fun(arg) {
+      <primitive "numeric_eq">
     }
     instance_method >>: fun(arg) {
-      <primitive "number_rshift">
+      <primitive "numeric_rshift">
     }
     instance_method <<: fun(arg) {
-      <primitive "number_lshift">
+      <primitive "numeric_lshift">
     }
     instance_method &: fun(arg) {
-      <primitive "number_bit_and">
+      <primitive "numeric_bit_and">
+    }
+    instance_method |: fun(arg) {
+      <primitive "numeric_bit_or">
     }
     instance_method neg: fun() {
-      <primitive "number_neg">
+      <primitive "numeric_neg">
     }
     instance_method toString: fun() {
-      <primitive "number_to_string">
+      <primitive "numeric_to_string">
     }
     instance_method asChar: fun() {
-      <primitive "number_as_char">
+      <primitive "numeric_as_char">
     }
     instance_method toSource: fun() {
-      <primitive "number_to_source">
+      <primitive "numeric_to_source">
+    }
+  end
+
+  class Integer
+    instance_method +: fun(arg) {
+      <primitive "numeric_sum">
+    }
+    instance_method -: fun(arg) {
+      <primitive "numeric_sub">
+    }
+    instance_method *: fun(arg) {
+      <primitive "numeric_mul">
+    }
+    instance_method <: fun(arg) {
+      <primitive "numeric_lt">
+    }
+    instance_method >: fun(arg) {
+      <primitive "numeric_gt">
+    }
+    instance_method >=: fun(arg) {
+      <primitive "numeric_gteq">
+    }
+    instance_method ==: fun(arg) {
+      <primitive "numeric_eq">
+    }
+    instance_method >>: fun(arg) {
+      <primitive "numeric_rshift">
+    }
+    instance_method <<: fun(arg) {
+      <primitive "numeric_lshift">
+    }
+    instance_method &: fun(arg) {
+      <primitive "numeric_bit_and">
+    }
+    instance_method |: fun(arg) {
+      <primitive "numeric_bit_or">
+    }
+    instance_method neg: fun() {
+      <primitive "numeric_neg">
+    }
+    instance_method toString: fun() {
+      <primitive "numeric_to_string">
+    }
+    instance_method asChar: fun() {
+      <primitive "numeric_as_char">
+    }
+    instance_method toSource: fun() {
+      <primitive "numeric_to_source">
     }
   end
 
@@ -562,6 +617,12 @@ end
 class TypeError < Exception
   instance_method toString: fun() {
     return "TypeError: " + this.message.toString();
+  }
+end
+
+class Overflow < Exception
+  instance_method toString: fun() {
+    return "OverFlow: " + this.message.toString();
   }
 end
 

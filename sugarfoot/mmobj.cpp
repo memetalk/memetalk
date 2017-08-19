@@ -181,7 +181,7 @@ oop MMObj::mm_object_new() {
 
 oop MMObj::mm_object_vt(oop obj) {
   if (is_small_int(obj)) {
-    return _core_image->get_prime("Number");
+    return _core_image->get_prime("Integer");
   } else if (obj == MM_TRUE) {
     return _core_image->get_prime("Boolean");
   } else if (obj == MM_FALSE) {
@@ -1411,6 +1411,19 @@ void MMObj::mm_exception_set_st(Process* p, oop ex, oop st, bool should_assert) 
   ((oop*)ex)[3] = st;
 }
 
+oop MMObj::mm_longnum_new(Process* proc, number n, bool should_assert) {
+  oop oop_n = mm_new(_core_image->get_prime("LongNum"),
+                     mm_object_new(), //assuming LongNum < Object
+                     1);
+  ((oop*)oop_n)[2] = (oop) n;
+  return oop_n;
+}
+
+number MMObj::mm_longnum_get(Process* p, oop n, bool should_assert) {
+  TYPE_CHECK(!( *(oop*) n == _core_image->get_prime("LongNum")),
+             "TypeError","Expected LongNum")
+    return (number) ((oop*)n)[2];
+}
 // oop MMObj::mm_exception_get_bp(Process* p, oop ex, bool should_assert) {
 //   TYPE_CHECK(!( *(oop*) ex == _core_image->get_prime("Exception")),
 //              "TypeError","Expected Exception")

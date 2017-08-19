@@ -22,7 +22,8 @@ const char* CoreImage::PRIMES_NAMES[] = {"Behavior",
                                         "Symbol",
                                         "Dictionary",
                                         "List",
-                                        "Number",
+                                        "Integer",
+                                         "LongNum",
                                         "CompiledFunction",
                                         "Function",
                                          "Context",
@@ -30,6 +31,7 @@ const char* CoreImage::PRIMES_NAMES[] = {"Behavior",
                                          "Exception",
                                          "ImportError",
                                          "TypeError",
+                                         "Overflow",
                                          "InternalError",
                                          "IndexError",
                                          "DoesNotUnderstand",
@@ -40,7 +42,7 @@ const char* CoreImage::PRIMES_NAMES[] = {"Behavior",
                                          "Null",
                                          "Mirror",
                                          "NonLocalReturn"};
-int CoreImage::TOTAL_PRIMES = 27;
+int CoreImage::TOTAL_PRIMES = 29;
 
 
 CoreImage::CoreImage(VM* vm, const char* filepath)
