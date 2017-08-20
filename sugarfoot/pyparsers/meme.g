@@ -82,8 +82,8 @@ constructor = spaces !(self.has_fun_literal(False))
                   ['body', self.i.ast(begin, body + [self.i.sint_ast(end,['end-body'])])]])
 
 top_level_fn = spaces alpha_name:name token(":") !(self.input.position):begin
-                expr:e token(";") -> self.i.ast(begin,['fun', name, ['params', []],
-                                                              ['body', self.i.ast(begin, [e])]])
+                expr:e token(";") -> self.i.ast(begin,['fun', name, ['params', []], False,
+                                                              ['body', [['return', e], ['end-body']]]])
 
 top_level_fun = spaces !(self.has_fun_literal(False))
                 alpha_name:name token(":")
