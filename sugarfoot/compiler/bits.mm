@@ -1,10 +1,13 @@
-.preamble(io, memetest)
- io : meme:io;
+.preamble(memetest)
  memetest : meme:memetest;
  [Test] <= memetest;
 .code
 
 WSIZE: 8;
+
+TAG_MASK: (-4611686018427387903 - 1) * 2; //0x8000000000000000
+
+UNTAG_MASK: (4611686018427387903 * 2) + 1; //0x7FFFFFFFFFFFFFFF
 
 class FormatException < Exception
 class_method check: fun(pred, message) {
@@ -15,7 +18,7 @@ class_method check: fun(pred, message) {
 end
 
 unpack: fun(str) {
-   FormatException.check(str.size == 8, "unpack requires string of length 8");
+   //FormatException.check(str.size == 8, "unpack requires string of length 8");
    var res = 0;
    str.each(fun(idx, chr) {
      res = res + (chr.toByte << (idx * 8));
@@ -37,21 +40,23 @@ pack_byte: fun(num) {
 }
 
 untag: fun(num) {
-  var flag = (4611686018427387903 * 2) + 1; //0x7FFFFFFFFFFFFFFF
-  return num & flag;
+  //TODO: check bounds in the future
+  return num & UNTAG_MASK;
 }
 
 tag: fun(num) {
-  var flag = (-4611686018427387903 - 1) * 2; //0x8000000000000000
-  return num | flag;
+  //TODO: check bounds in the future
+  return num | TAG_MASK;
 }
 
 bytelist: fun(num) {
+  //TODO: check bounds in the future
   return pack(num).map(fun(x) { x.toByte });
 }
 
 
 bytelist_tag: fun(num) {
+  //TODO: check bounds in the future
   return pack(tag(num)).map(fun(x) { x.toByte });
 }
 

@@ -96,7 +96,14 @@ public:
   oop mm_module_get_param(oop imodule, number idx);
 
   inline bool mm_is_string(oop obj) {
-    return *(oop*) obj == _cached_string;
+    if (is_small_int(obj) ||
+        (obj == MM_TRUE)  ||
+        (obj == MM_FALSE) ||
+        (obj == MM_NULL)) {
+      return false;
+    } else {
+      return *(oop*) obj == _cached_string;
+    }
   }
 
   oop mm_string_new(const std::string& str);
@@ -253,6 +260,8 @@ public:
   oop mm_exception_get_message(Process* proc, oop ex, bool should_assert = false);
   void mm_exception_set_st(Process* proc, oop ex, oop st, bool should_assert = false);
   // oop mm_exception_get_bp(Process* proc, oop ex, bool should_assert = false);
+
+  oop mm_integer_or_longnum_new(Process* proc, number n, bool should_assert = false);
 
   oop mm_longnum_new(Process* proc, number n, bool should_assert = false);
   number mm_longnum_get(Process* proc, oop n, bool should_assert = false);

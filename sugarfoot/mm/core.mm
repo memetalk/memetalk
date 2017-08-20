@@ -385,11 +385,17 @@
   instance_method index: fun(idx) {
     <primitive "list_index">
   }
+  instance_method pos: fun(val) {
+    <primitive "list_pos">
+  }
   instance_method each: fun(fn) {
     <primitive "list_each">
   }
   instance_method map: fun(fn) {
     <primitive "list_map">
+  }
+  instance_method sum: fun() {
+    <primitive "list_sum">
   }
   instance_method filter: fun(fn) {
     <primitive "list_filter">
@@ -405,6 +411,9 @@
   }
   instance_method from: fun(idx) {
     <primitive "list_from">
+  }
+  instance_method range: fun(begin, end) {
+    <primitive "list_range">
   }
   instance_method toString: fun() {
     <primitive "list_to_string">
@@ -423,6 +432,9 @@
   }
   instance_method +: fun(other) {
     <primitive "list_plus">
+  }
+  instance_method times: fun(x) {
+    <primitive "list_times">
   }
   instance_method ==: fun(other) {
     <primitive "list_equals">

@@ -1,0 +1,303 @@
+.preamble(bits, mmc, io, memetest)
+ bits : meme:bits;
+ mmc: meme:mmc;
+ io : meme:io;
+ memetest : meme:memetest;
+ [Test] <= memetest;
+.code
+
+class Cell
+fields: etable;
+init new: fun(etable) {
+  @etable = etable;
+}
+instance_method index: fun() {
+  return @etable.offset + @etable.entries.index(this);
+}
+instance_method etable: fun() {
+  return @etable;
+}
+end
+
+
+class NullCell < Cell
+instance_method size: fun() {
+  return bits.WSIZE;
+}
+instance_method value: fun(_) {
+  return bits.bytelist(0);
+}
+end
+
+class IntCell < Cell
+fields: num;
+init new: fun(etable, num) {
+  super.new(etable);
+  @num = num;
+}
+instance_method size: fun() {
+  return bits.WSIZE;
+}
+instance_method value: fun(_) {
+  return bits.bytelist(@num);
+}
+end
+
+class TaggedIntCell < Cell
+fields: num;
+init new: fun(etable, num) {
+  super.new(etable);
+  @num = num;
+}
+instance_method size: fun() {
+  return bits.WSIZE;
+}
+instance_method value: fun(_) {
+  return bits.bytelist_tag(@num);
+}
+end
+
+class StringCell < Cell
+fields: data;
+init new: fun(etable, string) {
+  super.new(etable);
+
+  var string_with_term = string + "\0";
+  //words_needed = int(math.ceil(len(string_with_term) / float(utils.WSIZE)))
+  //to_fill = (words_needed * utils.WSIZE) - len(string_with_term)
+  var to_fill = bits.string_block_size(string_with_term) - string_with_term.size;
+  @data = string_with_term.map(fun(x) { x.toByte }) + ([0].times(to_fill));
+}
+instance_method size: fun() {
+  return @data.size();
+}
+instance_method value: fun(_) {
+  return @data;
+}
+end
+
+class PointerCell < Cell
+fields: target_label, target_cell;
+init new: fun(etable, label, cell) { //label/cell: defaults to null
+  super.new(etable);
+  @target_label = label;
+  @target_cell = cell;
+
+  if (@target_label == null and @target_cell == null) {
+    Exception.throw("label or cell required");
+  }
+}
+instance_method size: fun() {
+  return bits.WSIZE;
+}
+instance_method value: fun(_) {
+  if (@target_cell) {
+    var to = this.etable.cells.pos(@target_cell);
+    return bits.bytelist(this.etable.base + this.etable.cell_sizes.range(0,to).sum());
+  } else {
+    return bits.bytelist(this.etable.base + this.etable.index[@target_label]);
+  }
+}
+end
+
+
+class VirtualMemory
+fields: cells, cell_sizes, index, base, cell_index;
+init new: fun() {
+  @cells = [];
+  @cell_sizes = [];
+  @index = {}; //label -> memory pos
+  @base = 0;
+  @cell_index = {}; //label -> cells index
+}
+instance_method index: fun() {
+  return @index;
+}
+instance_method base: fun() {
+  return @base;
+}
+instance_method cells: fun() {
+  return @cells;
+}
+instance_method cell_sizes: fun() {
+  return @cell_sizes;
+}
+instance_method _append_cell: fun(cell, label) {
+  if (label != null) {
+    this.label_current(label);
+  }
+  @cells.append(cell);
+  @cell_sizes.append(cell.size());
+}
+instance_method set_base: fun(base) {
+  @base = base;
+}
+instance_method label_current: fun(label) {
+  if (@index.has(label)) {
+    Exception.throw("Duplicated label " + label);
+  }
+  @index[label] = @cell_sizes.sum();
+  @cell_index[label] = @cells.size;
+}
+instance_method get_pointer_to: fun(label) {
+  return @cells[@cell_index[label]];
+}
+instance_method append_int: fun(num, label) { //label defaults to null
+  var cell = IntCell.new(this, num);
+  this._append_cell(cell, label);
+  return cell;
+}
+instance_method append_tagged_int: fun(num, label) { //label defaults to null
+  var cell = TaggedIntCell.new(this, num);
+  this._append_cell(cell, label);
+  return cell;
+}
+instance_method append_null: fun(label) { //label defaults to null
+  var cell = NullCell.new(this);
+  this._append_cell(cell, label);
+  return cell;
+}
+instance_method append_string: fun(string, label) { //label defaults to null
+  var cell = StringCell.new(this, string);
+  this._append_cell(cell, label);
+  return cell;
+}
+instance_method append_pointer_to: fun(target_cell, label) { //label defaults to null
+  var cell = PointerCell.new(this, null, target_cell);
+  this._append_cell(cell, label);
+  return cell;
+}
+instance_method append_label_ref: fun(target_label, label) { //label defaults to null
+  var cell = PointerCell.new(this, target_label, null);
+  this._append_cell(cell, label);
+  return cell;
+}
+
+//////
+
+instance_method physical_address: fun(cell) {
+  return @base + @cell_sizes.range(0, @cells.pos(cell)).reduce(0, fun(x,y) { x + y});
+}
+instance_method object_table: fun() {
+  return @cells.map(fun(c) { c.value(null) }).sum();
+}
+instance_method reloc_table: fun() {
+  return @cells.filter(fun(entry) { Mirror.vtFor(entry) == PointerCell }).map(fun(entry) { this.physical_address(entry) });
+}
+instance_method symbols_references: fun() {
+  var sr = [];
+  this.symbol_table.each(fun(_,entry) {
+    var text = entry[0];
+    var ptr = entry[1];
+    @cells.filter(fun(x) { Mirror.vtFor(x) == PointerCell }).each(fun(_, referer) {
+      sr.append([text, @base + @cell_sizes.range(0, @cells.pos(referer)).reduce(0, fun(x,y) { x + y})])
+    });
+  });
+  return sr;
+}
+instance_method append_int_to_int_dict: fun(mdict) {
+  var pairs_oop = [];
+  mdict.each(fun(key, val) {
+    pairs_oop.append([key, val]);
+  });
+  return this.append_dict_with_pairs(pairs_oop);
+}
+instance_method append_int_to_int_list: fun(mdict) {
+  var pairs_oop = [];
+  mdict.each(fun(key, val) {
+    var val_oop = this.append_list_of_ints(val);
+    pairs_oop.append([key, val_oop]);
+  });
+  return this.append_dict_with_pairs(pairs_oop);
+}
+instance_method append_symbol_to_int_dict: fun(mdict) {
+  var pairs_oop = [];
+  mdict.each(fun(key, val) {
+    var key_oop = this.append_symbol_instance(key);
+    pairs_oop.append([key_oop, val]);
+  });
+  return this.append_dict_with_pairs(pairs_oop);
+}
+instance_method append_symbol_dict: fun(mdict) {
+  var pairs_oop = [];
+  mdict.each(fun(key, val) {
+    var key_oop = this.append_symbol_instance(key);
+    var val_oop = this.append_string_instance(val);
+    pairs_oop.append([key_oop, val_oop]);
+  });
+  return this.append_dict_with_pairs(pairs_oop);
+}
+instance_method append_dict_with_pairs: fun(pairs) {
+  var frame_oop = this._append_dict_frame(pairs);
+  var oop = this.append_dict_prologue(pairs.size, frame_oop);
+  return oop;
+}
+instance_method _append_dict_frame: fun(pairs) {
+  this.append_int(mmc.FRAME_TYPE_ELEMENTS, null);
+  this.append_int(pairs.size * 2 * bits.WSIZE, null);
+
+  var oops = [];
+  pairs.each(fun(key, val) {
+    if (Mirror.vtFor(key) == Integer or Mirror.vtFor(key) == LongNum) {
+      oops.append(this.append_tagged_int(key, null));
+    } else {
+      oops.append(this.append_pointer_to(key, null));
+    }
+    if (Mirror.vtFor(val) == Integer or Mirror.vtFor(val) == LongNum) {
+      this.append_tagged_int(val, null);
+    } else {
+      this.append_pointer_to(val, null);
+    }
+  });
+
+  if (oops.size > 0) {
+    return oops[0];
+  } else {
+    return null;
+  }
+}
+instance_method append_empty_dict: fun() {
+  return this.append_dict_prologue(0, null);
+}
+
+instance_method append_sym_dict_emiting_entries: fun(entries_mdict) {
+  var pairs_oop = [];
+  entries_mdict.each(fun(key, entry) {
+    var key_oop = this.append_symbol_instance(key);
+    var val_oop = entry.fill(this);
+    pairs_oop.append([key_oop, val_oop]);
+  });
+  return this.append_dict_with_pairs(pairs_oop);
+}
+instance_method dump: fun() {
+  var addr = @base;
+  @cells.each(fun(idx, x) {
+    var v = x.value(null);
+    io.print(addr.toString + ": " + bits.unpack(v.map(fun(x) { x.asChar })).toString);
+    addr = addr + v.size;
+  });
+}
+
+end
+
+// tests
+
+main: fun() {
+    var tb = VirtualMemory.new;
+    var c0 = tb.append_label_ref("Behavior", "Behavior");  // 100 -> 100
+    var c1 = tb.append_int(14, "Object");                  // 108 = 14
+    var c2 = tb.append_int(18, null);                      // 116 = 18
+    var c3 = tb.append_label_ref("Object", null);          // 124 -> 104
+    var c4 = tb.append_int(16, null);                      // 132 = 16
+    tb.append_pointer_to(c3, null);                        // 140 -> 124
+    tb.append_label_ref("Foo", null);                      // 148 -> 180 -- forward reference
+
+    tb.append_string("abceghijkl", null);                 // 156..164
+    tb.append_label_ref("Foo", null);                     // 172 -> 180 -- forward reference
+    var c9 = tb.append_int(21, "Foo");                    // 180 = 21
+    tb.append_pointer_to(c9, null);                       // 188 -> 180
+    tb.set_base(100);
+    tb.dump();
+}
+
+.endcode

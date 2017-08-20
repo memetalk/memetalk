@@ -600,11 +600,7 @@ static int prim_numeric_sum(Process* proc) {
   if (__builtin_add_overflow(n_self, n_other, &n_res)) {
     proc->raise("Overflow", "result of + overflows");
   } else {
-    if (n_res <= MM_INT_MAX and n_res >= MM_INT_MIN) {
-      proc->stack_push((oop) tag_small_int(n_res));
-    } else {
-      proc->stack_push(proc->mmobj()->mm_longnum_new(proc, n_res));
-    }
+    proc->stack_push(proc->mmobj()->mm_integer_or_longnum_new(proc, n_res));
     return 0;
   }
 }
@@ -620,11 +616,7 @@ static int prim_numeric_sub(Process* proc) {
   if (__builtin_sub_overflow(n_self, n_other, &n_res)) {
     proc->raise("Overflow", "result of - overflows");
   } else {
-    if (n_res <= MM_INT_MAX and n_res >= MM_INT_MIN) {
-      proc->stack_push((oop) tag_small_int(n_res));
-    } else {
-      proc->stack_push(proc->mmobj()->mm_longnum_new(proc, n_res));
-    }
+    proc->stack_push(proc->mmobj()->mm_integer_or_longnum_new(proc, n_res));
     return 0;
   }
 }
@@ -640,11 +632,7 @@ static int prim_numeric_mul(Process* proc) {
   if (__builtin_mul_overflow(n_self, n_other, &n_res)) {
     proc->raise("Overflow", "result of * overflows");
   } else {
-    if (n_res <= MM_INT_MAX and n_res >= MM_INT_MIN) {
-      proc->stack_push((oop) tag_small_int(n_res));
-    } else {
-      proc->stack_push(proc->mmobj()->mm_longnum_new(proc, n_res));
-    }
+    proc->stack_push(proc->mmobj()->mm_integer_or_longnum_new(proc, n_res));
     return 0;
   }
 }
@@ -668,11 +656,7 @@ static int prim_numeric_bit_and(Process* proc) {
   unsigned long n_other = extract_number(proc, other);
   unsigned long n_res = n_self & n_other;
 
-  if (n_res <= MM_INT_MAX and n_res >= MM_INT_MIN) {
-    proc->stack_push((oop) tag_small_int(n_res));
-  } else {
-    proc->stack_push(proc->mmobj()->mm_longnum_new(proc, n_res));
-  }
+  proc->stack_push(proc->mmobj()->mm_integer_or_longnum_new(proc, n_res));
   return 0;
 }
 
@@ -684,11 +668,7 @@ static int prim_numeric_bit_or(Process* proc) {
   unsigned long n_other = extract_number(proc, other);
   unsigned long n_res = n_self | n_other;
 
-  if (n_res <= MM_INT_MAX and n_res >= MM_INT_MIN) {
-    proc->stack_push((oop) tag_small_int(n_res));
-  } else {
-    proc->stack_push(proc->mmobj()->mm_longnum_new(proc, n_res));
-  }
+  proc->stack_push(proc->mmobj()->mm_integer_or_longnum_new(proc, n_res));
   return 0;
 }
 
@@ -750,11 +730,7 @@ static int prim_numeric_rshift(Process* proc) {
   unsigned long n_other = extract_number(proc, other);
   unsigned long n_res = n_self >> n_other;
 
-  if (n_res <= MM_INT_MAX and n_res >= MM_INT_MIN) {
-    proc->stack_push((oop) tag_small_int(n_res));
-  } else {
-    proc->stack_push(proc->mmobj()->mm_longnum_new(proc, n_res));
-  }
+  proc->stack_push(proc->mmobj()->mm_integer_or_longnum_new(proc, n_res));
   return 0;
 }
 
@@ -766,11 +742,7 @@ static int prim_numeric_lshift(Process* proc) {
   unsigned long n_other = extract_number(proc, other);
   unsigned long n_res = n_self << n_other;
 
-  if (n_res <= MM_INT_MAX and n_res >= MM_INT_MIN) {
-    proc->stack_push((oop) tag_small_int(n_res));
-  } else {
-    proc->stack_push(proc->mmobj()->mm_longnum_new(proc, n_res));
-  }
+  proc->stack_push(proc->mmobj()->mm_integer_or_longnum_new(proc, n_res));
   return 0;
 }
 
@@ -780,11 +752,7 @@ static int prim_numeric_neg(Process* proc) {
 
   number n_self = extract_number(proc, self);
   number n_res = - n_self;
-  if (n_res <= MM_INT_MAX and n_res >= MM_INT_MIN) {
-    proc->stack_push((oop) tag_small_int(n_res));
-  } else {
-    proc->stack_push(proc->mmobj()->mm_longnum_new(proc, n_res));
-  }
+  proc->stack_push(proc->mmobj()->mm_integer_or_longnum_new(proc, n_res));
   return 0;
 }
 
@@ -893,6 +861,15 @@ static int prim_list_index(Process* proc) {
   return 0;
 }
 
+static int prim_list_pos(Process* proc) {
+  oop self =  proc->dp();
+  oop val = proc->get_arg(0);
+
+  number idx = proc->mmobj()->mm_list_index_of(proc, self, val);
+  proc->stack_push(tag_small_int(idx));
+  return 0;
+}
+
 static int prim_list_each(Process* proc) {
   oop self =  proc->dp();
   oop fun = proc->get_arg(0);
@@ -934,6 +911,37 @@ static int prim_list_map(Process* proc) {
     }
     DBG("list map[" << i << "] fun returned " << val << endl);
     proc->mmobj()->mm_list_append(proc, ret, val);
+  }
+  proc->stack_push(ret);
+  return 0;
+}
+
+static int prim_list_sum(Process* proc) {
+  oop self =  proc->dp();
+  oop fun = proc->get_arg(0);
+
+  number size = proc->mmobj()->mm_list_size(proc, self);
+  number res = 0;
+  for (int i = 0; i < size; i++) {
+    oop next = proc->mmobj()->mm_list_entry(proc, self, i);
+    res += extract_number(proc, next);
+    DBG("list sum[" << i << "] accumulated " << res << endl);
+  }
+  proc->stack_push(proc->mmobj()->mm_integer_or_longnum_new(proc, res));
+  return 0;
+}
+
+static int prim_list_times(Process* proc) {
+  oop self =  proc->dp();
+  number val = extract_number(proc, proc->get_arg(0));
+
+  number size = proc->mmobj()->mm_list_size(proc, self);
+  oop ret = proc->mmobj()->mm_list_new();
+  for (number i = 0; i < val; i++) {
+    for (number j = 0; j < size; j++) {
+      oop next = proc->mmobj()->mm_list_entry(proc, self, j);
+      proc->mmobj()->mm_list_append(proc, ret, next);
+    }
   }
   proc->stack_push(ret);
   return 0;
@@ -1124,8 +1132,7 @@ static int prim_list_last(Process* proc) {
 
 static int prim_list_from(Process* proc) {
   oop self =  proc->dp();
-  oop idx = proc->get_arg(0);
-  number index = untag_small_int(idx);
+  number index = extract_number(proc, proc->get_arg(0));
 
   number size = proc->mmobj()->mm_list_size(proc, self);
   oop ret = proc->mmobj()->mm_list_new();
@@ -1138,6 +1145,32 @@ static int prim_list_from(Process* proc) {
     for (number i = size + index; i < size; i++) {
       oop next = proc->mmobj()->mm_list_entry(proc, self, i);
       proc->mmobj()->mm_list_append(proc, ret, next);
+    }
+  }
+  proc->stack_push(ret);
+  return 0;
+}
+
+static int prim_list_range(Process* proc) {
+  oop self =  proc->dp();
+  number from = extract_number(proc, proc->get_arg(0));
+  number to = extract_number(proc, proc->get_arg(1));
+
+  number size = proc->mmobj()->mm_list_size(proc, self);
+  oop ret = proc->mmobj()->mm_list_new();
+  if (from < 0) {
+    proc->raise("TypeError", "first parameter has to be positive");
+  } else {  //`from` is positive
+    if (to >= 0) {
+      for (number i = from; i < to and i < size; i++) {
+        oop next = proc->mmobj()->mm_list_entry(proc, self, i);
+        proc->mmobj()->mm_list_append(proc, ret, next);
+      }
+    } else { //`to` is negative
+      for (number i = from; i < size + to and i >= 0; i++) {
+        oop next = proc->mmobj()->mm_list_entry(proc, self, i);
+        proc->mmobj()->mm_list_append(proc, ret, next);
+      }
     }
   }
   proc->stack_push(ret);
@@ -2346,13 +2379,17 @@ void init_primitives(VM* vm) {
   vm->register_primitive("list_append", prim_list_append);
   vm->register_primitive("list_prepend", prim_list_prepend);
   vm->register_primitive("list_index", prim_list_index);
+  vm->register_primitive("list_pos", prim_list_pos);
   vm->register_primitive("list_each", prim_list_each);
   vm->register_primitive("list_map", prim_list_map);
+  vm->register_primitive("list_sum", prim_list_sum);
+  vm->register_primitive("list_times", prim_list_times);
   vm->register_primitive("list_filter", prim_list_filter);
   vm->register_primitive("list_detect", prim_list_detect);
   vm->register_primitive("list_has", prim_list_has);
   vm->register_primitive("list_last", prim_list_last);
   vm->register_primitive("list_from", prim_list_from);
+  vm->register_primitive("list_range", prim_list_range);
   vm->register_primitive("list_to_string", prim_list_to_string);
   vm->register_primitive("list_to_source", prim_list_to_source);
   vm->register_primitive("list_size", prim_list_size);

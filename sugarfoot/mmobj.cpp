@@ -1411,6 +1411,14 @@ void MMObj::mm_exception_set_st(Process* p, oop ex, oop st, bool should_assert) 
   ((oop*)ex)[3] = st;
 }
 
+oop MMObj::mm_integer_or_longnum_new(Process* p, number n, bool should_assert) {
+  if (n <= MM_INT_MAX and n >= MM_INT_MIN) {
+    return tag_small_int(n);
+  } else {
+    return mm_longnum_new(p, n, should_assert);
+  }
+}
+
 oop MMObj::mm_longnum_new(Process* proc, number n, bool should_assert) {
   oop oop_n = mm_new(_core_image->get_prime("LongNum"),
                      mm_object_new(), //assuming LongNum < Object
