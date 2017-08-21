@@ -44,7 +44,7 @@ build: $(BIN)
 debug: CXXFLAGS += -g
 debug: build
 
-release: CXXFLAGS += -DMM_NO_DEBUG -O2
+release: CXXFLAGS += -DMM_NO_DEBUG -O2 -g
 release: build
 
 # Qsc file
@@ -105,8 +105,75 @@ test: core.img $(TEST_DEPS) $(MMC_TESTER) $(MMC_TESTS) $(MEMETALK) mm/qt.mmc
 memeclean:
 	rm -f mm/*.mmc
 	rm -f tests/*.mmc
+	rm -f compiler/*.mmc
 
 cleanall: memeclean clean
 	rm -f core.img
 	rm -f $(PY_PARSER_FILES)
 	rm -f pyparsers/*pyc
+
+#################
+
+reboot_ometa: compiler/ometa.g compiler/ometa_tr.g compiler/ometa_base.mmc compiler/ometa.mmc compiler/ometa_tr.mmc compiler/gen_parser.mmc mm/io.mmc
+	./sf-vm gen_parser ometa
+	./sf-vm gen_parser ometa_tr
+	python -m pycompiler.compiler compiler/ometa.mm
+	python -m pycompiler.compiler compiler/ometa_tr.mm
+
+compiler/gen_parser.mmc: compiler/gen_parser.mm
+	python -m pycompiler.compiler compiler/gen_parser.mm
+
+compiler/meme.mm: compiler/meme.g compiler/ometa.mmc compiler/ometa_tr.mmc compiler/gen_parser.mmc
+	./sf-vm gen_parser meme
+
+compiler/meme_tr.mm: compiler/meme_tr.g compiler/ometa.mmc compiler/ometa_tr.mmc compiler/gen_parser.mmc
+	./sf-vm gen_parser meme_tr
+
+#
+
+compiler/bits.mmc: compiler/bits.mm
+	python -m pycompiler.compiler compiler/bits.mm
+
+compiler/comp_vmemory.mmc: compiler/comp_vmemory.mm
+	python -m pycompiler.compiler compiler/comp_vmemory.mm
+
+compiler/vmemory.mmc: compiler/vmemory.mm
+	python -m pycompiler.compiler compiler/vmemory.mm
+
+compiler/opcode.mmc: compiler/opcode.mm
+	python -m pycompiler.compiler compiler/opcode.mm
+
+compiler/mmc.mmc: compiler/mmc.mm
+	python -m pycompiler.compiler compiler/mmc.mm
+
+compiler/entries.mmc: compiler/entries.mm
+	python -m pycompiler.compiler compiler/entries.mm
+
+compiler/ometa_base.mmc: compiler/ometa_base.mm
+	python -m pycompiler.compiler compiler/ometa_base.mm
+
+compiler/ometa.mmc: compiler/ometa.mm
+	python -m pycompiler.compiler compiler/ometa.mm
+
+compiler/ometa_tr.mmc: compiler/ometa_tr.mm
+	python -m pycompiler.compiler compiler/ometa_tr.mm
+
+compiler/meme.mmc: compiler/meme.mm
+	python -m pycompiler.compiler compiler/meme.mm
+
+compiler/meme_tr.mmc: compiler/meme_tr.mm
+	python -m pycompiler.compiler compiler/meme_tr.mm
+
+mm/io.mmc: mm/io.mm
+	python -m pycompiler.compiler mm/io.mm
+
+mm/remote_repl.mmc: mm/remote_repl.mm
+	python -m pycompiler.compiler mm/remote_repl.mm
+
+compiler/compiler.mmc: compiler/compiler.mm
+	python -m pycompiler.compiler compiler/compiler.mm
+
+
+mcompiler: compiler/bits.mmc compiler/comp_vmemory.mmc compiler/vmemory.mmc compiler/opcode.mmc compiler/mmc.mmc \
+	compiler/entries.mmc compiler/ometa_base.mmc compiler/meme.mmc mm/io.mmc compiler/compiler.mmc mm/remote_repl.mmc \
+	compiler/meme_tr.mmc compiler/ometa.mmc
