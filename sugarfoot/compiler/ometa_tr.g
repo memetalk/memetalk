@@ -40,7 +40,7 @@ instance_method _local_vars: fun() {
 
   inheritance = [:parent string:base] => base;
 
-  rules = [rule+];
+  rules = [rule+:x] => x;
 
   rule = [:rule _:name rule_args:args body:p]
        => (["instance_method ", name, ": fun() {\n"] + this._local_vars() + [args, p, "\n}"]).join("");

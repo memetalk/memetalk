@@ -66,10 +66,12 @@ instance_method inheritance: fun() {
   }]);
 }
 instance_method rules: fun() {
+  var x = null;
   return this._or([fun() {
     this._form(fun() {
-      this._many1(fun() {
+      x = this._many1(fun() {
         this._apply(:rule);});});
+    return x;
   }]);
 }
 instance_method rule: fun() {
