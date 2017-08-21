@@ -64,6 +64,8 @@ public:
 
   void set_debugger_module(oop module) { _debugger_module = module; };
 
+  char* get_argv(int);
+
 private:
   // void dump_prime_info();
   // void dictionary_dump(oop dict);

@@ -2330,6 +2330,22 @@ static int prim_set_debugger_module(Process* proc) {
   return 0;
 }
 
+static int prim_get_argv(Process* proc) {
+  int i = 0;
+  oop ret = proc->mmobj()->mm_list_new();
+  while (true) {
+    char* carg = proc->vm()->get_argv(i++);
+    if (carg) {
+      oop arg = proc->mmobj()->mm_string_new(carg);
+      proc->mmobj()->mm_list_append(proc, ret, arg);
+    } else {
+      break;
+    }
+  }
+  proc->stack_push(ret);
+  return 0;
+}
+
 void init_primitives(VM* vm) {
   vm->register_primitive("io_print", prim_io_print);
   vm->register_primitive("io_read_file", prim_io_read_file);
@@ -2514,6 +2530,8 @@ void init_primitives(VM* vm) {
 
   vm->register_primitive("modules_path", prim_modules_path);
   vm->register_primitive("set_debugger_module", prim_set_debugger_module);
+
+  vm->register_primitive("get_argv", prim_get_argv);
 
   qt_init_primitives(vm);
 }

@@ -839,4 +839,8 @@ end
   instantiate_module: fun(mm_name) {
      <primitive "remote_repl_instantiate_module">
   }
+
+  argv: fun() {
+     <primitive "get_argv">
+  }
 .end

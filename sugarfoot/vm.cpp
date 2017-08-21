@@ -79,7 +79,7 @@ Process* VM::init() {
 
 
 int VM::start() {
-  if (_argc != 2) {
+  if (_argc < 2) {
     bail("usage: sf-vm <file.mmc>");
   }
 
@@ -306,4 +306,12 @@ oop VM::get_compiled_module(Process* proc, std::string name) {
     proc->raise("KeyError", "module not found");
   }
   return _modules[name]->compiled_module();
+}
+
+char* VM::get_argv(int i) {
+  i += 1; //skip sf-vm
+  if (i < _argc) {
+    return _argv[i];
+  }
+  return NULL;
 }
