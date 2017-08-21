@@ -1068,6 +1068,11 @@ static int prim_list_equals(Process* proc) {
   oop self =  proc->dp();
   oop other = proc->get_arg(0);
 
+  if (proc->mmobj()->mm_object_vt(other) != proc->vm()->get_prime("List")) {
+    proc->stack_push(MM_FALSE);
+    return 0;
+  }
+
   number this_size = proc->mmobj()->mm_list_size(proc, self);
   number other_size = proc->mmobj()->mm_list_size(proc, other);
 
