@@ -99,6 +99,42 @@ static int prim_io_write_file(Process* proc) {
   return 0;
 }
 
+static int prim_io_open_file(Process* proc) {
+  oop oop_filepath = proc->get_arg(0);
+  oop oop_direction = proc->get_arg(1);
+
+  char* filepath = proc->mmobj()->mm_string_cstr(proc, oop_filepath);
+
+  std::fstream* file = new std::fstream;
+
+  if (oop_direction == proc->vm()->new_symbol("write")) {
+    file->open(filepath, std::fstream::out | std::fstream::binary);
+    proc->stack_push((oop)file);
+    return 0;
+  } else {
+    proc->raise("Exception", "TODO rest of io_open_file");
+  }
+}
+
+static int prim_io_write(Process* proc) {
+  std::fstream* file = (std::fstream*) proc->get_arg(0);
+  oop oop_text = proc->get_arg(1);
+
+  std::string text = proc->mmobj()->mm_string_stl_str(proc, oop_text);
+  *file << text;
+  proc->stack_push(proc->mp());
+  return 0;
+}
+
+static int prim_io_close(Process* proc) {
+  std::fstream* file = (std::fstream*) proc->get_arg(0);
+  file->close();
+  delete file;
+  proc->stack_push(proc->mp());
+  return 0;
+}
+
+
 static int prim_string_concat(Process* proc) {
   oop self =  proc->dp();
   oop other = proc->get_arg(0);
@@ -2350,6 +2386,10 @@ void init_primitives(VM* vm) {
   vm->register_primitive("io_print", prim_io_print);
   vm->register_primitive("io_read_file", prim_io_read_file);
   vm->register_primitive("io_write_file", prim_io_write_file);
+
+  vm->register_primitive("io_open_file", prim_io_open_file);
+  vm->register_primitive("io_write", prim_io_write);
+  vm->register_primitive("io_close", prim_io_close);
 
   vm->register_primitive("remote_repl_compile_module", prim_remote_repl_compile_module);
   vm->register_primitive("remote_repl_instantiate_module", prim_remote_repl_instantiate_module);
