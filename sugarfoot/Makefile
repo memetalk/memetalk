@@ -52,7 +52,7 @@ qsc.moc.cpp: qsc.hpp
 %.o: %.cpp
 	g++ $(CXXFLAGS) -c -o $@ $<
 
-$(OBJS): qsc.moc.cpp $(CPP_FILES) $(HPP_FILES)
+$(OBJS): qsc.moc.cpp
 
 $(BIN): $(OBJS)
 	g++ $(OBJS) $(LDFLAGS) -o $@
