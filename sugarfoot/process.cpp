@@ -538,7 +538,7 @@ oop Process::super_send(oop recv, oop selector, oop args, int* exc) {
   if (!fun) {
     std::stringstream s;
     s << _mmobj->mm_symbol_cstr(this, selector, true) << " not found in object " << recv;
-    DBG(s << endl);
+    DBG(s.str() << endl);
     *exc = 1;
     oop ex = mm_exception("DoesNotUnderstand", s.str().c_str());
     WARNING() << "raising DoesNotUnderstand: " << s.str() << endl;
@@ -550,7 +550,7 @@ oop Process::super_send(oop recv, oop selector, oop args, int* exc) {
   if (num_args != arity) {
     std::stringstream s;
     s << _mmobj->mm_symbol_cstr(this, selector, true) << ": expects " <<  arity << " but got " << num_args;
-    DBG(s << endl);
+    DBG(s.str() << endl);
     *exc = 1;
     WARNING() << "wrong arity: " << s.str() << endl;
     oop ex = mm_exception("ArityError", s.str().c_str());
@@ -574,7 +574,7 @@ oop Process::do_send(oop recv, oop selector, int num_args, int *exc) {
   if (!fun) {
     std::stringstream s;
     s << _mmobj->mm_symbol_cstr(this, selector, true) << " not found in object " << recv;
-    DBG(s << endl);
+    DBG(s.str() << endl);
     *exc = 1;
     oop ex = mm_exception("DoesNotUnderstand", s.str().c_str());
     WARNING() << "raising DoesNotUnderstand: " << s.str() << endl;
@@ -586,7 +586,7 @@ oop Process::do_send(oop recv, oop selector, int num_args, int *exc) {
   if (num_args != arity) {
     std::stringstream s;
     s << _mmobj->mm_symbol_cstr(this, selector, true) << ": expects " <<  arity << " but got " << num_args;
-    DBG(s << endl);
+    DBG(s.str() << endl);
     *exc = 1;
     WARNING() << "wrong arity: " << s.str() << endl;
     oop ex = mm_exception("ArityError", s.str().c_str());
@@ -659,7 +659,7 @@ oop Process::call(oop fun, oop args, int* exc) {
   if (num_args != arity) {
     std::stringstream s;
     s << _mmobj->mm_string_cstr(this, _mmobj->mm_function_get_name(this, fun)) << ": expects " <<  arity << " but got " << num_args;
-    DBG(s << endl);
+    DBG(s.str() << endl);
     oop ex = mm_exception("ArityError", s.str().c_str());
     WARNING() << "returning ArityError exception object " << ex << endl;
     *exc = 1;
@@ -682,7 +682,7 @@ oop Process::call_1(oop fun, oop arg, int* exc) {
   if (num_args != arity) {
     std::stringstream s;
     s << _mmobj->mm_string_cstr(this, _mmobj->mm_function_get_name(this, fun)) << ": expects " <<  arity << " but got " << num_args;
-    DBG(s << endl);
+    DBG(s.str() << endl);
     oop ex = mm_exception("ArityError", s.str().c_str());
     WARNING() << "returning ArityError exception object " << ex << endl;
     *exc = 1;
@@ -703,7 +703,7 @@ oop Process::call_2(oop fun, oop arg0, oop arg1, int* exc) {
   if (num_args != arity) {
     std::stringstream s;
     s << _mmobj->mm_string_cstr(this, _mmobj->mm_function_get_name(this, fun)) << ": expects " <<  arity << " but got " << num_args;
-    DBG(s << endl);
+    DBG(s.str() << endl);
     oop ex = mm_exception("ArityError", s.str().c_str());
     WARNING() << "returning ArityError exception object " << ex << endl;
     *exc = 1;
@@ -1071,7 +1071,7 @@ void Process::handle_super_send(number num_args) {
   if (num_args != arity) {
     std::stringstream s;
     s << _mmobj->mm_string_cstr(this, _mmobj->mm_function_get_name(this, fun)) << ": expects " <<  arity << " but got " << num_args;
-    DBG(s << endl);
+    DBG(s.str() << endl);
     oop ex = mm_exception("ArityError", s.str().c_str());
     WARNING() << "will raise ArityError: " << s.str() << endl;
     maybe_debug_on_raise(ex);
@@ -1118,7 +1118,7 @@ void Process::handle_send(number num_args) {
   if (!vararg && num_args != arity) {
     std::stringstream s;
     s << _mmobj->mm_string_cstr(this, _mmobj->mm_function_get_name(this, fun)) << ": expects " <<  arity << " but got " << num_args;
-    DBG(s << endl);
+    DBG(s.str() << endl);
     oop ex = mm_exception("ArityError", s.str().c_str());
     WARNING() << "will raise ArityError: " << s.str() << endl;
     maybe_debug_on_raise(ex);
@@ -1146,7 +1146,7 @@ void Process::handle_super_ctor_send(number num_args) {
     DBG("super Lookup failed");
     std::stringstream s;
     s << _mmobj->mm_symbol_cstr(this, selector) << " not found in child object " << instance;
-    DBG(s << endl);
+    DBG(s.str() << endl);
     //we rely on compiler generating a pop instruction to bind ex_oop to the catch var
     oop oo_ex = mm_exception("DoesNotUnderstand", s.str().c_str());
     WARNING() << "will raise DoesNotUnderstand: " << s.str() << endl;
@@ -1165,7 +1165,7 @@ void Process::handle_super_ctor_send(number num_args) {
   if (num_args != arity) {
     std::stringstream s;
     s << "arity and num_args differ: " << num_args << " != " << arity;
-    DBG(s << endl);
+    DBG(s.str() << endl);
     oop oo_ex = mm_exception("ArityError", s.str().c_str());
     WARNING() << "will raise ArityError: " << s.str() << endl;
     maybe_debug_on_raise(oo_ex);
@@ -1188,7 +1188,7 @@ void Process::handle_call(number num_args) {
   if (num_args != arity) {
     std::stringstream s;
     s << _mmobj->mm_string_cstr(this, _mmobj->mm_function_get_name(this, fun)) << ": expects " <<  arity << " but got " << num_args;
-    DBG(s << endl);
+    DBG(s.str() << endl);
     oop oo_ex = mm_exception("ArityError", s.str().c_str());
     WARNING() << "will raise ArityError: " << s.str() << endl;
     maybe_debug_on_raise(oo_ex);
