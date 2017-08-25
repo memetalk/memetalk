@@ -711,6 +711,9 @@ end
     class_method vtFor: fun(obj) {
       <primitive "mirror_vt_for">
     }
+    class_method isSubclass: fun(sub, sup) {
+      <primitive "mirror_is_subclass">
+    }
   end
 
 

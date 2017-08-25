@@ -302,7 +302,8 @@ instance_method _repeat: fun(n, fn) {
 instance_method _form: fun(fn) {
 //very confused about this one
   var r = this._apply(:anything);
-  this._pred([String, List].has(Mirror.vtFor(r))); //enumerable?sequenceable?
+  var klass = Mirror.vtFor(r);
+  this._pred(Mirror.isSubclass(klass, List) or Mirror.isSubclass(klass, List)); //enumerable?sequenceable?
   var input = @input;
   @input = OMetaStream.with_data(r);
   var res = fn(); //ignore the last element in the list.

@@ -1525,6 +1525,19 @@ static int prim_mirror_vt_for(Process* proc) {
   return 0;
 }
 
+static int prim_mirror_is_subclass(Process* proc) {
+  oop sub = proc->get_arg(0);
+  oop sup = proc->get_arg(0);
+
+  if (proc->mmobj()->delegates_to(sub, sup)) {
+    proc->stack_push(MM_TRUE);
+  } else {
+    proc->stack_push(MM_FALSE);
+  }
+  return 0;
+}
+
+
 static int prim_equal(Process* proc) {
   oop self =  proc->rp();
   oop other = proc->get_arg(0);
@@ -2514,6 +2527,7 @@ void init_primitives(VM* vm) {
   vm->register_primitive("mirror_value_for", prim_mirror_value_for);
   vm->register_primitive("mirror_set_value_for", prim_mirror_set_value_for);
   vm->register_primitive("mirror_vt_for", prim_mirror_vt_for);
+  vm->register_primitive("mirror_is_subclass", prim_mirror_is_subclass);
 
 
   vm->register_primitive("compiled_function_new_context", prim_compiled_function_new_context);
