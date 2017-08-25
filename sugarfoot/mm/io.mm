@@ -1,7 +1,7 @@
 .preamble()
 .code
 
-read_file: fun(path) {
+read_file: fun(filepath) {
   <primitive "io_read_file">
 }
 
