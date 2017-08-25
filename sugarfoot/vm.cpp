@@ -100,15 +100,17 @@ int VM::start() {
 
   int exc;
   oop retval = proc->run(imod, new_symbol("main"), &exc);
-  if (!(exc == 0)) {
-    proc->fail(retval);
-  } else {
-    print_retval(proc, retval);
-  }
   if (_profile) {
     proc->report_profile();
   }
-  return * (int*) (void*) &retval;
+  if (!(exc == 0)) {
+    proc->fail(retval);
+    return 1;
+  } else {
+    print_retval(proc, retval);
+    return 0;
+  }
+  //return * (int*) (void*) &retval;
 }
 
 std::pair<Process*, oop> VM::start_debugger(Process* target) {
