@@ -59,11 +59,12 @@ char* read_mmc_file(const std::string& name_or_path, int* file_size) {
 
   if (!file.good()) { //might be the name of the module alone with no extension
     std::string module_name = name_or_path;
-    if (module_name.substr(module_name.find_last_of(".") + 1) != "img" &&  //xxx.img
-        module_name.substr(module_name.find_last_of(".") + 1) != "mmc") {  //xxx.mmc
+    if ((module_name.find_last_of(".") == std::string::npos) ||
+        (module_name.substr(module_name.find_last_of(".") + 1) != "img" &&  //xxx.img
+         module_name.substr(module_name.find_last_of(".") + 1) != "mmc")) {  //xxx.mmc
       module_name = module_name + ".mmc";
     }
-    _log << "trying to find " << name_or_path << " in MEME_PATH" << std::endl;
+    _log << "trying to find " << name_or_path << " / " << module_name << " in MEME_PATH" << std::endl;
     open_file_in_meme_path(module_name, file);
   } else {
     _log << "opened " << name_or_path << " successfully" << std::endl;
@@ -190,4 +191,3 @@ std::string bytecode_to_str(bytecode code) {
   }
   return s.str();
 }
-
