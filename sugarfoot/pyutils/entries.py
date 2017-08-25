@@ -123,7 +123,7 @@ class Object(Entry):
 ## these need to know the CompiledFunction owner (which s Object_CompiledClass)
 
 class Object_ObjectBehavior(Object):
-    def new_ctor(self, name, params):
+    def new_ctor(self, name):
         owner = self.imod.object_by_name('Object_CompiledClass')
         d = [s for s in self.slots if s['type'] == 'dict']
         if len(d) == 0:
@@ -132,7 +132,7 @@ class Object_ObjectBehavior(Object):
         else:
             dslot = d[0]
 
-        fn = CompiledFunction(self.imod.cmod, owner, name, params, ctor=True)
+        fn = CompiledFunction(self.imod.cmod, owner, name, ctor=True)
         dslot['value'][name] = fn
         return fn
 
@@ -203,8 +203,8 @@ class Class(Entry):
     def label(self):
         return class_label(self.cclass.name)
 
-    def new_instance_method(self, name, params):
-        cfun = self.cclass.new_instance_method(name, params)
+    def new_instance_method(self, name):
+        cfun = self.cclass.new_instance_method(name)
         fun = Function(self.imod, cfun)
         self.dictionary[name] = fun
         return fun
@@ -215,8 +215,8 @@ class Class(Entry):
         self.behavior.dictionary[name] = fun
         return fun
 
-    def new_ctor(self, name, params):
-        cfun = self.cclass.new_ctor(name, params)
+    def new_ctor(self, name):
+        cfun = self.cclass.new_ctor(name)
         fun = Function(self.imod, cfun)
         self.behavior.dictionary[name] = fun
         return fun
@@ -254,13 +254,13 @@ class CompiledClass(Entry):
     def label(self):
         return cclass_label(self.name) #cmod.label() + '_' + self.name + "_CompiledClass"
 
-    def new_ctor(self, name, params):
-        fn = CompiledFunction(self.cmod, self, name, params, ctor=True)
+    def new_ctor(self, name):
+        fn = CompiledFunction(self.cmod, self, name, ctor=True)
         self.class_methods[name] = fn
         return fn
 
-    def new_instance_method(self, name, params):
-        fn = CompiledFunction(self.cmod, self, name, params)
+    def new_instance_method(self, name):
+        fn = CompiledFunction(self.cmod, self, name)
         self.instance_methods[name] = fn
         return fn
 

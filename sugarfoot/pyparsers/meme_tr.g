@@ -38,7 +38,7 @@ class_definition :modobj =  ['class' [:name :parent]
                               [class_method(klass)*]]
 
 constructor :klass =  !(self.input.head()[0]):ast
-                        ['ctor' :name params:p !(klass.new_ctor(name, p)):fnobj
+                        ['ctor' :name !(klass.new_ctor(name)):fnobj fparams(fnobj):p !(fnobj.set_params(p))
                              !(fnobj.set_line(ast))
                              :uses_env !(fnobj.uses_env(uses_env))
                              ['body' body(fnobj.body_processor())]]  !(fnobj.set_text(ast.text))
@@ -47,7 +47,7 @@ constructors :klass = ['ctors' [constructor(klass)*]]
                      | ['ctors' []]
 
 instance_method :klass = !(self.input.head()[0]):ast
-                           ['fun' :name params:p !(klass.new_instance_method(name, p)):fnobj
+                           ['fun' :name !(klass.new_instance_method(name)):fnobj fparams(fnobj):p !(fnobj.set_params(p))
                                   !(fnobj.set_line(ast))
                                   :uses_env !(fnobj.uses_env(uses_env))
                                   ['body' body(fnobj.body_processor())]]  !(fnobj.set_text(ast.text))
