@@ -94,6 +94,8 @@ public:
 
   oop unwind_with_exception(oop);
 
+  oop last_retval() { return _last_retval; }
+
   // oop do_call_protected(oop, int*);
   oop call(oop, oop, int*);
   oop call_1(oop, oop, int*);
@@ -221,8 +223,9 @@ private:
   oop _step_bp;
   oop _unwind_to_bp;
   oop _current_exception;
+  oop _last_retval;
+  bool _breaking_on_return;
   bool _online;
-
 //profiling
   long _PUSH_LOCAL;
   long _PUSH_LITERAL;

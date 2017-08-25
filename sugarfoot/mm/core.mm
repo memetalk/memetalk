@@ -768,6 +768,9 @@ end
   instance_method currentException: fun() {
     <primitive "process_current_exception">
   }
+  instance_method lastReturnedValue: fun() {
+    <primitive "process_last_returned_value">
+  }
   instance_method toggle_module_break_mode: fun() {
     <primitive "process_toggle_module_break_mode">
   }

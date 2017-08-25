@@ -334,13 +334,12 @@
 (defun memetalk-process-module-response (res file-part)
   (string-match "\\([a-zA-Z0-9_]+\\)[:/]" file-part)
   (let ((mod-name (concat (match-string-no-properties 1 file-part) ".mm")))
-    (message (format "mattched module '%s', path: %s" mod-name (memetalk-get-module-file-path mod-name)))
+    ;(message (format "matched module '%s', path: %s" mod-name (memetalk-get-module-file-path mod-name)))
     (let ((mod-path (memetalk-get-module-file-path mod-name)))
       (with-current-buffer (find-file mod-path)
-        (message (format "opened file '%s'" mod-path))
+        ;(message (format "opened file '%s'" mod-path))
         (widen) ;this shit keep being opened narrowed, god damn it!
         (change-memetalk-current-buffer (current-buffer))))
-    (message resp)
     (string-match
      "@\\[\\([0-9]+\\), \\([0-9]+\\), \\([0-9]+\\), \\([0-9]+\\)\\]"
      resp)
@@ -350,13 +349,15 @@
           (end-col (string-to-number (match-string-no-properties 4 resp))))
       (with-current-buffer memetalk-current-buffer
         (memetalk-remove-overlays memetalk-current-buffer)
-        (goto-line  (+ 1 start-line))
+        (progn (goto-char (point-min)) (forward-line start-line))
         (forward-char start-col)
         (let ((begin (point)))
-          (goto-line (+ 1 end-line))
+          (progn (goto-char (point-min)) (forward-line end-line))
           (forward-char end-col)
           (let ((x (make-overlay begin (point))))
             (overlay-put x 'face '(:box "yellow"))))))))
+
+
 
 (defun memetalk-process-show-response (resp b64text)
   (with-current-buffer memetalk-current-buffer
@@ -364,17 +365,22 @@
     (set-mark-command nil)
     (insert (base64-decode-string b64text))))
 
+(defun memetalk-process-show-info (resp b64text)
+  (message (format "returned: %s" (base64-decode-string b64text))))
+
 (defun memetalk-process-locals-response (resp b64text)
   (let ((base64-decode-string b64text))
-    (message (base64-decode-string b64text))))
+    (message (format "locals: %s" (base64-decode-string b64text)))))
 
 (defun memetalk-repl-dispatch-response (resp)
-  (message (format "received response '%s'" resp))
+  ;(message (format "received response {%s}" resp))
   (setq commands (cons resp commands))
   (when (equal (string-match "module: \\(.*\\)@" resp) 0)
     (memetalk-process-module-response resp (match-string-no-properties 1 resp)))
   (when (equal (string-match "show: \\(.*\\)" resp) 0)
     (memetalk-process-show-response resp (match-string-no-properties 1 resp)))
+  (when (equal (string-match "top: \\(.*\\)" resp) 0)
+    (memetalk-process-show-info resp (match-string-no-properties 1 resp)))
   (when (equal (string-match "locals: \\(.*\\)" resp) 0)
       (memetalk-process-locals-response resp (match-string-no-properties 1 resp))))
 
@@ -387,10 +393,21 @@
           (setq memetalk-response-content
                 (concat memetalk-response-content content))
           (when (equal (string-match ".*\n" memetalk-response-content) 0)
-            (memetalk-repl-dispatch-response
-             (memetalk-trim-r memetalk-response-content))
-            (setq memetalk-response-content ""))))
+            (setq memetalk-response-content
+                  (memetalk-repl-dispatch-responses
+                   memetalk-response-content)))))
     ((debug error t))))
+
+
+(defun memetalk-repl-dispatch-responses (text)
+  ;(message (format "dispatching responses {%s}" text))
+  (let (res)
+    (dolist (response (split-string (concat text "%") "\n") res)
+      (if (not (string-match "%" response))
+          (memetalk-repl-dispatch-response
+           (memetalk-trim-r response))
+        (setq res (replace-regexp-in-string "%" "" response))))))
+
 
 ;; (remove-hook 'after-change-functions 'memetalk-after-change)
 ;; (add-hook 'after-change-functions 'memetalk-after-change)

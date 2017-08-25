@@ -33,6 +33,12 @@ instance_method send_location: fun(socket, frame) {
   }
 }
 
+instance_method send_top_value: fun(socket) {
+  var retval = @process.lastReturnedValue;
+  io.print("top value: " + retval.toString);
+  socket.write_line("top: " + retval.toString.b64encode);
+}
+
 instance_method send_locals: fun(socket, frame) {
   var variables = frame.cp.compiledFunction.env_table;
   var locals = "";
@@ -48,13 +54,16 @@ instance_method get_frame: fun(idx) {
   return @process.frames()[idx];
 }
 
-instance_method process_paused: fun() { //this is called from the vm
+instance_method process_paused: fun(is_returning_value) { //this is called from the vm
   @current_frame_idx = 0;
   if (@started == false) {
     @started = true;
     @server.listen(4200);
   } else {
     this.send_location(@socket, this.get_frame(@current_frame_idx));
+    if (is_returning_value) {
+      this.send_top_value(@socket);
+    }
     io.print("process paused: nothing");
   }
   return :wait;

@@ -98,7 +98,9 @@ Process::Process(VM* vm, int debugger_id, bool online)
   _unwinding_exception = false;
   _step_bp = MM_NULL;
   _current_exception = MM_NULL;
+  _last_retval = MM_NULL;
   _break_only_on_this_module = MM_NULL;
+  _breaking_on_return = false;
 }
 
 std::string Process::dump_stack_trace(bool enabled) {
@@ -322,6 +324,7 @@ void Process::pop_frame() {
 void Process::unload_fun_and_return(oop retval) {
   pop_frame();
   stack_push(retval);
+  _last_retval = retval;
 }
 
 void Process::clear_exception_state(bool halt) {
@@ -877,6 +880,7 @@ void Process::maybe_break_on_return() {
       (_break_only_on_this_module == MM_NULL || _break_only_on_this_module == _mp)) {
     bytecode* last = _ip + _mmobj->mm_function_get_code_size(this, _cp, true);
     _volatile_breakpoints.push_back(bytecode_range_t(_ip,last));
+    _breaking_on_return = true;
   }
   // DBG("maybe_tick_return: " << _step_fp << " " << _fp << endl);
 }
@@ -945,8 +949,15 @@ void Process::tick() {
     _state = HALT_STATE;
 
     int exc;
-    oop retval = _dbg_handler.first->send_0(_dbg_handler.second,
-                                            _vm->new_symbol("process_paused"), &exc);
+    oop retval;
+    if (_breaking_on_return) {
+      retval = _dbg_handler.first->send_1(_dbg_handler.second,
+                                          _vm->new_symbol("process_paused"), MM_TRUE, &exc);
+    } else {
+      retval = _dbg_handler.first->send_1(_dbg_handler.second,
+                                          _vm->new_symbol("process_paused"), MM_FALSE, &exc);
+    }
+    _breaking_on_return = false;
     check_and_print_exception(_dbg_handler.first, exc, retval);
 
     if (exc != 0) {

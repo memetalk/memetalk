@@ -2390,6 +2390,14 @@ static int prim_process_current_exception(Process* proc) {
   return 0;
 }
 
+static int prim_process_last_returned_value(Process* proc) {
+  oop oop_target_proc = proc->rp();
+
+  Process* target_proc = proc->mmobj()->mm_process_get_proc(proc, oop_target_proc);
+  proc->stack_push(target_proc->last_retval());
+  return 0;
+}
+
 static int prim_process_run_until(Process* proc) {
   oop oop_target_proc = proc->rp();
   oop cfun = proc->get_arg(0);
@@ -2702,6 +2710,7 @@ void init_primitives(VM* vm) {
   vm->register_primitive("process_break_at_addr", prim_process_break_at_addr);
   vm->register_primitive("process_rewind_and_continue", prim_process_rewind_and_continue);
   vm->register_primitive("process_current_exception", prim_process_current_exception);
+  vm->register_primitive("process_last_returned_value", prim_process_last_returned_value);
   vm->register_primitive("process_run_until", prim_process_run_until);
   vm->register_primitive("process_add_breakpoint", prim_process_add_breakpoint);
   vm->register_primitive("process_toggle_module_break_mode", prim_process_toggle_module_break_mode);

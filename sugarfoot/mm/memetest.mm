@@ -94,7 +94,7 @@ instance_method start: fun() {
   });
 }
 
-instance_method process_paused: fun() {
+instance_method process_paused: fun(_) {
   var name = @current_file + "[step " + @test_idx.toString + "]";
   var idx = @test_idx;
   @test_idx = @test_idx + 1;
