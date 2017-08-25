@@ -43,8 +43,9 @@ init new: fun(input) {
                   => [:string_object, cs.join("")]
                 ;
 
+  alpha =  '+' | '*' | '-' | '/' | '=' | '<' | '>' | '?' | '!' | '&' | '|';
 
-  asymbol = ":" identifier:s => [:symbol, s];
+  asymbol = ":" {letter|alpha}:l {letter|digit|'_'|alpha}*:s => [:symbol, l + s.join("")];
 
   s_expr = "[" choice:s "]" => [:form, s];
 

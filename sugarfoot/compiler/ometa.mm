@@ -129,12 +129,52 @@ instance_method string_object: fun() {
     return [:string_object, cs.join("")];
   }]);
 }
+instance_method alpha: fun() {
+  return this._or([fun() {
+    this._apply_with_args(:seq, ["+"]);
+  }, fun() {
+    this._apply_with_args(:seq, ["*"]);
+  }, fun() {
+    this._apply_with_args(:seq, ["-"]);
+  }, fun() {
+    this._apply_with_args(:seq, ["/"]);
+  }, fun() {
+    this._apply_with_args(:seq, ["="]);
+  }, fun() {
+    this._apply_with_args(:seq, ["<"]);
+  }, fun() {
+    this._apply_with_args(:seq, [">"]);
+  }, fun() {
+    this._apply_with_args(:seq, ["?"]);
+  }, fun() {
+    this._apply_with_args(:seq, ["!"]);
+  }, fun() {
+    this._apply_with_args(:seq, ["&"]);
+  }, fun() {
+    this._apply_with_args(:seq, ["|"]);
+  }]);
+}
 instance_method asymbol: fun() {
+  var l = null;
   var s = null;
   return this._or([fun() {
     this._apply_with_args(:token, [":"]);
-    s = this._apply(:identifier);
-    return [:symbol, s];
+    l = this._or([fun() {
+      this._apply(:letter);
+    }, fun() {
+      this._apply(:alpha);
+    }]);
+    s = this._many(fun() {
+      this._or([fun() {
+        this._apply(:letter);
+      }, fun() {
+        this._apply(:digit);
+      }, fun() {
+        this._apply_with_args(:seq, ["_"]);
+      }, fun() {
+        this._apply(:alpha);
+      }]);}, null);
+    return [:symbol, l + s.join("")];
   }]);
 }
 instance_method s_expr: fun() {
