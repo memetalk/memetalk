@@ -286,6 +286,9 @@
   instance_method each: fun(fn) {
     <primitive "string_each">
   }
+  instance_method map: fun(fn) {
+    <primitive "string_map">
+  }
   instance_method index: fun(arg) {
     <primitive "string_index">
   }

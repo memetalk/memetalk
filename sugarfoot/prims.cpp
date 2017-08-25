@@ -463,6 +463,33 @@ static int prim_string_each(Process* proc) {
   return 0;
 }
 
+static int prim_string_map(Process* proc) {
+  oop self =  proc->dp();
+  oop fun = proc->get_arg(0);
+
+  // DBG("prim_list_each: closure is: " << fun << endl);
+  std::string str = proc->mmobj()->mm_string_stl_str(proc, self);
+
+  oop ret = proc->mmobj()->mm_list_new();
+  for (int i = 0; i < str.size(); i++) {
+    std::stringstream s;
+    s << str[i];
+    oop next = proc->mmobj()->mm_string_new(s.str());
+    DBG("string map[" << i << "] = " << next << endl);
+    int exc;
+    oop val = proc->call_1(fun, next, &exc);
+    if (exc != 0) {
+      DBG("prim_string_map raised" << endl);
+      proc->stack_push(val);
+      return PRIM_RAISED;
+    }
+    DBG("string map[" << i << "] fun returned " << val << endl);
+    proc->mmobj()->mm_list_append(proc, ret, val);
+  }
+  proc->stack_push(ret);
+  return 0;
+}
+
 static int prim_string_b64decode(Process* proc) {
   oop self =  proc->dp();
   std::string str = proc->mmobj()->mm_string_stl_str(proc, self);
@@ -2367,6 +2394,7 @@ void init_primitives(VM* vm) {
   vm->register_primitive("string_to_symbol", prim_string_to_symbol);
   vm->register_primitive("string_trim", prim_string_trim);
   vm->register_primitive("string_each", prim_string_each);
+  vm->register_primitive("string_map", prim_string_map);
   vm->register_primitive("string_escape", prim_string_escape);
 
 
