@@ -122,6 +122,7 @@ instance_method expr: fun() {
   }, fun() {
     this._form(fun() {
       this._apply_with_args(:exactly, [:and]);});
+    return "";
   }, fun() {
     this._form(fun() {
       this._apply_with_args(:exactly, [:or]);

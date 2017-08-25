@@ -57,7 +57,7 @@ instance_method _local_vars: fun() {
         => [@indent,"return this._or([", p.map(fun(x) { ["fun() {\n", x, "\n", @indent, "}"].join("") }).join(", "), "]);"].join("");
 
   expr = [:and expr+:p] => p.join("\n")
-       | [:and]
+       | [:and] => ""
        | [:or
            !{this.incr_indent()}
              expr+:p
