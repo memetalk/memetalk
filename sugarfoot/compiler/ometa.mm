@@ -351,6 +351,11 @@ instance_method term: fun() {
   var e = null;
   return this._or([fun() {
     this._apply_with_args(:token, ["~"]);
+    this._apply_with_args(:token, ["~"]);
+    e = this._apply(:element);
+    return [:not, [:not, e]];
+  }, fun() {
+    this._apply_with_args(:token, ["~"]);
     e = this._apply(:element);
     return [:not, e];
   }, fun() {

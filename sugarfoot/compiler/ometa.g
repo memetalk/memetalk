@@ -100,9 +100,10 @@ init new: fun(input) {
                       | term
                       ;
 
-  term  = "~"  element:e => [:not, e]
-        |  "&"  element:e => [:lookahead, e]
-        |  element
+  term  = "~"  "~" element:e => [:not, [:not, e]]
+        | "~"      element:e => [:not, e]
+        | "&"      element:e => [:lookahead, e]
+        | element
         ;
 
   binding = ":" identifier
