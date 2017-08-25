@@ -33,12 +33,12 @@ end
 
 class OMetaStream
 fields: memo, idx, hd, tl, data;
-init with_data: fun(data) {
-  @memo = {};
-  @idx = 0;
+init new: fun(memo, idx, data, hd, tl) {
+  @memo = memo;
+  @idx = idx;
   @data = data;
-  @hd = null;
-  @tl = null;
+  @hd = hd;
+  @tl = tl;
 }
 init with_head_and_tail: fun(hd, tl) {
   @memo = {};
@@ -94,6 +94,13 @@ instance_method memo: fun() {
 
 instance_method toString: fun() {
   return  "{" + @data.from(@idx).toString + " pos: " + @idx.toString + "}";
+}
+class_method with_data: fun(data) {
+  if (data.size == 0) {
+    return OMetaStreamEnd.from_idx_and_data(0, data);
+  } else {
+    return OMetaStream.new({}, 0, data, null, null);
+  }
 }
 end
 
