@@ -88,7 +88,7 @@ body :fnobj = [(expr(fnobj)*) ['end-body']]:ast -> fnobj.emit_return_this(ast)
 
 exprs :fnobj = [expr(fnobj)*]
 
-expr_elif :fnobj :lb = ['elif' expr(fnobj) !(fnobj.emit_jz()):label [expr(fnobj)* !(fnobj.emit_jmp(lb=lb))]] !(label.as_current())
+expr_elif :fnobj = ['elif' expr(fnobj) !(fnobj.emit_jz()):lb_next [expr(fnobj)* !(fnobj.emit_jmp()):lb_jmp]] !(lb_next.as_current()) -> lb_jmp
 
 stm :fnobj :ast = 'var-def' :id expr(fnobj) ->  fnobj.emit_var_decl(ast, id)
                | 'return' expr(fnobj)       ->  fnobj.emit_return_top(ast)
@@ -121,7 +121,7 @@ stm :fnobj :ast = 'var-def' :id expr(fnobj) ->  fnobj.emit_var_decl(ast, id)
                | '>=' :e expr(fnobj) apply('expr' fnobj e) -> fnobj.emit_binary(ast, '>=')
                | '==' :e expr(fnobj) apply('expr' fnobj e) -> fnobj.emit_binary(ast, '==')
                | '!=' :e expr(fnobj) apply('expr' fnobj e) -> fnobj.emit_binary(ast, '!=')
-               | 'if' expr(fnobj) !(fnobj.emit_jz()):label [expr(fnobj)* !(fnobj.emit_jmp()):lb2] !(label.as_current()) [expr_elif(fnobj lb2)*] [expr(fnobj)*] !(lb2.as_current())
+               | 'if' expr(fnobj) !(fnobj.emit_jz()):lb_next [expr(fnobj)* !(fnobj.emit_jmp()):lb_end] !(lb_next.as_current()) [expr_elif(fnobj)*:lbs_end] [expr(fnobj)*] !(lb_end.as_current()) !(map(lambda x: x.as_current(), lbs_end))
                | 'while' !(fnobj.current_label(False)):lbcond
                    expr(fnobj)
                    !(fnobj.emit_jz()):lbend [expr(fnobj)*] !(fnobj.emit_jmp_back(lbcond.as_current())) -> lbend.as_current()
