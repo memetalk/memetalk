@@ -802,12 +802,16 @@ static int prim_numeric_to_string(Process* proc) {
 static int prim_numeric_as_char(Process* proc) {
   oop self =  proc->rp();
 
-  number n_self = extract_number(proc, self);
-  std::string s = "";
-  s += (char) n_self;
-  oop oop_str = proc->mmobj()->mm_string_new(s);
-  proc->stack_push(oop_str);
-  return 0;
+  unsigned long n_self = extract_number(proc, self);
+  if (n_self >= 0 and n_self < 256) {
+    std::string s = "";
+    s += (char) n_self;
+    oop oop_str = proc->mmobj()->mm_string_new(s);
+    proc->stack_push(oop_str);
+    return 0;
+  } else {
+    proc->raise("Exception", "unsupported value for asChar  ");
+  }
 }
 
 
