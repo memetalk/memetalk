@@ -128,8 +128,7 @@ static int prim_string_to_byte(Process* proc) {
   if (str.length() != 1) {
     proc->raise("TypeError", "Expecting string of length 1");
   }
-  number s = str[0];
-  proc->stack_push(tag_small_int(s));
+  proc->stack_push(tag_small_int((unsigned char)str[0]));
   return 0;
 }
 
