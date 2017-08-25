@@ -1422,7 +1422,7 @@ oop MMObj::mm_longnum_new(Process* proc, number n, bool should_assert) {
 number MMObj::mm_longnum_get(Process* p, oop n, bool should_assert) {
   TYPE_CHECK(!( *(oop*) n == _core_image->get_prime("LongNum")),
              "TypeError","Expected LongNum")
-    return (number) ((oop*)n)[2];
+  return (number) ((oop*)n)[2];
 }
 
 oop MMObj::mm_float_new(Process* p, float n, bool should_assert) {
