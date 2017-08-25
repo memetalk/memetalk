@@ -141,6 +141,9 @@ instance_method set_error: fun(rule, input) {
 instance_method input: fun() {
   return @input;
 }
+instance_method set_input: fun(input) {
+  @input = input;
+}
 
 instance_method get_error: fun() {
   return [@error_pos, @error_rules];
