@@ -2382,6 +2382,15 @@ static int prim_get_argv(Process* proc) {
   return 0;
 }
 
+static int prim_basename(Process* proc) {
+  oop filepath = proc->get_arg(0);
+  fs::path p(proc->mmobj()->mm_string_stl_str(proc, filepath));
+
+  oop basename = proc->mmobj()->mm_string_new(p.stem().string());
+  proc->stack_push(basename);
+  return 0;
+}
+
 void init_primitives(VM* vm) {
   vm->register_primitive("io_print", prim_io_print);
   vm->register_primitive("io_read_file", prim_io_read_file);
@@ -2572,6 +2581,7 @@ void init_primitives(VM* vm) {
   vm->register_primitive("set_debugger_module", prim_set_debugger_module);
 
   vm->register_primitive("get_argv", prim_get_argv);
+  vm->register_primitive("basename", prim_basename);
 
   qt_init_primitives(vm);
 }

@@ -843,4 +843,8 @@ end
   argv: fun() {
      <primitive "get_argv">
   }
+
+  basename: fun(filepath) {
+     <primitive "basename">
+  }
 .end
