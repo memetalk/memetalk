@@ -4,12 +4,48 @@
   [OMetaBase] <= ometa_base;
 .code
 
+//extending List for AST node information
+class List < List
+fields: start_line, end_line, start_col, end_col, text;
+instance_method start_line: fun() {
+  if (@start_line == null) {
+    @start_line = -2;
+  }
+  return @start_line;
+}
+instance_method end_line: fun() {
+  if (@end_line == null) {
+    @end_line = -2;
+  }
+  return @end_line;
+}
+instance_method start_col: fun() {
+  if (@start_col == null) {
+    @start_col = -2;
+  }
+  return @start_col;
+}
+instance_method end_col: fun() {
+  if (@end_col == null) {
+    @end_col = -2;
+  }
+  return @end_col;
+}
+instance_method text: fun() {
+  if (@text == null) {
+    @text = "";
+  }
+  return @text;
+}
+end
+
 class MemeScriptParser < OMetaBase
 fields: has_fun_literal;
 init new: fun(input) {
   super.new(input);
   @has_fun_literal = false;
 }
+
 instance_method last_or_empty: fun(lst) {
   if (lst.size > 0) {
     return lst.last;
