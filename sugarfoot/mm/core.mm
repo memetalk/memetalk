@@ -271,6 +271,9 @@
   instance_method +: fun(other) {
     <primitive "string_concat">
   }
+  instance_method times: fun(s) {
+    <primitive "string_times">
+  }
   instance_method count: fun(other) {
     <primitive "string_count">
   }
@@ -367,6 +370,9 @@
   instance_method values: fun() {
     <primitive "dictionary_values">
   }
+  instance_method each: fun(fn) {
+    <primitive "dictionary_each">
+  }
   instance_method size: fun() {
     <primitive "dictionary_size">
   }
@@ -409,6 +415,12 @@
   }
   instance_method detect: fun(fn) {
     <primitive "list_detect">
+  }
+  instance_method reduce: fun(initial, fn) {
+    <primitive "list_reduce">
+  }
+  instance_method unique: fun() {
+    <primitive "list_unique">
   }
   instance_method has: fun(value) {
     <primitive "list_has">

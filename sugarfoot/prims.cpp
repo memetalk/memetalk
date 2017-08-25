@@ -148,6 +148,20 @@ static int prim_string_concat(Process* proc) {
   return 0;
 }
 
+static int prim_string_times(Process* proc) {
+  oop self =  proc->dp();
+  number num = untag_small_int(proc->get_arg(0));
+
+  std::string str = proc->mmobj()->mm_string_stl_str(proc, self);
+  std::string ret;
+  for (int i = 0; i < num; i++) {
+    ret += str;
+  }
+  oop oop_str = proc->mmobj()->mm_string_new(ret);
+  proc->stack_push(oop_str);
+  return 0;
+}
+
 static int prim_string_to_integer(Process* proc) {
   oop self =  proc->dp();
 
@@ -959,13 +973,33 @@ static int prim_list_sum(Process* proc) {
   oop fun = proc->get_arg(0);
 
   number size = proc->mmobj()->mm_list_size(proc, self);
-  number res = 0;
-  for (int i = 0; i < size; i++) {
-    oop next = proc->mmobj()->mm_list_entry(proc, self, i);
-    res += extract_number(proc, next);
-    DBG("list sum[" << i << "] accumulated " << res << endl);
+  if (size == 0) {
+    proc->stack_push(MM_NULL);
+    return 0;
   }
-  proc->stack_push(proc->mmobj()->mm_integer_or_longnum_new(proc, res));
+
+  oop first = proc->mmobj()->mm_list_entry(proc, self, 0);
+  if (is_numeric(proc, first)) {
+    number ret = extract_number(proc, first);
+    for (int i = 1; i < size; i++) {
+      oop next = proc->mmobj()->mm_list_entry(proc, self, i);
+      ret += extract_number(proc, next);
+    }
+    proc->stack_push(proc->mmobj()->mm_integer_or_longnum_new(proc, ret));
+  } else {
+    oop ret = first;
+    for (int i = 1; i < size; i++) {
+      oop next = proc->mmobj()->mm_list_entry(proc, self, i);
+      int exc;
+      oop val = proc->send_1(ret, proc->vm()->new_symbol("+"), next, &exc);
+      if (exc != 0) {
+        proc->stack_push(val);
+        return PRIM_RAISED;
+      }
+      ret = val;
+    }
+    proc->stack_push(ret);
+  }
   return 0;
 }
 
@@ -1035,7 +1069,55 @@ static int prim_list_detect(Process* proc) {
   return 0;
 }
 
+static int prim_list_reduce(Process* proc) {
+  oop self =  proc->dp();
+  oop acc = proc->get_arg(0);
+  oop fun = proc->get_arg(1);
 
+  number size = proc->mmobj()->mm_list_size(proc, self);
+  for (int i = 0; i < size; i++) {
+    oop next = proc->mmobj()->mm_list_entry(proc, self, i);
+    DBG("reduce[" << i << "] = " << next << endl);
+    int exc;
+    acc = proc->call_2(fun, acc, next, &exc);
+    if (exc != 0) {
+      DBG("raised" << endl);
+      proc->stack_push(acc);
+      return PRIM_RAISED;
+    }
+    DBG("reduce[" << i << "] fun returned " << acc << endl);
+  }
+  proc->stack_push(acc);
+  return 0;
+}
+
+static int prim_list_unique(Process* proc) {
+  oop self =  proc->dp();
+
+  number size = proc->mmobj()->mm_list_size(proc, self);
+  oop ret = proc->mmobj()->mm_list_new();
+  for (number i = 0; i < proc->mmobj()->mm_list_size(proc, self); i++) {
+    oop entry = proc->mmobj()->mm_list_entry(proc, self, i);
+
+    if (proc->mmobj()->mm_list_index_of(proc, ret, entry) != -1) {
+      continue;
+    } else {
+      int exc;
+      oop res = proc->send_1(ret, proc->vm()->new_symbol("has"), entry, &exc);
+      if (exc != 0) {
+        proc->stack_push(res);
+        return exc;
+      }
+      if (res == MM_TRUE) {
+        continue;
+      }
+    }
+    proc->mmobj()->mm_list_append(proc, ret, entry);
+  }
+
+  proc->stack_push(ret);
+  return 0;
+}
 
 static int prim_list_size(Process* proc) {
   oop self =  proc->dp();
@@ -1084,20 +1166,51 @@ static int prim_list_plus(Process* proc) {
   oop other = proc->get_arg(0);
 
   number this_size = proc->mmobj()->mm_list_size(proc, self);
-  number other_size = proc->mmobj()->mm_list_size(proc, other);
-
   oop res = proc->mmobj()->mm_list_new();
-  std::stringstream s;
-  for (int i = 0; i < this_size; i++) {
-    oop next = proc->mmobj()->mm_list_entry(proc, self, i);
-    proc->mmobj()->mm_list_append(proc, res, next);
+  if (proc->mmobj()->mm_is_list(other)) { //fast concatenation
+    number other_size = proc->mmobj()->mm_list_size(proc, other);
+
+
+    std::stringstream s;
+    for (int i = 0; i < this_size; i++) {
+      oop next = proc->mmobj()->mm_list_entry(proc, self, i);
+      proc->mmobj()->mm_list_append(proc, res, next);
+    }
+
+    for (int i = 0; i < other_size; i++) {
+      oop next = proc->mmobj()->mm_list_entry(proc, other, i);
+      proc->mmobj()->mm_list_append(proc, res, next);
+    }
+    proc->stack_push(res);
+    return 0;
+  } else { //slower concatenation
+
+    int exc;
+    oop maybe_other_size = proc->send_0(other, proc->vm()->new_symbol("size"), &exc);
+    if (exc != 0) {
+      proc->stack_push(maybe_other_size);
+      return PRIM_RAISED;
+    }
+
+    number other_size = extract_number(proc, maybe_other_size);
+
+    std::stringstream s;
+    for (int i = 0; i < this_size; i++) {
+      oop next = proc->mmobj()->mm_list_entry(proc, self, i);
+      proc->mmobj()->mm_list_append(proc, res, next);
+    }
+
+    for (int i = 0; i < other_size; i++) {
+      oop next = proc->send_1(other, proc->vm()->new_symbol("index"), tag_small_int(i), &exc);
+      if (exc != 0) {
+        proc->stack_push(res);
+        return PRIM_RAISED;
+      }
+      proc->mmobj()->mm_list_append(proc, res, next);
+    }
+    proc->stack_push(res);
+    return 0;
   }
-  for (int i = 0; i < other_size; i++) {
-    oop next = proc->mmobj()->mm_list_entry(proc, other, i);
-    proc->mmobj()->mm_list_append(proc, res, next);
-  }
-  proc->stack_push(res);
-  return 0;
 }
 
 static int prim_list_equals(Process* proc) {
@@ -1395,6 +1508,26 @@ static int prim_dictionary_keys(Process* proc) {
 static int prim_dictionary_values(Process* proc) {
   oop self =  proc->dp();
   proc->stack_push(proc->mmobj()->mm_dictionary_values(proc, self));
+  return 0;
+}
+
+static int prim_dictionary_each(Process* proc) {
+  oop self =  proc->dp();
+  oop fun = proc->get_arg(0);
+
+
+  boost::unordered_map<oop, oop>::iterator it = proc->mmobj()->mm_dictionary_begin(proc, self);
+  boost::unordered_map<oop, oop>::iterator end = proc->mmobj()->mm_dictionary_end(proc, self);
+  for ( ; it != end; it++) {
+    int exc;
+    oop val = proc->call_2(fun, it->first, it->second, &exc);
+    if (exc != 0) {
+      DBG("prim_dictionary_each raised" << endl);
+      proc->stack_push(val);
+      return PRIM_RAISED;
+    }
+  }
+  proc->stack_push(proc->rp());
   return 0;
 }
 
@@ -2471,6 +2604,8 @@ void init_primitives(VM* vm) {
   vm->register_primitive("list_times", prim_list_times);
   vm->register_primitive("list_filter", prim_list_filter);
   vm->register_primitive("list_detect", prim_list_detect);
+  vm->register_primitive("list_reduce", prim_list_reduce);
+  vm->register_primitive("list_unique", prim_list_unique);
   vm->register_primitive("list_has", prim_list_has);
   vm->register_primitive("list_last", prim_list_last);
   vm->register_primitive("list_from", prim_list_from);
@@ -2491,6 +2626,7 @@ void init_primitives(VM* vm) {
   vm->register_primitive("dictionary_has", prim_dictionary_has);
   vm->register_primitive("dictionary_keys", prim_dictionary_keys);
   vm->register_primitive("dictionary_values", prim_dictionary_values);
+  vm->register_primitive("dictionary_each", prim_dictionary_each);
   vm->register_primitive("dictionary_size", prim_dictionary_size);
   vm->register_primitive("dictionary_to_string", prim_dictionary_to_string);
   vm->register_primitive("dictionary_to_source", prim_dictionary_to_source);
@@ -2498,6 +2634,7 @@ void init_primitives(VM* vm) {
   vm->register_primitive("string_to_integer", prim_string_to_integer);
   vm->register_primitive("string_to_byte", prim_string_to_byte);
   vm->register_primitive("string_concat", prim_string_concat);
+  vm->register_primitive("string_times", prim_string_times);
   vm->register_primitive("string_equal", prim_string_equal);
   vm->register_primitive("string_count", prim_string_count);
   vm->register_primitive("string_size", prim_string_size);
