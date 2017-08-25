@@ -977,11 +977,41 @@ class CompiledFunction(Entry):
 
     @emitter
     def emit_push_list(self, _, length):
+        # idx_length = self.create_and_register_number_literal(length)
+        # idx_selector = self.create_and_register_symbol_literal("new")
+        # idx_append = self.create_and_register_symbol_literal("prepend")
+        # idx_klass = self.create_and_register_symbol_literal("List")
+        # self.bytecodes.append("push_module", 0)
+        # self.bytecodes.append('push_literal', idx_klass)
+        # self.bytecodes.append('send', 0)
+
+        # self.bytecodes.append('push_literal', idx_selector)
+        # self.bytecodes.append('send', 0)
+
+        # for i in range(0, length):
+        #     self.bytecodes.append('push_literal', idx_append)
+        #     self.bytecodes.append('send', 1)
+
+        ####
+
+        # #idx_length = self.create_and_register_number_literal(length)
+        # idx_klass = self.create_and_register_core("List")
+        # idx_new_from_stack = self.create_and_register_symbol_literal("new_from_stack")
+
+        # self.bytecodes.append('push_literal', idx_klass) # unusually reusing literal_frame to store core object references
+        # self.bytecodes.append('push_literal', idx_new_from_stack)
+        # self.bytecodes.append('send', length)
+
+        ###
+
         #idx_length = self.create_and_register_number_literal(length)
-        idx_klass = self.create_and_register_core("List")
+        idx_klass = self.create_and_register_symbol_literal("List")
         idx_new_from_stack = self.create_and_register_symbol_literal("new_from_stack")
 
-        self.bytecodes.append('push_literal', idx_klass) # unusually reusing literal_frame to store core object references
+        self.bytecodes.append("push_module", 0)
+        self.bytecodes.append('push_literal', idx_klass)
+        self.bytecodes.append('send', 0)
+
         self.bytecodes.append('push_literal', idx_new_from_stack)
         self.bytecodes.append('send', length)
 

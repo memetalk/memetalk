@@ -64,6 +64,8 @@ public:
   bool mm_boolean_cbool(Process*, oop val, bool should_assert = false);
 
   oop mm_list_new();
+  void mm_list_init(oop obj);
+
   number mm_list_size(Process*, oop list, bool should_assert = false);
   number mm_list_index_of(Process*, oop list, oop elem, bool should_assert = false);
   oop mm_list_entry(Process*, oop list, number idx, bool should_assert = false);

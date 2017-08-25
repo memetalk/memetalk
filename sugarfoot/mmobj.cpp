@@ -206,9 +206,13 @@ oop MMObj::mm_list_new() {
 
   ((word**) obj)[0] = _core_image->get_prime("List");
   ((word**) obj)[1] = mm_object_new();
+  mm_list_init(obj);
+  return obj;
+}
+
+void MMObj::mm_list_init(oop obj) {
   ((word*)  obj)[2] = -1;
   ((std::vector<oop>**) obj)[3] = new std::vector<oop>;
-  return obj;
 }
 
 number MMObj::mm_list_size(Process* p, oop list, bool should_assert) {

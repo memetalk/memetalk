@@ -66,7 +66,8 @@ oop MMCImage::instantiate_class(oop class_name, oop cclass, oop cclass_dict, std
   if (mod_classes.find(super_name_str) != mod_classes.end()) {
     DBG("Super class already instantiated" << endl);
     super_class = mod_classes.at(super_name_str);
-  } else if (_mmobj->mm_dictionary_has_key(_proc, cclass_dict, _proc->vm()->new_symbol(super_name_str))) {
+  } else if (_mmobj->mm_dictionary_has_key(_proc, cclass_dict, _proc->vm()->new_symbol(super_name_str)) &&
+             strcmp(cname, super_name_str) != 0) { //avoid loop when Foo < Foo
     DBG("Super class not instantiated. recursively instantiate it" << endl);
     super_class = instantiate_class(super_name, _mmobj->mm_dictionary_get(_proc, cclass_dict, _proc->vm()->new_symbol(super_name_str)), cclass_dict, mod_classes, imodule);
   } else if(_mmobj->mm_dictionary_has_key(_proc, cmod_aliases_dict, _proc->vm()->new_symbol(super_name_str))) {

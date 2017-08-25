@@ -843,15 +843,17 @@ static int prim_exception_throw(Process* proc) {
 }
 
 static int prim_list_new(Process* proc) {
-  oop self = proc->mmobj()->mm_list_new();
-
+  //oop self = proc->mmobj()->mm_list_new();
+  oop self =  proc->dp();
+  proc->mmobj()->mm_list_init(self);
   DBG(self << endl);
-  proc->stack_push(self);
+  proc->stack_push(proc->rp());
   return 0;
 }
 
 static int prim_list_new_from_stack(Process* proc) {
-  oop self = proc->mmobj()->mm_list_new();
+  oop self =  proc->dp();
+  // oop self = proc->mmobj()->mm_list_new();
   // number length = proc->mmobj(length_oo);
 
   DBG("appending " << proc->current_args_number() << " values" << endl);
@@ -862,7 +864,7 @@ static int prim_list_new_from_stack(Process* proc) {
   }
 
   // DBG("done new_from_stack" << endl);
-  proc->stack_push(self);
+  proc->stack_push(proc->rp());
   return 0;
 }
 
@@ -872,7 +874,7 @@ static int prim_list_append(Process* proc) {
 
   proc->mmobj()->mm_list_append(proc, self, element);
 
-  proc->stack_push(self);
+  proc->stack_push(proc->rp());
   return 0;
 }
 
@@ -882,7 +884,7 @@ static int prim_list_prepend(Process* proc) {
 
   // DBG("LIST: prepend " << element << endl);
   proc->mmobj()->mm_list_prepend(proc, self, element);
-  proc->stack_push(self);
+  proc->stack_push(proc->rp());
   return 0;
 }
 
@@ -925,7 +927,7 @@ static int prim_list_each(Process* proc) {
     }
     DBG("list each[" << i << "] fun returned " << val << endl);
   }
-  proc->stack_push(self);
+  proc->stack_push(proc->rp());
   return 0;
 }
 

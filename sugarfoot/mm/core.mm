@@ -376,6 +376,13 @@
   end
 
   class List
+  fields: flag, vector;
+  init new: fun() {
+    <primitive "list_new">
+  }
+  init new_from_stack: fun(*args) {
+    <primitive "list_new_from_stack">
+  }
   instance_method append: fun(x) {
     <primitive "list_append">
   }
@@ -438,12 +445,6 @@
   }
   instance_method ==: fun(other) {
     <primitive "list_equals">
-  }
-  class_method new: fun() {
-    <primitive "list_new">
-  }
-  class_method new_from_stack: fun(*args) {
-    <primitive "list_new_from_stack">
   }
   end
 
