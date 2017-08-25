@@ -33,7 +33,13 @@ class IntCell < Cell
 fields: num;
 init new: fun(etable, num) {
   super.new(etable);
-  @num = num;
+  if (num == true) {
+    @num = 1;
+  } elif (num == false or num == null) {
+    @num = 0;
+  } else {
+    @num = num;
+  }
 }
 instance_method size: fun() {
   return bits.WSIZE;
