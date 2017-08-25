@@ -1424,6 +1424,21 @@ number MMObj::mm_longnum_get(Process* p, oop n, bool should_assert) {
              "TypeError","Expected LongNum")
     return (number) ((oop*)n)[2];
 }
+
+oop MMObj::mm_float_new(Process* p, float n, bool should_assert) {
+  oop oop_n = mm_new(_core_image->get_prime("Float"),
+                     mm_object_new(), //assuming Float < Object
+                     1);
+  ((oop*)oop_n)[2] = (oop) *(number*) &n;
+  return oop_n;
+}
+
+float MMObj::mm_float_get(Process* p, oop n, bool should_assert) {
+  TYPE_CHECK(!( *(oop*) n == _core_image->get_prime("Float")),
+             "TypeError","Expected Float")
+  return *(float*) &((oop*)n)[2];
+}
+
 // oop MMObj::mm_exception_get_bp(Process* p, oop ex, bool should_assert) {
 //   TYPE_CHECK(!( *(oop*) ex == _core_image->get_prime("Exception")),
 //              "TypeError","Expected Exception")

@@ -623,6 +623,17 @@ static int prim_numeric_mul(Process* proc) {
   }
 }
 
+static int prim_numeric_div(Process* proc) {
+  oop self =  proc->dp();
+  oop other = proc->get_arg(0);
+
+  number n_self = extract_number(proc, self);
+  number n_other = extract_number(proc, other);
+  float n_res = n_self / (float) n_other; //FIXME: this is temporary
+  proc->stack_push(proc->mmobj()->mm_float_new(proc, n_res));
+  return 0;
+}
+
 static int prim_numeric_bit_and(Process* proc) {
   oop self =  proc->dp();
   oop other = proc->get_arg(0);
@@ -778,6 +789,13 @@ static int prim_numeric_to_source(Process* proc) {
   return prim_numeric_to_string(proc);
 }
 
+static int prim_float_ceil(Process* proc) {
+  oop self =  proc->rp();
+  float n_self = proc->mmobj()->mm_float_get(proc, self);
+  number res = ceil(n_self);
+  proc->stack_push(tag_small_int(res));
+  return 0;
+}
 
 
 
@@ -2258,6 +2276,7 @@ void init_primitives(VM* vm) {
   vm->register_primitive("numeric_sum", prim_numeric_sum);
   vm->register_primitive("numeric_sub", prim_numeric_sub);
   vm->register_primitive("numeric_mul", prim_numeric_mul);
+  vm->register_primitive("numeric_div", prim_numeric_div);
   vm->register_primitive("numeric_bit_and", prim_numeric_bit_and);
   vm->register_primitive("numeric_bit_or", prim_numeric_bit_or);
   vm->register_primitive("numeric_lshift", prim_numeric_lshift);
@@ -2272,6 +2291,8 @@ void init_primitives(VM* vm) {
   vm->register_primitive("numeric_to_string", prim_numeric_to_string);
   vm->register_primitive("numeric_as_char", prim_numeric_as_char);
   vm->register_primitive("numeric_to_source", prim_numeric_to_source);
+
+  vm->register_primitive("float_ceil", prim_float_ceil);
 
 
   vm->register_primitive("exception_throw", prim_exception_throw);

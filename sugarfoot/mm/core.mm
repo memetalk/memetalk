@@ -443,6 +443,9 @@
     instance_method *: fun(arg) {
       <primitive "numeric_mul">
     }
+    instance_method /: fun(arg) {
+      <primitive "numeric_div">
+    }
     instance_method <: fun(arg) {
       <primitive "numeric_lt">
     }
@@ -491,6 +494,9 @@
     instance_method *: fun(arg) {
       <primitive "numeric_mul">
     }
+    instance_method /: fun(arg) {
+      <primitive "numeric_div">
+    }
     instance_method <: fun(arg) {
       <primitive "numeric_lt">
     }
@@ -529,6 +535,12 @@
     }
   end
 
+  class Float
+  fields: self;
+  instance_method ceil: fun() {
+      <primitive "float_ceil">
+  }
+  end
 
   class Function
     fields: compiled_function, module;

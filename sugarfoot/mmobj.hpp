@@ -257,6 +257,9 @@ public:
   oop mm_longnum_new(Process* proc, number n, bool should_assert = false);
   number mm_longnum_get(Process* proc, oop n, bool should_assert = false);
 
+  oop mm_float_new(Process* proc, float n, bool should_assert = false);
+  float mm_float_get(Process* proc, oop n, bool should_assert = false);
+
   CoreImage* core() { return _core_image; };
 
 private:
