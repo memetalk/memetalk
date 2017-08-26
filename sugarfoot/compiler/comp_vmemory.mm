@@ -43,6 +43,8 @@ instance_method append_object_instance: fun() {
   return oop;
 }
 instance_method append_symbol_instance: fun(string) {
+  this.append_int(mmc.FRAME_TYPE_OBJECT, null);
+  this.append_int(1 * bits.WSIZE, null);
   if (string == "") {
     return this.append_null(null);
   }
@@ -62,6 +64,7 @@ instance_method append_string_instance: fun(string) {
    var oop = this.append_external_ref("String", null);
    this.append_pointer_to(delegate, null);
    this.append_int(string.size, null);
+   this.append_string(string, null);
 
    @string_table[string] = oop;
    return oop;

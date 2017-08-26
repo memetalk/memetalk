@@ -34,6 +34,8 @@ class CompVirtualMemory(vmemory.VirtualMemory):
         return oop
 
     def append_symbol_instance(self, string):
+        self.append_int(pyutils.FRAME_TYPE_OBJECT)
+        self.append_int(1 * bits.WSIZE)
         if string == '':
             return self.append_null()
         oop = self.append_int(0xBBBB)
