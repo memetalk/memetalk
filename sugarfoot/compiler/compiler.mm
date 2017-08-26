@@ -160,7 +160,12 @@ instance_method compile: fun(filepath) {
 end
 
 main: fun() {
-  Compiler.new.compile(argv()[1]);
+  var args = argv();
+  if (args.size != 2) {
+    io.print("usage: compiler <path to file.mm>");
+  } else {
+    Compiler.new.compile(argv()[1]);
+  }
 }
 
 .endcode

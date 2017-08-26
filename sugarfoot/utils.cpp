@@ -28,8 +28,10 @@ char* read_file(fstream& file, int* file_size) {
 }
 
 #include <boost/algorithm/string.hpp>
+#include <boost/filesystem.hpp>
 using namespace std;
 using namespace boost;
+namespace fs = ::boost::filesystem;
 
 void open_file_in_meme_path(const std::string& filename, fstream & file) {
   typedef split_iterator<string::iterator> string_split_iterator;
@@ -41,7 +43,8 @@ void open_file_in_meme_path(const std::string& filename, fstream & file) {
       prefix += '/';
     }
     std::string filepath =  prefix + filename;
-    _log << "trying to open " << filepath << std::endl;
+    _log << "trying to open " << filepath << " " << std::endl;
+
     file.open(filepath.c_str(), fstream::in | fstream::binary);
     if (file.good()) {
       break;
@@ -55,9 +58,12 @@ void open_file_in_meme_path(const std::string& filename, fstream & file) {
 char* read_mmc_file(const std::string& name_or_path, int* file_size) {
   fstream file;
 
-  file.open(name_or_path.c_str(), fstream::in | fstream::binary); //might be an absolute path
+  if (!fs::is_directory(name_or_path)) {
+    file.open(name_or_path.c_str(), fstream::in | fstream::binary); //might be an absolute path
+  }
 
-  if (!file.good()) { //might be the name of the module alone with no extension
+  if (!file.is_open() or !file.good()) { //might be the name of the module alone with no extension
+    _log << "file is no good for " << name_or_path << std::endl;
     std::string module_name = name_or_path;
     if ((module_name.find_last_of(".") == std::string::npos) ||
         (module_name.substr(module_name.find_last_of(".") + 1) != "img" &&  //xxx.img
