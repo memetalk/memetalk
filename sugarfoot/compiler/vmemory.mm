@@ -96,6 +96,9 @@ init new: fun(etable, label, cell) { //label/cell: defaults to null
 instance_method size: fun() {
   return bits.WSIZE;
 }
+instance_method target_cell: fun() {
+  return @target_cell;
+}
 instance_method value: fun(_) {
   if (@target_cell) {
     var to = this.etable.cells.pos(@target_cell);
@@ -195,7 +198,7 @@ instance_method symbols_references: fun() {
   this.symbol_table.each(fun(_,entry) {
     var text = entry[0];
     var ptr = entry[1];
-    @cells.filter(fun(x) { Mirror.vtFor(x) == PointerCell }).each(fun(_, referer) {
+    @cells.filter(fun(x) { if (Mirror.vtFor(x) == PointerCell) { return x.target_cell == ptr; } else { return false; } }).each(fun(_, referer) {
       sr.append([text, @base + @cell_sizes.range(0, @cells.pos(referer)).reduce(0, fun(x,y) { x + y})])
     });
   });

@@ -81,7 +81,7 @@ instance_method dump: fun(filepath) {
   var vmem = comp_vmemory.CompVirtualMemory.new();
   var mmc = this.create_mmc_struct(vmem);
 
-  io.with_file(filepath.substr(0, -2) + "mmc", fun(write) {
+  io.with_file(filepath.substr(0, filepath.size - 2) + "mmc", fun(write) {
     //header
     write(bits.pack(mmc[:header][:magic_number]));
     write(bits.pack(mmc[:header][:ot_size]));
