@@ -86,6 +86,7 @@ instance_method dump: fun(filepath) {
     write(bits.pack(mmc[:header][:magic_number]));
     write(bits.pack(mmc[:header][:ot_size]));
     write(bits.pack(mmc[:header][:er_size]));
+    write(bits.pack(mmc[:header][:st_size]));
     write(bits.pack(mmc[:header][:names_size]));
 
     //names
