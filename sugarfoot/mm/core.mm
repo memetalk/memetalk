@@ -494,6 +494,9 @@
     instance_method >=: fun(arg) {
       <primitive "numeric_gteq">
     }
+    instance_method <=: fun(arg) {
+      <primitive "numeric_lteq">
+    }
     instance_method ==: fun(arg) {
       <primitive "numeric_eq">
     }
@@ -544,6 +547,9 @@
     }
     instance_method >=: fun(arg) {
       <primitive "numeric_gteq">
+    }
+    instance_method <=: fun(arg) {
+      <primitive "numeric_lteq">
     }
     instance_method ==: fun(arg) {
       <primitive "numeric_eq">

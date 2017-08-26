@@ -759,6 +759,17 @@ static int prim_numeric_gteq(Process* proc) {
   proc->stack_push(res);
   return 0;
 }
+static int prim_numeric_lteq(Process* proc) {
+  oop self =  proc->dp();
+  oop other = proc->get_arg(0);
+
+  number n_self = extract_number(proc, self);
+  number n_other = extract_number(proc, other);
+  oop res = n_self <= n_other ? MM_TRUE : MM_FALSE;
+  proc->stack_push(res);
+  return 0;
+}
+
 
 static int prim_numeric_eq(Process* proc) {
   oop self =  proc->dp();
@@ -2581,6 +2592,7 @@ void init_primitives(VM* vm) {
   vm->register_primitive("numeric_lshift", prim_numeric_lshift);
   vm->register_primitive("numeric_rshift", prim_numeric_rshift);
   vm->register_primitive("numeric_gteq", prim_numeric_gteq);
+  vm->register_primitive("numeric_lteq", prim_numeric_lteq);
   vm->register_primitive("numeric_eq", prim_numeric_eq);
   vm->register_primitive("numeric_neg", prim_numeric_neg);
   vm->register_primitive("numeric_to_string", prim_numeric_to_string);
