@@ -1379,9 +1379,11 @@ static int prim_list_to_source(Process* proc) {
 
 
 static int prim_dictionary_new(Process* proc) {
-  oop self = proc->mmobj()->mm_dictionary_new();
+  //oop self = proc->mmobj()->mm_dictionary_new();
+  oop self =  proc->dp();
+  proc->mmobj()->mm_dictionary_init(self);
   DBG(self << endl);
-  proc->stack_push(self);
+  proc->stack_push(proc->rp());
   return 0;
 }
 
@@ -1391,7 +1393,7 @@ static int prim_dictionary_set(Process* proc) {
   oop val = proc->get_arg(1);
 
   proc->mmobj()->mm_dictionary_set(proc, self, key, val);
-  proc->stack_push(self);
+  proc->stack_push(proc->rp());
   return 0;
 }
 

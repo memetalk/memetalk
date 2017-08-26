@@ -346,6 +346,10 @@
   end
 
   class Dictionary
+  fields: flag, self;
+  init new: fun() {
+    <primitive "dictionary_new">
+  }
   instance_method toString: fun() {
     <primitive "dictionary_to_string">
   }
@@ -375,9 +379,6 @@
   }
   instance_method size: fun() {
     <primitive "dictionary_size">
-  }
-  class_method new: fun() {
-    <primitive "dictionary_new">
   }
   end
 

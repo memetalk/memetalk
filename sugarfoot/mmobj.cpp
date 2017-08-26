@@ -297,12 +297,14 @@ void MMObj::mm_list_append(Process* p, oop list, oop element, bool should_assert
 
 oop MMObj::mm_dictionary_new() {
   oop obj = (oop) malloc(sizeof(word) * OO_DICT_LEN);
-
   ((word**) obj)[0] = _core_image->get_prime("Dictionary");
   ((word**) obj)[1] = mm_object_new();
+  mm_dictionary_init(obj);
+  return obj;
+}
+void MMObj::mm_dictionary_init(oop obj) {
   ((word*) obj)[2] = -1;
   ((boost::unordered_map<oop, oop>**) obj)[3] = new boost::unordered_map<oop, oop>;
-  return obj;
 }
 
 boost::unordered_map<oop, oop>* MMObj::mm_dictionary_frame(Process* p, oop dict, bool should_assert) {

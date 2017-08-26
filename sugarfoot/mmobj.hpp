@@ -75,6 +75,7 @@ public:
   void mm_list_set(Process*, oop list, number idx, oop element, bool should_assert = false);
 
   oop mm_dictionary_new();
+  void mm_dictionary_init(oop obj);
   number mm_dictionary_size(Process*, oop dict, bool should_assert = false);
   // oop mm_dictionary_entry_key(Process*, oop dict, int idx, bool should_assert = false);
   // oop mm_dictionary_entry_value(Process*, oop dict, int idx, bool should_assert = false);
