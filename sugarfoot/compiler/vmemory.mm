@@ -243,7 +243,9 @@ instance_method _append_dict_frame: fun(pairs) {
   this.append_int(pairs.size * 2 * bits.WSIZE, null);
 
   var oops = [];
-  pairs.each(fun(key, val) {
+  pairs.each(fun(_, entry) {
+    var key = entry[0];
+    var val = entry[1];
     if (Mirror.vtFor(key) == Integer or Mirror.vtFor(key) == LongNum) {
       oops.append(this.append_tagged_int(key, null));
     } else {
