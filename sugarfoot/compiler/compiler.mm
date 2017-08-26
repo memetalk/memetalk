@@ -131,7 +131,7 @@ instance_method new_module: fun() {
 instance_method parse: fun() {
   var ast = ometa_base.parse(io.read_file(@filepath), meme.MemeScriptParser, :start);
   if (ast[0]) {
-    io.print("parse error: " + maybe_ast[0].toString);
+    io.print("parse error: " + ast[0].toString);
     Exception.throw("parse error");
   } else {
     return ast[1];
