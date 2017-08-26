@@ -35,6 +35,15 @@ pack: fun(num) {
   return res;
 }
 
+pack32: fun(num) {
+  var res = "";
+  [0,1,2,3].each(fun(_, i) {
+    var n = (num >> (i * 8)) & 0xFF;
+    res = res + n.asChar;
+  });
+  return res;
+}
+
 pack_byte: fun(num) {
     return num.asChar;
 }

@@ -554,7 +554,7 @@ instance_method fill_bytecodes: fun(vmem) {
     return 0;
   }
 
-  var bytecodes = @bytecodes.words.map(fun(w) { bits.pack(w) }).join("");
+  var bytecodes = @bytecodes.words.map(fun(w) { bits.pack32(w) }).join("");
 
   vmem.append_int(mmc.FRAME_TYPE_BYTECODE_FRAME, null);
   vmem.append_int(bits.string_block_size(bytecodes + "\0"), null);
