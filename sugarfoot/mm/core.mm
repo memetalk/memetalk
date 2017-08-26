@@ -250,6 +250,16 @@
     }
     return false;
   }
+  instance_method toString: fun() {
+    if (this) {
+      return "true";
+    } else {
+      return "false";
+    }
+  }
+  instance_method toSource: fun() {
+    return this.toString;
+  }
   end
 
   class String
