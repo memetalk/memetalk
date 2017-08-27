@@ -418,7 +418,7 @@ oop MMObj::mm_dictionary_get(Process* p, oop dict, oop key, bool should_assert) 
       // DBG(dict << "(" << elements->size() << ") get string? " << (mm_is_string(key) && mm_is_string(it->first)) << endl);
       if (mm_is_string(key) && mm_is_string(it->first)) {
         // DBG(dict << "(" << elements->size() << ") get: " << mm_is_string(key) << " =?= " << mm_string_cstr(it->first) << endl);
-        if (strcmp(mm_string_cstr(p, key, should_assert), mm_string_cstr(p, it->first, should_assert)) == 0) {
+        if (mm_string_stl_str(p, key, should_assert) == mm_string_stl_str(p, it->first, should_assert)) {
           return it->second;
         }
       }
