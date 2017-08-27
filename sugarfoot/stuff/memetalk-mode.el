@@ -1,6 +1,38 @@
+;;; memetalk-mode.el --- Emacs mode for the Meme Talk language
+;;; Commentary:
+;;; Code:
+(require 'prog-mode)
+
 ;; M-x toggle-debug-on-error
 
 (defvar memetalk-mode-hook nil)
+
+(defconst memetalk-keywords
+  (regexp-opt
+   '("license" "endlicense" "preamble" "code" "endcode" "class"
+     "fields" "init" "fun" "super" "instance_method" "class_method"
+     "if" "elif" "else" "try" "end" "catch" "var" "primitive"
+     "return" "while") 'words))
+
+(defconst memetalk-constants
+  (regexp-opt '("true" "false" "null") 'words))
+
+(defconst memetalk-builtins
+  (regexp-opt '("this" "thisModule" "thisContext") 'words))
+
+;;TODO:
+;; @vars
+
+(defconst memetalk-font-lock
+  (list
+   `(,memetalk-keywords . font-lock-keyword-face)
+   `(,memetalk-constants . font-lock-constant-face)
+   `(,memetalk-builtins . font-lock-builtin-face)
+   '("^\\s-*instance_method\\s-+\\([a-zA-Z_$]\\(?:\\s_\\|\\sw\\)*\\)" 1 font-lock-variable-name-face)
+   '("^\\([a-zA-Z_$]\\(?:\\s_\\|\\sw\\)*\\):" 1 font-lock-function-name-face)
+   '("var\\s-+\\([a-zA-Z_$]\\(?:\\s_\\|\\sw\\)*\\)" 1 font-lock-variable-name-face)
+  "Highlighting expressions for memetalk mode"))
+
 
 ; "If your keymap will have very few entries, then you may want to consider
 ; ‘make-sparse-keymap’ rather than ‘make-keymap’."
@@ -23,60 +55,28 @@
     (define-key map (kbd "s-v") 'memetalk-locals)
     (define-key map (kbd "s-m") 'memetalk-toggle-module-step-mode)
     map)
-  "Keymap for memetalk major mode")
+  "Keymap for memetalk major mode.")
 
+(defconst memetalk-mode-syntax-table
+  (let ((table (make-syntax-table)))
+    ;; (') & (") string delimiters
+    (modify-syntax-entry ?' "\"" table)
+    (modify-syntax-entry ?\" "\"" table)
 
-(add-to-list 'auto-mode-alist '("\\.mm\\'" . memetalk-mode))
+    ;; C++ ('//') style Comment
+    (modify-syntax-entry ?/ ". 12" table)
+    (modify-syntax-entry ?\n ">" table)
+    table))
 
-
-(setq memetalk-keywords '("preamble" "code" "endcode" "class" "fields"
-                          "init" "fun" "super" "instance_method" "class_method"
-                          "if" "elif" "else" "try" "end" "catch" "var" "primitive" "return"))
-
-(setq memetalk-constants '("true" "false" "null"))
-
-(setq memetalk-keywords-regexp (regexp-opt memetalk-keywords 'words))
-(setq memetalk-constants-regexp (regexp-opt memetalk-constants 'words))
-
-;; font-lock-defaults
-;; js--font-lock-keywords-3 js--font-lock-keywords-1 js--font-lock-keywords-2 js--font-lock-keywords-3))
-
-;;TODO:
-;; @vars
-;; this
-;; thisModule
-;; thisContext
-
-(defconst memetalk-font-lock-keywords
-  (list
-   `(,memetalk-keywords-regexp . font-lock-keyword-face)
-   `(,memetalk-constants-regexp . font-lock-constant-face)
-   '("^\\s-*instance_method\\s-+\\([a-zA-Z_$]\\(?:\\s_\\|\\sw\\)*\\)" 1 font-lock-variable-name-face)
-   '("^\\([a-zA-Z_$]\\(?:\\s_\\|\\sw\\)*\\):" 1 font-lock-function-name-face)
-   '("var\\s-+\\([a-zA-Z_$]\\(?:\\s_\\|\\sw\\)*\\)" 1 font-lock-variable-name-face)
-  "Highlighting expressions for memetalk mode"))
-
-;; I believe the following is for c++ style comments
-(defvar memetalk-mode-syntax-table
-  (let ((st (make-syntax-table)))
-    (modify-syntax-entry ?_ "w" st)
-    (modify-syntax-entry ?/ ". 124b" st)
-    (modify-syntax-entry ?* ". 23" st)
-    (modify-syntax-entry ?\n "> b" st)
-    st)
-  "Syntax table for memetalk-mode")
-
-(defun memetalk-mode ()
-  "Major mode for editing Workflow Process Description Language files"
-  (interactive)
-  (kill-all-local-variables)
-  (set-syntax-table memetalk-mode-syntax-table)
+(define-derived-mode memetalk-mode prog-mode "MemeTalk"
+  "Major mode for programming in the MemeTalk Programming System."
+  :group 'memetalk
+  :syntax-table memetalk-mode-syntax-table
+  :after-hook memetalk-mode-hook
   (use-local-map memetalk-mode-map)
-  (set (make-local-variable 'font-lock-defaults) '(memetalk-font-lock-keywords))
-  ;; (set (make-local-variable 'indent-line-function) 'memetalk-indent-line)
-  (setq major-mode 'memetalk-mode)
-  (setq mode-name "memetalk")
-  (run-hooks 'memetalk-mode-hook))
+  (setq-local comment-start "// ")
+  (setq-local comment-end "")
+  (setq-local font-lock-defaults (list memetalk-font-lock)))
 
 ;; utils
 
@@ -415,8 +415,6 @@
 (add-hook
  'after-change-functions 'memetalk-repl-change)
 
-(provide 'memetalk-mode)
-
 (defun memetalk-remove-overlays (buffer)
   (when (buffer-live-p buffer)
     (with-current-buffer buffer
@@ -455,3 +453,9 @@
            "^\\s-*\\(init\\s-+\\|instance_method\\s-+\\|class_method\\s-+\\|\\)\\(\\w+\\): fun")
           (let ((current-line (line-number-at-pos (point))))
                 current-line)))))
+
+;;;###autoload
+(add-to-list 'auto-mode-alist '("\\.mm\\'" . memetalk-mode))
+
+(provide 'memetalk-mode)
+;;; memetalk-mode ends here
