@@ -3,7 +3,7 @@ FROM debian
 ENV DEBIAN_FRONTEND noninteractive
 
 RUN apt-get -qy update && apt-get -qy --fix-missing install \
-    build-essential git pkg-config \
+    build-essential git pkg-config xvfb \
     libqt4-dev libqtwebkit-dev libqscintilla2-dev \
     libboost-system-dev libboost-filesystem-dev libboost-iostreams-dev \
     python-pip
@@ -17,4 +17,5 @@ RUN /bin/bash -c "pip install \
 
 WORKDIR /build/sugarfoot
 
-ENTRYPOINT ["make"]
+# Runs tests under xvfb to allow Qt to connect to a display
+CMD xvfb-run --server-args="-screen 0 1024x768x24" make test
