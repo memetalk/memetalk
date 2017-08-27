@@ -44,7 +44,7 @@ instance_method send_locals: fun(socket, frame) {
   var locals = "";
   variables.each(fun(idx, varname) {
      var value = frame.get_local_value(idx);
-     locals = locals + varname.toString + " : " + value.toString + "\n";
+     locals = locals + varname.toString + " : " + value.toSource + "\n";
   });
   io.print(locals);
   socket.write_line("locals: " + locals.b64encode);
