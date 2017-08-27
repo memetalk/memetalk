@@ -1122,7 +1122,7 @@ instance_method lit_string: fun() {
         this._apply(:anything);
       }]);}, null);
     this._apply_with_args(:seq, ["\""]);
-    return [:literal-string, xs.join("")];
+    return [:literal-string, xs.join("").escape];
   }]);
 }
 instance_method lit_escaped: fun() {

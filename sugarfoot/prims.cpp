@@ -394,17 +394,41 @@ static std::string base64_decode(std::string const& encoded_string) {
   return ret;
 }
 
+#include <boost/xpressive/xpressive.hpp>
+using namespace boost;
+using namespace xpressive;
+
+static std::string  escape_format_fun(smatch const &what)
+{
+  std::string::size_type num;
+  num = atoi( what[1].str().c_str());
+  std::string ret;
+  ret += (char) num;
+  return ret;
+}
 static int prim_string_escape(Process* proc) {
   oop self =  proc->dp();
 
   std::string str = proc->mmobj()->mm_string_stl_str(proc, self);
-  //TODO
-  // boost::replace_all(str, "\\", "\\\\");
-  // boost::replace_all(str, "\t",  "\\t");
-  // boost::replace_all(str, "\n",  "\\n");
-  // boost::replace_all(str, "\"",  "\\\"");
+
+  int size = str.length();
+
+  //some dirty substitutions follow...
+
+  std::string null;
+  null += (char) 0;
+
+  boost::replace_all(str, "\\0", null);  //\0
+  boost::replace_all(str, "\\t",  "\t"); //\t
+  boost::replace_all(str, "\\n",  "\n"); //\n
+  boost::replace_all(str, "\\\"",  "\""); //\"
+
+  //\x[0-9]+
+  sregex exp = sregex::compile( "\\\\x(\\d+)");
+  str = regex_replace(str, exp, escape_format_fun);
 
   oop oop_ret = proc->mmobj()->mm_string_new(str);
+
   proc->stack_push(oop_ret);
   return 0;
 }

@@ -341,7 +341,7 @@ lit_symbol = ":" symbol_name:xs
 lit_number = spaces  digit+:ds => [:literal-number, ds.join("").toInteger];
 
 lit_string  = '"' { lit_escaped | ~'"' _}*:xs '"'
-               => [:literal-string, xs.join("")];
+               => [:literal-string, xs.join("").escape];
 
 lit_escaped = ~'"' '\\' _:x => "\\" + x;
 
