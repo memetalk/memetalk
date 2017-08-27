@@ -1,0 +1,12 @@
+---
+sudo: required
+dist: trusty
+
+services:
+  - docker
+
+install:
+  - docker build . -t memetalk
+
+script:
+  - docker run -p8000:8000 -v $(pwd):/build -it memetalk
