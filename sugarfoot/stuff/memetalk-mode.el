@@ -1,15 +1,47 @@
 ;;; memetalk-mode.el --- Emacs mode for the Meme Talk language
+
+;; Copyright (C) 2017  Thiago Silva
+;; Copyright (C) 2017  Lincoln Clarete <lincoln@clarete.li>
+
+;; This program is free software; you can redistribute it and/or modify
+;; it under the terms of the GNU General Public License as published by
+;; the Free Software Foundation, either version 3 of the License, or
+;; (at your option) any later version.
+
+;; This program is distributed in the hope that it will be useful,
+;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;; GNU General Public License for more details.
+
+;; You should have received a copy of the GNU General Public License
+;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+;; Acknowledgements:
+
+;; A lot of this code was based on sm-c-mode.  Here's the copyright
+;; notice for the lines copied from it:
+
+;; Copyright (C) 2015, 2016  Free Software Foundation, Inc.
+;; Author: Stefan Monnier <monnier@iro.umontreal.ca>
+;; https://raw.githubusercontent.com/emacsmirror/sm-c-mode/master/sm-c-mode.el
+
 ;;; Commentary:
 ;;; Code:
 (require 'prog-mode)
+(require 'smie)
 
 ;; M-x toggle-debug-on-error
 
 (defvar memetalk-mode-hook nil)
 
+(defcustom memetalk-indent-offset 2
+  "Defines the indentation offset for MemeTalk code."
+  :group 'memetalk
+  :type 'integer)
+
 (defconst memetalk-keywords
   (regexp-opt
-   '("license" "endlicense" "preamble" "code" "endcode" "class"
+   '("license" "endlicense" "preamble" "code" "endcode" "class" "object"
      "fields" "init" "fun" "super" "instance_method" "class_method"
      "if" "elif" "else" "try" "end" "catch" "var" "primitive"
      "return" "while") 'words))
@@ -57,8 +89,238 @@
     map)
   "Keymap for memetalk major mode.")
 
+(defconst memetalk-smie-precedence-table
+  '((assoc ";")
+    (assoc ",")                         ;1
+    (nonassoc "=" "+=" "-=" "*=" "/=" "%=" "<<=" ">>=" "&=" "^=" "|=") ;2
+    (assoc "or")                        ;3
+    (assoc "and")                       ;4
+    (assoc "|")                         ;5
+    (assoc "^")                         ;6
+    (nonassoc "==" "!=")                ;7
+    (nonassoc "<" "<=" ">" ">=")        ;8
+    (nonassoc "<<" ">>")                ;9
+    (assoc "+" "-")                     ;10
+    (assoc "/" "*" "%")                 ;11
+    (assoc "@")))
+
+(defvar memetalk-smie--operators
+  '("<" "<=" ">" ">=" "==" "!=" "or" "and"
+    "+" "-" "|" "^" "*" "/" "%" "<<" ">>"))
+
+(defconst memetalk-smie-grammar
+  (let ((grm
+         (smie-prec2->grammar
+          (smie-merge-prec2s
+           (smie-bnf->prec2
+            '((id)
+              (insts ("{" insts "}")
+                     ("fun" exp "{ beg-fun" insts "} end-fun")
+                     (insts ";" insts)
+                     ("return" exp)
+                     ("var" exp)
+                     (exp-if))
+              (exp-if ("if" exp)
+                      ("while" exp)
+                      ("for" exp)
+                      ("else" exp-if)
+                      ("elif" exp-if)
+                      (exp))
+              (exp ("(" exp ")")
+                   (exp "," exp))
+
+              (class ("class" exp "\n cls-name-sep" insts "end" "\n end-cls"))
+              (object ("object" exp "\n obj-name-sep" insts "end" "\n end-obj"))
+              (first-level (class) (object))
+              (toplevels (".code" first-level ".end"))
+
+              ;; Some of the precedence table deals with pre/postfixes, which
+              ;; smie-precs->prec2 can't handle, so handle it here instead.
+              (exp11 (exp12) (exp11 "/" exp11))
+              (exp12 (exp13) ("!" exp12))
+              (exp13 (id) (exp13 "." id)))
+
+            '((assoc ";") (assoc ",") (assoc ".") (assoc ":"))
+            memetalk-smie-precedence-table)
+           (smie-precs->prec2 memetalk-smie-precedence-table)
+           (smie-precs->prec2 '((nonassoc ";") (nonassoc ":")))))))
+    grm))
+
+(defun memetalk-align-under-parent ()
+  "Align the current line under parent."
+  (save-excursion
+    (goto-char (nth 1 smie--parent))
+    (forward-line 0)
+    (let* ((begin-prev-line (point))
+           (_ (re-search-forward "^ +" (line-end-position) t))
+           (first-char-prev-ln (point))
+           (spaces (- (point) begin-prev-line)))
+      (progn
+        (message "bpl: %d, fcpl: %d, wooot:%d"
+                 begin-prev-line first-char-prev-ln spaces)
+        `(column . ,spaces)))))
+
+(defun memetalk-align-under-previous-line (lines)
+  "Align the current line under previous LINES."
+  (save-excursion
+    (forward-line lines)
+    (let* ((begin-prev-line (point))
+           (_ (re-search-forward "^ +" (line-end-position) t))
+           (first-char-prev-ln (point))
+           (spaces (- (point) begin-prev-line)))
+      (progn
+        (message "bpl: %d, fcpl: %d, wooot:%d"
+                 begin-prev-line first-char-prev-ln spaces)
+        `(column . ,spaces)))))
+
+(defun memetalk-smie-rules (kind token)
+  "Define the indent offset based on KIND and TOKEN."
+  (pcase (cons kind token)
+    (`(:elem . basic) memetalk-indent-offset)
+    (`(:elem . args) (- (+ (smie-indent-virtual) memetalk-indent-offset)))
+    (`(:before . ".")
+     (cond
+      ((smie-rule-parent-p nil) 0)
+      (t 0)))
+
+    (`(:list-intro . ,(or "class" "object" "."))
+     nil)
+
+    ;; Weird hack :/
+    (`(:after . "object") (+ memetalk-indent-offset 1))
+
+    (`(:before . "class")
+     (cond
+      ((smie-rule-parent-p ".") (- memetalk-indent-offset))
+      (t (smie-rule-parent))))
+
+    (`(:before . "end")
+     (cond
+      ((smie-rule-parent-p "class") (- memetalk-indent-offset))
+      (t 0)))
+    (`(:after . "end")
+     (cond
+      ((smie-rule-parent-p "class") (- memetalk-indent-offset))
+      (t 0)))
+
+    ;; Reset position of first element of class with inheritance
+    (`(:after . "<")
+     (if (smie-rule-parent-p "class")
+         (- memetalk-indent-offset)))
+
+    (`(:list-intro . ";")
+     (save-excursion
+       (forward-char 1)
+       (if (and (null (smie-forward-sexp))
+                ;; FIXME: Handle \\\n as well!
+                (progn (forward-comment (point-max))
+                       (looking-at "(")))
+           nil
+         t)))
+    (`(:after . ";")
+     (cond
+      ((smie-rule-parent-p ";") 0)
+      ((smie-rule-parent-p "{")
+       (smie-rule-parent memetalk-indent-offset))
+      ((smie-rule-parent-p "class")
+       (smie-rule-parent memetalk-indent-offset))
+      ((smie-rule-parent-p "object")
+       (smie-rule-parent memetalk-indent-offset))
+      (t (smie-rule-parent))))
+
+    (`(:before . ",")
+     (cond ((smie-rule-parent-p "fun") (smie-rule-parent))))
+
+    (`(:before . "^")
+     (memetalk-align-under-parent))
+
+    ;; Hanging collection declaration
+    (`(:before . "[")
+     (cond
+      ((and (smie-rule-hanging-p) (smie-rule-parent-p "var"))
+       (smie-rule-parent))
+      ((smie-rule-parent-p ";") (smie-rule-parent))
+      ((smie-rule-parent-p "(") (smie-rule-parent))
+      (t 0)))
+
+    (`(:before . "if")
+     (cond ((smie-rule-parent-p "{")
+            (smie-rule-parent memetalk-indent-offset))))
+
+    ;; Arguments indentation
+    (`(:before . "(")
+     (cond
+      ((and (not (smie-rule-hanging-p)) (smie-rule-parent-p "fun"))
+       (memetalk-align-under-parent))
+      ((smie-rule-parent-p ".") (memetalk-align-under-parent))
+      ((smie-rule-parent-p "if") (smie-rule-parent))
+      (t (smie-rule-parent))))
+    (`(:after . "(")
+     (if (not (smie-rule-hanging-p))
+         (smie-rule-parent)
+       memetalk-indent-offset))
+
+    ;; Nested code block or closures
+    (`(:before . "{")
+     (cond
+      ((smie-rule-parent-p "while") (smie-rule-parent))
+      ((smie-rule-parent-p "{") (smie-rule-parent))
+      ((smie-rule-parent-p "var") (smie-rule-parent))
+      ((smie-rule-parent-p "fun") (smie-rule-parent))
+      ((smie-rule-parent-p "if") (smie-rule-parent))
+      ((smie-rule-parent-p "elif")
+       (smie-rule-parent (- memetalk-indent-offset)))
+      ((smie-rule-parent-p "else")
+       (smie-rule-parent (- memetalk-indent-offset)))
+      (t 0)))
+
+    (`(:after . "{")
+     (cond
+      ((smie-rule-parent-p ";") (smie-rule-parent memetalk-indent-offset))
+      ((smie-rule-parent-p "{") (smie-rule-parent memetalk-indent-offset))
+      ((smie-rule-parent-p "}") (smie-rule-parent memetalk-indent-offset))
+      ((smie-rule-parent-p "if") (smie-rule-parent memetalk-indent-offset))
+      ((smie-rule-parent-p "var") (smie-rule-parent memetalk-indent-offset))
+      ((smie-rule-parent-p "while") (smie-rule-parent memetalk-indent-offset))
+      ((smie-rule-parent-p "fun") (smie-rule-parent memetalk-indent-offset))
+      ((smie-rule-parent-p "(")
+       (smie-rule-parent (- memetalk-indent-offset)))
+      (t (smie-rule-parent))))
+
+    (`(:after . "}")
+     (cond
+      ((smie-rule-parent-p ";") 0)
+      ((smie-rule-parent-p "{") 0)
+      ((smie-rule-parent-p "if") (smie-rule-parent (- memetalk-indent-offset)))
+      ((smie-rule-parent-p "elif") (smie-rule-parent (- (* 2 memetalk-indent-offset))))
+      ((smie-rule-parent-p "else") (smie-rule-parent (- memetalk-indent-offset)))
+      ((smie-rule-parent-p "while") (smie-rule-parent (- memetalk-indent-offset)))
+      (t 0)))
+    ))
+
+(defun verbose-memetalk-smie-rules (kind token)
+  (let ((value (memetalk-smie-rules kind token)))
+    (message "%s '%s'; sibling-p:%s parent:%s hanging:%s == %s" kind token
+             (ignore-errors (smie-rule-sibling-p))
+             (ignore-errors smie--parent)
+             (ignore-errors (smie-rule-hanging-p))
+             value)
+    value))
+
 (defconst memetalk-mode-syntax-table
   (let ((table (make-syntax-table)))
+    (modify-syntax-entry ?_ "W" table)
+    ;; Symbols
+    (modify-syntax-entry ?@ "_" table)
+
+    ;; Parenthesis characters
+    (modify-syntax-entry ?\( "()" table)
+    (modify-syntax-entry ?\) ")(" table)
+    (modify-syntax-entry ?\[ "(]" table)
+    (modify-syntax-entry ?\] ")[" table)
+    (modify-syntax-entry ?{ "(}" table)
+    (modify-syntax-entry ?} "){" table)
+
     ;; (') & (") string delimiters
     (modify-syntax-entry ?' "\"" table)
     (modify-syntax-entry ?\" "\"" table)
@@ -76,7 +338,8 @@
   (use-local-map memetalk-mode-map)
   (setq-local comment-start "// ")
   (setq-local comment-end "")
-  (setq-local font-lock-defaults (list memetalk-font-lock)))
+  (setq-local font-lock-defaults (list memetalk-font-lock))
+  (smie-setup memetalk-smie-grammar 'verbose-memetalk-smie-rules))
 
 ;; utils
 
