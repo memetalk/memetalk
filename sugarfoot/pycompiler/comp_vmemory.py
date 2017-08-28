@@ -2,7 +2,7 @@ import pyutils
 from pyutils import bits
 from pyutils import vmemory
 from pdb import set_trace as br
-
+import time
 
 class CompVirtualMemory(vmemory.VirtualMemory):
     def __init__(self):
@@ -12,13 +12,25 @@ class CompVirtualMemory(vmemory.VirtualMemory):
         self.string_table = {}
 
     def external_references(self):
-        return [(x[0], self.physical_address(x[1])) for x in self.ext_ref_table]
+        # print 'begin external refs'
+        # b = time.time()
+        res = [(x[0], self.physical_address(x[1])) for x in self.ext_ref_table]
+        # print 'end external refs', time.time()-b
+        return res
 
     def external_names(self):
-        return sorted(set([x[0] for x in self.ext_ref_table] + [x[0] for x in self.symb_table]))
+        # print 'begin external names'
+        # b = time.time()
+        res = sorted(set([x[0] for x in self.ext_ref_table] + [x[0] for x in self.symb_table]))
+        # print 'end external names', time.time()-b
+        return res
 
-    def reloc_table(self):
-        return [self.physical_address(entry) for entry in self.cells if type(entry) == vmemory.PointerCell]
+    # def reloc_table(self):
+    #     # print 'begin reloc table yy'
+    #     # b = time.time()
+    #     res = [self.physical_address(entry) for entry in self.cells if type(entry) == vmemory.PointerCell]
+    #     # print 'end reloc table', time.time()-b
+    #     return res
 
     def append_external_ref(self, name, label=None):
         oop = self.append_int(0xAAAA, label)

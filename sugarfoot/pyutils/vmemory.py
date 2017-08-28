@@ -2,6 +2,8 @@ from pdb import set_trace as br
 import math
 from pyutils import bits
 import pyutils
+import time
+from pyutils.parmap import parmap
 
 
 class Cell(object):
@@ -93,11 +95,26 @@ class VirtualMemory(object):
         self.base = 0
         self.cell_index = {} # label -> cells index
 
+        # opt
+        self.total_size = 0
+        self.opt_cell_indexes = {}
+        self.opt_ptr_cells = []
+        self.opt_physical_addresses = {}
+
+
     def _append_cell(self, cell, label):
         if label is not None:
             self.label_current(label)
         self.cells.append(cell)
         self.cell_sizes.append(len(cell))
+
+        # opt
+        self.opt_physical_addresses[cell] = self.total_size
+        self.total_size += len(cell)
+        self.opt_cell_indexes[cell] = len(self.cells) -1 # subst self.cells.index(cell)
+        if type(cell) == PointerCell:
+            self.opt_ptr_cells.append(cell)
+
 
     def set_base(self, base):
         self.base = base
@@ -144,19 +161,63 @@ class VirtualMemory(object):
 
     ###
     def physical_address(self, cell):
-        return self.base + sum(self.cell_sizes[0:self.cells.index(cell)])
+        return self.base + self.opt_physical_addresses[cell]
 
     def object_table(self):
-        return reduce(lambda x,y: x+y, [e() for e in self.cells])
+        # return reduce(lambda x,y: x+y, [e() for e in self.cells])
+        # b = time.time()
+        # print 'begin obj table' #, self.total_size)
+
+        def split_list(alist, parts=1):
+            length = len(alist)
+            return [ alist[i*length // parts: (i+1)*length // parts]
+                     for i in range(parts)]
+
+        def aggregate(cells):
+            # res = reduce(lambda x,y: x+y, [e() for e in self.cells])
+            res = []
+            for e in cells:
+                sub = e()
+                for v in sub:
+                    res.append(v)
+            return res
+
+        if self.total_size < 100000:
+            # res = reduce(lambda x,y: x+y, [e() for e in self.cells])
+            res = [None] * self.total_size
+            i = 0
+            for e in self.cells:
+                sub = e()
+                for v in sub:
+                    res[i] = v
+                    i += 1
+            # print 'end obj table', time.time()-b
+            return res
+        else:
+            num_workers = self.total_size / 1000
+            # print 'num_workers', num_workers
+            pres = parmap(aggregate, split_list(self.cells, num_workers))
+            # print 'done multiproc', time.time()-b
+            res = []
+            for x in pres:
+                res += x
+            return res
 
     def reloc_table(self):
-        return [self.physical_address(entry) for entry in self.cells if type(entry) == PointerCell]
+        # print 'reloc table xx'
+        # b = time.time()
+        res = [self.physical_address(entry) for entry in self.opt_ptr_cells]
+        # print 'end reloc table', time.time()-b
+        return res
 
     def symbols_references(self):
         sr = []
+        # print 'symb references'
+        # b = time.time()
         for text, ptr in self.symb_table:
-             for referer in [x for x in self.cells if type(x) == PointerCell and x.target_cell == ptr]:
-                 sr.append((text, self.base + sum(self.cell_sizes[0:self.cells.index(referer)])))
+            for referer in [x for x in self.opt_ptr_cells if x.target_cell == ptr]:
+                sr.append((text, self.physical_address(referer)))
+        # print 'end symb references', time.time()-b
         return sr
 
     def append_int_to_int_dict(self, pydict):
