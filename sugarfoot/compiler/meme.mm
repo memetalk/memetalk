@@ -96,6 +96,7 @@ instance_method id: fun() {
   return this._or([fun() {
     this._not(fun() {
       this._apply(:meme_keyword);});
+    this._apply(:spaces);
     this._apply(:identifier);
   }]);
 }

@@ -25,7 +25,7 @@ module_alias :modobj = [:alias _:libname _:alias] => modobj.module_alias(libname
 
 code_sec :modobj = [:code ~~[load_top_level_name(modobj)*] [definition(modobj)*]];
 
-load_top_level_name :modobj = [:class [:name _] _*] => modobj.add_top_level_name(name)
+load_top_level_name :modobj = [:class [_:name _] _*] => modobj.add_top_level_name(name)
                             | [:object _:name _*] => modobj.add_top_level_name(name)
                             | [:fun _:name _*] => modobj.add_top_level_name(name)
                             ;
@@ -43,7 +43,7 @@ function_definition :modobj =  !{this.input.head()}:ast
                                      [:body body(bproc)]] !{fnobj.set_text(ast.text)};
 
 
-class_definition :modobj =  [:class [:name _:parent]
+class_definition :modobj =  [:class [_:name _:parent]
                               [:fields _:fields]
                                 !{modobj.new_class(name, parent, fields)}:klass
                               constructors(klass)
@@ -83,7 +83,7 @@ fparam :obj  = [:var-arg _:x !{obj.set_vararg(x)}] => x
 params = [:params [param*:x]] => x;
 
 param = [:var-arg _:x] => x
-        | _:x
+        | _
         ;
 
 object_definition :modobj = [:object _:name !{modobj.new_object(name)}:obj
@@ -109,7 +109,7 @@ body :fnobj = [expr(fnobj)* [:end-body]]:ast => fnobj.emit_return_this(ast)
 
 exprs :fnobj = [expr(fnobj)*];
 
-expr_elif :fnobj :lb = [:elif expr(fnobj) !{fnobj.emit_jz()}:label [expr(fnobj)* !{fnobj.emit_jmp(lb)}]] !{label.as_current()}
+expr_elif :fnobj :lb = [:elif expr(fnobj) !{fnobj.emit_jz(null)}:label [expr(fnobj)* !{fnobj.emit_jmp(lb)}]] !{label.as_current()}
                      ;
 
 stm :fnobj :ast = :var-def _:id expr(fnobj) =>  fnobj.emit_var_decl(ast, id)
@@ -143,10 +143,10 @@ stm :fnobj :ast = :var-def _:id expr(fnobj) =>  fnobj.emit_var_decl(ast, id)
                | :>= _:e expr(fnobj) expr(fnobj, e) => fnobj.emit_binary(ast, ">=")
                | :== _:e expr(fnobj) expr(fnobj, e) => fnobj.emit_binary(ast, "==")
                | :!= _:e expr(fnobj) expr(fnobj, e) => fnobj.emit_binary(ast, "!=")
-               | :if expr(fnobj) !{fnobj.emit_jz()}:label [expr(fnobj)* !{fnobj.emit_jmp()}:lb2] !{label.as_current()} [expr_elif(fnobj, lb2)*] [expr(fnobj)*] !{lb2.as_current()}
+               | :if expr(fnobj) !{fnobj.emit_jz(null)}:label [expr(fnobj)* !{fnobj.emit_jmp(null)}:lb2] !{label.as_current()} [expr_elif(fnobj, lb2)*] [expr(fnobj)*] !{lb2.as_current()}
                | :while !{fnobj.current_label(false)}:lbcond
                    expr(fnobj)
-                   !{fnobj.emit_jz()}:lbend [expr(fnobj)*] !{fnobj.emit_jmp_back(lbcond.as_current())} => lbend.as_current()
+                   !{fnobj.emit_jz(null)}:lbend [expr(fnobj)*] !{fnobj.emit_jmp_back(lbcond.as_current())} => lbend.as_current()
                | :try
                   !{fnobj.current_label()}:label_begin_try
                     [expr(fnobj)*]
@@ -169,8 +169,8 @@ stm :fnobj :ast = :var-def _:id expr(fnobj) =>  fnobj.emit_var_decl(ast, id)
                | :literal :context    => fnobj.emit_push_context(ast)
                | :id _:name             => fnobj.emit_push_var(ast, name)
                | :field _:name          => fnobj.emit_push_field(ast, name)
-               | :literal-array  _:e exprs(fnobj, e)      => fnobj.emit_push_list(ast, len(e))
-               | :literal-dict   dict_pairs(fnobj):p   => fnobj.emit_push_dict(ast, len(p))
+               | :literal-array  _:e exprs(fnobj, e)      => fnobj.emit_push_list(ast, e.size)
+               | :literal-dict   dict_pairs(fnobj):p   => fnobj.emit_push_dict(ast, p.size)
                | :index _:e expr(fnobj) expr(fnobj, e)    => fnobj.emit_push_index(ast)
     ;
 

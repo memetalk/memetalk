@@ -284,6 +284,9 @@ init new: fun(cmod, name, super_name, fields) {
   @instance_methods = {};
   @class_methods = {};
 }
+instance_method fields: fun() {
+  return @fields;
+}
 instance_method label: fun() {
   return mmc.cclass_label(@name); //cmod.label() + '_' + self.name + "_CompiledClass"
 }
@@ -371,20 +374,20 @@ instance_method add: fun(cfun, name) {
     Exception.throw("redeclaration of " + name + " in " + cfun.name);
   }
   @variables[cfun].append(name);
-  return this.index(cfun, name);
+  return this.pos(cfun, name);
 }
-instance_method index: fun(cfun, name) {
-  return this._index(cfun, name);
+instance_method pos: fun(cfun, name) {
+  return this._pos(cfun, name);
 }
-instance_method _index: fun(cfun, name) {
+instance_method _pos: fun(cfun, name) {
   if (!@variables[cfun].has(name)) {
     if (@parent_storage == null) {
       Exception.throw("Undeclared " + name);
     } else {
-      return @parent_storage.index(@outer_cfun, name);
+      return @parent_storage.pos(@outer_cfun, name);
     }
   } else {
-    return fun() { this.env_offset(cfun) + @variables[cfun].index(name) };
+    return fun() { this.env_offset(cfun) + @variables[cfun].pos(name) };
   }
 }
 instance_method total: fun() {
@@ -409,7 +412,7 @@ fields: cmod, name, params, is_ctor, is_prim, prim_name, owner, is_top_level,
         location_mapping, has_env, var_declarations, literal_frame,
         bytecodes, exceptions_frame, accessor_flag, accessor_field,
         closures, should_wrap_catch_for_non_local_return, label,
-        var_arg;
+        var_arg, label_counter;
 
 init new: fun(cmod, owner, name, params, is_ctor, env_storage, is_top_level, outer_cfun, top_level_cfun) {
   //defaults:
@@ -456,6 +459,7 @@ init new: fun(cmod, owner, name, params, is_ctor, env_storage, is_top_level, out
 
   @label = null;
   @var_arg = false;
+  @label_counter = 0;
 }
 instance_method set_text: fun(text) {
   @text = text;
@@ -492,7 +496,8 @@ instance_method set_primitive: fun(prim_name) {
 }
 instance_method label: fun() {
   if (@label == null) {
-    @label = mmc.cfun_label(@owner.label, @name, Mirror.vtFor(@owner) == CompiledClass);
+    @label = mmc.cfun_label(@label_counter, @owner.label, @name, Mirror.vtFor(@owner) == CompiledClass);
+    @label_counter = @label_counter + 1;
   }
   return @label;
 }
@@ -763,7 +768,7 @@ instance_method create_and_register_core: fun(class_name) {
 instance_method emit_push_var: fun(_, name) {
   var idx = null;
   if (this.identifier_in_scope(this, name)) {
-    idx = @var_declarations.index(this, name);
+    idx = @var_declarations.pos(this, name);
     @bytecodes.append(:push_local, idx);
   } elif (this.identifier_is_module_scoped(name) or this.identifier_is_prime(name)) {
     idx = this.create_and_register_symbol_literal(name);
@@ -783,7 +788,7 @@ instance_method emit_push_var: fun(_, name) {
 instance_method emit_push_var: fun(_, name) {
   var idx = null;
   if (this.identifier_in_scope(this, name)) {
-    idx = @var_declarations.index(this, name);
+    idx = @var_declarations.pos(this, name);
     @bytecodes.append(:push_local, idx);
   } elif (this.identifier_is_module_scoped(name) or this.identifier_is_prime(name)) {
     idx = this.create_and_register_symbol_literal(name);
@@ -803,7 +808,7 @@ instance_method emit_push_var: fun(_, name) {
 instance_method emit_local_assignment: fun(_, name) {
   var idx = 0;
   if (this.identifier_in_scope(this, name)) {
-    idx = @var_declarations.index(this, name);
+    idx = @var_declarations.pos(this, name);
     @bytecodes.append(:pop_local, idx);
   } else {
     Exception.throw("local assignment: undeclared: " + name);
@@ -853,11 +858,11 @@ instance_method update_line_mapping: fun(bpos, ast) {
 }
 instance_method emit_var_decl: fun(_, name) {
   this.declare_var(name);
-  var idx = @var_declarations.index(this, name);
+  var idx = @var_declarations.pos(this, name);
   @bytecodes.append(:pop_local, idx);
 }
 instance_method emit_field_assignment: fun(_, field) {
-  var idx = @owner.fields.index(field);
+  var idx = @owner.fields.pos(field);
   @bytecodes.append(:pop_field, idx);
 }
 instance_method emit_index_assignment: fun(_) {
@@ -871,7 +876,7 @@ instance_method emit_pop: fun(_) {
 instance_method emit_send_or_local_call: fun(_, name, arity) {
   var idx = null;
   if (this.identifier_in_scope(this, name)) {
-    idx = @var_declarations.index(this, name);
+    idx = @var_declarations.pos(this, name);
     @bytecodes.append(:push_local, idx);
     @bytecodes.append(:call, arity);
   } elif (this.identifier_is_module_scoped(name)) {
@@ -917,21 +922,21 @@ instance_method emit_unary: fun(_, selector) {
 }
 instance_method emit_jz: fun(lb) { //lb defaults to null
   if (!lb) {
-    lb = @bytecodes.new_label();
+    lb = @bytecodes.new_label(null);
   }
   @bytecodes.append(:jz, lb);
   return lb;
 }
 instance_method emit_jmp: fun(lb) {
   if (!lb) {
-    lb = @bytecodes.new_label();
+    lb = @bytecodes.new_label(null);
   }
   @bytecodes.append(:jmp, lb);
   return lb;
 }
 instance_method emit_jmp_back: fun(lb) {
   if (!lb) {
-    lb = @bytecodes.new_label();
+    lb = @bytecodes.new_label(null);
   }
   @bytecodes.append(:jmpb, lb);
   return lb;
@@ -980,7 +985,7 @@ instance_method emit_push_closure: fun(_, fn) {
   @bytecodes.append(:send, 2);
 }
 instance_method emit_push_field: fun(_, field) {
-  var idx = @owner.fields.index(field);
+  var idx = @owner.fields.pos(field);
   @bytecodes.append(:push_field, idx);
 }
 instance_method bind_catch_var: fun(name) {

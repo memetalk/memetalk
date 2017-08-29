@@ -64,7 +64,7 @@ alpha =  '+' | '*' | '-' | '/' | '=' | '<' | '>' | '?' | '!';
 
 meme_keyword = ``fun`` | ``var`` | ``class`` | ``fields``;
 
-id = ~meme_keyword identifier;
+id = ~meme_keyword spaces identifier;
 
 alpha_name = spaces ~meme_keyword {alpha | letter | '_'}:x {identifier_rest|alpha}*:xs => ([x] + xs).join("");
 

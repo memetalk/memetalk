@@ -64,7 +64,7 @@ init new: fun(bytecodes, pos) { //pos defaults to null
   @pos = pos;
 }
 instance_method as_current: fun() {
-  @pos = @bytecodes.len - @start;
+  @pos = @bytecodes.size - @start;
 }
 instance_method value: fun() {
   return @pos;
@@ -77,13 +77,7 @@ init new: fun() {
   @lst = [];
 }
 instance_method append: fun(name, arg) {
-  if (Mirror.vtFor(arg) == Integer) {
-    @lst.append(Bytecode.new(name, Value.new(arg)));
-  } elif (Mirror.vtFor(arg) == Bytecode) {
-    @lst.append(Bytecode.new(name, arg));
-  } else {
-    Exception.throw("Unsupported type");
-  }
+  @lst.append(Bytecode.new(name, Value.new(arg)));
 }
 instance_method words: fun() {
   return @lst.map(fun(x) { x.value });
@@ -104,12 +98,20 @@ instance_method new_label: fun(current) { //current defaults to null
 end
 
 class Value
-fields: v;
-init new: fun(v) {
-  @v = v;
+fields: val;
+init new: fun(val) {
+  @val = val;
 }
 instance_method value: fun() {
-  return @v;
+  if (Mirror.vtFor(@val) == Integer) {
+    return @val;
+  } elif (Mirror.vtFor(@val) == Context) {
+    return @val();
+  } elif (Mirror.vtFor(@val) == Label) {
+    return @val.value;
+  } else {
+    Exception.throw("Unsupported type");
+  }
 }
 end
 

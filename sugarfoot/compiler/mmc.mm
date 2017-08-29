@@ -33,14 +33,11 @@ closure_name: fun() {
     return "<anonymous " + _closures.toString + ">";
 }
 
-_cfun_id: [0];
-
-cfun_label: fun(owner_label, name, is_method) {
+cfun_label: fun(counter, owner_label, name, is_method) {
   if (is_method) {
     // create unique label, so we can have an instance method with
     // the same name as a class method.
-    _cfun_id[0] = _cfun_id[0] + 1;
-    return _cfun_id.toString + "_" + owner_label + SEP + name + SEP + "CompiledFunction";
+    return counter.toString + "_" + owner_label + SEP + name + SEP + "CompiledFunction";
   } else {
     return owner_label + SEP + name + SEP + "CompiledFunction";
   }
