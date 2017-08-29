@@ -389,24 +389,14 @@ instance_method element: fun() {
     this._apply(:data_element);
   }, fun() {
     this._apply_with_args(:token, ["?{"]);
-    s = this._many(fun() {
-      this._or([fun() {
-        this._not(fun() {
-          this._apply_with_args(:seq, ["}"]);});
-        this._apply(:anything);
-      }]);}, null);
+    s = this._apply(:host_expr);
     this._apply_with_args(:seq, ["}"]);
-    return [:sem_pred, s.join("")];
+    return [:sem_pred, s];
   }, fun() {
     this._apply_with_args(:token, ["!{"]);
-    s = this._many(fun() {
-      this._or([fun() {
-        this._not(fun() {
-          this._apply_with_args(:seq, ["}"]);});
-        this._apply(:anything);
-      }]);}, null);
+    s = this._apply(:host_expr);
     this._apply_with_args(:seq, ["}"]);
-    return [:sem_action, s.join("")];
+    return [:sem_action, s];
   }, fun() {
     this._apply_with_args(:token, ["{"]);
     c = this._apply(:choices);

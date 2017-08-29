@@ -51,7 +51,7 @@ class_definition :modobj =  [:class [_:name _:parent]
                               [class_method(klass)*]];
 
 constructor :klass =  !{this.input.head()}:ast
-                        [:ctor _:name params:p !{klass.new_ctor(name, p)}:fnobj
+                        [:ctor _:name !{klass.new_ctor(name)}:fnobj fparams(fnobj):p !{fnobj.set_params(p)}
                              !{fnobj.set_line(ast)}
                              _:uses_env !{fnobj.uses_env(uses_env)}
                              !{fnobj.body_processor}:bproc
@@ -61,7 +61,7 @@ constructors :klass = [:ctors [constructor(klass)*]]
                      | [:ctors []];
 
 instance_method :klass = !{this.input.head()}:ast
-                           [:fun _:name params:p !{klass.new_instance_method(name, p)}:fnobj
+                           [:fun _:name !{klass.new_instance_method(name)}:fnobj fparams(fnobj):p !{fnobj.set_params(p)}
                                   !{fnobj.set_line(ast)}
                                   _:uses_env !{fnobj.uses_env(uses_env)}
                                   !{fnobj.body_processor}:bproc
@@ -77,7 +77,7 @@ class_method :klass = !{this.input.head()}:ast
 fparams :obj = [:params [fparam(obj)*:x]] => x;
 
 fparam :obj  = [:var-arg _:x !{obj.set_vararg(x)}] => x
-               | _:x
+               | _
                ;
 
 params = [:params [param*:x]] => x;
@@ -109,8 +109,9 @@ body :fnobj = [expr(fnobj)* [:end-body]]:ast => fnobj.emit_return_this(ast)
 
 exprs :fnobj = [expr(fnobj)*];
 
-expr_elif :fnobj :lb = [:elif expr(fnobj) !{fnobj.emit_jz(null)}:label [expr(fnobj)* !{fnobj.emit_jmp(lb)}]] !{label.as_current()}
-                     ;
+
+expr_elif :fnobj = [:elif expr(fnobj) !{fnobj.emit_jz(null)}:lb_next [expr(fnobj)* !{fnobj.emit_jmp(null)}:lb_jmp]] !{lb_next.as_current()} => lb_jmp;
+
 
 stm :fnobj :ast = :var-def _:id expr(fnobj) =>  fnobj.emit_var_decl(ast, id)
                | :return expr(fnobj)       =>  fnobj.emit_return_top(ast)
@@ -135,7 +136,6 @@ stm :fnobj :ast = :var-def _:id expr(fnobj) =>  fnobj.emit_var_decl(ast, id)
                | :&  _:e expr(fnobj) expr(fnobj, e) => fnobj.emit_binary(ast, "&")
                | :|  _:e expr(fnobj) expr(fnobj, e) => fnobj.emit_binary(ast, "|")
                | :<  _:e expr(fnobj) expr(fnobj, e) => fnobj.emit_binary(ast, "<")
-               | :<  _:e expr(fnobj) expr(fnobj, e) => fnobj.emit_binary(ast, "<")
                | :<<  _:e expr(fnobj) expr(fnobj, e) => fnobj.emit_binary(ast, "<<")
                | :>>  _:e expr(fnobj) expr(fnobj, e) => fnobj.emit_binary(ast, ">>")
                | :<= _:e expr(fnobj) expr(fnobj, e) => fnobj.emit_binary(ast, "<=")
@@ -143,15 +143,15 @@ stm :fnobj :ast = :var-def _:id expr(fnobj) =>  fnobj.emit_var_decl(ast, id)
                | :>= _:e expr(fnobj) expr(fnobj, e) => fnobj.emit_binary(ast, ">=")
                | :== _:e expr(fnobj) expr(fnobj, e) => fnobj.emit_binary(ast, "==")
                | :!= _:e expr(fnobj) expr(fnobj, e) => fnobj.emit_binary(ast, "!=")
-               | :if expr(fnobj) !{fnobj.emit_jz(null)}:label [expr(fnobj)* !{fnobj.emit_jmp(null)}:lb2] !{label.as_current()} [expr_elif(fnobj, lb2)*] [expr(fnobj)*] !{lb2.as_current()}
+               | :if expr(fnobj) !{fnobj.emit_jz(null)}:lb_next [expr(fnobj)* !{fnobj.emit_jmp(null)}:lb_end] !{lb_next.as_current()} [expr_elif(fnobj)*:lbs_end] [expr(fnobj)*] !{lb_end.as_current()} !{lbs_end.map(fun(x) { x.as_current()})}
                | :while !{fnobj.current_label(false)}:lbcond
                    expr(fnobj)
                    !{fnobj.emit_jz(null)}:lbend [expr(fnobj)*] !{fnobj.emit_jmp_back(lbcond.as_current())} => lbend.as_current()
                | :try
-                  !{fnobj.current_label()}:label_begin_try
+                  !{fnobj.current_label(true)}:label_begin_try
                     [expr(fnobj)*]
                   !{fnobj.emit_catch_jump()}:end_pos
-                  !{fnobj.current_label()}:label_begin_catch
+                  !{fnobj.current_label(true)}:label_begin_catch
                     catch_decl:cp
                   !{fnobj.bind_catch_var(cp[1])}
                     [expr(fnobj)*] => fnobj.emit_try_catch(label_begin_try, label_begin_catch, end_pos, cp[0])

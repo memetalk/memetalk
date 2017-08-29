@@ -140,11 +140,7 @@ instance_method parse: fun() {
 instance_method translate: fun(ast) {
   var parser = meme_tr.MemeScriptTranslator.new(this, ometa_base.OMetaStream.with_data([ast]));
   parser.prepend_input(:start);
-  try {
-    parser.apply();
-  } catch(OMetaException e) {
-    Exception.throw("translation error error");
-  }
+  parser.apply();
 }
 instance_method compile: fun(filepath) {
   @filepath = filepath;

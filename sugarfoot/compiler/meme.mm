@@ -79,6 +79,10 @@ instance_method alpha: fun() {
     this._apply_with_args(:seq, ["?"]);
   }, fun() {
     this._apply_with_args(:seq, ["!"]);
+  }, fun() {
+    this._apply_with_args(:seq, ["&"]);
+  }, fun() {
+    this._apply_with_args(:seq, ["|"]);
   }]);
 }
 instance_method meme_keyword: fun() {
@@ -545,8 +549,8 @@ instance_method top_fun_body: fun() {
 instance_method primitive: fun() {
   var s = null;
   return this._or([fun() {
-    this._apply_with_args(:token, ["<"]);
-    this._apply_with_args(:keyword,["primiteive"]);
+    this._apply_with_args(:token, ["<primitive"]);
+    this._apply(:spaces);
     s = this._apply(:lit_string);
     this._apply_with_args(:token, [">"]);
     return [[:primitive, s]];
@@ -628,7 +632,7 @@ instance_method lhs: fun() {
   var x = null;
   return this._or([fun() {
     r = this._apply(:expr);
-    this._pred(r.size > 0 and r[0] == "index");
+    this._pred(r.size > 0 and r[0] == :index);
     return r;
   }, fun() {
     x = this._apply(:alpha_name);
@@ -804,6 +808,8 @@ instance_method expr_rel: fun() {
   }, fun() {
     a = this._apply(:expr_rel);
     this._apply_with_args(:token, [">"]);
+    this._not(fun() {
+      this._apply_with_args(:seq, [">"]);});
     b = this._apply(:expr_add);
     return [:>, a, b];
   }, fun() {
@@ -814,6 +820,8 @@ instance_method expr_rel: fun() {
   }, fun() {
     a = this._apply(:expr_rel);
     this._apply_with_args(:token, ["<"]);
+    this._not(fun() {
+      this._apply_with_args(:seq, ["<"]);});
     b = this._apply(:expr_add);
     return [:<, a, b];
   }, fun() {
@@ -838,6 +846,26 @@ instance_method expr_add: fun() {
     this._apply_with_args(:token, ["-"]);
     b = this._apply(:expr_mul);
     return [:-, a, b];
+  }, fun() {
+    a = this._apply(:expr_add);
+    this._apply_with_args(:token, ["<<"]);
+    b = this._apply(:expr_mul);
+    return [:<<, a, b];
+  }, fun() {
+    a = this._apply(:expr_add);
+    this._apply_with_args(:token, [">>"]);
+    b = this._apply(:expr_mul);
+    return [:>>, a, b];
+  }, fun() {
+    a = this._apply(:expr_add);
+    this._apply_with_args(:token, ["&"]);
+    b = this._apply(:expr_mul);
+    return [:&, a, b];
+  }, fun() {
+    a = this._apply(:expr_add);
+    this._apply_with_args(:token, ["|"]);
+    b = this._apply(:expr_mul);
+    return [:|, a, b];
   }, fun() {
     this._apply(:expr_mul);
   }]);
@@ -1077,7 +1105,7 @@ instance_method rewrite_last_stmt: fun() {
     c = this._form(fun() {
       this._apply_with_args(:exactly, [:expression]);
       this._apply(:anything);});
-    return c.prepend(:return);
+    return c.set(0, :return);
   }, fun() {
     this._apply(:anything);
   }]);
@@ -1101,12 +1129,51 @@ instance_method lit_symbol: fun() {
   }]);
 }
 instance_method lit_number: fun() {
-  var ds = null;
+  var x = null;
   return this._or([fun() {
     this._apply(:spaces);
+    x = this._or([fun() {
+      this._apply(:base_10);
+    }, fun() {
+      this._apply(:base_16);
+    }]);
+    return [:literal-number, x];
+  }]);
+}
+instance_method base_10: fun() {
+  var ds = null;
+  return this._or([fun() {
     ds = this._many1(fun() {
       this._apply(:digit);});
-    return [:literal-number, ds.join("").toInteger];
+    this._not(fun() {
+      this._apply(:letter);});
+    return ds.join("").toInteger;
+  }]);
+}
+instance_method base_16: fun() {
+  var xs = null;
+  return this._or([fun() {
+    this._apply_with_args(:seq, ["0"]);
+    this._apply_with_args(:seq, ["x"]);
+    xs = this._many1(fun() {
+      this._or([fun() {
+        this._apply(:digit);
+      }, fun() {
+        this._apply_with_args(:seq, ["A"]);
+      }, fun() {
+        this._apply_with_args(:seq, ["B"]);
+      }, fun() {
+        this._apply_with_args(:seq, ["C"]);
+      }, fun() {
+        this._apply_with_args(:seq, ["D"]);
+      }, fun() {
+        this._apply_with_args(:seq, ["E"]);
+      }, fun() {
+        this._apply_with_args(:seq, ["F"]);
+      }]);});
+    this._not(fun() {
+      this._apply(:letter);});
+    return xs.join("").asHex;
   }]);
 }
 instance_method lit_string: fun() {
@@ -1151,7 +1218,7 @@ instance_method single_top_level_fun: fun() {
     this._apply_with_args(:token, ["{"]);
     body = this._apply(:top_fun_body);
     this._apply_with_args(:token, ["}"]);
-    return [:fun, name, [:params, p],
+    return [:fun, name, [:params, p], false,
                               [:body, body + [:end-body]]];
   }]);
 }

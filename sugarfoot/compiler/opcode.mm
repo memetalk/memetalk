@@ -127,7 +127,10 @@ instance_method value: fun() {
       ^ encode(val, @arg.value);
     }
   });
-  Exception.throw("Opcode not found");
+  Exception.throw("Opcode not found: " + @name.toSource);
+}
+instance_method set_arg: fun(arg) {
+  @arg = arg;
 }
 end
 

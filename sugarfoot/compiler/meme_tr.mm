@@ -174,8 +174,8 @@ instance_method class_definition: fun() {
 instance_method constructor: fun() {
   var ast = null;
   var name = null;
-  var p = null;
   var fnobj = null;
+  var p = null;
   var uses_env = null;
   var bproc = null;
   var klass = this._apply(:anything);
@@ -184,8 +184,9 @@ instance_method constructor: fun() {
     this._form(fun() {
       this._apply_with_args(:exactly, [:ctor]);
       name = this._apply(:anything);
-      p = this._apply(:params);
-      fnobj = klass.new_ctor(name, p);
+      fnobj = klass.new_ctor(name);
+      p = this._apply_with_args(:fparams, [fnobj]);
+      fnobj.set_params(p);
       fnobj.set_line(ast);
       uses_env = this._apply(:anything);
       fnobj.uses_env(uses_env);
@@ -214,8 +215,8 @@ instance_method constructors: fun() {
 instance_method instance_method: fun() {
   var ast = null;
   var name = null;
-  var p = null;
   var fnobj = null;
+  var p = null;
   var uses_env = null;
   var bproc = null;
   var klass = this._apply(:anything);
@@ -224,8 +225,9 @@ instance_method instance_method: fun() {
     this._form(fun() {
       this._apply_with_args(:exactly, [:fun]);
       name = this._apply(:anything);
-      p = this._apply(:params);
-      fnobj = klass.new_instance_method(name, p);
+      fnobj = klass.new_instance_method(name);
+      p = this._apply_with_args(:fparams, [fnobj]);
+      fnobj.set_params(p);
       fnobj.set_line(ast);
       uses_env = this._apply(:anything);
       fnobj.uses_env(uses_env);
@@ -284,7 +286,7 @@ instance_method fparam: fun() {
       obj.set_vararg(x);});
     return x;
   }, fun() {
-    x = this._apply(:anything);
+    this._apply(:anything);
   }]);
 }
 instance_method params: fun() {
@@ -417,19 +419,20 @@ instance_method exprs: fun() {
   }]);
 }
 instance_method expr_elif: fun() {
-  var label = null;
+  var lb_next = null;
+  var lb_jmp = null;
   var fnobj = this._apply(:anything);
-  var lb = this._apply(:anything);
   return this._or([fun() {
     this._form(fun() {
       this._apply_with_args(:exactly, [:elif]);
       this._apply_with_args(:expr, [fnobj]);
-      label = fnobj.emit_jz(null);
+      lb_next = fnobj.emit_jz(null);
       this._form(fun() {
         this._many(fun() {
           this._apply_with_args(:expr, [fnobj]);}, null);
-        fnobj.emit_jmp(lb);});});
-    label.as_current();
+        lb_jmp = fnobj.emit_jmp(null);});});
+    lb_next.as_current();
+    return lb_jmp;
   }]);
 }
 instance_method stm: fun() {
@@ -438,8 +441,9 @@ instance_method stm: fun() {
   var arity = null;
   var name = null;
   var e = null;
-  var label = null;
-  var lb2 = null;
+  var lb_next = null;
+  var lb_end = null;
+  var lbs_end = null;
   var lbcond = null;
   var lbend = null;
   var label_begin_try = null;
@@ -570,12 +574,6 @@ instance_method stm: fun() {
     this._apply_with_args(:expr, [fnobj,e]);
     return fnobj.emit_binary(ast,"<");
   }, fun() {
-    this._apply_with_args(:exactly, [:<]);
-    e = this._apply(:anything);
-    this._apply_with_args(:expr, [fnobj]);
-    this._apply_with_args(:expr, [fnobj,e]);
-    return fnobj.emit_binary(ast,"<");
-  }, fun() {
     this._apply_with_args(:exactly, [:<<]);
     e = this._apply(:anything);
     this._apply_with_args(:expr, [fnobj]);
@@ -620,19 +618,20 @@ instance_method stm: fun() {
   }, fun() {
     this._apply_with_args(:exactly, [:if]);
     this._apply_with_args(:expr, [fnobj]);
-    label = fnobj.emit_jz(null);
+    lb_next = fnobj.emit_jz(null);
     this._form(fun() {
       this._many(fun() {
         this._apply_with_args(:expr, [fnobj]);}, null);
-      lb2 = fnobj.emit_jmp(null);});
-    label.as_current();
+      lb_end = fnobj.emit_jmp(null);});
+    lb_next.as_current();
     this._form(fun() {
-      this._many(fun() {
-        this._apply_with_args(:expr_elif, [fnobj,lb2]);}, null);});
+      lbs_end = this._many(fun() {
+        this._apply_with_args(:expr_elif, [fnobj]);}, null);});
     this._form(fun() {
       this._many(fun() {
         this._apply_with_args(:expr, [fnobj]);}, null);});
-    lb2.as_current();
+    lb_end.as_current();
+    lbs_end.map(fun(x) { x.as_current()});
   }, fun() {
     this._apply_with_args(:exactly, [:while]);
     lbcond = fnobj.current_label(false);
@@ -645,12 +644,12 @@ instance_method stm: fun() {
     return lbend.as_current();
   }, fun() {
     this._apply_with_args(:exactly, [:try]);
-    label_begin_try = fnobj.current_label();
+    label_begin_try = fnobj.current_label(true);
     this._form(fun() {
       this._many(fun() {
         this._apply_with_args(:expr, [fnobj]);}, null);});
     end_pos = fnobj.emit_catch_jump();
-    label_begin_catch = fnobj.current_label();
+    label_begin_catch = fnobj.current_label(true);
     cp = this._apply(:catch_decl);
     fnobj.bind_catch_var(cp[1]);
     this._form(fun() {

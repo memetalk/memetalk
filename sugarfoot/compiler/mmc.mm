@@ -26,11 +26,8 @@ class_label: fun(name) {
   return name; // # + SEP + "Class"
 }
 
-_closures: [0]; //workaround for mutable global var
-
-closure_name: fun() {
-    _closures[0] = _closures[0] + 1;
-    return "<anonymous " + _closures.toString + ">";
+closure_name: fun(counter) {
+    return "<anonymous " + counter.toString + ">";
 }
 
 cfun_label: fun(counter, owner_label, name, is_method) {
@@ -39,7 +36,7 @@ cfun_label: fun(counter, owner_label, name, is_method) {
     // the same name as a class method.
     return counter.toString + "_" + owner_label + SEP + name + SEP + "CompiledFunction";
   } else {
-    return owner_label + SEP + name + SEP + "CompiledFunction";
+    return counter.toString + owner_label + SEP + name + SEP + "CompiledFunction";
   }
 }
 

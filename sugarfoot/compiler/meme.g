@@ -60,7 +60,7 @@ instance_method maybe_append_semicol_expr: fun(body, no_semicol_expr) {
 }
 
 <ometa>
-alpha =  '+' | '*' | '-' | '/' | '=' | '<' | '>' | '?' | '!';
+alpha =  '+' | '*' | '-' | '/' | '=' | '<' | '>' | '?' | '!' | '&' | '|';
 
 meme_keyword = ``fun`` | ``var`` | ``class`` | ``fields``;
 
@@ -179,7 +179,7 @@ idlist = id:x {"," id}*:xs => [x] + xs
 top_fun_body = primitive
              | stmts;
 
-primitive =  "<" ``primiteive`` lit_string:s ">" => [[:primitive, s]];
+primitive =  "<primitive" spaces lit_string:s ">" => [[:primitive, s]];
 
 stmts  =  stmt*:x => x;
 
@@ -201,7 +201,7 @@ expr_decl =  ``var``
 
 expr_attr =  spaces  lhs:a "=" expr:b => [:=, a, b];
 
-lhs =  expr:r ?{r.size > 0 and r[0] == "index"} => r
+lhs =  expr:r ?{r.size > 0 and r[0] == :index} => r
     |  alpha_name:x => [:id, x]
     |  field_name:x => [:field, x];
 
@@ -251,14 +251,18 @@ expr_eq =   expr_eq:a "==" expr_rel:b => [:==, a, b]
         | expr_rel;
 
 expr_rel =   expr_rel:a ">=" expr_add:b => [:>=, a, b]
-         |   expr_rel:a ">" expr_add:b => [:>, a, b]
+         |   expr_rel:a ">" ~'>' expr_add:b => [:>, a, b]
          |   expr_rel:a "<=" expr_add:b => [:<=, a, b]
-         |   expr_rel:a "<" expr_add:b => [:<, a, b]
+         |   expr_rel:a "<" ~'<' expr_add:b => [:<, a, b]
          | expr_add;
 
 expr_add =   expr_add:a "++" expr_mul:b => [:++, a, b]
          |   expr_add:a "+" expr_mul:b => [:+, a, b]
          |   expr_add:a "-" expr_mul:b => [:-, a, b]
+         |   expr_add:a "<<" expr_mul:b => [:<<, a, b]
+         |   expr_add:a ">>" expr_mul:b => [:>>, a, b]
+         |   expr_add:a "&" expr_mul:b =>  [:&, a, b]
+         |   expr_add:a "|" expr_mul:b =>  [:|, a, b]
          | expr_mul;
 
 expr_mul =   expr_mul:a "*" expr_unary:b => [:*, a, b]
@@ -330,15 +334,21 @@ funliteral_body =
                 => body + [[:return-null]];
 
 
-rewrite_last_stmt = [:expression _]:c => c.prepend(:return)
-                  | _;
+rewrite_last_stmt = [:expression _]:c => c.set(0, :return)
+                  | _
+                  ;
 
 cfunliteral_body = funliteral_body:x spaces ~_ => x;
 
 lit_symbol = ":" symbol_name:xs
            => [:literal-symbol, xs];
 
-lit_number = spaces  digit+:ds => [:literal-number, ds.join("").toInteger];
+lit_number = spaces {base_10 | base_16}:x => [:literal-number, x];
+
+base_10 = digit+:ds ~letter => ds.join("").toInteger;
+
+base_16 = '0' 'x' {digit | 'A' | 'B' | 'C' | 'D' | 'E' | 'F'}+:xs ~letter => xs.join("").asHex;
+
 
 lit_string  = '"' { lit_escaped | ~'"' _}*:xs '"'
                => [:literal-string, xs.join("").escape];
@@ -352,7 +362,7 @@ single_top_level_fun :name = ``fun``
                              fparams:p "{"
                          top_fun_body:body
                        "}"
-                       => [:fun, name, [:params, p],
+                       => [:fun, name, [:params, p], false,
                               [:body, body + [:end-body]]];
 </ometa>
 

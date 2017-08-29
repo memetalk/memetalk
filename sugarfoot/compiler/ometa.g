@@ -112,8 +112,8 @@ init new: fun(input) {
 
   element =  prod_app
           |  data_element
-          |  "?{" {~'}' _}*:s '}' => [:sem_pred, s.join("")]
-          |  "!{" {~'}' _}*:s '}' => [:sem_action, s.join("")]
+          |  "?{" host_expr:s '}' => [:sem_pred, s]
+          |  "!{" host_expr:s '}' => [:sem_action, s]
           |  "{" choices:c "}" => c
           ;
 

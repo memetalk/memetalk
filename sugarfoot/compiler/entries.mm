@@ -1,11 +1,8 @@
-.preamble(bits, opcode, mmc, memetest)
+.preamble(bits, opcode, mmc)
  bits : meme:bits;
  opcode : meme:opcode;
  mmc: meme:mmc;
- memetest : meme:memetest;
- [Test] <= memetest;
 .code
-
 
 class OrderedDict < Dictionary
 fields: order;
@@ -20,16 +17,17 @@ instance_method set: fun(key, val) {
 instance_method keys: fun() {
   return @order;
 }
-instance_method each: fun() {// DO NOT COMMIT ME
-  return Exception.throw("TODO");
+instance_method values: fun() {
+  return @order.map(fun(k) { this[k] });
 }
 end
 
 
 class Entry
-fields: oop;
+fields: oop, label_counter;
 init new: fun() {
   @oop = null;
+  @label_counter = 0;
 }
 instance_method set_oop: fun(oop) {
   @oop = oop;
@@ -37,6 +35,11 @@ instance_method set_oop: fun(oop) {
 }
 instance_method oop: fun() {
   return @oop;
+}
+instance_method label_counter: fun() {
+  var ret = @label_counter;
+  @label_counter = @label_counter + 1;
+  return ret;
 }
 end
 
@@ -145,7 +148,7 @@ end
 //// these need to know the CompiledFunction owner (which s Object_CompiledClass)
 
 class Object_Object_Behavior < MMObject
-instance_method new_ctor: fun(name, params) {
+instance_method new_ctor: fun(name) {
   var owner = this.imod.object_by_name("Object_CompiledClass");
   var d = this.slots.filter(fun(s) { s[:type] == :dict });
   var dslot = null;
@@ -155,7 +158,7 @@ instance_method new_ctor: fun(name, params) {
   } else {
     dslot = d[0];
   }
-  var fn = CompiledFunction.new(this.imod.cmod, owner, name, params,
+  var fn = CompiledFunction.new(this.imod.cmod, owner, name, [],
   true, null, true, null, null);
   dslot[:value][name] = fn;
   return fn;
@@ -227,15 +230,15 @@ fields: imod, behavior, cclass, dictionary;
 init new: fun(imod, cclass) {
   super.new();
   @imod = imod;
-  @behavior = Bejavior.new(cclass.name, cclass.super_name);
+  @behavior = Behavior.new(cclass.name, cclass.super_name);
   @cclass = cclass;
   @dictionary = {};
 }
 instance_method label: fun() {
   return mmc.class_label(@cclass.name);
 }
-instance_method new_instance_method: fun(name, params) {
-  var cfun = @cclass.new_instance_method(name, params);
+instance_method new_instance_method: fun(name) {
+  var cfun = @cclass.new_instance_method(name);
   var fn = Function.new(@imod, cfun);
   @dictionary[name] = fn;
   return fn;
@@ -246,8 +249,8 @@ instance_method new_class_method: fun(name) {
   @behavior.dictionary[name] = fn;
   return fn;
 }
-instance_method new_ctor: fun(name, params) {
-  var cfun = @cclass.new_ctor(name, params);
+instance_method new_ctor: fun(name) {
+  var cfun = @cclass.new_ctor(name);
   var fn = Function.new(@imod, cfun);
   @behavior.dictionary[name] = fn;
   return fn;
@@ -290,14 +293,14 @@ instance_method fields: fun() {
 instance_method label: fun() {
   return mmc.cclass_label(@name); //cmod.label() + '_' + self.name + "_CompiledClass"
 }
-instance_method new_ctor: fun(name, params) {
-  var fn = CompiledFunction.new(@cmod, this, name, params, true,
+instance_method new_ctor: fun(name) {
+  var fn = CompiledFunction.new(@cmod, this, name, [], true,
       null, true, null, null);
   @class_methods[name] = fn;
   return fn;
 }
-instance_method new_instance_method: fun(name, params) {
-  var fn = CompiledFunction.new(@cmod, this, name, params,
+instance_method new_instance_method: fun(name) {
+  var fn = CompiledFunction.new(@cmod, this, name, [],
       false, null, true, null, null);
   @instance_methods[name] = fn;
   return fn;
@@ -360,6 +363,9 @@ init new: fun(cfun, outer_cfun, storage) { //outer_cfun/storage defaults to null
   }
   @variables[cfun] = [];
 }
+instance_method variables: fun() {
+  return @variables;
+}
 instance_method is_visible: fun(cfun, name) {
   var idx = @variables.keys.pos(cfun);
   return this._flat(@variables.values().range(0, idx + 1)).has(name);
@@ -412,7 +418,7 @@ fields: cmod, name, params, is_ctor, is_prim, prim_name, owner, is_top_level,
         location_mapping, has_env, var_declarations, literal_frame,
         bytecodes, exceptions_frame, accessor_flag, accessor_field,
         closures, should_wrap_catch_for_non_local_return, label,
-        var_arg, label_counter;
+        var_arg;
 
 init new: fun(cmod, owner, name, params, is_ctor, env_storage, is_top_level, outer_cfun, top_level_cfun) {
   //defaults:
@@ -459,7 +465,6 @@ init new: fun(cmod, owner, name, params, is_ctor, env_storage, is_top_level, out
 
   @label = null;
   @var_arg = false;
-  @label_counter = 0;
 }
 instance_method set_text: fun(text) {
   @text = text;
@@ -494,10 +499,13 @@ instance_method set_primitive: fun(prim_name) {
   @prim_name = prim_name;
   @is_prim = true;
 }
+instance_method top_level_cfun: fun() {
+  return @top_level_cfun;
+}
+
 instance_method label: fun() {
   if (@label == null) {
-    @label = mmc.cfun_label(@label_counter, @owner.label, @name, Mirror.vtFor(@owner) == CompiledClass);
-    @label_counter = @label_counter + 1;
+    @label = mmc.cfun_label(@owner.label_counter, @owner.label, @name, Mirror.vtFor(@owner) == CompiledClass);
   }
   return @label;
 }
@@ -600,8 +608,8 @@ instance_method fill_exceptions_frame: fun(vmem) {
   return @exceptions_frame.size;
 }
 instance_method wrap_catch_for_non_local_return: fun() {
-  var lb_begin_try = opcode.Label(@bytecodes, 0);
-  var lb_begin_catch = this.current_label;
+  var lb_begin_try = opcode.Label.new(@bytecodes, 0);
+  var lb_begin_catch = this.current_label(true);
   var catch_type = "NonLocalReturn";
 
   //taking out the valuefrom exception object -- it is on top of stack
@@ -698,11 +706,12 @@ instance_method new_closure: fun(params) {
   if (@is_top_level) {
     top_level_cfun = this;
   } else {
-    top_level_cfun = this.top_level_cfun;
+    top_level_cfun = @top_level_cfun;
   }
 
-  var cfun = CompiledFunction.new(@cmod, @owner, mmc.closure_name(), params,
-                                  @var_declarations, false, this, top_level_cfun);
+  var cfun = CompiledFunction.new(@cmod, @owner, mmc.closure_name(@owner.label_counter), params,
+                                  false, @var_declarations, false, this, top_level_cfun);
+
   if (@is_top_level) {
     @closures.append(cfun);
   }
@@ -817,8 +826,12 @@ instance_method emit_local_assignment: fun(_, name) {
 instance_method emit_return_top: fun(_) {
   @bytecodes.append(:ret_top, 0);
 }
+instance_method set_should_wrap_catch_for_non_local_return: fun(val) {
+  @should_wrap_catch_for_non_local_return = val;
+}
+
 instance_method emit_non_local_return: fun(_) {
-  var idex_class = this.create_and_register_symbol_literal("NonLocalReturn");
+  var idx_class = this.create_and_register_symbol_literal("NonLocalReturn");
   var idx_throw = this.create_and_register_symbol_literal("throw");
   @bytecodes.append(:push_module, 0);
   @bytecodes.append(:push_literal, idx_class);
@@ -918,7 +931,7 @@ instance_method emit_binary: fun(_, selector) {
 instance_method emit_unary: fun(_, selector) {
   var idx = this.create_and_register_symbol_literal(selector);
   @bytecodes.append(:push_literal, idx);
-  @bytecodes.append(:send, 1);
+  @bytecodes.append(:send, 0);
 }
 instance_method emit_jz: fun(lb) { //lb defaults to null
   if (!lb) {
@@ -1001,7 +1014,7 @@ instance_method emit_catch_jump: fun() {
 }
 instance_method emit_try_catch: fun(lb_begin_try, lb_begin_catch, jmp_pos, catch_type) {
   var blen = @bytecodes.size;
-  @bytecodes.list[jmp_pos].set_arg(fun() { blen - jmp_pos });
+  @bytecodes.list[jmp_pos].set_arg(opcode.Value.new(blen - jmp_pos));
   this.add_exception_entry(lb_begin_try, lb_begin_catch, catch_type);
 }
 instance_method emit_push_list: fun(_, length) {
@@ -1031,7 +1044,7 @@ instance_method emit_push_dict: fun(_, length) {
 }
 instance_method emit_push_index: fun(_) {
   var idx_selector = this.create_and_register_symbol_literal("index");
-  @bytecodes.append("push_literal", idx_selector);
+  @bytecodes.append(:push_literal, idx_selector);
   @bytecodes.append(:send, 1);
 }
 end
@@ -1291,6 +1304,5 @@ instance_method fill: fun(vmem) {
   @imod.filL(vmem);
 }
 end
-
 
 .endcode
