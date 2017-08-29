@@ -157,10 +157,13 @@ end
 
 main: fun() {
   var args = argv();
-  if (args.size != 2) {
+  if (args.size < 2) {
     io.print("usage: compiler <path to file.mm>");
   } else {
-    Compiler.new.compile(argv()[1]);
+    argv().from(1).each(fun(_, path) {
+      io.print(path);
+      Compiler.new.compile(path);
+   });
   }
 }
 
