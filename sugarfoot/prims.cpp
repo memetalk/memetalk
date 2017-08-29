@@ -183,6 +183,18 @@ static int prim_string_to_byte(Process* proc) {
   return 0;
 }
 
+static int prim_string_as_hex(Process* proc) {
+  oop self =  proc->dp();
+  std::string str = proc->mmobj()->mm_string_stl_str(proc, self);
+  unsigned int x;
+  std::stringstream ss;
+  ss << std::hex << str;
+  ss >> x;
+  proc->stack_push(tag_small_int(x));
+  return 0;
+}
+
+
 static int prim_string_equal(Process* proc) {
   oop self =  proc->dp();
   oop other = proc->get_arg(0);
@@ -2697,6 +2709,7 @@ void init_primitives(VM* vm) {
 
   vm->register_primitive("string_to_integer", prim_string_to_integer);
   vm->register_primitive("string_to_byte", prim_string_to_byte);
+  vm->register_primitive("string_as_hex", prim_string_as_hex);
   vm->register_primitive("string_concat", prim_string_concat);
   vm->register_primitive("string_times", prim_string_times);
   vm->register_primitive("string_equal", prim_string_equal);

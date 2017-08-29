@@ -278,6 +278,9 @@
   instance_method toByte: fun() {
     <primitive "string_to_byte">
   }
+  instance_method asHex: fun() {
+    <primitive "string_as_hex">
+  }
   instance_method +: fun(other) {
     <primitive "string_concat">
   }
