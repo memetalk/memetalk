@@ -1714,7 +1714,7 @@ static int prim_mirror_vt_for(Process* proc) {
 
 static int prim_mirror_is_subclass(Process* proc) {
   oop sub = proc->get_arg(0);
-  oop sup = proc->get_arg(0);
+  oop sup = proc->get_arg(1);
 
   if (proc->mmobj()->delegates_to(sub, sup)) {
     proc->stack_push(MM_TRUE);
