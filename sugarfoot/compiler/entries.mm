@@ -1121,7 +1121,7 @@ init new: fun(name, params) { //params defaults to null
 }
 instance_method module_alias: fun(libname, aliases) {
   aliases.each(fun(_,alias) {
-    @aliases[alias] = libnmae;
+    @aliases[alias] = libname;
     this.add_top_level_name(alias);
   });
 }
