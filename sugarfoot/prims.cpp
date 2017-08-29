@@ -953,6 +953,19 @@ static int prim_list_index(Process* proc) {
   return 0;
 }
 
+static int prim_list_set(Process* proc) {
+  oop self =  proc->dp();
+  oop index_oop = proc->get_arg(0);
+  oop val_oop = proc->get_arg(1);
+
+  number index = untag_small_int(index_oop);
+
+  proc->mmobj()->mm_list_set(proc, self, index, val_oop);
+  proc->stack_push(proc->rp());
+  return 0;
+}
+
+
 static int prim_list_pos(Process* proc) {
   oop self =  proc->dp();
   oop val = proc->get_arg(0);
@@ -2667,6 +2680,7 @@ void init_primitives(VM* vm) {
   vm->register_primitive("list_join", prim_list_join);
   vm->register_primitive("list_plus", prim_list_plus);
   vm->register_primitive("list_equals", prim_list_equals);
+  vm->register_primitive("list_set", prim_list_set);
 
 
   vm->register_primitive("dictionary_new", prim_dictionary_new);

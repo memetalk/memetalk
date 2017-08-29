@@ -409,6 +409,9 @@
   instance_method index: fun(idx) {
     <primitive "list_index">
   }
+  instance_method set: fun(idx, val) {
+    <primitive "list_set">
+  }
   instance_method pos: fun(val) {
     <primitive "list_pos">
   }
