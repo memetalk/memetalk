@@ -114,6 +114,7 @@ static int prim_io_open_file(Process* proc) {
   } else {
     proc->raise("Exception", "TODO rest of io_open_file");
   }
+  return 0; // unreachable
 }
 
 static int prim_io_write(Process* proc) {
@@ -418,14 +419,13 @@ static int prim_string_split(Process* proc) {
   oop ret = proc->mmobj()->mm_list_new();
 
   if (sep_str.size() == 0) {
-    for (number i = 0; i < self_str.size(); i++) {
+    for (size_t i = 0; i < self_str.size(); i++) {
       std::stringstream s;
       s << self_str[i];
       oop chr = proc->mmobj()->mm_string_new(s.str());
       proc->mmobj()->mm_list_append(proc, ret, chr);
     }
   } else {
-    std::size_t prev_pos = 0;
     std::size_t pos = self_str.find(sep_str);
     DBG("string: " << self_str << " split: " << sep_str << " pos: " << pos << endl);
     if (pos == std::string::npos) {
@@ -494,7 +494,7 @@ static int prim_string_each(Process* proc) {
   // DBG("prim_list_each: closure is: " << fun << endl);
   std::string str = proc->mmobj()->mm_string_stl_str(proc, self);
 
-  for (int i = 0; i < str.size(); i++) {
+  for (size_t i = 0; i < str.size(); i++) {
     std::stringstream s;
     s << str[i];
     oop next = proc->mmobj()->mm_string_new(s.str());
@@ -520,7 +520,7 @@ static int prim_string_map(Process* proc) {
   std::string str = proc->mmobj()->mm_string_stl_str(proc, self);
 
   oop ret = proc->mmobj()->mm_list_new();
-  for (int i = 0; i < str.size(); i++) {
+  for (size_t i = 0; i < str.size(); i++) {
     std::stringstream s;
     s << str[i];
     oop next = proc->mmobj()->mm_string_new(s.str());
@@ -569,7 +569,7 @@ static int prim_string_b64encode(Process* proc) {
 static int prim_string_only_spaces(Process* proc) {
   oop self =  proc->dp();
   std::string str = proc->mmobj()->mm_string_stl_str(proc, self);
-  for (int i = 0; i < str.size(); i++) {
+  for (size_t i = 0; i < str.size(); i++) {
     if (str[i] != ' ' &&
         str[i] != '\t' &&
         str[i] != '\r' &&
@@ -585,7 +585,7 @@ static int prim_string_only_spaces(Process* proc) {
 static int prim_string_only_digits(Process* proc) {
   oop self =  proc->dp();
   std::string str = proc->mmobj()->mm_string_stl_str(proc, self);
-  for (int i = 0; i < str.size(); i++) {
+  for (size_t i = 0; i < str.size(); i++) {
     if (str[i] < '0' || str[i] > '9') {
       proc->stack_push(MM_FALSE);
       return 0;
@@ -598,7 +598,7 @@ static int prim_string_only_digits(Process* proc) {
 static int prim_string_is_lower(Process* proc) {
   oop self =  proc->dp();
   std::string str = proc->mmobj()->mm_string_stl_str(proc, self);
-  for (int i = 0; i < str.size(); i++) {
+  for (size_t i = 0; i < str.size(); i++) {
     if (str[i] < 'a' || str[i] > 'z') {
       proc->stack_push(MM_FALSE);
       return 0;
@@ -611,7 +611,7 @@ static int prim_string_is_lower(Process* proc) {
 static int prim_string_is_upper(Process* proc) {
   oop self =  proc->dp();
   std::string str = proc->mmobj()->mm_string_stl_str(proc, self);
-  for (int i = 0; i < str.size(); i++) {
+  for (size_t i = 0; i < str.size(); i++) {
     DBG((str[i] < 'A') << (str[i] > 'Z') << endl);
     if (str[i] < 'A' || str[i] > 'Z') {
       proc->stack_push(MM_FALSE);
@@ -637,6 +637,7 @@ static inline number extract_number(Process* proc, oop o) {
   } else {
     proc->raise("TypeError", "Expecting numeric value");
   }
+  return 0; // unreachable
 }
 
 static int prim_numeric_sum(Process* proc) {
@@ -653,6 +654,7 @@ static int prim_numeric_sum(Process* proc) {
     proc->stack_push(proc->mmobj()->mm_integer_or_longnum_new(proc, n_res));
     return 0;
   }
+  return 0; // unreachable
 }
 
 static int prim_numeric_sub(Process* proc) {
@@ -669,6 +671,7 @@ static int prim_numeric_sub(Process* proc) {
     proc->stack_push(proc->mmobj()->mm_integer_or_longnum_new(proc, n_res));
     return 0;
   }
+  return 0; // unreachable
 }
 
 static int prim_numeric_mul(Process* proc) {
@@ -685,6 +688,7 @@ static int prim_numeric_mul(Process* proc) {
     proc->stack_push(proc->mmobj()->mm_integer_or_longnum_new(proc, n_res));
     return 0;
   }
+  return 0; // unreachable
 }
 
 static int prim_numeric_div(Process* proc) {
@@ -830,6 +834,7 @@ static int prim_numeric_as_char(Process* proc) {
   } else {
     proc->raise("Exception", "unsupported value for asChar  ");
   }
+  return 0; // unreachable
 }
 
 
@@ -970,7 +975,6 @@ static int prim_list_map(Process* proc) {
 
 static int prim_list_sum(Process* proc) {
   oop self =  proc->dp();
-  oop fun = proc->get_arg(0);
 
   number size = proc->mmobj()->mm_list_size(proc, self);
   if (size == 0) {
@@ -1096,7 +1100,7 @@ static int prim_list_unique(Process* proc) {
 
   number size = proc->mmobj()->mm_list_size(proc, self);
   oop ret = proc->mmobj()->mm_list_new();
-  for (number i = 0; i < proc->mmobj()->mm_list_size(proc, self); i++) {
+  for (number i = 0; i < size; i++) {
     oop entry = proc->mmobj()->mm_list_entry(proc, self, i);
 
     if (proc->mmobj()->mm_list_index_of(proc, ret, entry) != -1) {
@@ -2339,7 +2343,7 @@ static int prim_exception_constructor(Process* proc) {
   oop msg = proc->get_arg(0);
   proc->mmobj()->mm_exception_set_message(proc, dself, msg);
 
-  oop bp = proc->bp();
+  // oop bp = proc->bp();
   std::stringstream s;
   s << "Uncaugh exception: " << proc->mmobj()->mm_string_stl_str(proc, msg) << endl;
   s << proc->dump_stack_trace(true);

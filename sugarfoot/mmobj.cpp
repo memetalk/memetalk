@@ -226,7 +226,7 @@ oop MMObj::mm_list_entry(Process* p, oop list, number idx, bool should_assert) {
   TYPE_CHECK(!( mm_object_vt(list) == _core_image->get_prime("List")),
              "TypeError","Expected List")
     std::vector<oop>* elements = mm_list_frame(p, list, should_assert);
-  if (idx >= elements->size()) {
+  if (idx >= (number) elements->size()) {
     p->raise("IndexError", "out of bounds index");
   }
   return (*elements)[idx];
@@ -1022,9 +1022,7 @@ bytecode* MMObj::mm_compiled_function_next_line_expr(Process* p, oop cfun, bytec
   oop mapping = mm_compiled_function_get_line_mapping(p, cfun, should_assert);
   boost::unordered_map<oop, oop>::iterator it = mm_dictionary_begin(p, mapping, should_assert);
   boost::unordered_map<oop, oop>::iterator end = mm_dictionary_end(p, mapping, should_assert);
-  word line = 0;
 
-  word smallest_upper_bound_offset = 0;
   word current_line = 0;
   //discover current line
   for ( ; it != end; it++) {
@@ -1038,7 +1036,6 @@ bytecode* MMObj::mm_compiled_function_next_line_expr(Process* p, oop cfun, bytec
       DBG(" best so far " << current_line << endl);
     }
   }
-
 
   //discover first instr for next line
   word next_line = current_line + 1;  //lowest upperbound line (next_line >= other)
@@ -1095,7 +1092,7 @@ bytecode* MMObj::mm_compiled_function_get_instruction_for_line(Process* p, oop c
   boost::unordered_map<oop, oop>::iterator it = mm_dictionary_begin(p, mapping, should_assert);
   boost::unordered_map<oop, oop>::iterator end = mm_dictionary_end(p, mapping, should_assert);
   for ( ; it != end; it++) {
-    word line = untag_small_int(it->second);
+    number line = untag_small_int(it->second);
     DBG("line: " << line << "=" << lineno << endl);
     if (line == lineno) {
       word b_offset = untag_small_int(it->first);
