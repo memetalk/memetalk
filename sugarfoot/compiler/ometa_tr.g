@@ -75,7 +75,7 @@ instance_method _local_vars: fun() {
   prod_arg = [:seq _:s] => s
            | [:token_string string:s] => s.toSource()
            | [:string_object string:s] => s.toSource()
-           | [:symbol symbol:s] => s.toSource()
+           | [:symbol string:s] => (":" + s).toString()
            | [:id string:s] => s
            | [:form expr:s] => s
            ;

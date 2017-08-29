@@ -73,10 +73,10 @@ init new: fun(input) {
 
   rule_rest :name =  action:ac                   => [:rule, name, ac]
                   |  "=" choices:c               => [:rule, name, c]
-                  |  binding+:args  action:ac    => [:rule, name, [:args] + args, ac]
-                  |  binding+:args "=" choices:c => [:rule, name, [:args] + args, c]
+                  |  prod_param+:params  action:ac    => [:rule, name, [:args] + params, ac]
+                  |  prod_param+:params "=" choices:c => [:rule, name, [:args] + params, c]
                   ;
-
+  prod_param = spaces binding;
 
   choices  = choice:x { "|" choice }*:xs => [:or, x] + xs;
 
@@ -106,7 +106,7 @@ init new: fun(input) {
         | element
         ;
 
-  binding = ":" identifier
+  binding = ':' first_and_rest(:identifier_first, :identifier_rest):s => s.join("")
           ;
 
 

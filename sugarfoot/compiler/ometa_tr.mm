@@ -175,8 +175,8 @@ instance_method prod_arg: fun() {
   }, fun() {
     this._form(fun() {
       this._apply_with_args(:exactly, [:symbol]);
-      s = this._apply(:symbol);});
-    return s.toSource();
+      s = this._apply(:string);});
+    return (":" + s).toString();
   }, fun() {
     this._form(fun() {
       this._apply_with_args(:exactly, [:id]);

@@ -264,7 +264,7 @@ instance_method rule: fun() {
 instance_method rule_rest: fun() {
   var ac = null;
   var c = null;
-  var args = null;
+  var params = null;
   var name = this._apply(:anything);
   return this._or([fun() {
     ac = this._apply(:action);
@@ -274,16 +274,22 @@ instance_method rule_rest: fun() {
     c = this._apply(:choices);
     return [:rule, name, c];
   }, fun() {
-    args = this._many1(fun() {
-      this._apply(:binding);});
+    params = this._many1(fun() {
+      this._apply(:prod_param);});
     ac = this._apply(:action);
-    return [:rule, name, [:args] + args, ac];
+    return [:rule, name, [:args] + params, ac];
   }, fun() {
-    args = this._many1(fun() {
-      this._apply(:binding);});
+    params = this._many1(fun() {
+      this._apply(:prod_param);});
     this._apply_with_args(:token, ["="]);
     c = this._apply(:choices);
-    return [:rule, name, [:args] + args, c];
+    return [:rule, name, [:args] + params, c];
+  }]);
+}
+instance_method prod_param: fun() {
+  return this._or([fun() {
+    this._apply(:spaces);
+    this._apply(:binding);
   }]);
 }
 instance_method choices: fun() {
@@ -367,9 +373,11 @@ instance_method term: fun() {
   }]);
 }
 instance_method binding: fun() {
+  var s = null;
   return this._or([fun() {
-    this._apply_with_args(:token, [":"]);
-    this._apply(:identifier);
+    this._apply_with_args(:seq, [":"]);
+    s = this._apply_with_args(:first_and_rest, [:identifier_first,:identifier_rest]);
+    return s.join("");
   }]);
 }
 instance_method element: fun() {
