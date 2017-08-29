@@ -41,4 +41,4 @@ instance_method all: fun() {
 end //inheritance1:Point3D
 
 
-.end
+.endcode

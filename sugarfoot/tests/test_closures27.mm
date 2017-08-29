@@ -20,4 +20,4 @@ main: fun() {
   test.assertEqual(f4(10), 20, "local f2::z receives 20");
 }
 
-.end
+.endcode

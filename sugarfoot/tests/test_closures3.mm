@@ -20,4 +20,4 @@ x: fun(f) {
 // -- module classes --
 
 
-.end
+.endcode

@@ -54,4 +54,4 @@ class_method throw: fun(x) {
 end //exceptions1:MyException
 
 
-.end
+.endcode

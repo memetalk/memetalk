@@ -20,4 +20,4 @@ main: fun() {
   test.assertEqual(T.new.foo, 10, "pop_field returning field from instance");
   test.assertEqual(T.new.bar, 11, "closure returning field from instance");
 }
-.end
+.endcode

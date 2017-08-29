@@ -26,4 +26,4 @@ main: fun() {
   test.assertEqual(f(), 10, "f() != 10");
 }
 
-.end
+.endcode

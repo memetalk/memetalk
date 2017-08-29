@@ -25,4 +25,4 @@ x: fun(g) {
 }
 
 
-.end
+.endcode

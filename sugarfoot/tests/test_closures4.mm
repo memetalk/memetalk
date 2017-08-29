@@ -23,4 +23,4 @@ x: fun(g) {
 // -- module classes --
 
 
-.end
+.endcode

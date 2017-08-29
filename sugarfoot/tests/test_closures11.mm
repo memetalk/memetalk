@@ -38,4 +38,4 @@ instance_method y: fun(fn) {
 end //closures11:X
 
 
-.end
+.endcode

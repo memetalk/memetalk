@@ -30,4 +30,4 @@ class_method throw: fun() {
 end //class_method1:X
 
 
-.end
+.endcode

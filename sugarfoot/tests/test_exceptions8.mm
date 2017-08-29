@@ -23,4 +23,4 @@ main: fun() {
   test.assertEqual(foo().message, "baz_ex", "Primitive handled exception");
 }
 
-.end
+.endcode

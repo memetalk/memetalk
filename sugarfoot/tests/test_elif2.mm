@@ -34,4 +34,4 @@ main: fun() {
     f(:g, 0);
   }
 }
-.endcode<
+.endcode

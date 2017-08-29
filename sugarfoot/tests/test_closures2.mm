@@ -10,4 +10,4 @@ x: fun(f) {
   return f(9);
 }
 
-.end
+.endcode

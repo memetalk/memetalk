@@ -52,4 +52,4 @@ debug: fun(proc) {
   test.set_debugger_tests(Tester.new(proc), 4);
   return test;
 }
-.end
+.endcode

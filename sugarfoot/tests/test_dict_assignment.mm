@@ -29,4 +29,4 @@ main: fun() {
 
 
 
-.end
+.endcode

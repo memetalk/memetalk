@@ -7,4 +7,4 @@ main: fun() {
   test.assertEqual(z(10), 11, "testing closure return value");
 }
 
-.end
+.endcode

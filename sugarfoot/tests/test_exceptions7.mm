@@ -48,4 +48,4 @@ main: fun() {
   }
 }
 
-.end
+.endcode

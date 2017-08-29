@@ -26,4 +26,4 @@ main: fun() {
 // -- module classes --
 
 
-.end
+.endcode

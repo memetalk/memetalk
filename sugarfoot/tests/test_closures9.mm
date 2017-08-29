@@ -25,4 +25,4 @@ instance_method bla: fun() {
 end
 
 
-.end
+.endcode
