@@ -210,6 +210,9 @@ oop Process::run(oop recv, oop selector_sym, int* exc) {
   //atm, we don't need to check exc
   //since ::unwind_with_exception will terminate the vm
   //if there is no more stack to unwind.
+  if (_online) {
+    halt_and_debug();
+  }
   return send_0(recv, selector_sym, exc);
 }
 
