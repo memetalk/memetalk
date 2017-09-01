@@ -894,7 +894,9 @@ end
   argv: fun() {
      <primitive "get_argv">
   }
-
+  exit: fun(x) {
+     <primitive "exit">
+  }
   basename: fun(filepath) {
      <primitive "basename">
   }
