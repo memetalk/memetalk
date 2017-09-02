@@ -118,9 +118,9 @@ instance_method meme_keyword: fun() {
 }
 instance_method id: fun() {
   return this._or([fun() {
+    this._apply(:spaces);
     this._not(fun() {
       this._apply(:meme_keyword);});
-    this._apply(:spaces);
     this._apply(:identifier);
   }]);
 }
@@ -821,7 +821,7 @@ instance_method expr_or: fun() {
     this._apply(:spaces);
     var _pos = this.input.idx();
     a = this._apply(:expr_or);
-    this._apply_with_args(:keyword,["or"]);
+    this._apply_with_args(:token, ["or"]);
     b = this._apply(:expr_and);
     return [:or, a, b].at(this, _pos);
   }, fun() {
@@ -835,10 +835,12 @@ instance_method expr_and: fun() {
     this._apply(:spaces);
     var _pos = this.input.idx();
     a = this._apply(:expr_and);
-    this._apply_with_args(:keyword,["and"]);
+    this._apply_with_args(:token, ["and"]);
+    this._apply(:spaces);
     b = this._apply(:expr_eq);
     return [:and, a, b].at(this, _pos);
   }, fun() {
+    this._apply(:spaces);
     this._apply(:expr_eq);
   }]);
 }
@@ -860,6 +862,7 @@ instance_method expr_eq: fun() {
     b = this._apply(:expr_rel);
     return [:!=, a, b].at(this, _pos);
   }, fun() {
+    this._apply(:spaces);
     this._apply(:expr_rel);
   }]);
 }
@@ -899,6 +902,7 @@ instance_method expr_rel: fun() {
     b = this._apply(:expr_add);
     return [:<, a, b].at(this, _pos);
   }, fun() {
+    this._apply(:spaces);
     this._apply(:expr_add);
   }]);
 }
@@ -955,6 +959,7 @@ instance_method expr_add: fun() {
     b = this._apply(:expr_mul);
     return [:|, a, b].at(this, _pos);
   }, fun() {
+    this._apply(:spaces);
     this._apply(:expr_mul);
   }]);
 }
@@ -976,6 +981,7 @@ instance_method expr_mul: fun() {
     b = this._apply(:expr_unary);
     return [:/, a, b].at(this, _pos);
   }, fun() {
+    this._apply(:spaces);
     this._apply(:expr_unary);
   }]);
 }

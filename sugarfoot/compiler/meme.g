@@ -84,7 +84,7 @@ alpha =  '+' | '*' | '-' | '/' | '=' | '<' | '>' | '?' | '!' | '&' | '|';
 
 meme_keyword = ``fun`` | ``var`` | ``class`` | ``fields``;
 
-id = ~meme_keyword spaces identifier;
+id = spaces ~meme_keyword identifier;
 
 alpha_name = spaces ~meme_keyword {alpha | letter | '_'}:x {identifier_rest|alpha}*:xs => ([x] + xs).join("");
 
@@ -259,21 +259,21 @@ catch_type =  # alpha_name:type => #[:id, type];
 
 expr = spaces expr_or;
 
-expr_or =  # expr_or:a ``or`` expr_and:b => #[:or, a, b]
+expr_or =  # expr_or:a "or" expr_and:b => #[:or, a, b]
         | expr_and;
 
-expr_and = #  expr_and:a ``and`` expr_eq:b => #[:and, a, b]
-         | expr_eq;
+expr_and = #  expr_and:a "and" spaces expr_eq:b => #[:and, a, b]
+         | spaces expr_eq;
 
 expr_eq =  # expr_eq:a "==" expr_rel:b => #[:==, a, b]
         |  # expr_eq:a "!=" expr_rel:b => #[:!=, a, b]
-        | expr_rel;
+        | spaces expr_rel;
 
 expr_rel =  # expr_rel:a ">=" expr_add:b => #[:>=, a, b]
          |  # expr_rel:a ">" ~'>' expr_add:b => #[:>, a, b]
          |  # expr_rel:a "<=" expr_add:b => #[:<=, a, b]
          |  # expr_rel:a "<" ~'<' expr_add:b => #[:<, a, b]
-         | expr_add;
+         | spaces expr_add;
 
 expr_add =  # expr_add:a "++" expr_mul:b => #[:++, a, b]
          |  # expr_add:a "+" expr_mul:b => #[:+, a, b]
@@ -282,11 +282,11 @@ expr_add =  # expr_add:a "++" expr_mul:b => #[:++, a, b]
          |  # expr_add:a ">>" expr_mul:b => #[:>>, a, b]
          |  # expr_add:a "&" expr_mul:b =>  #[:&, a, b]
          |  # expr_add:a "|" expr_mul:b =>  #[:|, a, b]
-         | expr_mul;
+         | spaces expr_mul;
 
 expr_mul =  # expr_mul:a "*" expr_unary:b => #[:*, a, b]
          |  # expr_mul:a "/" expr_unary:b => #[:/, a, b]
-         | expr_unary;
+         | spaces expr_unary;
 
 expr_unary =  # "+" prim_expr:a  => #[:positive, a]
             | # "-" prim_expr:a  => #[:negative, a]
@@ -314,8 +314,8 @@ call_expr =  # call_expr:r args:p
 
 prim_expr = "(" expr:e ")" => e
           | literal
-          |  #  field_name:x => #[:field, x]
-          |  # alpha_name:x => #[:id, x];
+          |  # field_name:x => #[:field, x]
+          |  # alpha_name:x => #[:id, x]; //should it be id?
 
 pair_list = pair:x {"," pair}*:xs => [x] + xs
           | => [];
