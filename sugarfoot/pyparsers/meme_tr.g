@@ -83,7 +83,7 @@ obj_function :obj = constructor(obj)
                   | function_definition(obj)
 
 
-body :fnobj = [(expr(fnobj)*) ['end-body']]:ast -> fnobj.emit_return_this(ast)
+body :fnobj = [(expr(fnobj)*)]
             | [['primitive' ['literal-string' :name]] (:ignore)*]   -> fnobj.set_primitive(name)
 
 exprs :fnobj = [expr(fnobj)*]
@@ -91,6 +91,7 @@ exprs :fnobj = [expr(fnobj)*]
 expr_elif :fnobj = ['elif' expr(fnobj) !(fnobj.emit_jz()):lb_next [expr(fnobj)* !(fnobj.emit_jmp()):lb_jmp]] !(lb_next.as_current()) -> lb_jmp
 
 stm :fnobj :ast = 'var-def' :id expr(fnobj) ->  fnobj.emit_var_decl(ast, id)
+               | 'end-body' -> fnobj.emit_end_body(ast)
                | 'return' expr(fnobj)       ->  fnobj.emit_return_top(ast)
                | 'return-null' -> fnobj.emit_return_null(ast)
                | 'return-top' -> fnobj.emit_return_top(ast)

@@ -213,6 +213,25 @@ static int prim_string_equal(Process* proc) {
   return 0;
 }
 
+static int prim_string_lt(Process* proc) {
+  oop self =  proc->dp();
+  oop other = proc->get_arg(0);
+
+  if (proc->mmobj()->mm_is_string(other)) {
+    std::string str_1 = proc->mmobj()->mm_string_stl_str(proc, self);
+    std::string str_2 = proc->mmobj()->mm_string_stl_str(proc, other);
+    if (str_1 < str_2) {
+      proc->stack_push(MM_TRUE);
+    } else {
+      proc->stack_push(MM_FALSE);
+    }
+  } else {
+    proc->stack_push(MM_FALSE);
+  }
+  return 0;
+}
+
+
 static int prim_string_size(Process* proc) {
   oop self =  proc->dp();
   number len = proc->mmobj()->mm_string_size(proc, self);
@@ -1064,6 +1083,44 @@ static int prim_list_sum(Process* proc) {
     }
     proc->stack_push(ret);
   }
+  return 0;
+}
+
+class less_then_oop {
+public:
+  Process* proc;
+  less_then_oop(Process* p) : proc(p) {}
+
+  inline bool operator() (const oop a, oop b) {
+      int exc;
+      oop ret =  proc->send_1(a, proc->vm()->new_symbol("<"), b, &exc);
+      if (exc != 0) {
+        throw mm_exception_rewind(ret);
+      }
+      if (ret == MM_FALSE) {
+        return false;
+      } else {
+        return true;
+      }
+  }
+};
+
+static int prim_list_sorted(Process* proc) {
+  oop self =  proc->dp();
+
+  //dirty sorting of lists
+
+
+  number size = proc->mmobj()->mm_list_size(proc, self);
+
+  oop ret = proc->mmobj()->mm_list_new();
+
+  std::vector<oop>* this_vector = proc->mmobj()->mm_list_frame(proc, self);
+  std::vector<oop>* ret_vector = proc->mmobj()->mm_list_frame(proc, ret);
+
+  *ret_vector = *this_vector;
+  std::sort(ret_vector->begin(), ret_vector->end(), less_then_oop(proc));
+  proc->stack_push(ret);
   return 0;
 }
 
@@ -2676,6 +2733,7 @@ void init_primitives(VM* vm) {
   vm->register_primitive("list_each", prim_list_each);
   vm->register_primitive("list_map", prim_list_map);
   vm->register_primitive("list_sum", prim_list_sum);
+  vm->register_primitive("list_sorted", prim_list_sorted);
   vm->register_primitive("list_times", prim_list_times);
   vm->register_primitive("list_filter", prim_list_filter);
   vm->register_primitive("list_detect", prim_list_detect);
@@ -2735,6 +2793,7 @@ void init_primitives(VM* vm) {
   vm->register_primitive("string_each", prim_string_each);
   vm->register_primitive("string_map", prim_string_map);
   vm->register_primitive("string_escape", prim_string_escape);
+  vm->register_primitive("string_lt", prim_string_lt);
 
 
   vm->register_primitive("mirror_entries", prim_mirror_entries);

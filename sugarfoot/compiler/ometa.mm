@@ -324,6 +324,9 @@ instance_method top_expression: fun() {
     this._apply(:bind_expression);
   }, fun() {
     this._apply(:repeated_expression);
+  }, fun() {
+    this._apply_with_args(:token, ["#"]);
+    return [:ometa-position];
   }]);
 }
 instance_method bind_expression: fun() {
@@ -443,6 +446,16 @@ instance_method host_str: fun() {
 instance_method host_paren: fun() {
   var e = null;
   return this._or([fun() {
+    this._apply_with_args(:seq, ["#("]);
+    e = this._many(fun() {
+      this._or([fun() {
+        this._not(fun() {
+          this._apply_with_args(:seq, [")"]);});
+        this._apply(:host_element);
+      }]);}, null);
+    this._apply_with_args(:seq, [")"]);
+    return ["(", e.join(""),").at(this, _pos)"].join("");
+  }, fun() {
     this._apply_with_args(:seq, ["("]);
     e = this._many(fun() {
       this._or([fun() {
@@ -457,6 +470,16 @@ instance_method host_paren: fun() {
 instance_method host_sq_brk: fun() {
   var e = null;
   return this._or([fun() {
+    this._apply_with_args(:seq, ["#["]);
+    e = this._many(fun() {
+      this._or([fun() {
+        this._not(fun() {
+          this._apply_with_args(:seq, ["]"]);});
+        this._apply(:host_element);
+      }]);}, null);
+    this._apply_with_args(:seq, ["]"]);
+    return ["[", e.join(""),"].at(this, _pos)"].join("");
+  }, fun() {
     this._apply_with_args(:seq, ["["]);
     e = this._many(fun() {
       this._or([fun() {

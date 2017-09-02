@@ -291,6 +291,10 @@ instance_method expression: fun() {
       this._apply_with_args(:exactly, [:keyword_string]);
       s = this._apply(:string);});
     return [@indent,"this._apply_with_args(:keyword,[",s.toSource,"]);"].join("");
+  }, fun() {
+    this._form(fun() {
+      this._apply_with_args(:exactly, [:ometa-position]);});
+    return [@indent,"this._apply(:spaces);\n", @indent,"var _pos = this.input.idx();"].join("");
   }]);
 }
 

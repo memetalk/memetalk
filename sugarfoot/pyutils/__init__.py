@@ -66,20 +66,15 @@ def cclass_label(name):
 def class_label(name):
     return name # + SEP + "Class"
 
-_closures = 0
-def closure_name():
-    global _closures
-    _closures += 1
-    return '<anonymous ' + str(_closures) + '>'
+def closure_name(cid):
+    ret = '<anonymous ' + str(cid) + '>'
+    return ret
 
-_cfun_id = 0
-def cfun_label(owner_label, name, is_method):
-    global _cfun_id
+def cfun_label(cid, owner_label, name, is_method):
     if is_method:
         # create unique label, so we can have an instance method with
         # the same name as a class method.
-        _cfun_id += 1
-        return str(_cfun_id) + "_" + owner_label + SEP + name + SEP + 'CompiledFunction'
+        return str(cid) + "_" + owner_label + SEP + name + SEP + 'CompiledFunction'
     else:
         return owner_label + SEP + name + SEP + 'CompiledFunction'
 

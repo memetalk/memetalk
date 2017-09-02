@@ -388,16 +388,12 @@ instance_method obj_function: fun() {
   }]);
 }
 instance_method body: fun() {
-  var ast = null;
   var name = null;
   var fnobj = this._apply(:anything);
   return this._or([fun() {
-    ast = this._form(fun() {
+    this._form(fun() {
       this._many(fun() {
-        this._apply_with_args(:expr, [fnobj]);}, null);
-      this._form(fun() {
-        this._apply_with_args(:exactly, [:end-body]);});});
-    return fnobj.emit_return_this(ast);
+        this._apply_with_args(:expr, [fnobj]);}, null);});
   }, fun() {
     this._form(fun() {
       this._form(fun() {
@@ -462,6 +458,9 @@ instance_method stm: fun() {
     id = this._apply(:anything);
     this._apply_with_args(:expr, [fnobj]);
     return fnobj.emit_var_decl(ast, id);
+  }, fun() {
+    this._apply_with_args(:exactly, [:end-body]);
+    return fnobj.emit_end_body(ast);
   }, fun() {
     this._apply_with_args(:exactly, [:return]);
     this._apply_with_args(:expr, [fnobj]);

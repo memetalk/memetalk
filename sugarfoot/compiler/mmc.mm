@@ -36,7 +36,7 @@ cfun_label: fun(counter, owner_label, name, is_method) {
     // the same name as a class method.
     return counter.toString + "_" + owner_label + SEP + name + SEP + "CompiledFunction";
   } else {
-    return counter.toString + owner_label + SEP + name + SEP + "CompiledFunction";
+    return owner_label + SEP + name + SEP + "CompiledFunction";
   }
 }
 

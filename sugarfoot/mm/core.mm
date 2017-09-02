@@ -284,6 +284,9 @@
   instance_method +: fun(other) {
     <primitive "string_concat">
   }
+  instance_method <: fun(other) {
+    <primitive "string_lt">
+  }
   instance_method times: fun(s) {
     <primitive "string_times">
   }
@@ -426,6 +429,9 @@
   }
   instance_method sum: fun() {
     <primitive "list_sum">
+  }
+  instance_method sorted: fun() {
+    <primitive "list_sorted">
   }
   instance_method filter: fun(fn) {
     <primitive "list_filter">

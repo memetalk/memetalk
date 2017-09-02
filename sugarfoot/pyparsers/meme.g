@@ -76,14 +76,16 @@ constructor = spaces !(self.has_fun_literal(False))
               token("init") alpha_name:name token(":")
               spaces !(self.input.position):begin
               token("fun") fparams:p token("{")
-                  top_fun_body:body !(self.input.position):end
-                token("}")
+                  top_fun_body:body
+              end_body:e
              -> self.i.ast(begin,['ctor', name, ["params", p], self.has_fun_literal(),
-                  ['body', self.i.ast(begin, body + [self.i.sint_ast(end,['end-body'])])]])
+                  ['body', self.i.ast(begin, body + [e])]])
 
-top_level_fn = spaces alpha_name:name token(":") !(self.input.position):begin
+end_body = spaces !(self.input.position):begin token("}") -> self.i.ast(begin,['end-body'])
+
+top_level_fn = spaces alpha_name:name token(":") spaces !(self.input.position):begin
                 expr:e token(";") -> self.i.ast(begin,['fun', name, ['params', []], False,
-                                                              ['body', [['return', e], ['end-body']]]])
+                                                              ['body', [['return', e]]]])
 
 top_level_fun = spaces !(self.has_fun_literal(False))
                 alpha_name:name token(":")
@@ -92,9 +94,9 @@ top_level_fun = spaces !(self.has_fun_literal(False))
 fun_rest :name = !(self.input.position):begin
                 token("fun")  fparams:p token("{")
                   top_fun_body:body !(self.input.position):end
-                token("}")
+                end_body:e
                   -> self.i.ast(begin,['fun', name, ["params", p], self.has_fun_literal(),
-                                              ['body', self.i.sint_ast(end, body + [self.i.sint_ast(end,['end-body'])])]])
+                                              ['body', self.i.sint_ast(end, body + [e])]])
 
 
 instance_method_decl = spaces !(self.has_fun_literal(False))
@@ -264,20 +266,20 @@ literal = lit_number
 
 funliteral = spaces !(self.input.position):begin token("fun") params:p token("{")
                funliteral_body:body
-             token("}") -> self.i.ast(begin, ['fun-literal', ["params", p], ["body", body]])
+             end_body:e -> self.i.ast(begin, ['fun-literal', ["params", p], ["body", body + [e]]])
 
 funliteral_body = !(self.input.position):begin
                   stmts:body
                     expr?:no_semicol_expr !(not no_semicol_expr or body.append(['expression', no_semicol_expr]))
                     !(body.get(-1, [])):last
                     rewrite_last_stmt(last)
-                -> self.i.ast(begin, body + self.i.sint_ast(self.input.position,[self.i.sint_ast(self.input.position,['return-null'])]))
+                -> body
 
 
 rewrite_last_stmt = ['expression' :x]:c -> c.__setitem__(0, 'return')
                   | :x
 
-cfunliteral_body = funliteral_body:x spaces ~anything -> x
+cfunliteral_body = funliteral_body:x spaces ~anything -> self.i.ast(0, x + [['end-body']])
 
 lit_symbol = spaces !(self.input.position):begin token(":") symbol_name:xs
            -> self.i.ast(begin, ["literal-symbol", xs])

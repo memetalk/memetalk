@@ -206,14 +206,16 @@ instance_method symbols_references: fun() {
 }
 instance_method append_int_to_int_dict: fun(mdict) {
   var pairs_oop = [];
-  mdict.each(fun(key, val) {
+  mdict.keys.sorted.each(fun(_, key) {
+    var val = mdict[key];
     pairs_oop.append([key, val]);
   });
   return this.append_dict_with_pairs(pairs_oop);
 }
 instance_method append_int_to_int_list: fun(mdict) {
   var pairs_oop = [];
-  mdict.each(fun(key, val) {
+  mdict.keys.sorted.each(fun(_, key) {
+    var val = mdict[key];
     var val_oop = this.append_list_of_ints(val);
     pairs_oop.append([key, val_oop]);
   });
@@ -221,7 +223,8 @@ instance_method append_int_to_int_list: fun(mdict) {
 }
 instance_method append_symbol_to_int_dict: fun(mdict) {
   var pairs_oop = [];
-  mdict.each(fun(key, val) {
+  mdict.keys.sorted.each(fun(_, key) {
+    var val = mdict[key];
     var key_oop = this.append_symbol_instance(key);
     pairs_oop.append([key_oop, val]);
   });
@@ -229,7 +232,8 @@ instance_method append_symbol_to_int_dict: fun(mdict) {
 }
 instance_method append_symbol_dict: fun(mdict) {
   var pairs_oop = [];
-  mdict.each(fun(key, val) {
+  mdict.keys.sorted.each(fun(_, key) {
+    var val = mdict[key];
     var key_oop = this.append_symbol_instance(key);
     var val_oop = this.append_string_instance(val);
     pairs_oop.append([key_oop, val_oop]);

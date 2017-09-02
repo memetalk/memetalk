@@ -87,6 +87,7 @@ init new: fun(input) {
 
   top_expression =   bind_expression
                  |   repeated_expression
+                 |   "#" => [:ometa-position]
                  ;
 
 
@@ -130,8 +131,12 @@ init new: fun(input) {
            => "\"" + cs.join("") + "\""
            ;
 
-  host_paren  = '(' { ~')' host_element }*:e ')' => ["(", e.join(""), ")"].join("");
-  host_sq_brk = '[' { ~']' host_element }*:e ']' => ["[", e.join(""), "]"].join("");
+  host_paren  = '#(' { ~')' host_element }*:e ')' => ["(", e.join(""), ").at(this, _pos)"].join("")
+              | '(' { ~')' host_element }*:e ')' => ["(", e.join(""), ")"].join("");
+
+  host_sq_brk = '#[' { ~']' host_element }*:e ']' => ["[", e.join(""), "].at(this, _pos)"].join("")
+              | '[' { ~']' host_element }*:e ']' => ["[", e.join(""), "]"].join("");
+
   host_c_brk  = '{' { ~'}' host_element }*:e '}' => ["{", e.join(""), "}"].join("");
 
   host_element = host_str

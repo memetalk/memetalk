@@ -30,12 +30,18 @@ def emitter(fn):
 class Entry(object):
     def __init__(self):
         self.oop = None
+
+        self._label_counter = 0
     # def get_oop(self, vmem, dont_load=True):
     #     if self.oop is None:
     #         if dont_load:
     #             raise Exception('get_oop called prior to having an oop')
     #         self.oop = self.fill(vmem)
     #     return self.oop
+    def label_counter(self):
+        ret = self._label_counter
+        self._label_counter += 1
+        return ret
 
 class Object(Entry):
     def __init__(self, name, imod):
@@ -455,7 +461,7 @@ class CompiledFunction(Entry):
 
     def label(self):
         if self._label is None:
-            self._label = cfun_label(self.owner.label(),
+            self._label = cfun_label(self.owner.label_counter(), self.owner.label(),
                                     self.name, isinstance(self.owner, CompiledClass))
         return self._label
 
@@ -660,7 +666,7 @@ class CompiledFunction(Entry):
         else:
             top_level_cfun = self.top_level_cfun
 
-        cfun = CompiledFunction(self.cmod, self.owner, closure_name(), params,
+        cfun = CompiledFunction(self.cmod, self.owner, closure_name(self.owner.label_counter()), params,
                                 env_storage=self.var_declarations,
                                 is_top_level=False, outer_cfun=self,
                                 top_level_cfun=top_level_cfun)
@@ -782,8 +788,17 @@ class CompiledFunction(Entry):
         self.bytecodes.append("ret_top",0)
 
     @emitter
-    def emit_return_this(self, _):
-        self.bytecodes.append("ret_this",0)
+    def emit_end_body(self, _):
+        if self.is_top_level:
+            self.bytecodes.append("ret_this",0)
+        else:
+            self.bytecodes.append('push_bin', 0)
+            self.bytecodes.append("ret_top",0)
+
+
+    # @emitter
+    # def emit_return_this(self, _):
+    #     self.bytecodes.append("ret_this",0)
 
     def current_bytecode_pos(self):
         return len(self.bytecodes)

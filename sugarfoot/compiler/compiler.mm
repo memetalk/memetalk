@@ -147,6 +147,7 @@ instance_method compile: fun(filepath) {
   var ast = this.parse();
 
   io.print(ast.toSource);
+  io.print("translating...");
 
   this.translate(ast);
 

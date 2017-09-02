@@ -24,7 +24,7 @@ instance_method external_references: fun() {
   });
 }
 instance_method external_names: fun() {
-  return (@ext_ref_table.map(fun(x) { x[0] }) + @symb_table.map(fun(x) { x[0] })).unique;
+  return (@ext_ref_table.map(fun(x) { x[0] }) + @symb_table.map(fun(x) { x[0] })).unique.sorted;
 }
 instance_method reloc_table: fun() {
   return this.cells.filter(fun(entry) { Mirror.vtFor(entry) == vmemory.PointerCell}).map(fun(entry) { this.physical_address(entry) });
@@ -72,8 +72,8 @@ instance_method append_string_instance: fun(string) {
 }
 instance_method append_sym_to_string_dict: fun(mdict) {
   var pairs_oop = [];
-  //? sorted
-  mdict.each(fun(key, val) {
+  mdict.keys.sorted.each(fun(_, key) {
+    var val = mdict[key];
     var key_oop = this.append_string_instance(key);
     var val_oop = this.append_symbol_instance(val);
     pairs_oop.append([key_oop, val_oop]);
@@ -169,8 +169,8 @@ instance_method append_list_of_ints: fun(lst) {
     this.append_int(mmc.FRAME_TYPE_ELEMENTS, null);
     this.append_int(lst.size * bits.WSIZE, null);
     var oops = [];
-    oops_elements.each(fun(_,oop_element) {
-      oops.append(this.append_pointer_to(oop_element, null));
+    lst.each(fun(_,oop_element) {
+      oops.append(this.append_tagged_int(oop_element, null));
     });
   }
 

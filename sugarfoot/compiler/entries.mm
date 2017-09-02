@@ -844,14 +844,24 @@ instance_method emit_return_null: fun(_) {
   @bytecodes.append(:push_bin, 0);
   @bytecodes.append(:ret_top, 0);
 }
-instance_method emit_return_this: fun(_) {
-  @bytecodes.append(:ret_this, 0);
+instance_method emit_end_body: fun(ast) {
+  var bpos = this.current_bytecode_pos();
+  if (@is_top_level) {
+    @bytecodes.append(:ret_this, 0);
+  } else {
+    @bytecodes.append(:push_bin, 0);
+    @bytecodes.append(:ret_top, 0);
+  }
+  this.update_line_mapping(bpos, ast);
 }
 instance_method current_bytecode_pos: fun() {
   return @bytecodes.size;
 }
 instance_method update_line_mapping: fun(bpos, ast) {
   if (ast == null) {
+    return null;
+  }
+  if (ast.start_line == null) {
     return null;
   }
 
@@ -954,10 +964,12 @@ instance_method emit_jmp_back: fun(lb) {
   @bytecodes.append(:jmpb, lb);
   return lb;
 }
-instance_method emit_push_num_literal: fun(_, num) {
+instance_method emit_push_num_literal: fun(ast, num) {
   if (num <= 4611686018427387903) {
+    var bpos = this.current_bytecode_pos();
     var idx = this.create_and_register_number_literal(num);
     @bytecodes.append(:push_literal, idx);
+    this.update_line_mapping(bpos, ast);
   } else {
     Exception.throw("Integer is too big: " + num.toString);
   }
@@ -973,22 +985,33 @@ instance_method emit_push_sym_literal: fun(_, sym) {
   var idx = this.create_and_register_symbol_literal(sym);
   @bytecodes.append(:push_literal, idx);
 }
-instance_method emit_push_null: fun(_) {
+instance_method emit_push_null: fun(ast) {
+  var bpos = this.current_bytecode_pos();
   @bytecodes.append(:push_bin, 0);
+  this.update_line_mapping(bpos, ast);
 }
-instance_method emit_push_true: fun(_) {
+instance_method emit_push_true: fun(ast) {
+  var bpos = this.current_bytecode_pos();
   @bytecodes.append(:push_bin, 1);
+  this.update_line_mapping(bpos, ast);
 }
-instance_method emit_push_false: fun(_) {
+instance_method emit_push_false: fun(ast) {
+  var bpos = this.current_bytecode_pos();
   @bytecodes.append(:push_bin, 2);
+  this.update_line_mapping(bpos, ast);
 }
-instance_method emit_push_module: fun(_) {
+instance_method emit_push_module: fun(ast) {
+  var bpos = this.current_bytecode_pos();
   @bytecodes.append(:push_module, 0);
+  this.update_line_mapping(bpos, ast);
 }
-instance_method emit_push_context: fun(_) {
+instance_method emit_push_context: fun(ast) {
+  var bpos = this.current_bytecode_pos();
   @bytecodes.append(:push_context, 0);
+  this.update_line_mapping(bpos, ast);
 }
-instance_method emit_push_closure: fun(_, fn) {
+instance_method emit_push_closure: fun(ast, fn) {
+  var bpos = this.current_bytecode_pos();
   var idx_cfun = this.create_and_register_closure_literal(fn);
   var idx_selector = this.create_and_register_symbol_literal("new_context");
   @bytecodes.append(:push_fp, 0);
@@ -996,10 +1019,13 @@ instance_method emit_push_closure: fun(_, fn) {
   @bytecodes.append(:push_literal, idx_cfun);
   @bytecodes.append(:push_literal, idx_selector);
   @bytecodes.append(:send, 2);
+  this.update_line_mapping(bpos, ast);
 }
-instance_method emit_push_field: fun(_, field) {
+instance_method emit_push_field: fun(ast, field) {
+  var bpos = this.current_bytecode_pos();
   var idx = @owner.fields.pos(field);
   @bytecodes.append(:push_field, idx);
+  this.update_line_mapping(bpos, ast);
 }
 instance_method bind_catch_var: fun(name) {
   if (!this.identifier_in_scope(this, name)) {
@@ -1017,14 +1043,17 @@ instance_method emit_try_catch: fun(lb_begin_try, lb_begin_catch, jmp_pos, catch
   @bytecodes.list[jmp_pos].set_arg(opcode.Value.new(blen - jmp_pos));
   this.add_exception_entry(lb_begin_try, lb_begin_catch, catch_type);
 }
-instance_method emit_push_list: fun(_, length) {
+instance_method emit_push_list: fun(ast, length) {
+  var bpos = this.current_bytecode_pos();
   var idx_klass = this.create_and_register_core("List");
   var idx_new_from_stack = this.create_and_register_symbol_literal("new_from_stack");
   @bytecodes.append(:push_literal, idx_klass); //unusually reusing literal_frame to store core object reference
   @bytecodes.append(:push_literal, idx_new_from_stack);
   @bytecodes.append(:send, length);
+  this.update_line_mapping(bpos, ast);
 }
-instance_method emit_push_dict: fun(_, length) {
+instance_method emit_push_dict: fun(ast, length) {
+  var bpos = this.current_bytecode_pos();
   var idx_length = this.create_and_register_number_literal(length);
   var idx_selector = this.create_and_register_symbol_literal("new");
   var idx_set = this.create_and_register_symbol_literal("set");
@@ -1041,11 +1070,14 @@ instance_method emit_push_dict: fun(_, length) {
     @bytecodes.append(:push_literal, idx_set);
     @bytecodes.append(:send, 2);
   });
+  this.update_line_mapping(bpos, ast);
 }
-instance_method emit_push_index: fun(_) {
+instance_method emit_push_index: fun(ast) {
+  var bpos = this.current_bytecode_pos();
   var idx_selector = this.create_and_register_symbol_literal("index");
   @bytecodes.append(:push_literal, idx_selector);
   @bytecodes.append(:send, 1);
+  this.update_line_mapping(bpos, ast);
 }
 end
 

@@ -111,6 +111,7 @@ instance_method _local_vars: fun() {
                => [@indent, "this._lookahead(fun() {\n",la,"});"].join("")
              | [:keyword_string string:s]
                => [@indent, "this._apply_with_args(:keyword,[",s.toSource,"]);"].join("")
+             | [:ometa-position] => [@indent, "this._apply(:spaces);\n", @indent, "var _pos = this.input.idx();"].join("")
              ;
 </ometa>
 
