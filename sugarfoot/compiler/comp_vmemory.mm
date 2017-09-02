@@ -194,8 +194,8 @@ instance_method append_list_of_oops_for_labels: fun(lst) {
     this.append_int(mmc.FRAME_TYPE_ELEMENTS, null);
     this.append_int(lst.size * bits.WSIZE, null);
     var oops = [];
-    lst.each(fun(_, oop_element) {
-      oops.append(this.append_pointer_to(oop_element, null));
+    lst.each(fun(_, label) {
+      oops.append(this.append_label_ref(label, null));
     });
   }
 
