@@ -54,12 +54,18 @@ instance_method extends: fun(other) {
 end
 
 class MemeScriptParser < OMetaBase
-fields: has_fun_literal;
+fields: has_fun_literal, line_offset;
 init new: fun(input) {
   super.new(input);
   @has_fun_literal = false;
+  @line_offset = 0;
 }
-
+instance_method set_line_offset: fun(line_offset) {
+  @line_offset = line_offset;
+}
+instance_method line_offset: fun() {
+  return @line_offset;
+}
 instance_method last_or_empty: fun(lst) {
   if (lst.size > 0) {
     return lst.last;
