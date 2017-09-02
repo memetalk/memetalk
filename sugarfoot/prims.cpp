@@ -999,10 +999,28 @@ static int prim_list_set(Process* proc) {
 
 static int prim_list_pos(Process* proc) {
   oop self =  proc->dp();
-  oop val = proc->get_arg(0);
+  oop value = proc->get_arg(0);
 
-  number idx = proc->mmobj()->mm_list_index_of(proc, self, val);
-  proc->stack_push(tag_small_int(idx));
+  number idx = proc->mmobj()->mm_list_index_of(proc, self, value);
+  if (idx != -1) {
+    proc->stack_push(tag_small_int(idx));
+    return 0;
+  }
+
+  for (number i = 0; i < proc->mmobj()->mm_list_size(proc, self); i++) {
+    oop entry = proc->mmobj()->mm_list_entry(proc, self, i);
+    int exc;
+    oop res = proc->send_1(entry, proc->vm()->new_symbol("=="), value, &exc);
+    if (exc != 0) {
+      proc->stack_push(res);
+      return exc;
+    }
+    if (res == MM_TRUE) {
+      proc->stack_push(tag_small_int(i));
+      return 0;
+    }
+  }
+  proc->stack_push(tag_small_int(-1));
   return 0;
 }
 
@@ -1340,6 +1358,7 @@ static int prim_list_equals(Process* proc) {
   oop self =  proc->dp();
   oop other = proc->get_arg(0);
 
+  //FIXME: this likely breaks with two equal objs, subclasses of List.
   if (proc->mmobj()->mm_object_vt(other) != proc->vm()->get_prime("List")) {
     proc->stack_push(MM_FALSE);
     return 0;
@@ -1657,6 +1676,58 @@ static int prim_dictionary_each(Process* proc) {
 static int prim_dictionary_size(Process* proc) {
   oop self =  proc->dp();
   proc->stack_push(tag_small_int(proc->mmobj()->mm_dictionary_size(proc, self)));
+  return 0;
+}
+
+static int prim_dictionary_equals(Process* proc) {
+  oop self =  proc->dp();
+  oop other = proc->get_arg(0);
+
+  oop Dictionary = proc->vm()->get_prime("Dictionary");
+  // oop klass = proc->mmobj()->mm_object_vt(other);
+  // if (!proc->mmobj()->delegates_to(klass, Dictionary)) {
+  //   proc->stack_push(MM_FALSE);
+  //   return 0;
+  // }
+
+  if (proc->mmobj()->mm_object_vt(proc->rp()) != proc->mmobj()->mm_object_vt(other)) {
+    proc->stack_push(MM_FALSE);
+    return 0;
+  }
+
+  oop dp_other = proc->mmobj()->delegate_for_vt(proc, other, Dictionary);
+
+  boost::unordered_map<oop, oop>* d_self = proc->mmobj()->mm_dictionary_frame(proc, self);
+  boost::unordered_map<oop, oop>* d_other = proc->mmobj()->mm_dictionary_frame(proc, dp_other);
+
+  if (d_self->size() != d_other->size()) {
+    proc->stack_push(MM_FALSE);
+    return 0;
+  }
+
+  boost::unordered_map<oop, oop>::iterator it = proc->mmobj()->mm_dictionary_begin(proc, self);
+  boost::unordered_map<oop, oop>::iterator end = proc->mmobj()->mm_dictionary_end(proc, self);
+  for ( ; it != end; it++) {
+    int exc;
+    oop val = proc->send_1(other, proc->vm()->new_symbol("index"), it->first, &exc);
+    if (exc != 0) {
+      DBG("prim_dictionary_equals raised" << endl);
+      proc->stack_push(val);
+      return PRIM_RAISED;
+    }
+    oop val_eq = proc->send_1(it->second, proc->vm()->new_symbol("=="), val, &exc);
+    if (exc != 0) {
+      DBG("prim_dictionary_equals raised" << endl);
+      proc->stack_push(val);
+      return PRIM_RAISED;
+    }
+    if (val_eq == MM_FALSE) {
+      proc->stack_push(MM_FALSE);
+      return 0;
+    }
+
+  }
+  proc->stack_push(MM_TRUE);
   return 0;
 }
 
@@ -2762,6 +2833,7 @@ void init_primitives(VM* vm) {
   vm->register_primitive("dictionary_values", prim_dictionary_values);
   vm->register_primitive("dictionary_each", prim_dictionary_each);
   vm->register_primitive("dictionary_size", prim_dictionary_size);
+  vm->register_primitive("dictionary_equals", prim_dictionary_equals);
   vm->register_primitive("dictionary_to_string", prim_dictionary_to_string);
   vm->register_primitive("dictionary_to_source", prim_dictionary_to_source);
 

@@ -1337,6 +1337,17 @@ bool MMObj::delegates_or_is_subclass(Process* p, oop subclass, oop superclass) {
   }
 }
 
+oop MMObj::delegate_for_vt(Process* p, oop obj, oop vt) {
+  oop my_vt = mm_object_vt(obj);
+  if (my_vt == vt) {
+    return obj;
+  }
+  oop delegate = mm_object_delegate(obj);
+  if (obj == MM_NULL || obj == delegate) {
+    p->raise("Exception", "Could not find vt for delegate");
+  }
+  return delegate_for_vt(p, delegate, vt);
+}
 
 oop MMObj::mm_new(oop vt, oop delegate, number payload) {
   oop obj = (oop) calloc(sizeof(word), (2 + payload)); // vt, delegate

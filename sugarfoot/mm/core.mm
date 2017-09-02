@@ -396,6 +396,9 @@
   instance_method size: fun() {
     <primitive "dictionary_size">
   }
+  instance_method ==: fun(other) {
+    <primitive "dictionary_equals">
+  }
   end
 
   class List

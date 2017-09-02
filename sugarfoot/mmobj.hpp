@@ -50,6 +50,7 @@ public:
 
   bool delegates_to(oop, oop);
   bool delegates_or_is_subclass(Process* p, oop subclass, oop superclass);
+  oop delegate_for_vt(Process* p, oop obj, oop vt);
 
   oop mm_module_new(int num_fields, oop cmod, oop delegate);
 
