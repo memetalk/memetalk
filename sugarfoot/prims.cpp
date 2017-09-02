@@ -186,11 +186,12 @@ static int prim_string_to_byte(Process* proc) {
 static int prim_string_as_hex(Process* proc) {
   oop self =  proc->dp();
   std::string str = proc->mmobj()->mm_string_stl_str(proc, self);
-  unsigned int x;
+  number x;
   std::stringstream ss;
   ss << std::hex << str;
   ss >> x;
-  proc->stack_push(tag_small_int(x));
+  proc->stack_push(proc->mmobj()->mm_integer_or_longnum_new(proc, x));
+
   return 0;
 }
 
