@@ -1228,8 +1228,8 @@ instance_method new_function: fun(name, params) {
   @functions[name] = fn;
   return fn;
 }
-instance_method new_class: fun(name, parent, fields) {
-  var klass = CompiledClass.new(this, name, parent, fields);
+instance_method new_class: fun(name, parent, fields_list) {
+  var klass = CompiledClass.new(this, name, parent, fields_list);
   @classes[name] = klass;
   return klass;
 }
@@ -1359,8 +1359,8 @@ instance_method new_function: fun(name, params) {
   @imod.append_function(name, fn);
   return fn;
 }
-instance_method new_class: fun(name, parent, fields) {
-  var cclass = super(name, parent, fields);
+instance_method new_class: fun(name, parent, fields_list) {
+  var cclass = super(name, parent, fields_list);
   var klass = Class.new(@imod, cclass);
   @imod.append_class(klass);
   return klass;
