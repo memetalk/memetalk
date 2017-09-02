@@ -386,8 +386,9 @@ instance_method exactly: fun() {
 
 instance_method number: fun() {
   var r = this._apply(:anything);
-  var vt = this._pred(Mirror.vtFor(r));
-  return vt == Integer or vt == LongNum;
+  var vt = Mirror.vtFor(r);
+  this._pred(vt == Integer or vt == LongNum);
+  return r;
 }
 
 instance_method string: fun() {
@@ -415,7 +416,7 @@ instance_method space: fun() {
 }
 
 instance_method spaces: fun() {
-  return this._many(fun() { this._apply(:space) }, null);
+  return this._many(fun() { this._apply(:space) }, null).join("");
 }
 
 instance_method digit: fun() {
@@ -489,12 +490,10 @@ instance_method identifier: fun() {
 
 instance_method keyword: fun() {
   var xs = this._apply(:anything);
-  return this._or([fun() {
-    this._apply_with_args(:token, [xs]);
-    this._not(fun() {
-      this._apply(:identifier_rest);});
-    return xs;
-  }]);
+  this._apply_with_args(:token, [xs]);
+  this._not(fun() {
+    this._apply(:identifier_rest);});
+  return xs;
 }
 
 
@@ -521,6 +520,16 @@ parse: fun(data, cls, rule) {
   parser.prepend_input(rule);
   try {
     return [null, parser.apply()];
+  } catch(OMetaException e) {
+    return [input.format_error, null];
+  }
+}
+
+parse_with_args: fun(data, cls, rule, args) {
+  var input = OMetaStream.with_data(data);
+  var parser = cls.new(input);
+  try {
+    return [null, parser._apply_with_args(rule, args)];
   } catch(OMetaException e) {
     return [input.format_error, null];
   }
