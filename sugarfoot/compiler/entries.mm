@@ -269,7 +269,7 @@ instance_method fill: fun(vmem) {
   var oop = vmem.append_pointer_to(oop_vt, this.label); // vt
   vmem.append_label_ref(mmc.class_label(@cclass.super_name), null);              // delegate
   vmem.append_pointer_to(oop_dict, null);                                        // dict: "methods"
-  vmem.append_int(@cclass.fields.size, null);                                  // payload
+  vmem.append_int(@cclass.fields_list.size, null);                                  // payload
   vmem.append_label_ref(mmc.cclass_label(@cclass.name), null);                   // compiled_class
   // vmem.append_pointer_to(self.cclass.oop)                                     // <-
   return this.set_oop(oop);
@@ -277,18 +277,18 @@ instance_method fill: fun(vmem) {
 end
 
 class CompiledClass < Entry
-fields: cmod, name, super_name, fields, instance_methods, class_methods;
-init new: fun(cmod, name, super_name, fields) {
+fields: cmod, name, super_name, fields_list, instance_methods, class_methods;
+init new: fun(cmod, name, super_name, fields_list) {
   super.new();
   @cmod = cmod;
   @name = name;
   @super_name = super_name;
-  @fields = fields;
+  @fields_list = fields_list;
   @instance_methods = {};
   @class_methods = {};
 }
-instance_method fields: fun() {
-  return @fields;
+instance_method fields_list: fun() {
+  return @fields_list;
 }
 instance_method label: fun() {
   return mmc.cclass_label(@name); //cmod.label() + '_' + self.name + "_CompiledClass"
@@ -324,7 +324,7 @@ instance_method fill: fun(vmem) {
   var delegate = vmem.append_object_instance();
   var oop_name = vmem.append_string_instance(@name);
   var oop_super = vmem.append_string_instance(@super_name);
-  var oop_fields = vmem.append_list_of_strings(@fields);
+  var oop_fields = vmem.append_list_of_strings(@fields_list);
   var oop_methods = vmem.append_sym_dict_emiting_entries(@instance_methods);
   var oop_class_methods = vmem.append_sym_dict_emiting_entries(@class_methods);
 
@@ -901,7 +901,7 @@ instance_method emit_var_decl: fun(ast, name) {
 }
 instance_method emit_field_assignment: fun(ast, field) {
   var bpos = this.current_bytecode_pos();
-  var idx = @owner.fields.pos(field);
+  var idx = @owner.fields_list.pos(field);
   @bytecodes.append(:pop_field, idx);
   this.update_line_mapping(bpos, ast);
 }
@@ -1064,7 +1064,7 @@ instance_method emit_push_closure: fun(ast, fn) {
 }
 instance_method emit_push_field: fun(ast, field) {
   var bpos = this.current_bytecode_pos();
-  var idx = @owner.fields.pos(field);
+  var idx = @owner.fields_list.pos(field);
   @bytecodes.append(:push_field, idx);
   this.update_line_mapping(bpos, ast);
 }
