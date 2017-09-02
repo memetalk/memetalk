@@ -9,6 +9,17 @@
 #include <list>
 #include "core_image.hpp"
 
+//#include <gc_cpp.h>
+#include "gc/gc_allocator.h"
+
+typedef std::vector<oop, gc_allocator<oop> > oop_vector;
+
+typedef boost::unordered_map<oop, oop, boost::hash<oop>,
+                             std::equal_to<oop>,
+                             gc_allocator<std::pair<oop,oop> > >
+                           oop_map;
+
+
 class CoreImage;
 class VM;
 
@@ -70,7 +81,7 @@ public:
   number mm_list_size(Process*, oop list, bool should_assert = false);
   number mm_list_index_of(Process*, oop list, oop elem, bool should_assert = false);
   oop mm_list_entry(Process*, oop list, number idx, bool should_assert = false);
-  std::vector<oop>* mm_list_frame(Process*, oop, bool should_assert = false);
+  oop_vector* mm_list_frame(Process*, oop, bool should_assert = false);
   void mm_list_prepend(Process*, oop list, oop element, bool should_assert = false);
   void mm_list_append(Process*, oop list, oop element, bool should_assert = false);
   void mm_list_set(Process*, oop list, number idx, oop element, bool should_assert = false);
@@ -88,9 +99,9 @@ public:
  oop mm_dictionary_get(Process*, oop dict, oop key, bool should_assert = false);
  oop mm_dictionary_fast_get(Process*, oop dict, oop key);
 
-  boost::unordered_map<oop,oop>* mm_dictionary_frame(Process*, oop, bool should_assert = false);
-  boost::unordered_map<oop,oop>::iterator mm_dictionary_begin(Process*, oop, bool should_assert = false);
-  boost::unordered_map<oop,oop>::iterator mm_dictionary_end(Process*, oop, bool should_assert = false);
+  oop_map* mm_dictionary_frame(Process*, oop, bool should_assert = false);
+  oop_map::iterator mm_dictionary_begin(Process*, oop, bool should_assert = false);
+  oop_map::iterator mm_dictionary_end(Process*, oop, bool should_assert = false);
 
   void mm_module_set_dictionary(Process*, oop imodule, oop imod_dict, bool should_assert = false);
   void mm_module_set_module_argument(oop imodule, oop arg, number idx);

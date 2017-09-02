@@ -9,6 +9,8 @@
 #include "mmc_fun.hpp"
 #include <cstdlib>
 
+#include <gc_cpp.h>
+#include "gc/gc_allocator.h"
 
 #define DBG(...) if(_log._enabled) { _log << _log.magenta + _log.bold + "[VM|" << __FUNCTION__ << "] " << _log.normal << __VA_ARGS__; }
 
@@ -18,7 +20,7 @@
 
 VM::VM(int argc, char** argv, bool online, bool profile, const char* core_img_filepath)
   : _log(LOG_VM), _argc(argc), _argv(argv), _online(online), _profile(profile),
-    _core_image(new CoreImage(this, core_img_filepath)), _mmobj(new MMObj(_core_image)),
+    _core_image(new (GC) CoreImage(this, core_img_filepath)), _mmobj(new (GC) MMObj(_core_image)),
     _debugger_module(MM_NULL) {
 }
 
@@ -64,7 +66,7 @@ void VM::print_error(Process* proc, oop retval) {
 }
 
 Process* VM::init() {
-  Process* proc = new Process(this, 0, _online);
+  Process* proc = new (GC) Process(this, 0, _online);
   _core_image->load();
   init_primitives(this); //module initialization could execute primitives but
                          //now we are using Symbol objects as entries in the
@@ -119,7 +121,7 @@ std::pair<Process*, oop> VM::start_debugger(Process* target) {
   static int debugger_id = 0;
 
   oop imod;
-  Process* dbg_proc = new Process(this, ++debugger_id);
+  Process* dbg_proc = new (GC) Process(this, ++debugger_id);
   if (_debugger_module != MM_NULL) {
     imod = _debugger_module;
   } else {
@@ -144,7 +146,7 @@ std::pair<Process*, oop> VM::start_debugger(Process* target) {
 
 oop VM::new_symbol(const char* cstr) {
   std::string s = cstr;
-  boost::unordered_map<std::string, oop>::iterator it = _symbols.find(s);
+  symbol_map_t::iterator it = _symbols.find(s);
   if (it == _symbols.end()) {
     oop sym = _mmobj->mm_symbol_new(cstr);
     _symbols[s] = sym;
@@ -180,10 +182,10 @@ void VM::register_primitive(std::string name, prim_function_t fun) {
 oop VM::instantiate_module(Process* proc, const char* name_or_path, oop module_args_list) {
   DBG( "instantiating module " << name_or_path << endl);
   MMCImage* mmc;
-  std::map<std::string, MMCImage*>::iterator it = _modules.find(name_or_path);
+  modules_map_t::iterator it = _modules.find(name_or_path);
   if (it == _modules.end()) {
     DBG("loading new module " << name_or_path << endl);
-    mmc = new MMCImage(proc, _core_image, name_or_path);
+    mmc = new (GC) MMCImage(proc, _core_image, name_or_path);
     _modules[name_or_path] = mmc;
     mmc->load();
   } else {
@@ -243,12 +245,12 @@ oop VM::recompile_fun(Process* proc, oop cfun, int line, const char* text, int* 
     out << &pstream;
     std::string data = out.str();
 
-    char* c_data = (char*) calloc(sizeof(char), data.size());
+    char* c_data = (char*) GC_MALLOC(sizeof(char) * data.size());
     data.copy(c_data, data.size());
 
     DBG("Done executing python compiler" << endl);
     if (pclose(p) == 0) {
-      MMCFunction* mmcf = new MMCFunction(this, _core_image, c_data, data.size());
+      MMCFunction* mmcf = new (GC) MMCFunction(this, _core_image, c_data, data.size());
       oop new_cfun = mmcf->load(proc);
       _mmobj->mm_overwrite_compiled_function(proc, cfun, new_cfun);
       return cfun;
@@ -277,10 +279,10 @@ oop VM::compile_fun(Process* proc, const char* text, std::list<std::string> vars
     out << &pstream;
     std::string data = out.str();
 
-    char* c_data = (char*) calloc(sizeof(char), data.size()+1);
+    char* c_data = (char*) GC_MALLOC(sizeof(char) * data.size()+1);
     data.copy(c_data, data.size());
     if (pclose(p) == 0) {
-      MMCFunction* mmcf = new MMCFunction(this, _core_image, c_data, data.size());
+      MMCFunction* mmcf = new (GC) MMCFunction(this, _core_image, c_data, data.size());
       oop cfun = mmcf->load(proc);
       _mmobj->mm_compiled_function_set_cmod(proc, cfun, cmod);
       return cfun;

@@ -16,6 +16,25 @@ class MMCImage;
 class MMObj;
 class Process;
 
+
+typedef boost::unordered_map<std::string, oop, boost::hash<std::string>,
+                             std::equal_to<std::string>,
+                             gc_allocator<std::pair<std::string,oop> > >
+                            symbol_map_t;
+
+typedef boost::unordered_map<oop, prim_function_t,
+                             boost::hash<oop>,
+                             std::equal_to<oop>,
+                             gc_allocator<std::pair<oop,prim_function_t> > >
+                            prim_map_t;
+
+typedef boost::unordered_map<std::string, MMCImage*,
+                             boost::hash<std::string>,
+                             std::equal_to<std::string>,
+                             gc_allocator<std::pair<std::string,MMCImage*> > >
+                            modules_map_t;
+
+
 class VM {
 
 public:
@@ -82,10 +101,10 @@ private:
   oop _debugger_module;
 //  std::list<Process*> _processes;
 
-  boost::unordered_map<std::string, oop> _symbols;
+  symbol_map_t _symbols;
 
-  boost::unordered_map<oop, prim_function_t> _primitives;
-  std::map<std::string, MMCImage*> _modules;
+  prim_map_t _primitives;
+  modules_map_t _modules;
 };
 
 #endif

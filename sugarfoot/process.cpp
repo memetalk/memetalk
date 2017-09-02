@@ -217,7 +217,7 @@ oop Process::run(oop recv, oop selector_sym, int* exc) {
 }
 
 void Process::init() {
-  _stack = (word*) malloc(DEFAULT_STACK_SIZE);
+  _stack = (word*) GC_MALLOC_UNCOLLECTABLE(DEFAULT_STACK_SIZE);
   _state = INVALID_STATE;
   _sp = _stack; //stack
   _fp = NULL;
@@ -367,7 +367,7 @@ void Process::basic_new_and_load(oop klass) {
 
 void Process::setup_fp(number params, number storage_size) {
   //ideally this should be a calloc followed by memcpy
-  oop fp = (oop) calloc(sizeof(oop), storage_size + 2); //+2: space for rp, dp
+  oop fp = (oop) GC_MALLOC(sizeof(oop) * (storage_size + 2)); //+2: space for rp, dp
   DBG("allocated fp: " << fp << " - " << " params: " << params
       << " storage_size: " << storage_size << endl);
 

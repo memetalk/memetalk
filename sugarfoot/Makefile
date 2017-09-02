@@ -22,7 +22,7 @@ QT_CXXFLAGS = $(shell pkg-config --cflags $(QT_PKGLIBS)) -I$(INC_QSCI)
 QT_LIBS = $(shell pkg-config --libs $(QT_PKGLIBS)) -lqscintilla2
 
 CXXFLAGS = -Wall $(QT_CXXFLAGS)
-LIBS = -lboost_system -lboost_iostreams -lboost_filesystem $(QT_LIBS)
+LIBS = -lboost_system -lboost_iostreams -lboost_filesystem -lgc $(QT_LIBS)
 
 CPP_FILES = log.cpp mmc_image.cpp core_image.cpp vm.cpp utils.cpp	\
 	mmobj.cpp main.cpp process.cpp prims.cpp mmc_fun.cpp		\

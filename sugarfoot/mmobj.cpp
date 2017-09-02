@@ -11,7 +11,12 @@
 #include <cstring>
 #include <limits.h>
 
+#include <gc_cpp.h>
+#include "gc/gc_allocator.h"
 
+//**void * `GC_MALLOC`(size_t _nbytes_)** - Allocates and clears _nbytes_
+//**void * `GC_MALLOC_ATOMIC`(size_t _nbytes_)** -  This is the preferred way to allocate strings, floating point arrays, bitmaps, etc.
+//**void * `GC_MALLOC_UNCOLLECTABLE`(size_t _nbytes_)** - for stack
 
 #ifdef MM_NO_DEBUG
   #define DBG(...)
@@ -113,7 +118,7 @@ bytecode* MMObj::mm_frame_get_ip(Process* p, oop frame, bool should_assert) {
 }
 
 oop MMObj::mm_module_new(int num_fields, oop cmod, oop delegate) {
-  oop imodule = (oop) calloc(OO_MODULE_LEN + num_fields, sizeof(word)); //4: vt, delegate, dict, cmod
+  oop imodule = (oop) GC_MALLOC((OO_MODULE_LEN + num_fields) * sizeof(word)); //4: vt, delegate, dict, cmod
 
   ((word**) imodule)[0] = imodule; //imodule[vt] = imodule
   ((word**) imodule)[1] = delegate; // imodule[delegate]
@@ -172,7 +177,7 @@ bool MMObj::mm_boolean_cbool(Process* p, oop val, bool should_assert) {
 }
 
 oop MMObj::mm_object_new() {
-  oop obj = (oop) malloc(sizeof(word) * OO_OBJECT_LEN);
+  oop obj = (oop) GC_MALLOC(sizeof(word) * OO_OBJECT_LEN);
 
   ((word**) obj)[0] = _core_image->get_prime("Object");
   ((word**) obj)[1] = 0;
@@ -202,7 +207,7 @@ oop MMObj::mm_object_delegate(oop obj) {
 }
 
 oop MMObj::mm_list_new() {
-  oop obj = (oop) malloc(sizeof(word) * OO_LIST_LEN);
+  oop obj = (oop) GC_MALLOC(sizeof(word) * OO_LIST_LEN);
 
   ((word**) obj)[0] = _core_image->get_prime("List");
   ((word**) obj)[1] = mm_object_new();
@@ -212,40 +217,40 @@ oop MMObj::mm_list_new() {
 
 void MMObj::mm_list_init(oop obj) {
   ((word*)  obj)[2] = -1;
-  ((std::vector<oop>**) obj)[3] = new std::vector<oop>;
+  ((oop_vector**) obj)[3] = new (GC) oop_vector;
 }
 
 number MMObj::mm_list_size(Process* p, oop list, bool should_assert) {
   TYPE_CHECK(!( mm_object_vt(list) == _core_image->get_prime("List")),
              "TypeError","Expected List")
-    std::vector<oop>* elements = mm_list_frame(p, list, should_assert);
+    oop_vector* elements = mm_list_frame(p, list, should_assert);
   return elements->size();
 }
 
 oop MMObj::mm_list_entry(Process* p, oop list, number idx, bool should_assert) {
   TYPE_CHECK(!( mm_object_vt(list) == _core_image->get_prime("List")),
              "TypeError","Expected List")
-    std::vector<oop>* elements = mm_list_frame(p, list, should_assert);
+    oop_vector* elements = mm_list_frame(p, list, should_assert);
   if (idx >= (number) elements->size()) {
     p->raise("IndexError", "out of bounds index");
   }
   return (*elements)[idx];
 }
 
-std::vector<oop>* MMObj::mm_list_frame(Process* p, oop list, bool should_assert) {
+oop_vector* MMObj::mm_list_frame(Process* p, oop list, bool should_assert) {
   TYPE_CHECK(!( mm_object_vt(list) == _core_image->get_prime("List")),
              "TypeError","Expected List")
   number size = (number) ((oop*)list)[2];
   if (size == -1) {
-    return (std::vector<oop>*) ((oop*)list)[3];
+    return (oop_vector*) ((oop*)list)[3];
   } else {
     ((word*)list)[2] = -1;
-    std::vector<oop>* elements = new std::vector<oop>;
+    oop_vector* elements = new (GC) oop_vector;
     oop frame = ((oop*)list)[3];
     for (int i = 0; i < size; i++) {
       elements->push_back(((oop*)frame)[i]);
     }
-    ((std::vector<oop>**) list)[3] = elements;
+    ((oop_vector**) list)[3] = elements;
     return elements;
   }
 }
@@ -253,10 +258,10 @@ std::vector<oop>* MMObj::mm_list_frame(Process* p, oop list, bool should_assert)
 number MMObj::mm_list_index_of(Process* p, oop list, oop elem, bool should_assert) {
   TYPE_CHECK(!( mm_object_vt(list) == _core_image->get_prime("List")),
              "TypeError","Expected List")
-    std::vector<oop>* elements = mm_list_frame(p, list, should_assert);
+    oop_vector* elements = mm_list_frame(p, list, should_assert);
 
 
-  std::vector<oop>::iterator it = elements->begin();
+  oop_vector::iterator it = elements->begin();
   for (number pos = 0; it != elements->end(); it++, pos++) {
     if (*it == elem) {
       return pos;
@@ -274,7 +279,7 @@ number MMObj::mm_list_index_of(Process* p, oop list, oop elem, bool should_asser
 void MMObj::mm_list_set(Process* p, oop list, number idx, oop element, bool should_assert) {
   TYPE_CHECK(!( mm_object_vt(list) == _core_image->get_prime("List")),
              "TypeError","Expected List")
-    std::vector<oop>* elements = mm_list_frame(p, list, should_assert);
+    oop_vector* elements = mm_list_frame(p, list, should_assert);
   (*elements)[idx] = element;
 }
 
@@ -283,7 +288,7 @@ void MMObj::mm_list_prepend(Process* p, oop list, oop element, bool should_asser
   TYPE_CHECK(!( mm_object_vt(list) == _core_image->get_prime("List")),
              "TypeError","Expected List")
 
-    std::vector<oop>* elements = mm_list_frame(p, list, should_assert);
+    oop_vector* elements = mm_list_frame(p, list, should_assert);
   elements->insert(elements->begin(), element);
 }
 
@@ -291,12 +296,12 @@ void MMObj::mm_list_append(Process* p, oop list, oop element, bool should_assert
   TYPE_CHECK(!( mm_object_vt(list) == _core_image->get_prime("List")),
              "TypeError","Expected List")
 
-    std::vector<oop>* elements = mm_list_frame(p, list, should_assert);
+    oop_vector* elements = mm_list_frame(p, list, should_assert);
   elements->push_back(element);
 }
 
 oop MMObj::mm_dictionary_new() {
-  oop obj = (oop) malloc(sizeof(word) * OO_DICT_LEN);
+  oop obj = (oop) GC_MALLOC(sizeof(word) * OO_DICT_LEN);
   ((word**) obj)[0] = _core_image->get_prime("Dictionary");
   ((word**) obj)[1] = mm_object_new();
   mm_dictionary_init(obj);
@@ -304,46 +309,46 @@ oop MMObj::mm_dictionary_new() {
 }
 void MMObj::mm_dictionary_init(oop obj) {
   ((word*) obj)[2] = -1;
-  ((boost::unordered_map<oop, oop>**) obj)[3] = new boost::unordered_map<oop, oop>;
+  ((oop_map**) obj)[3] = new (GC) oop_map;
 }
 
-boost::unordered_map<oop, oop>* MMObj::mm_dictionary_frame(Process* p, oop dict, bool should_assert) {
+oop_map* MMObj::mm_dictionary_frame(Process* p, oop dict, bool should_assert) {
   TYPE_CHECK(!( mm_object_vt(dict) == _core_image->get_prime("Dictionary")),
              "TypeError","Expected Dictionary")
 
   number size = (number) ((oop*)dict)[2];
   if (size == -1) {
-    return (boost::unordered_map<oop, oop>*) ((oop*)dict)[3];
+    return (oop_map*) ((oop*)dict)[3];
   } else {
     ((word*)dict)[2] = -1;
-    boost::unordered_map<oop, oop>* elements = new boost::unordered_map<oop, oop>;
+    oop_map* elements = new (GC) oop_map;
     oop frame = ((oop*)dict)[3];
     for (int i = 0, j = 0; i < size; i++, j += 2) {
       (*elements)[((oop*)frame)[j]] = ((oop*)frame)[j+1];
     }
-    ((boost::unordered_map<oop, oop>**) dict)[3] = elements;
+    ((oop_map**) dict)[3] = elements;
     return elements;
   }
 }
 
-boost::unordered_map<oop,oop>::iterator MMObj::mm_dictionary_begin(Process* p, oop dict, bool should_assert) {
+oop_map::iterator MMObj::mm_dictionary_begin(Process* p, oop dict, bool should_assert) {
   TYPE_CHECK(!( mm_object_vt(dict) == _core_image->get_prime("Dictionary")),
              "TypeError","Expected Dictionary")
-    boost::unordered_map<oop, oop>* elements = mm_dictionary_frame(p, dict, should_assert);
+    oop_map* elements = mm_dictionary_frame(p, dict, should_assert);
   return elements->begin();
 }
 
-boost::unordered_map<oop,oop>::iterator MMObj::mm_dictionary_end(Process* p, oop dict, bool should_assert) {
+oop_map::iterator MMObj::mm_dictionary_end(Process* p, oop dict, bool should_assert) {
   TYPE_CHECK(!( mm_object_vt(dict) == _core_image->get_prime("Dictionary")),
              "TypeError","Expected Dictionary")
-    boost::unordered_map<oop, oop>* elements = mm_dictionary_frame(p, dict, should_assert);
+    oop_map* elements = mm_dictionary_frame(p, dict, should_assert);
   return elements->end();
 }
 
 number MMObj::mm_dictionary_size(Process* p, oop dict, bool should_assert) {
   TYPE_CHECK(!( mm_object_vt(dict) == _core_image->get_prime("Dictionary")),
              "TypeError","Expected Dictionary")
-    boost::unordered_map<oop, oop>* elements = mm_dictionary_frame(p, dict, should_assert);
+    oop_map* elements = mm_dictionary_frame(p, dict, should_assert);
   return elements->size();
 }
 
@@ -351,9 +356,9 @@ bool MMObj::mm_dictionary_has_key(Process* p, oop dict, oop key, bool should_ass
   TYPE_CHECK(!( mm_object_vt(dict) == _core_image->get_prime("Dictionary")),
              "TypeError","Expected Dictionary")
 
-    boost::unordered_map<oop, oop>* elements = mm_dictionary_frame(p, dict, should_assert);
+    oop_map* elements = mm_dictionary_frame(p, dict, should_assert);
   // DBG(dict << "(" << elements->size() << ") has key " << key << " ?" << endl);
-  for (boost::unordered_map<oop, oop>::iterator it = elements->begin(); it != elements->end(); it++) {
+  for (oop_map::iterator it = elements->begin(); it != elements->end(); it++) {
     if (it->first == key) {
       return true;
     } else if (mm_is_string(key) && mm_is_string(it->first)) {
@@ -371,8 +376,8 @@ oop MMObj::mm_dictionary_keys(Process* p, oop dict, bool should_assert) {
              "TypeError","Expected Dictionary")
 
   oop lst = mm_list_new();
-  boost::unordered_map<oop, oop>* elements = mm_dictionary_frame(p, dict, should_assert);
-  for (boost::unordered_map<oop, oop>::iterator it = elements->begin(); it != elements->end(); it++) {
+  oop_map* elements = mm_dictionary_frame(p, dict, should_assert);
+  for (oop_map::iterator it = elements->begin(); it != elements->end(); it++) {
     mm_list_append(p, lst, it->first, should_assert);
   }
   return lst;
@@ -382,16 +387,16 @@ oop MMObj::mm_dictionary_values(Process* p, oop dict, bool should_assert) {
   TYPE_CHECK(!( mm_object_vt(dict) == _core_image->get_prime("Dictionary")),
              "TypeError","Expected Dictionary")
   oop lst = mm_list_new();
-  boost::unordered_map<oop, oop>* elements = mm_dictionary_frame(p, dict, should_assert);
-  for (boost::unordered_map<oop, oop>::iterator it = elements->begin(); it != elements->end(); it++) {
+  oop_map* elements = mm_dictionary_frame(p, dict, should_assert);
+  for (oop_map::iterator it = elements->begin(); it != elements->end(); it++) {
     mm_list_append(p, lst, it->second, should_assert);
   }
   return lst;
 }
 
 oop MMObj::mm_dictionary_fast_get(Process* p, oop dict, oop key) {
-    boost::unordered_map<oop, oop>* elements = mm_dictionary_frame(p, dict, true);
-  boost::unordered_map<oop, oop>::iterator it = elements->find(key);
+    oop_map* elements = mm_dictionary_frame(p, dict, true);
+  oop_map::iterator it = elements->find(key);
   if (it != elements->end()) {
     return it->second;
   } else {
@@ -403,14 +408,14 @@ oop MMObj::mm_dictionary_get(Process* p, oop dict, oop key, bool should_assert) 
   TYPE_CHECK(!( mm_object_vt(dict) == _core_image->get_prime("Dictionary")),
              "TypeError","Expected Dictionary")
 
-    boost::unordered_map<oop, oop>* elements = mm_dictionary_frame(p, dict, should_assert);
+    oop_map* elements = mm_dictionary_frame(p, dict, should_assert);
 
-  boost::unordered_map<oop, oop>::iterator it = elements->find(key);
+  oop_map::iterator it = elements->find(key);
   if (it != elements->end()) {
     return it->second;
   }
   DBG(dict << "(" << elements->size() << ") get " << key << endl);
-  for (boost::unordered_map<oop, oop>::iterator it = elements->begin(); it != elements->end(); it++) {
+  for (oop_map::iterator it = elements->begin(); it != elements->end(); it++) {
     // DBG(dict << "(" << elements->size() << ") get direct? " << (it->first == key) << endl);
     if (it->first == key) {
       return it->second;
@@ -432,7 +437,7 @@ void MMObj::mm_dictionary_set(Process* p, oop dict, oop key, oop value, bool sho
   TYPE_CHECK(!( mm_object_vt(dict) == _core_image->get_prime("Dictionary")),
              "TypeError","Expected Dictionary")
 
-    boost::unordered_map<oop, oop>* elements = mm_dictionary_frame(p, dict, should_assert);
+    oop_map* elements = mm_dictionary_frame(p, dict, should_assert);
   (*elements)[key] = value;
 }
 
@@ -561,7 +566,7 @@ oop MMObj::mm_function_from_cfunction(Process* p, oop cfun, oop imod, bool shoul
   TYPE_CHECK(!( mm_object_vt(cfun) == _core_image->get_prime("CompiledFunction")),
              "TypeError","Expected CompiledFunction")
 
-  oop fun = (oop) malloc(sizeof(word) * OO_FUN_LEN);
+  oop fun = (oop) GC_MALLOC(sizeof(word) * OO_FUN_LEN);
 
   * (oop*) fun = _core_image->get_prime("Function");
   * (oop*) &fun[1] = mm_object_new();
@@ -995,8 +1000,8 @@ bytecode* MMObj::mm_compiled_function_next_expr(Process* p, oop cfun, bytecode* 
   word idx = ip - base_ip;
 
   oop mapping = mm_compiled_function_get_loc_mapping(p, cfun, should_assert);
-  boost::unordered_map<oop, oop>::iterator it = mm_dictionary_begin(p, mapping, should_assert);
-  boost::unordered_map<oop, oop>::iterator end = mm_dictionary_end(p, mapping, should_assert);
+  oop_map::iterator it = mm_dictionary_begin(p, mapping, should_assert);
+  oop_map::iterator end = mm_dictionary_end(p, mapping, should_assert);
   word next_offset = INT_MAX;
   for ( ; it != end; it++) {
     word b_offset = untag_small_int(it->first);
@@ -1020,8 +1025,8 @@ bytecode* MMObj::mm_compiled_function_next_line_expr(Process* p, oop cfun, bytec
   word idx = ip - base_ip;
 
   oop mapping = mm_compiled_function_get_line_mapping(p, cfun, should_assert);
-  boost::unordered_map<oop, oop>::iterator it = mm_dictionary_begin(p, mapping, should_assert);
-  boost::unordered_map<oop, oop>::iterator end = mm_dictionary_end(p, mapping, should_assert);
+  oop_map::iterator it = mm_dictionary_begin(p, mapping, should_assert);
+  oop_map::iterator end = mm_dictionary_end(p, mapping, should_assert);
 
   word current_line = 0;
   //discover current line
@@ -1067,8 +1072,8 @@ number MMObj::mm_compiled_function_get_line_for_instruction(Process* p, oop cfun
   word idx = ip - base_ip;
 
   oop mapping = mm_compiled_function_get_line_mapping(p, cfun, should_assert);
-  boost::unordered_map<oop, oop>::iterator it = mm_dictionary_begin(p, mapping, should_assert);
-  boost::unordered_map<oop, oop>::iterator end = mm_dictionary_end(p, mapping, should_assert);
+  oop_map::iterator it = mm_dictionary_begin(p, mapping, should_assert);
+  oop_map::iterator end = mm_dictionary_end(p, mapping, should_assert);
   word current_line = 0;
   for ( ; it != end; it++) {
     word b_offset = untag_small_int(it->first);
@@ -1089,8 +1094,8 @@ bytecode* MMObj::mm_compiled_function_get_instruction_for_line(Process* p, oop c
   bytecode* base_ip = mm_compiled_function_get_code(p, cfun, should_assert);
 
   oop mapping = mm_compiled_function_get_line_mapping(p, cfun, should_assert);
-  boost::unordered_map<oop, oop>::iterator it = mm_dictionary_begin(p, mapping, should_assert);
-  boost::unordered_map<oop, oop>::iterator end = mm_dictionary_end(p, mapping, should_assert);
+  oop_map::iterator it = mm_dictionary_begin(p, mapping, should_assert);
+  oop_map::iterator end = mm_dictionary_end(p, mapping, should_assert);
   for ( ; it != end; it++) {
     number line = untag_small_int(it->second);
     DBG("line: " << line << "=" << lineno << endl);
@@ -1113,8 +1118,8 @@ bytecode* MMObj::mm_compiled_function_get_instruction_for_line(Process* p, oop c
 //   // DBG("MMOBJ IDX : " << idx << endl);
 
 //   oop mapping = mm_compiled_function_get_loc_mapping(cfun);
-//   boost::unordered_map<oop, oop>::iterator it = mm_dictionary_begin(mapping);
-//   boost::unordered_map<oop, oop>::iterator end = mm_dictionary_end(mapping);
+//   oop_map::iterator it = mm_dictionary_begin(mapping);
+//   oop_map::iterator end = mm_dictionary_end(mapping);
 //   for ( ; it != end; it++) {
 //     word b_offset = untag_small_int(it->first);
 //     // DBG("LOC_MATCHES_IP? -- " << b_offset << " " <<  idx << std::endl);
@@ -1182,7 +1187,7 @@ oop MMObj::mm_cfuns_to_funs_dict(Process* p, oop cfuns_dict, oop imod, bool shou
   // number size = mm_dictionary_size(cfuns_dict);
   oop funs_dict = mm_dictionary_new();
 
-  boost::unordered_map<oop, oop>::iterator it = mm_dictionary_begin(p, cfuns_dict, should_assert);
+  oop_map::iterator it = mm_dictionary_begin(p, cfuns_dict, should_assert);
   for ( ; it != mm_dictionary_end(p, cfuns_dict, should_assert); it++) {
     oop sym_name = it->first;
     oop cfun = it->second;
@@ -1198,7 +1203,7 @@ oop MMObj::mm_class_behavior_new(Process* p, oop super_class, oop funs_dict, boo
   //vt: Behavior
   //delegate:
   //dict
-  oop cbehavior = (oop) malloc(sizeof(word) * OO_CLASS_BEHAVIOR_LEN);
+  oop cbehavior = (oop) GC_MALLOC(sizeof(word) * OO_CLASS_BEHAVIOR_LEN);
   * (oop*) cbehavior = _core_image->get_prime("Behavior");
   * (oop*) &cbehavior[1] = * (oop*) super_class; //super_class[vt]
   * (oop*) &cbehavior[2] = funs_dict;
@@ -1213,7 +1218,7 @@ oop MMObj::mm_class_new(Process* p, oop class_behavior, oop super_class, oop dic
   TYPE_CHECK(!( *(oop*) compiled_class == _core_image->get_prime("CompiledClass")),
              "TypeError","Expected CompiledClass")
 
-  oop klass = (oop) malloc(sizeof(word) * OO_CLASS_LEN);
+  oop klass = (oop) GC_MALLOC(sizeof(word) * OO_CLASS_LEN);
   * (oop*) klass = class_behavior;
   * (oop*) &klass[1] = super_class;
   * (oop*) &klass[2] = dict;
@@ -1245,7 +1250,7 @@ oop MMObj::mm_new_slot_getter(Process* p, oop imodule, oop owner, oop name, int 
   TYPE_CHECK(!( *(oop*) name == _core_image->get_prime("String")),
              "TypeError","Expected String")
 
-  oop cfun_getter = (oop) calloc(sizeof(word), OO_CFUN_LEN);
+  oop cfun_getter = (oop) GC_MALLOC(sizeof(word) * OO_CFUN_LEN);
 
   * (oop*) cfun_getter = _core_image->get_prime("CompiledFunction");
   * (oop*) &cfun_getter[1] = mm_object_new();
@@ -1259,7 +1264,7 @@ oop MMObj::mm_new_slot_getter(Process* p, oop imodule, oop owner, oop name, int 
 }
 
 oop MMObj::mm_symbol_new(const char* str) {
-  oop symb = (oop) malloc((sizeof(word) * OO_SYMBOL_LEN) + (strlen(str)+1));
+  oop symb = (oop) GC_MALLOC((sizeof(word) * OO_SYMBOL_LEN) + (strlen(str)+1));
 
   * (oop*) symb = _core_image->get_prime("Symbol");
   * (oop*) &symb[1] = mm_object_new();
@@ -1350,7 +1355,7 @@ oop MMObj::delegate_for_vt(Process* p, oop obj, oop vt) {
 }
 
 oop MMObj::mm_new(oop vt, oop delegate, number payload) {
-  oop obj = (oop) calloc(sizeof(word), (2 + payload)); // vt, delegate
+  oop obj = (oop) GC_MALLOC(sizeof(word) * (2 + payload)); // vt, delegate
 
   ((oop*) obj)[0] = vt;
   ((oop*) obj)[1] = delegate;
@@ -1371,7 +1376,7 @@ oop MMObj::alloc_instance(Process* p, oop klass) {
 
   DBG("alloc_instance: payload " << payload << endl);
 
-  oop instance = (oop) calloc(sizeof(word), payload + 2); //2: vt, delegate
+  oop instance = (oop) GC_MALLOC(sizeof(word) * (payload + 2)); //2: vt, delegate
   DBG("new instance [size: " << payload << "]: "
       << mm_string_cstr(p, mm_class_name(p, klass, true), true) << " = " << instance << endl);
 

@@ -23,7 +23,7 @@ char* read_file(fstream& file, int* file_size) {
 
   file.close();
   const char* str = contents.c_str();
-  char* ret = (char*) malloc((sizeof(char) * *file_size)+1);
+  char* ret = (char*) GC_MALLOC((sizeof(char) * *file_size)+1);
   return (char*) memcpy(ret, str, (sizeof(char) * *file_size)+1);
 }
 
