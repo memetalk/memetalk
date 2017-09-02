@@ -201,7 +201,7 @@ top_fun_body = primitive
 
 primitive =  "<primitive" spaces lit_string:s ">" => [[:primitive, s]];
 
-stmts  =  stmt*:x => x;
+stmts  =  stmt*;
 
 stmt = control_expr
      | non_control_expr:e ";" => e;
