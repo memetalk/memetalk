@@ -131,22 +131,28 @@ instance_method new_module: fun() {
 instance_method parse: fun() {
   var ast = ometa_base.parse(io.read_file(@filepath), meme.MemeScriptParser, :start);
   if (ast[0]) {
-    io.print("parse error: " + ast[0].toString);
-    Exception.throw("parse error");
+    io.print(ast[0]);
+    exit(1);
   } else {
     return ast[1];
   }
 }
 instance_method translate: fun(ast) {
-  var parser = meme_tr.MemeScriptTranslator.new(this, ometa_base.OMetaStream.with_data([ast]));
+  var input = ometa_base.OMetaStream.with_data([ast]);
+  var parser = meme_tr.MemeScriptTranslator.new(this, input);
   parser.prepend_input(:start);
-  parser.apply();
+  try {
+    parser.apply();
+  } catch(e) {
+    io.print(input.format_error);
+    exit(1);
+  }
 }
 instance_method compile: fun(filepath) {
   @filepath = filepath;
   var ast = this.parse();
 
-  io.print(ast.toSource);
+  //io.print(ast.toSource);
   io.print("translating...");
 
   this.translate(ast);

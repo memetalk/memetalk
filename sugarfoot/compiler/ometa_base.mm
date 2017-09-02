@@ -75,6 +75,51 @@ instance_method head: fun() {
   }
   return @hd;
 }
+instance_method last_parsed_token: fun() {
+  var st = this;
+  var prev = this;
+  var line = 0;
+  var col = 0;
+  var idx = 0;
+  while (idx < @data.size) {
+    if (@data[idx] == "\n") {
+      line = line + 1;
+      col = 0;
+    } else {
+      col = col + 1;
+    }
+    idx = idx + 1;
+    if (st.memo.size > 0) {
+      prev = st;
+
+      st = st.tail;
+
+      if (Mirror.vtFor(st) == OMetaStreamEnd) {
+        return {:line : line, :col : col, :token: prev};
+      }
+    } else {
+      return {:line : line, :col : col, :token: prev};
+    }
+  }
+}
+instance_method format_error: fun() {
+  var last = this.last_parsed_token();
+  var line = last[:line];
+  var col = last[:col];
+  if (Mirror.vtFor(@data) == String) {
+//    var lines = @data.split("\n");
+    return ["parse error: ", (line + 1).toString, ":", col.toString, "\n"].join("");
+            // lines[line],"\n",
+            // " ".times(col),"^\n",
+            // "expected: ",
+            // last[:token].memo.keys().map(fun(x) { x.toString }).join(", ")].join("");
+  } else {
+    return ["parse error: ", "\n"].join("");
+    // return ["error: '", last.head.toString, "'\n",
+    //         "expected: ",
+    //         last.memo.keys().map(fun(x) { x.toString }).join(", ")].join("");
+  }
+}
 
 instance_method tail: fun() {
  if (!@tl) {
@@ -471,12 +516,13 @@ instance_method until: fun() {
 end
 
 parse: fun(data, cls, rule) {
-  var parser = cls.new(OMetaStream.with_data(data));
+  var input = OMetaStream.with_data(data);
+  var parser = cls.new(input);
   parser.prepend_input(rule);
   try {
     return [null, parser.apply()];
   } catch(OMetaException e) {
-    return [parser.get_error, null];
+    return [input.format_error, null];
   }
 }
 
