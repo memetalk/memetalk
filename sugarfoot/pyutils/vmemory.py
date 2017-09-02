@@ -288,7 +288,7 @@ class VirtualMemory(object):
 
     def append_sym_dict_emiting_entries(self, entries_pydict):
         pairs_oop = []
-        for key, entry, in entries_pydict.iteritems():
+        for key, entry, in iter(sorted(entries_pydict.items())):
             key_oop = self.append_symbol_instance(key)
             val_oop = entry.fill(self)
             pairs_oop.append((key_oop, val_oop))

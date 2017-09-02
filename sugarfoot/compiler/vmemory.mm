@@ -277,7 +277,8 @@ instance_method append_empty_dict: fun() {
 
 instance_method append_sym_dict_emiting_entries: fun(entries_mdict) {
   var pairs_oop = [];
-  entries_mdict.each(fun(key, entry) {
+  entries_mdict.keys.sorted.each(fun(_, key) {
+    var entry = entries_mdict[key];
     var key_oop = this.append_symbol_instance(key);
     var val_oop = entry.fill(this);
     pairs_oop.append([key_oop, val_oop]);
