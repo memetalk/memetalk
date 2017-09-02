@@ -1086,9 +1086,13 @@ instance_method emit_try_catch: fun(lb_begin_try, lb_begin_catch, jmp_pos, catch
 }
 instance_method emit_push_list: fun(ast, length) {
   var bpos = this.current_bytecode_pos();
-  var idx_klass = this.create_and_register_core("List");
+  var idx_klass = this.create_and_register_symbol_literal("List");
   var idx_new_from_stack = this.create_and_register_symbol_literal("new_from_stack");
+
+  @bytecodes.append(:push_module, 0);
   @bytecodes.append(:push_literal, idx_klass); //unusually reusing literal_frame to store core object reference
+  @bytecodes.append(:send, 0);
+
   @bytecodes.append(:push_literal, idx_new_from_stack);
   @bytecodes.append(:send, length);
   this.update_line_mapping(bpos, ast);
