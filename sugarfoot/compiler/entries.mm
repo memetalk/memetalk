@@ -774,7 +774,9 @@ instance_method create_and_register_core: fun(class_name) {
   return this.index_for_literal(entry);
 }
 
-instance_method emit_push_var: fun(_, name) {
+instance_method emit_push_var: fun(ast, name) {
+  var bpos = this.current_bytecode_pos();
+
   var idx = null;
   if (this.identifier_in_scope(this, name)) {
     idx = @var_declarations.pos(this, name);
@@ -793,28 +795,31 @@ instance_method emit_push_var: fun(_, name) {
     @bytecodes.append(:push_literal, idx);
     @bytecodes.append(:send, 0);
   }
+  this.update_line_mapping(bpos, ast);
 }
-instance_method emit_push_var: fun(_, name) {
-  var idx = null;
-  if (this.identifier_in_scope(this, name)) {
-    idx = @var_declarations.pos(this, name);
-    @bytecodes.append(:push_local, idx);
-  } elif (this.identifier_is_module_scoped(name) or this.identifier_is_prime(name)) {
-    idx = this.create_and_register_symbol_literal(name);
-    @bytecodes.append(:push_module, 0);
-    @bytecodes.append(:push_literal, idx);
-    @bytecodes.append(:send, 0);
-  } else {
-    // raise Exception('push_var: undeclared ' + name)
-    // for now, lets assume its a module instead of raising,
-    // to make it easy for dynamic eval() code
-    idx = this.create_and_register_symbol_literal(name);
-    @bytecodes.append(:push_module, 0);
-    @bytecodes.append(:push_literal, idx);
-    @bytecodes.append(:send, 0);
-  }
-}
-instance_method emit_local_assignment: fun(_, name) {
+// instance_method emit_push_var: fun(_, name) {
+//   var idx = null;
+//   if (this.identifier_in_scope(this, name)) {
+//     idx = @var_declarations.pos(this, name);
+//     @bytecodes.append(:push_local, idx);
+//   } elif (this.identifier_is_module_scoped(name) or this.identifier_is_prime(name)) {
+//     idx = this.create_and_register_symbol_literal(name);
+//     @bytecodes.append(:push_module, 0);
+//     @bytecodes.append(:push_literal, idx);
+//     @bytecodes.append(:send, 0);
+//   } else {
+//     // raise Exception('push_var: undeclared ' + name)
+//     // for now, lets assume its a module instead of raising,
+//     // to make it easy for dynamic eval() code
+//     idx = this.create_and_register_symbol_literal(name);
+//     @bytecodes.append(:push_module, 0);
+//     @bytecodes.append(:push_literal, idx);
+//     @bytecodes.append(:send, 0);
+//   }
+// }
+instance_method emit_local_assignment: fun(ast, name) {
+  var bpos = this.current_bytecode_pos();
+
   var idx = 0;
   if (this.identifier_in_scope(this, name)) {
     idx = @var_declarations.pos(this, name);
@@ -822,15 +827,19 @@ instance_method emit_local_assignment: fun(_, name) {
   } else {
     Exception.throw("local assignment: undeclared: " + name);
   }
+  this.update_line_mapping(bpos, ast);
 }
-instance_method emit_return_top: fun(_) {
+instance_method emit_return_top: fun(ast) {
+  var bpos = this.current_bytecode_pos();
   @bytecodes.append(:ret_top, 0);
+  this.update_line_mapping(bpos, ast);
 }
 instance_method set_should_wrap_catch_for_non_local_return: fun(val) {
   @should_wrap_catch_for_non_local_return = val;
 }
 
-instance_method emit_non_local_return: fun(_) {
+instance_method emit_non_local_return: fun(ast) {
+  var bpos = this.current_bytecode_pos();
   var idx_class = this.create_and_register_symbol_literal("NonLocalReturn");
   var idx_throw = this.create_and_register_symbol_literal("throw");
   @bytecodes.append(:push_module, 0);
@@ -839,11 +848,15 @@ instance_method emit_non_local_return: fun(_) {
   @bytecodes.append(:push_literal, idx_throw);
   @bytecodes.append(:send, 1);
   @top_level_cfun.set_should_wrap_catch_for_non_local_return(true);
+  this.update_line_mapping(bpos, ast);
 }
-instance_method emit_return_null: fun(_) {
+instance_method emit_return_null: fun(ast) {
+  var bpos = this.current_bytecode_pos();
   @bytecodes.append(:push_bin, 0);
   @bytecodes.append(:ret_top, 0);
+  this.update_line_mapping(bpos, ast);
 }
+
 instance_method emit_end_body: fun(ast) {
   var bpos = this.current_bytecode_pos();
   if (@is_top_level) {
@@ -879,24 +892,33 @@ instance_method update_line_mapping: fun(bpos, ast) {
   @location_mapping[bpos] = [start_line, ast.start_col, end_line, ast.end_col];
   @line_mapping[bpos] = start_line;
 }
-instance_method emit_var_decl: fun(_, name) {
+instance_method emit_var_decl: fun(ast, name) {
+  var bpos = this.current_bytecode_pos();
   this.declare_var(name);
   var idx = @var_declarations.pos(this, name);
   @bytecodes.append(:pop_local, idx);
+  this.update_line_mapping(bpos, ast);
 }
-instance_method emit_field_assignment: fun(_, field) {
+instance_method emit_field_assignment: fun(ast, field) {
+  var bpos = this.current_bytecode_pos();
   var idx = @owner.fields.pos(field);
   @bytecodes.append(:pop_field, idx);
+  this.update_line_mapping(bpos, ast);
 }
-instance_method emit_index_assignment: fun(_) {
+instance_method emit_index_assignment: fun(ast) {
+  var bpos = this.current_bytecode_pos();
   var idx_selector = this.create_and_register_symbol_literal("set");
   @bytecodes.append(:push_literal,idx_selector);
   @bytecodes.append(:send, 2);
+  this.update_line_mapping(bpos, ast);
 }
-instance_method emit_pop: fun(_) {
+instance_method emit_pop: fun(ast) {
+  var bpos = this.current_bytecode_pos();
   @bytecodes.append(:pop, 0);
+  this.update_line_mapping(bpos, ast);
 }
-instance_method emit_send_or_local_call: fun(_, name, arity) {
+instance_method emit_send_or_local_call: fun(ast, name, arity) {
+  var bpos = this.current_bytecode_pos();
   var idx = null;
   if (this.identifier_in_scope(this, name)) {
     idx = @var_declarations.pos(this, name);
@@ -916,32 +938,45 @@ instance_method emit_send_or_local_call: fun(_, name, arity) {
     @bytecodes.append(:push_literal, idx);
     @bytecodes.append(:send, arity);
   }
+  this.update_line_mapping(bpos, ast);
 }
-instance_method emit_call: fun(_, arity) {
+instance_method emit_call: fun(ast, arity) {
+  var bpos = this.current_bytecode_pos();
   @bytecodes.append(:call, arity);
+  this.update_line_mapping(bpos, ast);
 }
-instance_method emit_send: fun(_, selector, arity) {
+instance_method emit_send: fun(ast, selector, arity) {
+  var bpos = this.current_bytecode_pos();
   var idx = this.create_and_register_symbol_literal(selector);
   @bytecodes.append(:push_literal, idx);
   @bytecodes.append(:send, arity);
+  this.update_line_mapping(bpos, ast);
 }
-instance_method emit_super_send: fun(_, arity) {
+instance_method emit_super_send: fun(ast, arity) {
+  var bpos = this.current_bytecode_pos();
   @bytecodes.append(:super_send, arity);
+  this.update_line_mapping(bpos, ast);
 }
-instance_method emit_super_ctor_send: fun(_, selector, arity) {
+instance_method emit_super_ctor_send: fun(ast, selector, arity) {
+  var bpos = this.current_bytecode_pos();
   var idx = this.create_and_register_symbol_literal(selector);
   @bytecodes.append(:push_literal, idx);
   @bytecodes.append(:super_ctor_send, arity);
+  this.update_line_mapping(bpos, ast);
 }
-instance_method emit_binary: fun(_, selector) {
+instance_method emit_binary: fun(ast, selector) {
+  var bpos = this.current_bytecode_pos();
   var idx = this.create_and_register_symbol_literal(selector);
   @bytecodes.append(:push_literal, idx);
   @bytecodes.append(:send, 1);
+  this.update_line_mapping(bpos, ast);
 }
-instance_method emit_unary: fun(_, selector) {
+instance_method emit_unary: fun(ast, selector) {
+  var bpos = this.current_bytecode_pos();
   var idx = this.create_and_register_symbol_literal(selector);
   @bytecodes.append(:push_literal, idx);
   @bytecodes.append(:send, 0);
+  this.update_line_mapping(bpos, ast);
 }
 instance_method emit_jz: fun(lb) { //lb defaults to null
   if (!lb) {
@@ -974,16 +1009,22 @@ instance_method emit_push_num_literal: fun(ast, num) {
     Exception.throw("Integer is too big: " + num.toString);
   }
 }
-instance_method emit_push_this: fun(_) {
+instance_method emit_push_this: fun(ast) {
+  var bpos = this.current_bytecode_pos();
   @bytecodes.append(:push_this, 0);
+  this.update_line_mapping(bpos, ast);
 }
-instance_method emit_push_str_literal: fun(_, string) {
+instance_method emit_push_str_literal: fun(ast, string) {
+  var bpos = this.current_bytecode_pos();
   var idx = this.create_and_register_string_literal(string);
   @bytecodes.append(:push_literal, idx);
+  this.update_line_mapping(bpos, ast);
 }
-instance_method emit_push_sym_literal: fun(_, sym) {
+instance_method emit_push_sym_literal: fun(ast, sym) {
+  var bpos = this.current_bytecode_pos();
   var idx = this.create_and_register_symbol_literal(sym);
   @bytecodes.append(:push_literal, idx);
+  this.update_line_mapping(bpos, ast);
 }
 instance_method emit_push_null: fun(ast) {
   var bpos = this.current_bytecode_pos();
