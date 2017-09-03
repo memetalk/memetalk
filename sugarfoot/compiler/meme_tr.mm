@@ -149,7 +149,7 @@ instance_method function_definition: fun() {
 instance_method class_definition: fun() {
   var name = null;
   var parent = null;
-  var fields = null;
+  var fields_list = null;
   var klass = null;
   var modobj = this._apply(:anything);
   return this._or([fun() {
@@ -160,8 +160,8 @@ instance_method class_definition: fun() {
         parent = this._apply(:anything);});
       this._form(fun() {
         this._apply_with_args(:exactly, [:fields]);
-        fields = this._apply(:anything);});
-      klass = modobj.new_class(name, parent, fields);
+        fields_list = this._apply(:anything);});
+      klass = modobj.new_class(name, parent, fields_list);
       this._apply_with_args(:constructors, [klass]);
       this._form(fun() {
         this._many(fun() {

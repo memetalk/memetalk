@@ -44,8 +44,8 @@ function_definition :modobj =  !{this.input.head()}:ast
 
 
 class_definition :modobj =  [:class [_:name _:parent]
-                              [:fields _:fields]
-                                !{modobj.new_class(name, parent, fields)}:klass
+                              [:fields _:fields_list]
+                                !{modobj.new_class(name, parent, fields_list)}:klass
                               constructors(klass)
                               [instance_method(klass)*]
                               [class_method(klass)*]];
