@@ -456,9 +456,13 @@ static int prim_string_escape(Process* proc) {
   std::string null;
   null += (char) 0;
 
-  boost::replace_all(str, "\\0", null);  //\0
-  boost::replace_all(str, "\\t",  "\t"); //\t
-  boost::replace_all(str, "\\n",  "\n"); //\n
+  boost::replace_all(str, "\\0", null);
+  boost::replace_all(str, "\\t",  "\t");
+  boost::replace_all(str, "\\n",  "\n");
+  boost::replace_all(str, "\\b",  "\b");
+  boost::replace_all(str, "\\f",  "\f");
+  boost::replace_all(str, "\\r",  "\r");
+  boost::replace_all(str, "\\v",  "\v");
   boost::replace_all(str, "\\\"",  "\""); //\"
 
   //\x[0-9]+
