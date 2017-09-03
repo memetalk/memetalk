@@ -93,7 +93,7 @@ ometa_basic_tutorial_1: fun() {
   res = ometa_base.parse("321", OMetaBase, :letter_or_digit);
   io.print(res.toSource); //*[null, "3"]
 
-  //*identifier_first: defined as `letter | anything`
+  //*identifier_first: defined as `letter | '_'`
   res = ometa_base.parse("_xyz", OMetaBase, :identifier_first);
   io.print(res.toSource); //*[null, "_"]
 
