@@ -1,0 +1,66 @@
+meme central:memescript/compiler
+
+requires io, ometa_base, definitions_pr, definitions_tr
+where
+  definitions_pr = central:stdlib/bindgen/definitions_pr
+  definitions_tr = central:stdlib/bindgen/definitions_tr
+  io             = central:stdlib/io
+  ometa_base     = central:memescript/ometa_base
+import SyscallDefinitionsParser from definitions_pr
+import SyscallDefinitionsTranslator from definitions_tr
+
+// This program reads a file containing definitions of C functions and
+// generates code with the C calls wrapped with the MemeTalk API to
+// make the C call available to MemeTalk code.
+//
+// This format was found and adopted from the one used by the Go
+// lang. Huge thanks for the inspiration!
+//
+// The definitions are not in any specific format. That's neither C,
+// MemeTalk nor anything else. Here are the only rules you must follow
+// to write definition files:
+//
+// * The format supports the definition of structs and C functions
+//   only. No C++ for now :(
+//
+// * Everything happens within comments. Someday this could become an
+//   extension for the meme compiler and it'd read directly the file
+//   using the bindings annotated with comments with this format
+//
+// * You don't have to declare the fields of the struct that you don't
+//   need to access them in MemeTalk code. If you don't need any
+//   field. Just declare it like this: `struct mystruct;`
+//
+// * structs can be defined with the `struct` keyword and members will
+//   be defined between curly brackets and separated with a semicolon.
+//   E.g.:
+//
+//     struct {}
+
+// Shortcuts
+parseRule: fun(content, rule) {
+  return ometa_base.parse(content, SyscallDefinitionsParser, rule)[1];
+}
+parse: fun(content) {
+  return parseRule(content, :start);
+}
+translateRule: fun(defs, rule, args) {
+  if (args == null) {
+    return ometa_base.parse(
+      defs, SyscallDefinitionsTranslator, rule)[1];
+  } else {
+    return ometa_base.parse_with_args(
+      defs, SyscallDefinitionsTranslator, rule, args)[1];
+  }
+}
+translate: fun(defs) {
+  return translateRule(defs, :start, null);
+}
+main: fun() {
+  var args = argv();
+  if (args.size() == 2) {
+    var contents = io.read_file(args[1]);
+    io.print(translate([parse(contents)]));
+  }
+  return 0;
+}

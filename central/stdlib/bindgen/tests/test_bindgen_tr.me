@@ -1,0 +1,90 @@
+meme central:memescript/compiler
+
+requires test, io, bindgen, definitions_pr, definitions_tr
+where
+  definitions_pr = central:stdlib/bindgen/definitions_pr
+  definitions_tr = central:stdlib/bindgen/definitions_tr
+  bindgen        = central:stdlib/bindgen/bindgen
+  io             = central:stdlib/io
+import Fun from definitions_tr
+import Param from definitions_tr
+
+// Translate strings
+tr: fun(definition, rule1, rule2, arg) {
+  return bindgen.translateRule([bindgen.parseRule(
+    definition, rule1)], rule2, arg);
+}
+// :type rule
+testTranslateTypeDefinitions: fun() {
+  var obj1 = Param.new;
+  tr("int", :type, :type, [obj1]);
+  test.assertEqual(obj1.getTypeName(), "int", "getTypeName");
+  test.assertEqual(obj1.getIsConst(), false, "getIsConst");
+  test.assertEqual(obj1.getIsPointer(), false, "getIsPointer");
+  test.assertEqual(obj1.getIsUnsigned(), false, "getIsUnsigned");
+
+  var obj2 = Param.new;
+  tr("const char", :type, :type, [obj2]);
+  test.assertEqual(obj2.getTypeName(), "char", "getTypeName");
+  test.assertEqual(obj2.getIsConst(), true, "getIsConst");
+  test.assertEqual(obj2.getIsPointer(), false, "getIsPointer");
+  test.assertEqual(obj2.getIsUnsigned(), false, "getIsUnsigned");
+
+  var obj3 = Param.new;
+  tr("const unsigned short", :type, :type, [obj3]);
+  test.assertEqual(obj3.getTypeName(), "short", "getTypeName");
+  test.assertEqual(obj3.getIsConst(), true, "getIsConst");
+  test.assertEqual(obj3.getIsPointer(), false, "getIsPointer");
+  test.assertEqual(obj3.getIsUnsigned(), true, "getIsUnsigned");
+
+  var obj4 = Param.new;
+  tr("const unsigned char**", :type_pointer, :type, [obj4]);
+  test.assertEqual(obj4.getTypeName(), "char", "getTypeName");
+  test.assertEqual(obj4.getIsConst(), true, "getIsConst");
+  test.assertEqual(obj4.getIsPointer(), 2, "getIsPointer");
+  test.assertEqual(obj4.getIsUnsigned(), true, "getIsUnsigned");
+
+  var obj5 = Param.new;
+  tr("struct foo*", :type_pointer, :type, [obj5]);
+  test.assertEqual(obj5.getTypeName(), "struct foo", "getTypeName");
+  test.assertEqual(obj5.getIsConst(), false, "getIsConst");
+  test.assertEqual(obj5.getIsPointer(), 1, "getIsPointer");
+  test.assertEqual(obj5.getIsUnsigned(), false, "getIsUnsigned");
+}
+// :params rule
+testTranslateParamsDefinitions: fun() {
+  var obj1 = Fun.new("f1");
+  tr("(struct foo* p1, const char* p2)", :params, :params, [obj1]);
+  test.assertEqual(obj1.getParams.size, 2, "getParams.size");
+  test.assertEqual(obj1.getParams[0].getName(), "p1", "getName#1");
+  test.assertEqual(obj1.getParams[0].getTypeName(), "struct foo", "getTypeName#1");
+  test.assertEqual(obj1.getParams[1].getName(), "p2", "getName#2");
+  test.assertEqual(obj1.getParams[1].getTypeName(), "char", "getTypeName#2");
+  test.assertEqual(obj1.getParams[1].getIsPointer(), 1, "getIsPointer#2");
+
+  var obj2 = Fun.new("f2");
+  tr("(char* foo[], int bar[])", :params, :params, [obj2]);
+  test.assertEqual(obj2.getParams.size, 2, "getParams.size");
+  test.assertEqual(obj2.getParams[0].getName(), "foo", "getName#1");
+  test.assertEqual(obj2.getParams[0].getTypeName(), "char", "getTypeName#1");
+  test.assertEqual(obj2.getParams[0].getIsArray(), true, "getIsArray#1");
+  test.assertEqual(obj2.getParams[1].getName(), "bar", "getName#2");
+  test.assertEqual(obj2.getParams[1].getTypeName(), "int", "getTypeName#2");
+  test.assertEqual(obj2.getParams[1].getIsPointer(), false, "getIsPointer#2");
+  test.assertEqual(obj2.getParams[1].getIsArray(), true, "getIsArray#2");
+}
+// :func rule
+testTranslateFuncDefinitions: fun() {
+  var funcSource = tr("int exit(int code)", :func, :func, null);
+  test.assertEqual(
+    funcSource.split("\n")[0],
+    "static int prim_exit (Process* proc) {",
+    "func"
+  );
+}
+// All definitions_pr grammar rules
+main: fun() {
+  testTranslateTypeDefinitions();
+  testTranslateParamsDefinitions();
+  testTranslateFuncDefinitions();
+}

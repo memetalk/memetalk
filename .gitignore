@@ -1,6 +1,8 @@
 *.o
 *.pyc
 *.mec
+central/stdlib/bindgen/definitions_pr.me
+central/stdlib/bindgen/definitions_tr.me
 py/pyparsers/memetr.py
 py/pyparsers/parser.py
 src/qsc.moc.cpp

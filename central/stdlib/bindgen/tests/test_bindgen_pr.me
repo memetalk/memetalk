@@ -1,0 +1,86 @@
+meme central:memescript/compiler
+
+requires test, io, bindgen
+where
+  bindgen = central:stdlib/bindgen/bindgen
+  io      = central:stdlib/io
+
+// :id rule
+testParseIdDefinitions: fun() {
+  test.assertEqual(bindgen.parseRule("foo", :id), "foo", "id");
+  test.assertEqual(bindgen.parseRule("foo_test", :id), "foo_test", "id");
+  test.assertEqual(bindgen.parseRule("foo234", :id), "foo234", "id");
+  test.assertEqual(bindgen.parseRule("foo234a", :id), "foo234a", "id");
+}
+// :typed rule
+testParseTypedDefinitions: fun() {
+  test.assertEqual(bindgen.parseRule(
+    "int *foo4", :typed),
+    [[:pointer, [:builtin, "int"], 1], "foo4"], "typed");
+  test.assertEqual(bindgen.parseRule(
+    "int* foo5", :typed),
+    [[:pointer, [:builtin, "int"], 1], "foo5"], "typed");
+  test.assertEqual(bindgen.parseRule(
+    "struct foo1 bar1", :typed),
+    [[:struct, "foo1"], "bar1"], "typed");
+  test.assertEqual(bindgen.parseRule(
+    "struct foo2* bar2", :typed),
+    [[:pointer, [:struct, "foo2"], 1], "bar2"], "typed");
+  test.assertEqual(bindgen.parseRule(
+    "struct foo3 *bar3", :typed),
+    [[:pointer, [:struct, "foo3"], 1], "bar3"], "typed");
+}
+// :params rule
+testParseParamsDefinitions: fun() {
+  test.assertEqual(bindgen.parseRule(
+    "(int *yi)", :params),
+    [[[:pointer, [:builtin, "int"], 1], "yi"]], "params");
+  test.assertEqual(bindgen.parseRule(
+    "(int er1, float er1)", :params),
+    [[[:builtin, "int"], "er1"], [[:builtin, "float"], "er1"]], "params");
+  test.assertEqual(bindgen.parseRule(
+    "(float san1, struct san2 san3)", :params),
+    [[[:builtin, "float"], "san1"], [[:struct, "san2"], "san3"]], "params");
+  test.assertEqual(bindgen.parseRule(
+    "(float si1, struct si* si3)", :params),
+    [[[:builtin, "float"], "si1"], [[:pointer, [:struct, "si"], 1], "si3"]], "params");
+  test.assertEqual(bindgen.parseRule(
+    "(float wu1, struct wu* wu3[])", :params),
+    [[[:builtin, "float"], "wu1"], [:list, [[:pointer, [:struct, "wu"], 1], "wu3"]]],
+    "params");
+}
+// :rtype rule
+testParseRtypeDefinitions: fun() {
+  test.assertEqual(bindgen.parseRule(
+    "int", :rtype),
+    [:builtin, "int"], "rtype");
+  test.assertEqual(bindgen.parseRule(
+    "char*", :rtype),
+    [:pointer, [:builtin, "char"], 1], "rtype");
+  test.assertEqual(bindgen.parseRule(
+    "struct blah *", :rtype),
+    [:pointer, [:struct, "blah"], 1], "rtype");
+  test.assertEqual(bindgen.parseRule(
+    "const char *", :rtype),
+    [:pointer, [:const, [:builtin, "char"]], 1], "rtype");
+  test.assertEqual(bindgen.parseRule(
+    "unsigned char *", :rtype),
+    [:pointer, [:unsigned, [:builtin, "char"]], 1], "rtype");
+}
+// :func rule
+testParseFuncDefinitions: fun() {
+  test.assertEqual(bindgen.parseRule(
+    "int exit(int code)", :func),
+    [:func, "exit", [[[:builtin, "int"], "code"]], [:builtin, "int"]], "func");
+  test.assertEqual(bindgen.parseRule(
+    "struct _foo* getfoo(int bar)", :func),
+    [:func, "getfoo", [[[:builtin, "int"], "bar"]], [:pointer, [:struct, "_foo"], 1]], "func");
+}
+// All definitions_pr grammar rules
+main: fun() {
+  testParseIdDefinitions();
+  testParseTypedDefinitions();
+  testParseParamsDefinitions();
+  testParseRtypeDefinitions();
+  testParseFuncDefinitions();
+}
