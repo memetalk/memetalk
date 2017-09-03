@@ -112,6 +112,7 @@ instance_method _local_vars: fun() {
              | [:keyword_string string:s]
                => [@indent, "this._apply_with_args(:keyword,[",s.toSource,"]);"].join("")
              | [:ometa-position] => [@indent, "this._apply(:spaces);\n", @indent, "var _pos = this.input.idx();"].join("")
+             | [:ometa-ns-position] => [@indent, @indent, "var _pos = this.input.idx();"].join("")
              ;
 </ometa>
 

@@ -183,40 +183,40 @@ catch_type = !(self.input.position):begin alpha_name:type -> self.i.ast(begin, [
 
 expr = spaces expr_or
 
-expr_or =  !(self.input.position):begin expr_or:a token("or") expr_and:b -> self.i.ast(begin,['or', a, b])
+expr_or =  !(self.input.position):begin expr_or:a token("or") spaces expr_and:b -> self.i.ast(begin,['or', a, b])
         | expr_and
 
-expr_and =  !(self.input.position):begin expr_and:a token("and") expr_eq:b -> self.i.ast(begin,['and', a, b])
+expr_and =  !(self.input.position):begin expr_and:a token("and") spaces expr_eq:b -> self.i.ast(begin,['and', a, b])
          | expr_eq
 
-expr_eq =  !(self.input.position):begin expr_eq:a token("==") expr_rel:b -> self.i.ast(begin,['==', a, b])
-        |  !(self.input.position):begin expr_eq:a token("!=") expr_rel:b -> self.i.ast(begin,['!=', a, b])
+expr_eq =  !(self.input.position):begin expr_eq:a token("==") spaces expr_rel:b -> self.i.ast(begin,['==', a, b])
+        |  !(self.input.position):begin expr_eq:a token("!=") spaces expr_rel:b -> self.i.ast(begin,['!=', a, b])
         | expr_rel
 
-expr_rel =  !(self.input.position):begin expr_rel:a token(">=") expr_add:b -> self.i.ast(begin, ['>=', a, b])
-         |  !(self.input.position):begin expr_rel:a token(">") ~'>' expr_add:b -> self.i.ast(begin, ['>', a, b])
-         |  !(self.input.position):begin expr_rel:a token("<=") expr_add:b -> self.i.ast(begin, ['<=', a, b])
-         |  !(self.input.position):begin expr_rel:a token("<") ~'<' expr_add:b -> self.i.ast(begin, ['<', a, b])
+expr_rel =  !(self.input.position):begin expr_rel:a token(">=")     spaces expr_add:b -> self.i.ast(begin, ['>=', a, b])
+         |  !(self.input.position):begin expr_rel:a token(">") ~'>' spaces expr_add:b -> self.i.ast(begin, ['>', a, b])
+         |  !(self.input.position):begin expr_rel:a token("<=")     spaces expr_add:b -> self.i.ast(begin, ['<=', a, b])
+         |  !(self.input.position):begin expr_rel:a token("<") ~'<' spaces expr_add:b -> self.i.ast(begin, ['<', a, b])
          | expr_add
 
-expr_add =  !(self.input.position):begin expr_add:a token("++") expr_mul:b -> self.i.ast(begin, ['++', a, b])
-         |  !(self.input.position):begin expr_add:a token("+") expr_mul:b -> self.i.ast(begin, ['+', a, b])
-         |  !(self.input.position):begin expr_add:a token("-") expr_mul:b -> self.i.ast(begin, ['-', a, b])
-         |  !(self.input.position):begin expr_add:a token("<<") expr_mul:b -> self.i.ast(begin, ['<<', a, b])
-         |  !(self.input.position):begin expr_add:a token(">>") expr_mul:b -> self.i.ast(begin, ['>>', a, b])
-         |  !(self.input.position):begin expr_add:a token("&") expr_mul:b -> self.i.ast(begin, ['&', a, b])
-         |  !(self.input.position):begin expr_add:a token("|") expr_mul:b -> self.i.ast(begin, ['|', a, b])
+expr_add =  !(self.input.position):begin expr_add:a token("++") spaces expr_mul:b -> self.i.ast(begin, ['++', a, b])
+         |  !(self.input.position):begin expr_add:a token("+")  spaces expr_mul:b -> self.i.ast(begin, ['+', a, b])
+         |  !(self.input.position):begin expr_add:a token("-")  spaces expr_mul:b -> self.i.ast(begin, ['-', a, b])
+         |  !(self.input.position):begin expr_add:a token("<<") spaces expr_mul:b -> self.i.ast(begin, ['<<', a, b])
+         |  !(self.input.position):begin expr_add:a token(">>") spaces expr_mul:b -> self.i.ast(begin, ['>>', a, b])
+         |  !(self.input.position):begin expr_add:a token("&")  spaces expr_mul:b -> self.i.ast(begin, ['&', a, b])
+         |  !(self.input.position):begin expr_add:a token("|")  spaces expr_mul:b -> self.i.ast(begin, ['|', a, b])
          | expr_mul
 
-expr_mul =  !(self.input.position):begin expr_mul:a token("*") expr_unary:b -> self.i.ast(begin, ['*', a, b])
-         |  !(self.input.position):begin expr_mul:a token("/") expr_unary:b -> self.i.ast(begin, ['/', a, b])
+expr_mul =  !(self.input.position):begin expr_mul:a token("*") spaces expr_unary:b -> self.i.ast(begin, ['*', a, b])
+         |  !(self.input.position):begin expr_mul:a token("/") spaces expr_unary:b -> self.i.ast(begin, ['/', a, b])
          | expr_unary
 
-expr_unary =   spaces !(self.input.position):begin token("+") prim_expr:a  -> self.i.ast(begin, ['positive', a])
-            |  spaces !(self.input.position):begin token("-") prim_expr:a  -> self.i.ast(begin, ['negative', a])
-            |  spaces !(self.input.position):begin token("!") expr_unary:a -> self.i.ast(begin, ['not', a])
-            |  spaces !(self.input.position):begin token("~") expr_unary:a -> self.i.ast(begin, ['bit-neg', a])
-            | spaces suffix_expr
+expr_unary =   spaces !(self.input.position):begin token("+") spaces prim_expr:a  -> self.i.ast(begin, ['positive', a])
+            |  spaces !(self.input.position):begin token("-") spaces prim_expr:a  -> self.i.ast(begin, ['negative', a])
+            |  spaces !(self.input.position):begin token("!") spaces expr_unary:a -> self.i.ast(begin, ['not', a])
+            |  spaces !(self.input.position):begin token("~") spaces expr_unary:a -> self.i.ast(begin, ['bit-neg', a])
+            |  suffix_expr
 
 suffix_expr = !(self.input.position):begin token("super") token(".") alpha_name:sel args:p
             -> self.i.ast(begin, ['super-ctor-send', sel, ['args', p]])
@@ -230,16 +230,16 @@ suffix_expr = !(self.input.position):begin token("super") token(".") alpha_name:
 
 call_expr =  !(self.input.position):begin call_expr:r args:p
             -> self.i.ast(begin, ['call', r, ['args', p]])
-          |  spaces !(self.input.position):begin token("super") args:p
+          |  !(self.input.position):begin token("super") args:p
             -> self.i.ast(begin, ['super-send', ['args',p]])
-          |  spaces !(self.input.position):begin id:r args:p
+          |  !(self.input.position):begin id:r args:p
             -> self.i.ast(begin, ['send-or-local-call', r, ['args',p]])
           | prim_expr
 
 prim_expr = token("(") expr:e token(")") -> e
           | literal
-          |  spaces !(self.input.position):begin field_name:x -> self.i.ast(begin, ["field", x])
-          |  spaces !(self.input.position):begin alpha_name:x -> self.i.ast(begin, ["id", x])
+          | spaces !(self.input.position):begin field_name:x -> self.i.ast(begin, ["field", x])
+          | spaces !(self.input.position):begin alpha_name:x -> self.i.ast(begin, ["id", x])
 
 pair_list = pair:x (token(",") pair)*:xs -> [x]+xs
           | -> []

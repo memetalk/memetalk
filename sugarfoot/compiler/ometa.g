@@ -87,6 +87,7 @@ init new: fun(input) {
 
   top_expression =   bind_expression
                  |   repeated_expression
+                 |   "#!" => [:ometa-ns-position]
                  |   "#" => [:ometa-position]
                  ;
 

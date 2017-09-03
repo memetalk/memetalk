@@ -464,6 +464,7 @@ static int prim_string_escape(Process* proc) {
   boost::replace_all(str, "\\r",  "\r");
   boost::replace_all(str, "\\v",  "\v");
   boost::replace_all(str, "\\\"",  "\""); //\"
+  boost::replace_all(str, "\\\\",  "\\"); //\"
 
   //\x[0-9]+
   sregex exp = sregex::compile( "\\\\x(\\d+)");

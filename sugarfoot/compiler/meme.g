@@ -259,40 +259,40 @@ catch_type =  # alpha_name:type => #[:id, type];
 
 expr = spaces expr_or;
 
-expr_or =  # expr_or:a "or" expr_and:b => #[:or, a, b]
+expr_or =  #! expr_or:a "or" spaces expr_and:b => #[:or, a, b]
         | expr_and;
 
-expr_and = #  expr_and:a "and" spaces expr_eq:b => #[:and, a, b]
-         | spaces expr_eq;
+expr_and = #! expr_and:a "and" spaces expr_eq:b => #[:and, a, b]
+         | expr_eq;
 
-expr_eq =  # expr_eq:a "==" expr_rel:b => #[:==, a, b]
-        |  # expr_eq:a "!=" expr_rel:b => #[:!=, a, b]
-        | spaces expr_rel;
+expr_eq =  #! expr_eq:a "==" spaces expr_rel:b => #[:==, a, b]
+        |  #! expr_eq:a "!=" spaces expr_rel:b => #[:!=, a, b]
+        | expr_rel;
 
-expr_rel =  # expr_rel:a ">=" expr_add:b => #[:>=, a, b]
-         |  # expr_rel:a ">" ~'>' expr_add:b => #[:>, a, b]
-         |  # expr_rel:a "<=" expr_add:b => #[:<=, a, b]
-         |  # expr_rel:a "<" ~'<' expr_add:b => #[:<, a, b]
-         | spaces expr_add;
+expr_rel =  #! expr_rel:a ">="     spaces expr_add:b => #[:>=, a, b]
+         |  #! expr_rel:a ">" ~'>' spaces expr_add:b => #[:>, a, b]
+         |  #! expr_rel:a "<="     spaces expr_add:b => #[:<=, a, b]
+         |  #! expr_rel:a "<" ~'<' spaces expr_add:b => #[:<, a, b]
+         | expr_add;
 
-expr_add =  # expr_add:a "++" expr_mul:b => #[:++, a, b]
-         |  # expr_add:a "+" expr_mul:b => #[:+, a, b]
-         |  # expr_add:a "-" expr_mul:b => #[:-, a, b]
-         |  # expr_add:a "<<" expr_mul:b => #[:<<, a, b]
-         |  # expr_add:a ">>" expr_mul:b => #[:>>, a, b]
-         |  # expr_add:a "&" expr_mul:b =>  #[:&, a, b]
-         |  # expr_add:a "|" expr_mul:b =>  #[:|, a, b]
-         | spaces expr_mul;
+expr_add =  #! expr_add:a "++" spaces expr_mul:b => #[:++, a, b]
+         |  #! expr_add:a "+"  spaces expr_mul:b => #[:+, a, b]
+         |  #! expr_add:a "-"  spaces expr_mul:b => #[:-, a, b]
+         |  #! expr_add:a "<<" spaces expr_mul:b => #[:<<, a, b]
+         |  #! expr_add:a ">>" spaces expr_mul:b => #[:>>, a, b]
+         |  #! expr_add:a "&"  spaces expr_mul:b =>  #[:&, a, b]
+         |  #! expr_add:a "|"  spaces expr_mul:b =>  #[:|, a, b]
+         | expr_mul;
 
-expr_mul =  # expr_mul:a "*" expr_unary:b => #[:*, a, b]
-         |  # expr_mul:a "/" expr_unary:b => #[:/, a, b]
-         | spaces expr_unary;
+expr_mul =  #! expr_mul:a "*" spaces expr_unary:b => #[:*, a, b]
+         |  #! expr_mul:a "/" spaces expr_unary:b => #[:/, a, b]
+         | expr_unary;
 
-expr_unary =  # "+" prim_expr:a  => #[:positive, a]
-            | # "-" prim_expr:a  => #[:negative, a]
-            | # "!" expr_unary:a => #[:not, a]
-            | # "~" expr_unary:a => #[:bit-neg, a]
-            | spaces suffix_expr;
+expr_unary =  # "+" spaces spaces prim_expr:a  => #[:positive, a]
+            | # "-" spaces spaces prim_expr:a  => #[:negative, a]
+            | # "!" spaces spaces expr_unary:a => #[:not, a]
+            | # "~" spaces spaces expr_unary:a => #[:bit-neg, a]
+            | suffix_expr;
 
 suffix_expr = # ``super`` "." alpha_name:sel args:p
             => #[:super-ctor-send, sel, [:args, p]]
@@ -300,7 +300,7 @@ suffix_expr = # ``super`` "." alpha_name:sel args:p
             => #[:send, r, sel, [:args, p]]
           |  # suffix_expr:r "." alpha_name:sel
             => #[:send, r, sel, [:args, []]]
-          | # suffix_expr:r "[" expr:i "]"
+          |  # suffix_expr:r "[" expr:i "]"
              => #[:index, r, i]
           | call_expr;
 

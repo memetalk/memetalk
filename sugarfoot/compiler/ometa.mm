@@ -325,6 +325,9 @@ instance_method top_expression: fun() {
   }, fun() {
     this._apply(:repeated_expression);
   }, fun() {
+    this._apply_with_args(:token, ["#!"]);
+    return [:ometa-ns-position];
+  }, fun() {
     this._apply_with_args(:token, ["#"]);
     return [:ometa-position];
   }]);
