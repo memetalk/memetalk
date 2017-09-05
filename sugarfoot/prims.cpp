@@ -1387,7 +1387,14 @@ static int prim_list_equals(Process* proc) {
   for (int i = 0; i < this_size; i++) {
     oop next_self = proc->mmobj()->mm_list_entry(proc, self, i);
     oop next_other = proc->mmobj()->mm_list_entry(proc, other, i);
-    if (next_self != next_other) {
+    int exc;
+    oop res = proc->send_1(next_self, proc->vm()->new_symbol("=="), next_other, &exc);
+    if (exc != 0) {
+      DBG("prim_list_equals raised" << endl);
+      proc->stack_push(res);
+      return PRIM_RAISED;
+    }
+    if (res == MM_FALSE) {
       proc->stack_push(MM_FALSE);
       return 0;
     }
