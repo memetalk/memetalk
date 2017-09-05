@@ -2342,7 +2342,8 @@ void get_mm_test_files(const fs::path& root, std::vector<std::string>& ret) {
 
 static int prim_test_files(Process* proc) {
   std::vector<std::string> ret;
-  get_mm_test_files("./tests", ret);
+  std::string path = proc->mmobj()->mm_string_stl_str(proc, proc->get_arg(0));
+  get_mm_test_files(path, ret);
 
   oop list = proc->mmobj()-> mm_list_new();
 

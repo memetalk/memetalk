@@ -35,7 +35,7 @@ end
 
 class Test
 fields: current_file, total_debugger_tests, debugger_test_module, test_idx;
-instance_method test_files: fun() {
+instance_method test_files: fun(path) {
   <primitive "test_files">
 }
 
@@ -88,8 +88,8 @@ instance_method test_file: fun(mmc_test_file) {
   this.do_test(mmc_test_file, fun() {  m.main(); });
 }
 
-instance_method start: fun() {
-  this.test_files().each(fun(_, mmc_test_file) {
+instance_method start: fun(path) {
+  this.test_files(path).each(fun(_, mmc_test_file) {
     this.test_file(mmc_test_file)
   });
 }
@@ -112,7 +112,11 @@ instance_method set_debugger_tests: fun(mod, tests_number) {
 end
 
 main: fun() {
-  Test.new.start();
+  if (argv.size == 2) {
+    Test.new.start(argv[1]);
+  } else {
+    Test.new.start("./tests");
+  }
   return 0;
 }
 .end
