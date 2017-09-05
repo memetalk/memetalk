@@ -26,7 +26,7 @@ gen: fun(grammar_in_file_path, grammar_out_file_path, OMeta, OMetaTranslator) {
 
 main: fun() {
   var name = argv()[1];
-  gen("compiler/" + name + ".g", "compiler/" + name + ".mm", ometa.OMeta, ometa_tr.OMetaTranslator);
+  gen("memescript/" + name + ".g", "memescript/" + name + ".mm", ometa.OMeta, ometa_tr.OMetaTranslator);
 }
 
 .endcode
