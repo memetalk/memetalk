@@ -27,7 +27,7 @@ These should be installed to be able to build the VM.
 ### Python
 
 While MemeScript compiler is written in itself, we are currently bootstrapping
-using a compiler written in python. Thus, to build, you will also need have
+using a compiler written in python. Thus, to build, you will also need to have
 the following installed:
 
  * Python (2.7.5)
