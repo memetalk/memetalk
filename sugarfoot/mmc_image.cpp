@@ -9,9 +9,9 @@
 
 using namespace std;
 
-#define DBG(...) if(_log._enabled) { _log << _log.blue + _log.bold + "[MMCImg|" << __FUNCTION__ << "] " << _log.normal << __VA_ARGS__; }
-#define WARNING() MMLog::warning() << "[MMCImg|" << __FUNCTION__ << "] " << _log.normal
-#define ERROR() MMLog::error() << "[MMCImg|" << __FUNCTION__ << "] " << _log.normal
+#define DBG(...) if(_log._enabled) { _log << _log.blue + _log.bold + "[MMCImg|" << __FUNCTION__ << "|" << _mod_path <<"] " << _log.normal << __VA_ARGS__; }
+#define WARNING() MMLog::warning() << "[MMCImg|" << __FUNCTION__ << "" << _mod_path << "] " << _log.normal
+#define ERROR() MMLog::error() << "[MMCImg|" << __FUNCTION__ << "|" << _mod_path << "] " << _log.normal
 
 word MMCImage::HEADER_SIZE = 5 * WSIZE;
 word MMCImage::MAGIC_NUMBER = 0x420;
