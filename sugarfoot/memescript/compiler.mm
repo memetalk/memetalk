@@ -146,7 +146,7 @@ instance_method translate: fun(ast) {
   parser.prepend_input(:start);
   try {
     parser.apply();
-  } catch(e) {
+  } catch(OMetaException e) {
     io.print(input.format_error);
     exit(1); //FIXME: we probably want to raise as this might be used as a library
   }
