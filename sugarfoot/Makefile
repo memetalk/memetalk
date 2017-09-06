@@ -25,11 +25,9 @@ CXXFLAGS = -Wall $(QT_CXXFLAGS)
 LIBS = -lboost_system -lboost_iostreams -lboost_filesystem -lgc $(QT_LIBS)
 
 CPP_FILES = log.cpp mmc_image.cpp core_image.cpp vm.cpp utils.cpp	\
-	mmobj.cpp main.cpp process.cpp prims.cpp mmc_fun.cpp		\
-	remote_repl.cpp
+	mmobj.cpp main.cpp process.cpp prims.cpp mmc_fun.cpp
 HPP_FILES = mmc_image.hpp core_image.hpp vm.hpp log.hpp utils.hpp	\
-	defs.hpp mmobj.hpp process.hpp prims.hpp mmc_fun.hpp		\
-	remote_repl.hpp
+	defs.hpp mmobj.hpp process.hpp prims.hpp mmc_fun.hpp
 
 CPP_FILES += qt_prims.cpp qsc.cpp ctrl.cpp
 HPP_FILES += qt_prims.hpp qsc.hpp ctrl.hpp
