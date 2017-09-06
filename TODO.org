@@ -4,15 +4,16 @@
 ** VM (Major Issues)
    * Co-routines, Continuations, Concurrency (e.g. actors)
    * GC
-** Compilation (Major Issues) [0/5]
-*** DOING Compiler written in Memescript (dump python)
-    * Likely needs some form of packaging to separate code into
-      different .me files (otherwise a "compiler.me" will be huge and
-      take a long time to compile; the compiler in python has 9 files!)
+** Compilation (Major Issues) [0/0]
+*** DONE Compiler written in Memescript (dump python)
 *** TODO Loader written in MemeScript (dump C++ loader)
     * Implement remote loader, caching of .mec files and respecting
       version information.
-*** TODO Measure & Improve Performance [0/2]
+*** TODO Improve compilation performance
+    * move object_table to be the first section in .mec and compute cells as
+      they are appended to vmemory, so it doesn't require a base
+      address. Measure the results.
+*** TODO Monitor Performance [0/2]
     * [ ] Dashboard for visualizing metrics
     * [ ] Collect metrics from VM and push to dashboard
 ** Network [1/3]
@@ -25,9 +26,11 @@
      prematurely from function with a specific value?
 ** Emacs mode [0/3]
    * [ ] Fix Indentation
+   * [ ] Update indentation & highlight to new preamble syntax
    * [ ] Some kind of inspector, where we can easily inspect and
      introspect on values.
    * [ ] A way to visualize the current stack trace.
+   * [ ] Enable inspecting field variables.
 ** Ecosystem
    * SDE: revamp the Qt based thing? Might depend on first solidify
      package / module import w/ vesion.  (which depends on the loader
@@ -48,6 +51,16 @@
     disabled/commented out because the functions were moved to .h
     files and the macros that perform type check were not defined
     there.
+  * Enable mmobj's type-checking on release build.
+  * Port loader to memescript; add loader path to header in .mec files so the
+    vm can select the correct loader.
+  * Try to clean up C macros (ugh!).
+  * Implement shortcircuit or/and
+  * Analyze possibility of left to right evaluation of expressions.
+  * Fix closure tests that need recompilation, to use memescript compiler.
+  * Organize core.me -- move garbage & inessentials out.
+  * Fix g++ warnings.
+  * core.me compiled by memescript compiler.
 ** Optimizations
   * Add VM internal bytecodes for all core/prims. Substitute SEND
     operations to the corresponding internal bytecode during execution
