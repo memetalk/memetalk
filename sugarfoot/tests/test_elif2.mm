@@ -1,10 +1,5 @@
-.license
-.endlicense
-
-.preamble(test)
-
-.code
-
+meme foo
+requires test
 
 cond: fun(a, b) {
  return a == 4;
@@ -34,4 +29,3 @@ main: fun() {
     f(:g, 0);
   }
 }
-.endcode

@@ -1,9 +1,12 @@
-.preamble(ometa, ometa_tr, ometa_base, io)
- ometa : meme:ometa;
- ometa_tr : meme:ometa_tr;
- ometa_base : meme:ometa_base;
- io : meme:io;
-.code
+meme foo
+
+requires ometa, ometa_tr, ometa_base, io
+where
+ ometa      = central:memescript/ometa
+ ometa_tr   = central:memescript/ometa_tr
+ ometa_base = central:memescript/ometa_base
+ io         = central:stdlib/io
+
 
 gen: fun(grammar_in_file_path, grammar_out_file_path, OMeta, OMetaTranslator) {
   io.print("=== processing " + grammar_in_file_path);
@@ -28,5 +31,3 @@ main: fun() {
   var name = argv()[1];
   gen("memescript/" + name + ".g", "memescript/" + name + ".mm", ometa.OMeta, ometa_tr.OMetaTranslator);
 }
-
-.endcode

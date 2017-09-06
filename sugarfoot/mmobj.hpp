@@ -65,12 +65,13 @@ public:
 
   oop mm_module_new(int num_fields, oop cmod, oop delegate);
 
-  oop mm_compiled_module_classes(Process*, oop, bool should_assert = false);
   oop mm_compiled_module_name(Process*, oop, bool should_assert = false);
-  oop mm_compiled_module_functions(Process*, oop, bool should_assert = false);
   oop mm_compiled_module_params(Process*, oop, bool should_assert = false);
-  oop mm_compiled_module_default_params(Process*, oop, bool should_assert = false);
-  oop mm_compiled_module_aliases(Process*, oop, bool should_assert = false);
+  oop mm_compiled_module_meta_vars(Process*, oop, bool should_assert = false);
+  oop mm_compiled_module_default_locations(Process*, oop, bool should_assert = false);
+  oop mm_compiled_module_imports(Process*, oop, bool should_assert = false);
+  oop mm_compiled_module_classes(Process*, oop, bool should_assert = false);
+  oop mm_compiled_module_functions(Process*, oop, bool should_assert = false);
 
   oop mm_boolean_new(number val);
   bool mm_boolean_cbool(Process*, oop val, bool should_assert = false);

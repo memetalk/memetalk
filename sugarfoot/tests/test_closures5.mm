@@ -1,9 +1,5 @@
-.license
-.endlicense
-
-.preamble(test)
-.code
-
+meme foo
+requires test
 
 main: fun() {
   var z = 9;
@@ -23,6 +19,3 @@ main: fun() {
 x: fun(g) {
   return g()(10);
 }
-
-
-.endcode

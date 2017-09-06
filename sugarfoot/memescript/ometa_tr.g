@@ -1,8 +1,9 @@
-.preamble(io, ometa_base)
-  io: meme:io;
-  ometa_base: meme:ometa_base;
-  [OMetaBase] <= ometa_base;
-.code
+meme foo
+requires io, ometa_base
+where
+  io = central:stdlib/io
+  ometa_base = central:memescript/ometa_base
+import OMetaBase from ometa_base
 
 class OMetaTranslator < OMetaBase
 fields: vars, indent;
@@ -117,5 +118,3 @@ instance_method _local_vars: fun() {
 </ometa>
 
 end //OMetaTranslator
-
-.endcode

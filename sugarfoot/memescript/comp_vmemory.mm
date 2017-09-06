@@ -1,11 +1,14 @@
-.preamble(vmemory, mmc, bits, memetest)
- vmemory : meme:vmemory;
- mmc : meme:mmc;
- bits : meme:bits;
- memetest : meme:memetest;
- [Test] <= memetest;
- [VirtualMemory] <= vmemory;
-.code
+meme foo
+
+requires vmemory, mmc, bits, memetest
+where
+  vmemory  = central:memescript/vmemory
+  mmc      = central:memescript/mmc
+  bits     = central:memescript/bits
+  memetest = central:stdlib/memetest
+
+import Test from memetest
+import VirtualMemory from vmemory
 
 class CompVirtualMemory < VirtualMemory
 fields: ext_ref_table, symb_table, string_table;
@@ -213,4 +216,3 @@ instance_method append_list_of_oops_for_labels: fun(lst) {
   return oop;
 }
 end
-.endcode

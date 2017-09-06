@@ -1,9 +1,5 @@
-.license
-.endlicense
-
-.preamble(test)
-
-.code
+meme foo
+requires test
 
 // -- module functions --
 
@@ -52,6 +48,3 @@ class_method throw: fun(x) {
 }
 
 end //exceptions1:MyException
-
-
-.endcode

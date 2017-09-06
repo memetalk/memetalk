@@ -16,8 +16,9 @@ using namespace std;
 word MMCImage::HEADER_SIZE = 5 * WSIZE;
 word MMCImage::MAGIC_NUMBER = 0x420;
 
-MMCImage::MMCImage(Process* proc, CoreImage* core_image, const std::string& name_or_path)
-  : _log(LOG_MMCIMG), _proc(proc), _mmobj(proc->vm()->mmobj()), _core_image(core_image), _name_or_path(name_or_path) {
+MMCImage::MMCImage(Process* proc, CoreImage* core_image, const std::string& mod_path, int data_size, char* data)
+  : _log(LOG_MMCIMG), _proc(proc), _mmobj(proc->vm()->mmobj()), _core_image(core_image),
+    _mod_path(mod_path), _data_size(data_size), _data(data) {
 }
 
 void MMCImage::load_header() {
@@ -27,7 +28,6 @@ void MMCImage::load_header() {
   _st_size = unpack_word(_data, 3 * WSIZE);
   _names_size = unpack_word(_data,  4 * WSIZE);
 
-  DBG(" ============ Module: " << _name_or_path << " ===========" << endl);
   DBG("Header:magic: " << magic_number << " =?= " << MMCImage::MAGIC_NUMBER << endl);
   DBG("Header:ot_size: " << _ot_size << endl);
   DBG("Header:er_size: " << _er_size << endl);
@@ -58,7 +58,7 @@ oop MMCImage::instantiate_class(oop class_name, oop cclass, oop cclass_dict, std
   DBG("Super " << super_name_str << endl);
 
   oop cmod_params_list =   _mmobj->mm_compiled_module_params(_proc, _compiled_module);
-  oop cmod_aliases_dict = _mmobj->mm_compiled_module_aliases(_proc, _compiled_module);
+  oop cmod_imports_dict = _mmobj->mm_compiled_module_imports(_proc, _compiled_module);
   // number num_params = _mmobj->mm_list_size(
   //   _mmobj->mm_compiled_module_params(_compiled_module));
 
@@ -70,11 +70,11 @@ oop MMCImage::instantiate_class(oop class_name, oop cclass, oop cclass_dict, std
              strcmp(cname, super_name_str) != 0) { //avoid loop when Foo < Foo
     DBG("Super class not instantiated. recursively instantiate it" << endl);
     super_class = instantiate_class(super_name, _mmobj->mm_dictionary_get(_proc, cclass_dict, _proc->vm()->new_symbol(super_name_str)), cclass_dict, mod_classes, imodule);
-  } else if(_mmobj->mm_dictionary_has_key(_proc, cmod_aliases_dict, _proc->vm()->new_symbol(super_name_str))) {
-    //when loading the aliases, have a _alias_idx_map<oop[string], int> to indicate where it will be in the imod
+  } else if(_mmobj->mm_dictionary_has_key(_proc, cmod_imports_dict, _proc->vm()->new_symbol(super_name_str))) {
+    //when loading the imports, have a _import_idx_map<oop[string], int> to indicate where it will be in the imod
     super_class = _mmobj->mm_module_get_param(
-      imodule, _alias_idx_map[_proc->vm()->new_symbol(super_name_str)]); //_mmobj->mm_dictionary_index_of(cmod_aliases_dict, super_name) + num_params
-    DBG("Super class is module alias: " << super_class << endl);
+      imodule, _import_idx_map[_proc->vm()->new_symbol(super_name_str)]); //_mmobj->mm_dictionary_index_of(cmod_imports_dict, super_name) + num_params
+    DBG("Super class is imported name: " << super_class << endl);
   } else  if (_mmobj->mm_list_index_of(_proc, cmod_params_list, super_name) != -1) {
     super_class = _mmobj->mm_module_get_param(
       imodule, _mmobj->mm_list_index_of(_proc, cmod_params_list, super_name));
@@ -126,16 +126,19 @@ void MMCImage::load_default_dependencies_and_assign_module_arguments(oop imodule
   //   idx = index(p.name, cmod->params)
   //   imod[idx] = imod
   oop params_list = _mmobj->mm_compiled_module_params(_proc, _compiled_module);
-  oop default_params_dict = _mmobj->mm_compiled_module_default_params(_proc, _compiled_module);
-  // number dict_size = _mmobj->mm_dictionary_size(default_params_dict);
+  oop default_locations_dict = _mmobj->mm_compiled_module_default_locations(_proc, _compiled_module);
+  // number dict_size = _mmobj->mm_dictionary_size(default_locations_dict);
   // for (int i = 0; i < dict_size; i++) {
-  boost::unordered_map<oop, oop>::iterator it = _mmobj->mm_dictionary_begin(_proc, default_params_dict);
-  boost::unordered_map<oop, oop>::iterator end = _mmobj->mm_dictionary_end(_proc, default_params_dict);
+  boost::unordered_map<oop, oop>::iterator it = _mmobj->mm_dictionary_begin(_proc, default_locations_dict);
+  boost::unordered_map<oop, oop>::iterator end = _mmobj->mm_dictionary_end(_proc, default_locations_dict);
   for ( ; it != end; it++) {
     oop lhs_name = it->first; //_mmobj->mm_dictionary_entry_key(default_params_dict, i);
     oop mod_name = it->second; //_mmobj->mm_dictionary_entry_value(default_params_dict, i);
-    oop imd = _proc->vm()->instantiate_module(_proc, _mmobj->mm_string_cstr(_proc, mod_name),
+    char* str_mod_name = _mmobj->mm_string_cstr(_proc, mod_name);
+    DBG(">>> instantiating default module: " << str_mod_name << endl);
+    oop imd = _proc->vm()->instantiate_module(_proc, str_mod_name,
                                       _mmobj->mm_list_new());
+    DBG("<<<< DONE instantiating default module: " << str_mod_name << endl);
     number midx = _mmobj->mm_list_index_of(_proc, params_list, _mmobj->mm_symbol_to_string(_proc, lhs_name));
     if (midx == -1) {
       DBG("raising Import error on " << _mmobj->mm_symbol_cstr(_proc, lhs_name) << endl);
@@ -145,52 +148,52 @@ void MMCImage::load_default_dependencies_and_assign_module_arguments(oop imodule
   }
 }
 
-void MMCImage::load_aliases(oop imodule, oop aliases_dict, number num_params) {
+void MMCImage::load_imports(oop imodule, oop imports_dict, number num_params) {
   // [print] <= test;
-  number num_aliases = _mmobj->mm_dictionary_size(_proc, aliases_dict);
+  number num_imports = _mmobj->mm_dictionary_size(_proc, imports_dict);
   oop cmod_params_list =   _mmobj->mm_compiled_module_params(_proc, _compiled_module);
-  DBG(num_aliases << endl);
+  DBG(num_imports << endl);
 
-  boost::unordered_map<oop, oop>::iterator it = _mmobj->mm_dictionary_begin(_proc, aliases_dict);
-  boost::unordered_map<oop, oop>::iterator end = _mmobj->mm_dictionary_end(_proc, aliases_dict);
+  boost::unordered_map<oop, oop>::iterator it = _mmobj->mm_dictionary_begin(_proc, imports_dict);
+  boost::unordered_map<oop, oop>::iterator end = _mmobj->mm_dictionary_end(_proc, imports_dict);
   for (int i = 0 ; it != end; it++, i++) {
-    oop alias_name = it->first; //_mmobj->mm_dictionary_entry_key(aliases_dict, i);
-    oop module_param_name = it->second; //_mmobj->mm_dictionary_entry_value(aliases_dict, i);
+    oop import_name = it->first; //_mmobj->mm_dictionary_entry_key(imports_dict, i);
+    oop module_param_name = it->second; //_mmobj->mm_dictionary_entry_value(imports_dict, i);
     number param_index = _mmobj->mm_list_index_of(_proc, cmod_params_list, module_param_name);
     oop module_param_object = _mmobj->mm_module_get_param(imodule, param_index);
 
-    DBG("alias name " << _mmobj->mm_symbol_cstr(_proc, alias_name)
+    DBG("import name " << _mmobj->mm_symbol_cstr(_proc, import_name)
             << " module_param: " << _mmobj->mm_string_cstr(_proc, module_param_name)
         << " param_index: " << param_index << endl);
 
     int exc;
-    oop entry = _proc->send_0(module_param_object, alias_name, &exc);
+    oop entry = _proc->send_0(module_param_object, import_name, &exc);
     if (exc != 0) {
-      _proc->raise("ImportError", "could not load aliases");
+      _proc->raise("ImportError", "could not load imports");
     }
 
     DBG("entry: " << entry << " in imod idx: " << i + num_params << endl);
     _mmobj->mm_module_set_module_argument(imodule, entry, i + num_params);
-    _alias_idx_map[alias_name] = i + num_params;
+    _import_idx_map[import_name] = i + num_params;
   }
 }
 
-void MMCImage::create_alias_getters(oop imodule, oop imod_dict,
-                                    oop aliases_dict, number num_params) {
-  DBG("Creating aliases: " << _mmobj->mm_dictionary_size(_proc, aliases_dict) << endl);
+void MMCImage::create_import_getters(oop imodule, oop imod_dict,
+                                    oop imports_dict, number num_params) {
+  DBG("Creating imports: " << _mmobj->mm_dictionary_size(_proc, imports_dict) << endl);
 
-  boost::unordered_map<oop, oop>::iterator it = _mmobj->mm_dictionary_begin(_proc, aliases_dict);
-  boost::unordered_map<oop, oop>::iterator end = _mmobj->mm_dictionary_end(_proc, aliases_dict);
+  boost::unordered_map<oop, oop>::iterator it = _mmobj->mm_dictionary_begin(_proc, imports_dict);
+  boost::unordered_map<oop, oop>::iterator end = _mmobj->mm_dictionary_end(_proc, imports_dict);
   for (int i = 0 ; it != end; it++, i++) {
-    oop name = it->first; //_mmobj->mm_dictionary_entry_key(aliases_dict, i);
-    // oop module_param_name = _mmobj->mm_dictionary_entry_value(aliases_dict, i);
+    oop name = it->first; //_mmobj->mm_dictionary_entry_key(imports_dict, i);
+    // oop module_param_name = _mmobj->mm_dictionary_entry_value(imports_dict, i);
     char* str = _mmobj->mm_symbol_cstr(_proc, name);
-    DBG("Creating getter for alias " << str << " " << i << endl);
+    DBG("Creating getter for import " << str << " " << i << endl);
     oop getter = _mmobj->mm_new_slot_getter(_proc, imodule,
                                             _compiled_module, _mmobj->mm_symbol_to_string(_proc, name),
                                             num_params + 4 + i); //imod: vt, delegate, dict, cmod
     _mmobj->mm_dictionary_set(_proc, imod_dict, _proc->vm()->new_symbol(str), getter);
-    DBG("alias dict has " << _mmobj->mm_dictionary_size(_proc, imod_dict) << endl);
+    DBG("import dict has " << _mmobj->mm_dictionary_size(_proc, imod_dict) << endl);
   }
 }
 
@@ -211,9 +214,15 @@ void MMCImage::check_module_arity(oop module_arguments_list) {
   oop params = _mmobj->mm_compiled_module_params(_proc, _compiled_module);
   number num_params = _mmobj->mm_list_size(_proc, params);
 
-  oop default_params_dict = _mmobj->mm_compiled_module_default_params(_proc, _compiled_module);
+  DBG("Compiled module arity: " << num_params << endl);
+
+  number num_args = _mmobj->mm_list_size(_proc, module_arguments_list);
+  DBG("received args: " << num_args << endl);
+
+  oop default_params_dict = _mmobj->mm_compiled_module_default_locations(_proc, _compiled_module);
   number dict_size = _mmobj->mm_dictionary_size(_proc, default_params_dict);
-  if (num_params != (dict_size + _mmobj->mm_list_size(_proc, module_arguments_list))) {
+  DBG("default params: " << dict_size << endl);
+  if (num_params != (dict_size + num_args)) {
     DBG("module arity differ: "
             << num_params << " != " <<
         _mmobj->mm_list_size(_proc, module_arguments_list) << endl);
@@ -222,6 +231,7 @@ void MMCImage::check_module_arity(oop module_arguments_list) {
 }
 
 oop MMCImage::instantiate_module(oop module_arguments_list) {
+  DBG(" ============ instantiate module ===========" << endl);
 
   // word* cmod = (word*) _compiled_module;
   // DBG("CompiledModule: " << cmod << endl);
@@ -229,29 +239,29 @@ oop MMCImage::instantiate_module(oop module_arguments_list) {
 
   oop cclass_dict = _mmobj->mm_compiled_module_classes(_proc, _compiled_module);
 
-  // DBG("CompiledModule class_dict: " << cclass_dict << endl);
+  DBG("CompiledModule class_dict: " << cclass_dict << endl);
   // DBG("CompiledModule class_dict vt: " << (word*) *((word*)cclass_dict) << endl);
 
   number num_classes = _mmobj->mm_dictionary_size(_proc, cclass_dict);
-  // DBG("CompiledModule num_classes: " << num_classes << endl);
+  DBG("CompiledModule num_classes: " << num_classes << endl);
 
   oop params = _mmobj->mm_compiled_module_params(_proc, _compiled_module);
-  number num_params = _mmobj->mm_list_size(_proc, params);
-
 
   check_module_arity(module_arguments_list);
 
-  oop aliases_dict = _mmobj->mm_compiled_module_aliases(_proc, _compiled_module);
-  number num_aliases =  _mmobj->mm_dictionary_size(_proc, aliases_dict);
+  number num_params = _mmobj->mm_list_size(_proc, params);
 
-  oop imodule = _mmobj->mm_module_new(num_params + num_aliases + num_classes,
+  oop imports_dict = _mmobj->mm_compiled_module_imports(_proc, _compiled_module);
+  number num_imports =  _mmobj->mm_dictionary_size(_proc, imports_dict);
+
+  oop imodule = _mmobj->mm_module_new(num_params + num_imports + num_classes,
                                       _compiled_module,
                                       _core_image->get_module_instance());
 
   oop name = _mmobj->mm_compiled_module_name(_proc, _compiled_module);
   DBG("imodule " << imodule << " name:" << _mmobj->mm_string_cstr(_proc, name) << " params:" << num_params
-          << " aliases " << num_aliases
-      << " classes:" << num_classes << " (size: " << (num_params + num_classes + num_aliases) << ")" << endl);
+          << " imports " << num_imports
+      << " classes:" << num_classes << " (size: " << (num_params + num_classes + num_imports) << ")" << endl);
 
   oop fun_dict = _mmobj->mm_compiled_module_functions(_proc, _compiled_module);
 
@@ -270,15 +280,17 @@ oop MMCImage::instantiate_module(oop module_arguments_list) {
 
   create_param_getters(imodule, imod_dict, params);
 
-  load_aliases(imodule, aliases_dict, num_params);
+  load_imports(imodule, imports_dict, num_params);
 
-  create_alias_getters(imodule, imod_dict, aliases_dict, num_params);
+  create_import_getters(imodule, imod_dict, imports_dict, num_params);
 
-  int imod_dict_idx = num_params + num_aliases;
+  int imod_dict_idx = num_params + num_imports;
 
   // //for each CompiledFunction:
   // // mod[dict] += Function
   // // mod[i] = Function
+
+  DBG("total module functions: " << _mmobj->mm_dictionary_size(_proc, fun_dict) << endl);
 
   boost::unordered_map<oop, oop>::iterator it = _mmobj->mm_dictionary_begin(_proc, fun_dict);
   boost::unordered_map<oop, oop>::iterator end = _mmobj->mm_dictionary_end(_proc, fun_dict);
@@ -291,9 +303,11 @@ oop MMCImage::instantiate_module(oop module_arguments_list) {
     imod_dict_idx++;
   }
 
+  DBG("total module classes: " << _mmobj->mm_dictionary_size(_proc, cclass_dict) << endl);
+
   std::map<std::string, oop> mod_classes; //store each Class created here, so we do parent look up more easily
 
-  int imod_idx = num_params + num_aliases + 4; //imod: vt, delegate, dict, cmod
+  int imod_idx = num_params + num_imports + 4; //imod: vt, delegate, dict, cmod
 
   it = _mmobj->mm_dictionary_begin(_proc, cclass_dict);
   end = _mmobj->mm_dictionary_end(_proc, cclass_dict);
@@ -301,6 +315,8 @@ oop MMCImage::instantiate_module(oop module_arguments_list) {
     oop sym_name = it->first; //_mmobj->mm_dictionary_entry_key(cclass_dict, i);
     oop str_name = _mmobj->mm_symbol_to_string(_proc, sym_name);
     char* cname = _mmobj->mm_symbol_cstr(_proc, sym_name);
+
+    DBG("Found class " << cname << endl);
 
     oop cclass = it->second; //_mmobj->mm_dictionary_entry_value(cclass_dict, i);
     oop klass;
@@ -321,18 +337,19 @@ oop MMCImage::instantiate_module(oop module_arguments_list) {
     _mmobj->mm_dictionary_set(_proc, imod_dict, _proc->vm()->new_symbol(cname), klass_getter);
     imod_dict_idx++;
   }
+  DBG(" ============ DONE instantiate module ===========" << endl);
   return imodule;
 }
 
 
 oop MMCImage::load() {
-  _data = read_mmc_file(_name_or_path, &_data_size);
+  DBG(" ============ Load module ===========" << endl);
   load_header();
   relocate_addresses(_data, _data_size, HEADER_SIZE + _names_size + _ot_size + _er_size + _st_size);
   link_external_references();
   link_symbols(_data, _st_size, HEADER_SIZE + _names_size + _ot_size + _er_size, _proc->vm(), _core_image);
   _compiled_module = (oop) * (word*)(& _data[HEADER_SIZE + _names_size]);
 
-  DBG(" ============ Done module: " << _name_or_path << " ===========" << endl);
+  DBG(" ============ Done load module ===========" << endl);
   return _compiled_module;
 }

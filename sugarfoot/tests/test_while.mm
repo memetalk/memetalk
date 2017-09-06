@@ -1,9 +1,5 @@
-.license
-.endlicense
-
-.preamble(test)
-
-.code
+meme foo
+requires test
 
 main: fun() {
   var i = 1;
@@ -12,6 +8,3 @@ main: fun() {
   }
   test.assertEqual(i, 10, "i != 10");
 }
-
-
-.endcode

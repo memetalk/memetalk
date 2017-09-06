@@ -1105,26 +1105,32 @@ def create_module_to_string(cmod):
     return cfun
 
 class CompiledModule(Entry):
-    def __init__(self, name, params=None):
+    def __init__(self, name):
         super(CompiledModule, self).__init__()
         self.name = name
-        if params is None:
-            self.params = []
-            # eager loading of all top level names
-            self.top_level_names = []
-        else:
-            self.params = params
-            self.top_level_names = list(params)
-        self.default_params = {}
-        self.aliases = {}
+        self.top_level_names = []
+        self.params = []
+        self.meta_vars = {}
+        self.default_locations = {}
+        self.imports = {}
+
         self.functions = {'toString': create_module_to_string(self)}
         self.classes = {}
 
+    def add_meta(self, key, val):
+        self.meta_vars[key] = val
 
-    def module_alias(self, libname, aliases):
-        for alias in aliases:
-            self.aliases[alias] = libname
-            self.add_top_level_name(alias)
+    def set_params(self, params):
+        self.params = params
+        for p in params:
+            self.add_top_level_name(p)
+
+    def add_default_location(self, mod, path):
+        self.default_locations[mod] = path
+
+    def add_import(self, name, from_):
+        self.imports[name] = from_
+        self.add_top_level_name(name)
 
     def add_top_level_name(self, name):
         self.top_level_names.append(name)
@@ -1134,14 +1140,6 @@ class CompiledModule(Entry):
 
     def label(self):
         return cmod_label(self.name)
-
-    def set_params(self, params):
-        self.params = params
-        self.top_level_names += params
-
-    def add_default_param(self, lhs, ns, name):
-        # TODO: support everything else
-        self.default_params[name] = name # {"lhs": lhs, "ns": ns, "name": name}
 
     def new_function(self, name, params):
         fn = CompiledFunction(self, self, name, params)
@@ -1154,15 +1152,15 @@ class CompiledModule(Entry):
         return klass
 
     def fill(self, vmem):
+        # first word on object table is a pointer to the CompiledModule
         vmem.append_label_ref(self.label())
 
-        # first word on object table is a pointer to the CompiledModule
         delegate = vmem.append_object_instance()
         oop_name = vmem.append_string_instance(self.name)
-        oop_license = vmem.append_string_instance("")
         oop_params = vmem.append_list_of_strings(self.params)
-        oop_default_params = vmem.append_symbol_dict(self.default_params)
-        oop_aliases = vmem.append_symbol_dict(self.aliases)
+        oop_meta_vars = vmem.append_symbol_dict(self.meta_vars)
+        oop_def_locations = vmem.append_symbol_dict(self.default_locations)
+        oop_imports = vmem.append_symbol_dict(self.imports)
         oop_functions = vmem.append_sym_dict_emiting_entries(self.functions)
         oop_classes = vmem.append_sym_dict_emiting_entries(self.classes)
 
@@ -1172,10 +1170,10 @@ class CompiledModule(Entry):
         oop = vmem.append_external_ref('CompiledModule', self.label()) # vt: CompiledModule
         vmem.append_pointer_to(delegate)
         vmem.append_pointer_to(oop_name)
-        vmem.append_pointer_to(oop_license)
         vmem.append_pointer_to(oop_params)
-        vmem.append_pointer_to(oop_default_params)
-        vmem.append_pointer_to(oop_aliases)
+        vmem.append_pointer_to(oop_meta_vars)
+        vmem.append_pointer_to(oop_def_locations)
+        vmem.append_pointer_to(oop_imports)
         vmem.append_pointer_to(oop_functions)
         vmem.append_pointer_to(oop_classes)
         vmem.append_null()                        # parent_module

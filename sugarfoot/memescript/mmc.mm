@@ -1,5 +1,4 @@
-.preamble()
-.code
+meme foo
 
 FRAME_TYPE_OBJECT: 900;
 FRAME_TYPE_BVAR_OBJECT: 901; // len in bytes (symbols/strings)
@@ -50,4 +49,3 @@ cmod_label: fun(name) {
 mod_label: fun(cmod_name) {
     return cmod_name + SEP + "Module";
 }
-.endcode

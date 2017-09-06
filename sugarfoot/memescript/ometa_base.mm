@@ -1,6 +1,8 @@
-.preamble(io)
-  io: meme:io;
-.code
+meme foo
+
+requires io
+where
+  io = central:stdlib/io
 
 class OMetaException
 instance_method throw: fun() {
@@ -534,5 +536,3 @@ parse_with_args: fun(data, cls, rule, args) {
     return [input.format_error, null];
   }
 }
-
-.endcode

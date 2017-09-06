@@ -1,9 +1,6 @@
-.license
-.endlicense
+meme foo
+requires test
 
-.preamble(test)
-
-.code
 
 baz: fun() {
   Exception.throw("baz_ex");
@@ -22,5 +19,3 @@ foo: fun() {
 main: fun() {
   test.assertEqual(foo().message, "baz_ex", "Primitive handled exception");
 }
-
-.endcode

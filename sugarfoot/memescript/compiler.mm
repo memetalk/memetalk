@@ -1,13 +1,16 @@
-.preamble(bits, comp_vmemory, io, entries, ometa_base, meme, meme_tr)
- bits : meme:bits;
- comp_vmemory : meme:comp_vmemory;
- io : meme:io;
- entries: meme:entries;
- ometa_base: meme:ometa_base;
- meme : meme:meme;
- meme_tr : meme:meme_tr;
- [OMetaException] <= ometa_base;
-.code
+meme foo
+
+requires bits, comp_vmemory, io, entries, ometa_base, meme, meme_tr
+where
+  bits         = central:memescript/bits
+  comp_vmemory = central:memescript/comp_vmemory
+  io           = central:stdlib/io
+  entries      = central:memescript/entries
+  ometa_base   = central:memescript/ometa_base
+  meme         = central:memescript/meme
+  meme_tr      = central:memescript/meme_tr
+import OMetaException from ometa_base
+
 
 MAGIC_NUMBER: 0x420;
 
@@ -125,7 +128,7 @@ class Compiler
 fields: cmodule, filepath;
 instance_method new_module: fun() {
   var module_name = basename(@filepath); //provisory function to get the basename
-  @cmodule = entries.CompiledModule.new(module_name, null);
+  @cmodule = entries.CompiledModule.new(module_name);
   return @cmodule;
 }
 instance_method parse: fun() {
@@ -152,7 +155,7 @@ instance_method compile: fun(filepath) {
   @filepath = filepath;
   var ast = this.parse();
 
-  //io.print(ast.toSource);
+  io.print(ast.toSource);
   io.print("translating...");
 
   this.translate(ast);
@@ -173,5 +176,3 @@ main: fun() {
    });
   }
 }
-
-.endcode

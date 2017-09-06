@@ -1,7 +1,9 @@
-.preamble(memetest)
- memetest : meme:memetest;
- [Test] <= memetest;
-.code
+meme foo
+
+requires memetest
+where
+  memetest = central:stdlib/memetest
+import Test from memetest
 
 WSIZE: 8;
 
@@ -91,5 +93,3 @@ main: fun() {
   t.assertEqual(string_block_size   ("1"), WSIZE, "string_block_size 1");
   t.assertEqual(string_block_size   ("123456789"), WSIZE * 2, "string_block_size 1");
 }
-
-.endcode

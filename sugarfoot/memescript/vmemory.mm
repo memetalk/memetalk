@@ -1,10 +1,12 @@
-.preamble(bits, mmc, io, memetest)
- bits : meme:bits;
- mmc: meme:mmc;
- io : meme:io;
- memetest : meme:memetest;
- [Test] <= memetest;
-.code
+meme foo
+
+requires bits, mmc, io, memetest
+where
+  bits     = central:memescript/bits
+  mmc      = central:memescript/mmc
+  io       = central:stdlib/io
+  memetest = central:stdlib/memetest
+import Test from memetest
 
 class Cell
 fields: etable;
@@ -362,5 +364,3 @@ main: fun() {
     tb.set_base(100);
     tb.dump();
 }
-
-.endcode

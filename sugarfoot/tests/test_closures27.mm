@@ -1,5 +1,5 @@
-.preamble(test)
-.code
+meme foo
+requires test
 
 main: fun() {
   var f1 = fun() {
@@ -20,4 +20,3 @@ main: fun() {
   test.assertEqual(f4(10), 20, "local f2::z receives 20");
 }
 
-.endcode

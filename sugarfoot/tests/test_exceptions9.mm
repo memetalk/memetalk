@@ -1,9 +1,5 @@
-.license
-.endlicense
-
-.preamble(test)
-
-.code
+meme foo
+requires test
 
 // -- module functions --
 
@@ -25,5 +21,3 @@ f: fun() {
 main: fun() {
   test.assertEqual(f(), 10, "f() != 10");
 }
-
-.endcode

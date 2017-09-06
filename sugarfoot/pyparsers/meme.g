@@ -16,35 +16,41 @@ comment = "/*"  (~"*/" anything)* "*/"
 
 spaces = space*
 
-license = token(".license")  (~(token(".endlicense")) anything)*:x
-          token(".endlicense") -> [".license", ''.join(x)]
-        | -> [".license", '']
 
-meta_section = token(".meta") -> [".meta", None]
-             |                -> [".meta", None]
-
-preamble_section = spaces token(".preamble") module_params:params
-                  preamble_entry*:entries
-                  module_alias*:aliases -> [".preamble", params, entries, aliases]
-
-code_section = spaces token(".code")
-               module_decl*:d
-               token(".end") -> [".code", d]
-
-start = license:lic
+start = 'm' 'e' 'm' 'e' space compiler_line:c
         meta_section:meta
-        preamble_section:pre
+        requirements_section:req
         code_section:code
-       -> ["module", lic, meta, pre, code]
+        spaces end
+        -> ["module", c, meta, req, code]
 
-module_params = params
+compiler_line = (~'\n' anything)+:xs -> "".join(xs)
+
+meta_section = meta_variable*:xs -> ["meta", xs]
+
+meta_variable = spaces '@' spaces id:key token(":")  (~'\n' anything)+:xs -> [key, "".join(xs)]
+
+requirements_section = token("requires") module_params:params
+                       where_section:specs
+                       module_import*:imp
+                      -> ["requirements", params, ["default-locations", specs], ["imports", imp]]
+                    | -> ["requirements", [], ["default-locations", []], ["imports", []]]
+
+where_section = token("where") module_default*
               | -> []
 
-preamble_entry = id:name token(":") module_spec:s token(";") -> ["param", name, s]
+module_params = id:x (token(",") id)*:xs -> [x] + xs
 
-module_spec = id:ns token(":") id:mname -> ["library", ns, mname]
+module_default = id:name token("=") spaces module_location:loc -> [name, loc]
 
-module_alias = spaces token("[") idlist:lst token("]") token("<=") id:x token(";") -> ["alias", x, lst]
+module_location = (~'\n' anything)+:xs -> "".join(xs)
+
+module_import = token("import") id:name token("from") id:lib -> [name, lib]
+
+
+
+
+code_section = module_decl*:d -> ["code", d]
 
 module_decl = obj_decl | class_decl | top_level_fun | top_level_fn
 

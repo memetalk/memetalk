@@ -1,8 +1,11 @@
-.preamble(bits, opcode, mmc)
- bits : meme:bits;
- opcode : meme:opcode;
- mmc: meme:mmc;
-.code
+meme foo
+
+requires bits, opcode, mmc
+where
+  bits   = central:memescript/bits
+  opcode = central:memescript/opcode
+  mmc    = central:memescript/mmc
+
 
 class OrderedDict < Dictionary
 fields: order;
@@ -1180,28 +1183,34 @@ create_module_to_string: fun(cmod) {
 }
 
 class CompiledModule < Entry
-fields: name, params, top_level_names, default_params, aliases, functions, classes;
-init new: fun(name, params) { //params defaults to null
+fields: name, params, default_locations, imports, top_level_names, functions, classes, meta_vars;
+init new: fun(name) {
   super.new();
   @name = name;
-  if (params == null) {
-    @params = [];
-    @top_level_names = [];
-  } else {
-    @params = params;
-    @top_level_names = params; //list(params)?
-  }
-  @default_params = {};
-  @aliases = {};
+  @params = [];
+  @meta_vars = {};
+  @default_locations = {};
+  @imports = {};
+
+  @top_level_names = [];
   @functions = {"toString": create_module_to_string(this)};
   @classes = {};
 }
-instance_method module_alias: fun(libname, aliases) {
-  aliases.each(fun(_,alias) {
-    @aliases[alias] = libname;
-    this.add_top_level_name(alias);
-  });
+instance_method add_meta: fun(key, val) {
+  @meta_vars[key] = val;
 }
+instance_method set_params: fun(params) {
+  @params = params;
+  params.each(fun(_, p) { this.add_top_level_name(p) });
+}
+instance_method add_default_location: fun(name, path) {
+  @default_locations[name] = path;
+}
+instance_method add_import: fun(name, from) {
+  @imports[name] = from;
+  this.add_top_level_name(name);
+}
+
 instance_method top_level_names: fun() {
   return @top_level_names;
 }
@@ -1214,14 +1223,7 @@ instance_method entry_labels: fun() {
 instance_method label: fun() {
   return mmc.cmod_label(@name);
 }
-instance_method set_params: fun(params) {
-  @params = params;
-  @top_level_names = @top_level_names + params;
-}
-instance_method add_default_param: fun(lhs, ns, name) {
-  //TODO: support everything else
-  @default_params[name] = name; // {"lhs": lhs, "ns": ns, "name": name}
-}
+
 instance_method new_function: fun(name, params) {
   var fn = CompiledFunction.new(this, this, name, params,
       false, null, true, null, null);
@@ -1234,15 +1236,17 @@ instance_method new_class: fun(name, parent, fields_list) {
   return klass;
 }
 instance_method fill: fun(vmem) {
-  vmem.append_label_ref(this.label, null);
+
 
   // first word on object table is a pointer to the CompiledModule
+  vmem.append_label_ref(this.label, null);
+
   var delegate = vmem.append_object_instance();
   var oop_name = vmem.append_string_instance(@name);
-  var oop_license = vmem.append_string_instance("");
   var oop_params = vmem.append_list_of_strings(@params);
-  var oop_default_params = vmem.append_symbol_dict(@default_params);
-  var oop_aliases = vmem.append_symbol_dict(@aliases);
+  var oop_meta_vars = vmem.append_symbol_dict(@meta_vars);
+  var oop_def_locations = vmem.append_symbol_dict(@default_locations);
+  var oop_imports = vmem.append_symbol_dict(@imports);
   var oop_functions = vmem.append_sym_dict_emiting_entries(@functions);
   var oop_classes = vmem.append_sym_dict_emiting_entries(@classes);
 
@@ -1252,10 +1256,10 @@ instance_method fill: fun(vmem) {
   var oop = vmem.append_external_ref("CompiledModule", this.label); // vt: CompiledModule
   vmem.append_pointer_to(delegate, null);
   vmem.append_pointer_to(oop_name, null);
-  vmem.append_pointer_to(oop_license, null);
   vmem.append_pointer_to(oop_params, null);
-  vmem.append_pointer_to(oop_default_params, null);
-  vmem.append_pointer_to(oop_aliases, null);
+  vmem.append_pointer_to(oop_meta_vars, null);
+  vmem.append_pointer_to(oop_def_locations, null);
+  vmem.append_pointer_to(oop_imports, null);
   vmem.append_pointer_to(oop_functions, null);
   vmem.append_pointer_to(oop_classes, null);
   vmem.append_null(null);                        // parent_module
@@ -1344,7 +1348,7 @@ end
 class CoreCompiledModule < CompiledModule
 fields: imod;
 init new: fun(imod) {
-  super.new("core", null);
+  super.new("core");
   @imod = CoreModule.new(this);
 }
 instance_method label: fun() {
@@ -1381,5 +1385,3 @@ instance_method fill: fun(vmem) {
   @imod.filL(vmem);
 }
 end
-
-.endcode

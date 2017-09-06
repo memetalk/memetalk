@@ -1,6 +1,5 @@
-.preamble(test)
-
-.code
+meme foo
+requires test
 
 class Fail < Exception
 end
@@ -47,5 +46,3 @@ main: fun() {
     //
   }
 }
-
-.endcode

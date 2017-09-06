@@ -1,20 +1,25 @@
-start = ['module' :license :meta
+start = ['module'
+         :ignore_compiler
          !(self.i.new_module()):modobj
-         preamble(modobj) code_sec(modobj)]
+         meta_section(modobj)
+         requirements_section(modobj)
+         code_sec(modobj)]
 
-preamble :modobj = ['.preamble'
-                    :params
-                    !(modobj.set_params(params))
-                    [module_default_param(modobj)*] [module_alias(modobj)*]]
+meta_section :modobj = ['meta' [meta_var(modobj)*]]
 
+meta_var :modobj = [:key :val] -> modobj.add_meta(key, val)
 
-module_default_param :modobj = ['param' :lhs ['library' :ns :name]]
-                               -> modobj.add_default_param(lhs, ns, name)
+requirements_section :modobj = ['requirements' module_params:params !(modobj.set_params(params))
+                                ['default-locations' [default_location(modobj)*]]
+                                ['imports' [module_import(modobj)*]]]
 
-module_alias :modobj = ['alias' :libname :alias] -> modobj.module_alias(libname, alias)
+module_params = [anything*:xs] -> xs
 
+default_location :modobj = [:mod :path] -> modobj.add_default_location(mod, path)
 
-code_sec :modobj = ['.code' ~~[load_top_level_name(modobj)*] [definition(modobj)*]]
+module_import :modobj = [:name :from_] -> modobj.add_import(name, from_)
+
+code_sec :modobj = ['code' ~~[load_top_level_name(modobj)*] [definition(modobj)*]]
 
 load_top_level_name :modobj = ['class' [:name :ignore] (:ignore)*] -> modobj.add_top_level_name(name)
                             | ['object' :name (:ignore)*] -> modobj.add_top_level_name(name)

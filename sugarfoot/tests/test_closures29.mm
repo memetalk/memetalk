@@ -1,5 +1,5 @@
-.preamble(test)
-.code
+meme foo
+requires test
 
 class X
 class_method z: fun() {
@@ -51,5 +51,3 @@ main: fun() {
     test.assert(true, "Compilation succeeded");
   }
 }
-
-.endcode

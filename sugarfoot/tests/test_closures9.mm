@@ -1,9 +1,5 @@
-.license
-.endlicense
-
-.preamble(test)
-
-.code
+meme foo
+requires test
 
 main: fun() {
   test.assertEqual(X.new().bla(), 10, "Closure accessing instance field");
@@ -23,6 +19,3 @@ instance_method bla: fun() {
 }
 
 end
-
-
-.endcode

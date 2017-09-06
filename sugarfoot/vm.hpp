@@ -85,9 +85,12 @@ public:
 
   char* get_argv(int);
 
+  char* fetch_module(const std::string& filepath, int* file_size);
 private:
   // void dump_prime_info();
   // void dictionary_dump(oop dict);
+  // void parse_repository_path();
+  void maybe_load_config();
   void print_retval(Process*, oop retval);
   Process* init();
 
@@ -105,6 +108,11 @@ private:
 
   prim_map_t _primitives;
   modules_map_t _modules;
+  std::string _mmc_cache_directory;
+
+  //path configurations
+  boost::unordered_map<std::string, std::string> _repo_locations;
+  boost::unordered_map<std::string, std::string> _repo_override;
 };
 
 #endif

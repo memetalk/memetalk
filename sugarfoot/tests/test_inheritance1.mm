@@ -1,9 +1,6 @@
-.license
-.endlicense
+meme foo
+requires test
 
-.preamble(test)
-
-.code
 
 // -- module functions --
 
@@ -39,6 +36,3 @@ instance_method all: fun() {
 }
 
 end //inheritance1:Point3D
-
-
-.endcode

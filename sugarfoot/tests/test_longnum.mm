@@ -1,9 +1,5 @@
-.license
-.endlicense
-
-.preamble(test)
-
-.code
+meme foo
+requires test
 
 // -- module functions --
 
@@ -52,5 +48,3 @@ main: fun() {
   test_sub_overflow();
   test_masking_64bits();
 }
-
-.endcode

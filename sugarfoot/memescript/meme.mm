@@ -1,8 +1,10 @@
-.preamble(ometa_base, io)
-  ometa_base: meme:ometa_base;
-  io : meme:io;
-  [OMetaBase] <= ometa_base;
-.code
+meme foo
+
+requires ometa_base, io
+where
+  ometa_base = central:memescript/ometa_base
+  io         = central:stdlib/io
+import OMetaBase from ometa_base
 
 //extending List for AST node information
 class List < List
@@ -202,108 +204,141 @@ instance_method comment: fun() {
     this._apply_with_args(:seq, ["\n"]);
   }]);
 }
-instance_method license: fun() {
-  var x = null;
+instance_method start: fun() {
+  var c = null;
+  var meta = null;
+  var req = null;
+  var code = null;
   return this._or([fun() {
-    this._apply_with_args(:keyword,[".license"]);
-    x = this._many(fun() {
+    this._apply_with_args(:seq, ["m"]);
+    this._apply_with_args(:seq, ["e"]);
+    this._apply_with_args(:seq, ["m"]);
+    this._apply_with_args(:seq, ["e"]);
+    this._apply(:space);
+    c = this._apply(:compiler_line);
+    meta = this._apply(:meta_section);
+    req = this._apply(:requirements_section);
+    code = this._apply(:code_section);
+    this._apply(:spaces);
+    this._apply(:end);
+    return [:module, c, meta, req, code];
+  }]);
+}
+instance_method compiler_line: fun() {
+  var xs = null;
+  return this._or([fun() {
+    xs = this._many1(fun() {
       this._or([fun() {
         this._not(fun() {
-          this._or([fun() {
-            this._apply_with_args(:keyword,[".endlicense"]);
-          }]);});
+          this._apply_with_args(:seq, ["\n"]);});
         this._apply(:anything);
-      }]);}, null);
-    this._apply_with_args(:keyword,[".endlicense"]);
-    return [:license, x.join("")];
-  }, fun() {
-    return [:license,""];
+      }]);});
+    return xs.join("");
   }]);
 }
 instance_method meta_section: fun() {
+  var xs = null;
   return this._or([fun() {
-    this._apply_with_args(:keyword,[".meta"]);
-    return [:meta, null];
-  }, fun() {
-    return [:meta, null];
+    xs = this._many(fun() {
+      this._apply(:meta_variable);}, null);
+    return [:meta, xs];
   }]);
 }
-instance_method preamble_section: fun() {
-  var params = null;
-  var entries = null;
-  var aliases = null;
+instance_method meta_variable: fun() {
+  var key = null;
+  var xs = null;
   return this._or([fun() {
-    this._apply_with_args(:keyword,[".preamble"]);
+    this._apply(:spaces);
+    this._apply_with_args(:seq, ["@"]);
+    this._apply(:spaces);
+    key = this._apply(:id);
+    this._apply_with_args(:token, [":"]);
+    xs = this._many1(fun() {
+      this._or([fun() {
+        this._not(fun() {
+          this._apply_with_args(:seq, ["\n"]);});
+        this._apply(:anything);
+      }]);});
+    return [key, xs.join("")];
+  }]);
+}
+instance_method requirements_section: fun() {
+  var params = null;
+  var specs = null;
+  var imp = null;
+  return this._or([fun() {
+    this._apply_with_args(:keyword,["requires"]);
     params = this._apply(:module_params);
-    entries = this._many(fun() {
-      this._apply(:preamble_entry);}, null);
-    aliases = this._many(fun() {
-      this._apply(:module_alias);}, null);
-    return [:preamble, params, entries, aliases];
+    specs = this._apply(:where_section);
+    imp = this._many(fun() {
+      this._apply(:module_import);}, null);
+    return [:requirements, params, [:default-locations, specs], [:imports, imp]];
+  }, fun() {
+    return [:requirements, [], [:default-locations, []], [:imports, []]];
+  }]);
+}
+instance_method where_section: fun() {
+  return this._or([fun() {
+    this._apply_with_args(:keyword,["where"]);
+    this._many(fun() {
+      this._apply(:module_default);}, null);
+  }, fun() {
+    return [];
+  }]);
+}
+instance_method module_params: fun() {
+  var x = null;
+  var xs = null;
+  return this._or([fun() {
+    x = this._apply(:id);
+    xs = this._many(fun() {
+      this._or([fun() {
+        this._apply_with_args(:token, [","]);
+        this._apply(:id);
+      }]);}, null);
+    return [x] + xs;
+  }]);
+}
+instance_method module_default: fun() {
+  var name = null;
+  var loc = null;
+  return this._or([fun() {
+    name = this._apply(:id);
+    this._apply_with_args(:token, ["="]);
+    this._apply(:spaces);
+    loc = this._apply(:module_location);
+    return [name, loc];
+  }]);
+}
+instance_method module_location: fun() {
+  var xs = null;
+  return this._or([fun() {
+    xs = this._many1(fun() {
+      this._or([fun() {
+        this._not(fun() {
+          this._apply_with_args(:seq, ["\n"]);});
+        this._apply(:anything);
+      }]);});
+    return xs.join("");
+  }]);
+}
+instance_method module_import: fun() {
+  var name = null;
+  var lib = null;
+  return this._or([fun() {
+    this._apply_with_args(:keyword,["import"]);
+    name = this._apply(:id);
+    this._apply_with_args(:keyword,["from"]);
+    lib = this._apply(:id);
+    return [name, lib];
   }]);
 }
 instance_method code_section: fun() {
   var d = null;
   return this._or([fun() {
-    this._apply_with_args(:keyword,[".code"]);
     d = this._many(fun() {
       this._apply(:module_decl);}, null);
-    this._apply_with_args(:keyword,[".endcode"]);
     return [:code, d];
-  }]);
-}
-instance_method start: fun() {
-  var lic = null;
-  var meta = null;
-  var pre = null;
-  var code = null;
-  return this._or([fun() {
-    lic = this._apply(:license);
-    meta = this._apply(:meta_section);
-    pre = this._apply(:preamble_section);
-    code = this._apply(:code_section);
-    return [:module, lic, meta, pre, code];
-  }]);
-}
-instance_method module_params: fun() {
-  return this._or([fun() {
-    this._apply(:params);
-  }, fun() {
-    return [];
-  }]);
-}
-instance_method preamble_entry: fun() {
-  var name = null;
-  var s = null;
-  return this._or([fun() {
-    name = this._apply(:id);
-    this._apply_with_args(:token, [":"]);
-    s = this._apply(:module_spec);
-    this._apply_with_args(:token, [";"]);
-    return [:param, name, s];
-  }]);
-}
-instance_method module_spec: fun() {
-  var ns = null;
-  var mname = null;
-  return this._or([fun() {
-    ns = this._apply(:id);
-    this._apply_with_args(:token, [":"]);
-    mname = this._apply(:id);
-    return [:library, ns, mname];
-  }]);
-}
-instance_method module_alias: fun() {
-  var lst = null;
-  var x = null;
-  return this._or([fun() {
-    this._apply_with_args(:token, ["["]);
-    lst = this._apply(:idlist);
-    this._apply_with_args(:token, ["]"]);
-    this._apply_with_args(:token, ["<="]);
-    x = this._apply(:id);
-    this._apply_with_args(:token, [";"]);
-    return [:alias, x, lst];
   }]);
 }
 instance_method module_decl: fun() {
@@ -1379,5 +1414,3 @@ instance_method single_top_level_fun: fun() {
 
 
 end //OMeta
-
-.endcode

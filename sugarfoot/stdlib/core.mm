@@ -1,9 +1,4 @@
-.license
-.endlicense
-
-.preamble()
-
-.code
+meme foo
 
   object Behavior
     _vt: Behavior; //self-referencing
@@ -900,4 +895,3 @@ end
   basename: fun(filepath) {
      <primitive "basename">
   }
-.end

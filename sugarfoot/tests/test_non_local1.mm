@@ -1,9 +1,5 @@
-.license
-.endlicense
-
-.preamble(test)
-
-.code
+meme foo
+requires test
 
 f: fun() {
   [2].each(fun(_, y) {
@@ -16,5 +12,3 @@ f: fun() {
 main: fun() {
   test.assertEqual(f(), 100, "");
 }
-
-.endcode

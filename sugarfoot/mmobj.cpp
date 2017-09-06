@@ -133,22 +133,26 @@ oop MMObj::mm_compiled_module_name(Process* p, oop cmod, bool should_assert) {
   return (oop) ((word*)cmod)[2];
 }
 
-//license 3
-
 oop MMObj::mm_compiled_module_params(Process* p, oop cmod, bool should_assert) {
+  TYPE_CHECK(!( mm_object_vt(cmod) == _core_image->get_prime("CompiledModule")),
+             "TypeError","Expected CompiledModule")
+  return (oop) ((word*)cmod)[3];
+}
+
+
+oop MMObj::mm_compiled_module_meta_vars(Process* p, oop cmod, bool should_assert) {
   TYPE_CHECK(!( mm_object_vt(cmod) == _core_image->get_prime("CompiledModule")),
              "TypeError","Expected CompiledModule")
   return (oop) ((word*)cmod)[4];
 }
 
-
-oop MMObj::mm_compiled_module_default_params(Process* p, oop cmod, bool should_assert) {
+oop MMObj::mm_compiled_module_default_locations(Process* p, oop cmod, bool should_assert) {
   TYPE_CHECK(!( mm_object_vt(cmod) == _core_image->get_prime("CompiledModule")),
              "TypeError","Expected CompiledModule")
   return (oop) ((word*)cmod)[5];
 }
 
-oop MMObj::mm_compiled_module_aliases(Process* p, oop cmod, bool should_assert) {
+oop MMObj::mm_compiled_module_imports(Process* p, oop cmod, bool should_assert) {
   TYPE_CHECK(!( mm_object_vt(cmod) == _core_image->get_prime("CompiledModule")),
              "TypeError","Expected CompiledModule")
   return (oop) ((word*)cmod)[6];

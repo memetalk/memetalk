@@ -1,7 +1,8 @@
-.preamble(ometa_base)
-  ometa_base: meme:ometa_base;
-  [OMetaBase] <= ometa_base;
-.code
+meme foo
+requires ometa_base
+where
+  ometa_base = central:memescript/ometa_base
+import OMetaBase from ometa_base
 
 class MemeScriptTranslator < OMetaBase
 fields: proc;
@@ -10,20 +11,28 @@ init new: fun(proc, input) {
   @proc = proc;
 }
 <ometa>
-start = [:module _:license _:meta
+start = [:module
+         _                             //ignore compiler node
          !{@proc.new_module()}:modobj
-         preamble(modobj) code_sec(modobj)];
+         meta_section(modobj)
+         requirements_section(modobj)
+         code_section(modobj)];
 
-preamble :modobj = [:preamble _:params !{modobj.set_params(params)}
-                   [module_default_param(modobj)*] [module_alias(modobj)*]];
+meta_section :modobj = [:meta [meta_var(modobj)*]];
 
-module_default_param :modobj = [:param _:lhs [:library _:ns _:name]]
-                               => modobj.add_default_param(lhs, ns, name);
+meta_var :modobj = [_:key _:val] => modobj.add_meta(key, val);
 
-module_alias :modobj = [:alias _:libname _:alias] => modobj.module_alias(libname, alias);
+requirements_section :modobj = [:requirements module_params:params !{modobj.set_params(params)}
+                                [:default-locations [default_location(modobj)*]]
+                                [:imports [module_import(modobj)*]]];
 
+module_params = [_*:xs] => xs;
 
-code_sec :modobj = [:code ~~[load_top_level_name(modobj)*] [definition(modobj)*]];
+default_location :modobj = [_:mod _:path] => modobj.add_default_location(mod, path);
+
+module_import :modobj = [_:name _:from] => modobj.add_import(name, from);
+
+code_section :modobj = [:code ~~[load_top_level_name(modobj)*] [definition(modobj)*]];
 
 load_top_level_name :modobj = [:class [_:name _] _*] => modobj.add_top_level_name(name)
                             | [:object _:name _*] => modobj.add_top_level_name(name)
@@ -206,5 +215,3 @@ arglist :fnobj = [expr(fnobj)+]:x => x.size;
 </ometa>
 
 end //MemeScriptTranslator
-
-.endcode

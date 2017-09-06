@@ -8,6 +8,8 @@ class VM;
 class Process;
 class CoreImage;
 
+void create_cache_dir(std::string&);
+
 char* read_file(std::fstream& file, int* file_size);
 char* read_mmc_file(const std::string& filepath, int* file_size);
 word unpack_word(const char* data, int offset);

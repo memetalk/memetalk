@@ -2305,7 +2305,9 @@ static int prim_test_import(Process* proc) {
 
   std::string str_filepath = proc->mmobj()->mm_string_stl_str(proc, filepath);
   DBG(str_filepath << endl);
-  MMCImage* mmc = new (GC) MMCImage(proc, proc->vm()->core(), str_filepath);
+  int data_size;
+  char* data = read_mmc_file(str_filepath, &data_size);
+  MMCImage* mmc = new (GC) MMCImage(proc, proc->vm()->core(), str_filepath, data_size, data);
   mmc->load();
   proc->stack_push(mmc->instantiate_module(args));
   return 0;

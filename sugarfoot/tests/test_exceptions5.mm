@@ -1,9 +1,5 @@
-.license
-.endlicense
-
-.preamble(test)
-
-.code
+meme foo
+requires test
 
 // -- module functions --
 
@@ -47,6 +43,3 @@ r: fun(fn) {
 }
 
 // -- module classes --
-
-
-.endcode

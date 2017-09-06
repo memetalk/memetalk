@@ -1,5 +1,5 @@
-.preamble(test)
-.code
+meme foo
+requires test
 
 class X
 fields: a,b, c;
@@ -20,5 +20,3 @@ main: fun() {
   test.assertEqual(x.b, 5, "x.b from env");
   test.assertEqual(x.c, 6, "x.c from env");
 }
-
-.endcode

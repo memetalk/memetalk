@@ -1,9 +1,7 @@
-.license
-.endlicense
-
-.preamble(io)
- io: meme:io;
-.code
+meme foo
+requires io
+where
+  io = central:stdlib/io
 
 class QAction
 fields: self;
@@ -668,7 +666,3 @@ instance_method connect: fun(signal, slot) {
   <primitive "qt_qaction_connect">
 }
 end
-
-.endcode
-
-.end

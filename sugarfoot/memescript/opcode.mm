@@ -1,8 +1,9 @@
-.preamble(io, memetest)
- io : meme:io;
- memetest : meme:memetest;
- [Test] <= memetest;
-.code
+meme foo
+requires io, memetest
+where
+  io = central:stdlib/io
+  memetest = central:stdlib/memetest
+import Test from memetest
 
 WORD_SIZE: 4;
 
@@ -133,5 +134,3 @@ instance_method set_arg: fun(arg) {
   @arg = arg;
 }
 end
-
-.endcode

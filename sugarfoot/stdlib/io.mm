@@ -1,5 +1,4 @@
-.preamble()
-.code
+meme foo
 
 read_file: fun(filepath) {
   <primitive "io_read_file">
@@ -37,5 +36,3 @@ with_file: fun(filepath, fn) {
   }
   close(fp);
 }
-
-.endcode

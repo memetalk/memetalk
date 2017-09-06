@@ -1,5 +1,5 @@
-.preamble(test)
-.code
+meme foo
+requires test
 
 main: fun() {
   var fn = Context.withVars("var b = a + 5;", {:a: 5}, thisModule);
@@ -8,5 +8,3 @@ main: fun() {
   test.assertEqual(fn.getEnv()[:a], 5, "testing Context.getEnv [a]");
   test.assertEqual(fn.getEnv()[:b], 10, "testing Context.getEnv [b]");
 }
-
-.endcode

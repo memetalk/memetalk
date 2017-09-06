@@ -1,7 +1,8 @@
-.preamble(qt, io)
-  qt : meme:qt;
-  io : meme:io;
-.code
+meme foo
+requires qt, io
+where
+  qt = central:qt
+  io : central:stdlib/io;
 
 class RemoteDebugger
 fields: process, current_frame_idx, started, server, socket, vars;
@@ -327,5 +328,3 @@ main: fun() {
   var repl = RemoteRepl.new(null);
   return app.exec();
 }
-
-.endcode

@@ -1,7 +1,9 @@
-.preamble(ometa_base)
-  ometa_base: meme:ometa_base;
-  [OMetaBase] <= ometa_base;
-.code
+meme foo
+requires ometa_base
+where
+  ometa_base = central:memescript/ometa_base
+import OMetaBase from ometa_base
+
 
 escaped: fun(chr) {
   if (chr == "b") { return  "\b"; }
@@ -165,5 +167,3 @@ init new: fun(input) {
 </ometa>
 
 end //OMeta
-
-.endcode

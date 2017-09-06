@@ -1,5 +1,5 @@
-.preamble(test)
-.code
+meme foo
+requires test
 
 a: fun() {
   return fun() { 10 }();
@@ -38,5 +38,3 @@ main: fun() {
  test.assertEqual(f(), 90, "statement and expr without semicol");
  test.assertEqual(g(), null, "empty body");
 }
-
-.endcode

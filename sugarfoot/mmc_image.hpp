@@ -14,7 +14,7 @@ class MMCImage {
   static word MAGIC_NUMBER;
   static word HEADER_SIZE;
 public:
-  MMCImage(Process*, CoreImage*, const std::string&);
+  MMCImage(Process*, CoreImage*, const std::string&, int, char*);
   oop load();
   oop instantiate_module(oop);
 
@@ -29,8 +29,8 @@ private:
   void assign_module_arguments(oop imodule, oop module_arguments_list);
   void load_default_dependencies_and_assign_module_arguments(oop imodule);
 
-  void load_aliases(oop imodule, oop aliases_dict, number num_params);
-  void create_alias_getters(oop imodule, oop imod_dict, oop aliases_dict, number num_params);
+  void load_imports(oop imodule, oop imports_dict, number num_params);
+  void create_import_getters(oop imodule, oop imod_dict, oop imports_dict, number num_params);
 
   void  create_param_getters(oop imodule, oop imod_dict, oop params_list);
 
@@ -39,7 +39,7 @@ private:
   MMObj* _mmobj;
   CoreImage* _core_image;
 
-  std::string _name_or_path;
+  std::string _mod_path;
   int _data_size;
   char* _data;
 
@@ -50,7 +50,7 @@ private:
   word _names_size;
 
   oop _compiled_module;
-  std::map<oop, int> _alias_idx_map;
+  std::map<oop, int> _import_idx_map;
 };
 
 

@@ -1,5 +1,5 @@
-.preamble(test)
-.code
+meme foo
+requires test
 
 main: fun() {
   var z = fun(k) { k + 1 };
@@ -9,5 +9,3 @@ main: fun() {
 x: fun(f) {
   return f(9);
 }
-
-.endcode

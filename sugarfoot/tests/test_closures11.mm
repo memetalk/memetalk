@@ -1,9 +1,5 @@
-.license
-.endlicense
-
-.preamble(test)
-
-.code
+meme foo
+requires test
 
 // -- module functions --
 
@@ -36,6 +32,3 @@ instance_method y: fun(fn) {
     }
 
 end //closures11:X
-
-
-.endcode

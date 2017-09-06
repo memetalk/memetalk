@@ -1,9 +1,7 @@
-.license
-.endlicense
-
-.preamble(io)
- io: meme:io;
-.code
+meme foo
+requires io
+where
+ io = central:stdlib/io
 
 
 //outside of Exception hierarchy, so

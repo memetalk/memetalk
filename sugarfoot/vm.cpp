@@ -22,6 +22,11 @@ VM::VM(int argc, char** argv, bool online, bool profile, const char* core_img_fi
   : _log(LOG_VM), _argc(argc), _argv(argv), _online(online), _profile(profile),
     _core_image(new (GC) CoreImage(this, core_img_filepath)), _mmobj(new (GC) MMObj(_core_image)),
     _debugger_module(MM_NULL) {
+
+  _mmc_cache_directory = getenv("HOME");
+  _mmc_cache_directory += "/.memetalk/cache/";
+  create_cache_dir(_mmc_cache_directory);
+  maybe_load_config();
 }
 
 // MMObj* VM::mmobj() {
@@ -82,19 +87,18 @@ Process* VM::init() {
 
 int VM::start() {
   if (_argc < 2) {
-    bail("usage: sf-vm <file.mmc>");
+    bail("usage: meme <module-path>");
   }
 
+  char* module_path = _argv[1];
+
   Process* proc = init();
-
-  char* filepath = _argv[1];
-
 
   // dump_prime_info();
 
   oop imod;
   try {
-    imod = instantiate_module(proc, filepath, _mmobj->mm_list_new());
+    imod = instantiate_module(proc, module_path, _mmobj->mm_list_new());
   } catch(mm_exception_rewind e) {
     print_error(proc, e.mm_exception);
     return * (int*) (void*) &(e.mm_exception);
@@ -126,7 +130,7 @@ std::pair<Process*, oop> VM::start_debugger(Process* target) {
     imod = _debugger_module;
   } else {
     try {
-      imod = instantiate_module(dbg_proc, "remote_repl", _mmobj->mm_list_new());
+      imod = instantiate_module(dbg_proc, "central:stdlib/remote_repl", _mmobj->mm_list_new());
     } catch(mm_exception_rewind e) {
       ERROR() << "uncaught exception while instantiating debugger module :(" << endl;
       dbg_proc->fail(e.mm_exception);
@@ -179,17 +183,19 @@ void VM::register_primitive(std::string name, prim_function_t fun) {
 //   return _primitives.at(name);
 // }
 
-oop VM::instantiate_module(Process* proc, const char* name_or_path, oop module_args_list) {
-  DBG( "instantiating module " << name_or_path << endl);
+oop VM::instantiate_module(Process* proc, const char* mod_path, oop module_args_list) {
+  DBG( "instantiating module " << mod_path << endl);
   MMCImage* mmc;
-  modules_map_t::iterator it = _modules.find(name_or_path);
+  modules_map_t::iterator it = _modules.find(mod_path);
   if (it == _modules.end()) {
-    DBG("loading new module " << name_or_path << endl);
-    mmc = new (GC) MMCImage(proc, _core_image, name_or_path);
-    _modules[name_or_path] = mmc;
+    DBG("loading new module " << mod_path << endl);
+    int file_size;
+    char* data = fetch_module(mod_path, &file_size);
+    mmc = new (GC) MMCImage(proc, _core_image, mod_path, file_size, data);
+    _modules[mod_path] = mmc;
     mmc->load();
   } else {
-    DBG("module already loaded " << name_or_path << endl);
+    DBG("module already loaded " << mod_path << endl);
     mmc = it->second;
   }
   return mmc->instantiate_module(module_args_list);
@@ -318,4 +324,52 @@ char* VM::get_argv(int i) {
     return _argv[i];
   }
   return NULL;
+}
+
+void VM::maybe_load_config() {
+  ptree pt;
+  try {
+    boost::property_tree::read_json("meme.config", pt);
+  } catch(...) {
+    DBG("No meme.config present");
+    return;
+  }
+
+  try {
+    ptree node = pt.get_child("repositories");
+    boost::property_tree::ptree::iterator iter;
+    for(iter = node.begin(); iter != node.end(); iter++) {
+      // std::cerr << iter->first << " " << iter->second.data() << std::endl;
+      _repo_locations[iter->first] = iter->second.data();
+    }
+
+    node = pt.get_child("override_to_local");
+    for(iter = node.begin(); iter != node.end(); iter++) {
+      // std::cerr << iter->first << " " << iter->second.data() << std::endl;
+      _repo_override[iter->first] = iter->second.data();
+    }
+  } catch(...) {
+    DBG("Could not read data in meme.config");
+  }
+}
+
+char* VM::fetch_module(const std::string& mod_path, int* file_size) {
+  DBG("fetch module " << mod_path << std::endl);
+  //1-check for overriding rules
+  boost::unordered_map<std::string, std::string>::iterator it;
+  for (it = _repo_override.begin(); it != _repo_override.end(); it++) {
+    if (mod_path.find(it->first) == 0) {
+      std::string local_path =it->second + mod_path.substr(it->first.length());
+      DBG("translating " << mod_path << " to local path " << local_path << std::endl);
+      return read_mmc_file(local_path + ".mmc", file_size);
+    }
+  }
+  for (it = _repo_locations.begin(); it != _repo_locations.end(); it++) {
+    if (mod_path.find(it->first) == 0) {
+      std::cerr << "TODO: fetching " << mod_path << " on " << it->first << " = " << it->second << std::endl;
+      bail();
+    }
+  }
+  bail(std::string("fatal error:\n\tmodule not found: ") + mod_path);
+  return 0;
 }

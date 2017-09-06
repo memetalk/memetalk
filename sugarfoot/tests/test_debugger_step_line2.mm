@@ -1,10 +1,10 @@
-.license
-.endlicense
+meme foo
+requires test, io, qt
+where
+ io = central:stdlib/io
+ qt = central:stdlib/qt
 
-.preamble(test, io, qt)
- io : meme:io;
- qt : meme:qt;
-.code
+
 
 f: fun(x) {
    return 10;
@@ -52,4 +52,3 @@ debug: fun(proc) {
   test.set_debugger_tests(Tester.new(proc), 9);
   return test;
 }
-.endcode

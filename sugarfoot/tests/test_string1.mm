@@ -1,10 +1,8 @@
-.license
-.endlicense
+meme foo
+requires test, io
+where
+  io = central:stdlib/io
 
-.preamble(test, io)
- io : meme:io;
-
-.code
 
 main: fun() {
   test.assertEqual("abc" + "def", "abcdef", "concat");
@@ -33,5 +31,3 @@ main: fun() {
   r2 = r2 + 2.asChar;
   test.assertEqual("\x00\x01\x02", r2, "binary content 3");
 }
-
-.endcode

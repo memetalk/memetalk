@@ -1,9 +1,5 @@
-.license
-.endlicense
-
-.preamble(test)
-
-.code
+meme foo
+requires test
 
 // -- module functions --
 
@@ -25,8 +21,3 @@ main: fun() {
 }
 
 // -- module classes --
-
-
-
-
-.endcode

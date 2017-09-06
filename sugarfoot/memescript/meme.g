@@ -1,8 +1,11 @@
-.preamble(ometa_base, io)
-  ometa_base: meme:ometa_base;
-  io : meme:io;
-  [OMetaBase] <= ometa_base;
-.code
+meme foo
+
+requires ometa_base, io
+where
+  ometa_base = central:memescript/ometa_base
+  io         = central:stdlib/io
+import OMetaBase from ometa_base
+
 
 //extending List for AST node information
 class List < List
@@ -96,35 +99,40 @@ space =  _:c ?{c.onlySpaces} => c
 comment = '/*'  {~'*/' _}* '*/'
         | '//' {~'\n' _}* '\n';
 
-license = ``.license``  {~{``.endlicense``} _}*:x
-          ``.endlicense`` => [:license, x.join("")]
-        | => [:license, ""];
 
-meta_section = ``.meta`` => [:meta, null]
-             |           => [:meta, null];
-
-preamble_section = ``.preamble`` module_params:params
-                  preamble_entry*:entries
-                  module_alias*:aliases => [:preamble, params, entries, aliases];
-
-code_section = ``.code``
-               module_decl*:d
-               ``.endcode`` => [:code, d];
-
-start = license:lic
+start = 'm' 'e' 'm' 'e' space compiler_line:c
         meta_section:meta
-        preamble_section:pre
+        requirements_section:req
         code_section:code
-       => [:module, lic, meta, pre, code];
+        spaces $
+        => [:module, c, meta, req, code];
 
-module_params = params
-              | => [];
+compiler_line = {~'\n' _}+:xs => xs.join("");
 
-preamble_entry = id:name ":" module_spec:s ";" => [:param, name, s];
+meta_section = meta_variable*:xs => [:meta, xs];
 
-module_spec = id:ns ":" id:mname => [:library, ns, mname];
+meta_variable = spaces '@' spaces id:key ":" {~'\n' _}+:xs => [key, xs.join("")];
 
-module_alias = "[" idlist:lst "]" "<=" id:x ";" => [:alias, x, lst];
+requirements_section = ``requires`` module_params:params
+                         where_section:specs
+                         module_import*:imp
+                       => [:requirements, params, [:default-locations, specs], [:imports, imp]]
+                     | => [:requirements, [], [:default-locations, []], [:imports, []]];
+
+where_section = ``where`` module_default*
+              | => []
+              ;
+
+module_params = id:x {"," id}*:xs => [x] + xs;
+
+module_default = id:name "=" spaces module_location:loc => [name, loc];
+
+module_location = {~'\n' _}+:xs => xs.join("");
+
+module_import = ``import`` id:name ``from`` id:lib => [name, lib];
+
+
+code_section = module_decl*:d => [:code, d];
 
 module_decl = obj_decl | class_decl | top_level_fun | top_level_fn;
 
@@ -383,5 +391,3 @@ single_top_level_fun :name = # ``fun`` fparams:p "{"
 </ometa>
 
 end //OMeta
-
-.endcode
