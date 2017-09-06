@@ -1,4 +1,4 @@
-subdirs = py src memetalk
+subdirs = py src central
 
 all:
 	$(foreach el,$(subdirs),$(MAKE) -C $(el) all;)

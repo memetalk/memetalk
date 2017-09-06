@@ -1,6 +1,6 @@
 ROOT_DIR = $(shell pwd)/..
 PY_DIR = $(ROOT_DIR)/py
-MEME_DIR = $(ROOT_DIR)/memetalk
+MEME_DIR = $(ROOT_DIR)/central
 
 BIN = $(ROOT_DIR)/meme
 

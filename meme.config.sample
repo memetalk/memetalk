@@ -1,5 +1,6 @@
 {"repositories":
   {"central": "http://libraries.memetalk.org/"},
  "override_to_local": {
-   "central": "./memetalk"
+   "central:memescript": "/home/thiago/src/memetalk/central/memescript",
+   "central:stdlib": "/home/thiago/src/memetalk/central/stdlib"
 }}

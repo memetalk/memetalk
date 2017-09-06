@@ -1,6 +1,6 @@
 ROOT_DIR = $(shell pwd)/../..
 #MEME_SCRIPT_DIR = $(shell pwd)
-MEME_STDLIB_DIR = $(ROOT_DIR)/memetalk/stdlib
+MEME_STDLIB_DIR = $(ROOT_DIR)/central/stdlib
 PY_DIR = $(ROOT_DIR)/py
 TESTS_DIR = $(shell pwd)
 MEME = $(ROOT_DIR)/meme

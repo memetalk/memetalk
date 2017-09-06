@@ -52,7 +52,8 @@ $ make test
 
 ## Running
 
-From the repository directory, just run:
+Copy meme.config.sample to ~/.meme.config and, from the repository directory,
+just run:
 
 ```
 $  ./meme memetalk/stdlib/hello_world.me
