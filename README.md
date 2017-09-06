@@ -6,45 +6,54 @@ A rationale for this project may be found at the [wiki][1]
 
 [1]: https://github.com/thiago-silva/memetalk/wiki
 
+Current stage of development is **alpha**.
+
 ## List of dependencies
 
-Memetalk's VM is currently developed in C++, with some python needs. To build
-and use it, you will need:
+### C++
 
- * Python (I'm using 2.7.5)
+The Memetalk VM is currently developed in C++ and depends on:
+
+* Boost (1.58.0.1)
+* [Boehm GC (gc-7.6.0)](http://www.hboehm.info/gc/)
+
+Memetalk also has unfortunate dependencies at the moment, such as:
+
  * Qt 4
  * QScintila2
- * boost
 
+These should be installed to be able to build the VM.
 
-* `$ brew install boost python pyqt qscintilla2`
+### Python
 
-Also, you will need:
+While MemeScript compiler is written in itself, we are currently bootstrapping
+using a compiler written in python. Thus, to build, you will also need have
+the following installed:
 
- * Clone `pymeta` from https://github.com/thiago-silva/pymeta.git
- * `# python setup.py install` in the `pymeta` dir after cloning
+ * Python (2.7.5)
+ * clime (0.3.1)
+ * pymeta (from https://github.com/thiago-silva/pymeta.git)
 
 ## Building
 
-Just run `make` Inside of the `memetalk/sugarfoot` directory.
-
-## Compiling
-
-Source files are in `sugarfoot/mm` directory, with extension `.mm`. The
-compiler is written in python at the moment. To compile source code, run the
-following from the `memetalk/sugarfoot` directory:
+Run inside the repository directory:
 
 ```
-$  python -m pycompiler.compiler mm/hello_world.mm mm/io.mm
+$ make
 ```
 
-Compiled `.mmc` files should have been generated on `mm` directory.
+The VM binary `meme` should have been created in the current directory.
 
+To be sure everything is minimally O.K., we also recommend running the tests:
+
+```
+$ make test
+```
 
 ## Running
 
-From `sugarfoot` directory, run:
+From the repository directory, just run:
 
 ```
-$  MEME_PATH=./mm/ ./sf-vm hello_world
-```
+$  ./meme memetalk/stdlib/hello_world.me
+   ```
