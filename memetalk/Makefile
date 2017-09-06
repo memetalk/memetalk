@@ -1,4 +1,4 @@
-subdirs = py src memetalk
+subdirs = memescript stdlib tests
 
 all:
 	$(foreach el,$(subdirs),$(MAKE) -C $(el) all;)
@@ -6,10 +6,9 @@ all:
 clean:
 	$(foreach el,$(subdirs),$(MAKE) -C $(el) clean;)
 
-debug:
-	$(foreach el,$(subdirs),$(MAKE) -C $(el) debug;)
-
 test:
 	$(foreach el,$(subdirs),$(MAKE) -C $(el) test;)
+
+debug:
 
 .PHONY: $(subdirs) clean

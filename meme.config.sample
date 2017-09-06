@@ -1,0 +1,5 @@
+{"repositories":
+  {"central": "http://libraries.memetalk.org/"},
+ "override_to_local": {
+   "central": "./memetalk"
+}}

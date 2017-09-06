@@ -4,13 +4,16 @@
 #   -clean: deletes the VM binary and mmc files
 #
 #   -core: builds the core.img file
-#   -memetalk: build the compiler, VM and core image
+#   -memetalk: build the VM and core image
 #   -test: runs all memetalk tests
 #
 
 ############ VM Section ############
+ROOT_DIR = $(shell pwd)/..
+PY_DIR = $(ROOT_DIR)/py
+MEME_DIR = $(ROOT_DIR)/memetalk
 
-BIN = sf-vm
+BIN = $(ROOT_DIR)/meme
 
 # General flags
 INC_DIRS = /usr/include /usr/local/include
@@ -35,7 +38,7 @@ HPP_FILES += qt_prims.hpp qsc.hpp ctrl.hpp
 OBJS = $(CPP_FILES:%.cpp=%.o)
 
 # Main targets
-all: release
+all: release core
 clean:; rm -f $(BIN) $(OBJS) qsc.moc.cpp
 build: $(BIN)
 
@@ -52,126 +55,90 @@ qsc.moc.cpp: qsc.hpp; moc $< > $@
 %.o: %.cpp; g++ $(CXXFLAGS) -c -o $@ $^
 $(BIN): qsc.moc.cpp $(OBJS); g++ $(OBJS) $(LIBS) -o $@
 
-############ Compiler Section ############
+############ end VM Section ############
 
-GRAMMARS = pyparsers/*.g
-PY_PARSER_FILES = pyparsers/memetr.py pyparsers/parser.py
-PY_COMPILER_DEPENDENCIES = $(GRAMMARS) pycompiler/*py pycore/*.py pyutils/*.py
-MM_CORE = stdlib/core.mm
-MEMETALK = core.img $(PY_PARSER_FILES) sf-vm
+############ Core Section ############
+CORE_IMG = $(ROOT_DIR)/core.img
+MM_CORE = $(MEME_DIR)/stdlib/core.mm
 
-core: core.img
-memetalk: $(MEMETALK)
+$(CORE_IMG): $(MM_CORE)
+	cd $(PY_DIR); python -m pycore.compiler $(MM_CORE) $(ROOT_DIR)
 
-$(PY_PARSER_FILES): $(GRAMMARS)
-	python -m pyparsers.gen_parsers
-
-core.img: $(PY_PARSER_FILES) $(MM_CORE) $(PY_COMPILER_DEPENDENCIES)
-	python -m pycore.compiler
+core: $(CORE_IMG)
 
 ############ Memetalk Tests Section ############
 
+# memeclean:
+# 	rm -f stdlib/*.mmc
+# 	rm -f tests/*.mmc
+# 	rm -f compiler/*.mmc
+
+# cleanall: memeclean clean
+# 	rm -f core.img
+# 	rm -f $(PY_PARSER_FILES)
+# 	rm -f pyparsers/*pyc
 
 
-MM_TESTS = tests/*.mm
-MMC_TESTS = tests/*.mmc
+# reboot_ometa: memescript/ometa.g memescript/ometa_tr.g memescript/ometa_base.mmc memescript/ometa.mmc memescript/ometa_tr.mmc memescript/gen_parser.mmc stdlib/io.mmc
+# 	./sf-vm gen_parser ometa
+# 	./sf-vm gen_parser ometa_tr
+# 	python -m pycompiler.compiler memescript/ometa.mm
+# 	python -m pycompiler.compiler memescript/ometa_tr.mm
 
-TEST_DEPS = stdlib/io.mmc
-MM_TESTER = stdlib/memetest.mm
-MMC_TESTER = stdlib/memetest.mmc
+# memescript/gen_parser.mmc: memescript/gen_parser.mm
+# 	python -m pycompiler.compiler memescript/gen_parser.mm
 
-# compile_tester: $(MMC_TESTER)
-# compile_all_tests: $(MMC_TESTS)
+# memescript/meme.mm: memescript/meme.g memescript/ometa.mmc memescript/ometa_tr.mmc memescript/gen_parser.mmc
+# 	./sf-vm gen_parser meme
 
-$(TEST_DEPS): stdlib/io.mm
-	python -m pycompiler.compiler stdlib/io.mm
+# memescript/meme_tr.mm: memescript/meme_tr.g memescript/ometa.mmc memescript/ometa_tr.mmc memescript/gen_parser.mmc
+# 	./sf-vm gen_parser meme_tr
 
-$(MMC_TESTER): $(MM_TESTER) $(MEMETALK)
-	python -m pycompiler.compiler $(MM_TESTER)
+# #
 
+# memescript/bits.mmc: memescript/bits.mm
+# 	python -m pycompiler.compiler memescript/bits.mm
 
-$(MMC_TESTS): $(MM_TESTS) $(MEMETALK)
-	python -m pycompiler.compiler $(MM_TESTS)
+# memescript/comp_vmemory.mmc: memescript/comp_vmemory.mm
+# 	python -m pycompiler.compiler memescript/comp_vmemory.mm
 
-stdlib/qt.mmc: stdlib/qt.mm # debugger tests need qt
-	python -m pycompiler.compiler stdlib/qt.mm
+# memescript/vmemory.mmc: memescript/vmemory.mm
+# 	python -m pycompiler.compiler memescript/vmemory.mm
 
-test: core.img $(TEST_DEPS) $(MMC_TESTER) $(MMC_TESTS) $(MEMETALK) stdlib/qt.mmc
-	./sf-vm stdlib/memetest.mm
+# memescript/opcode.mmc: memescript/opcode.mm
+# 	python -m pycompiler.compiler memescript/opcode.mm
 
+# memescript/mmc.mmc: memescript/mmc.mm
+# 	python -m pycompiler.compiler memescript/mmc.mm
 
-memeclean:
-	rm -f stdlib/*.mmc
-	rm -f tests/*.mmc
-	rm -f compiler/*.mmc
+# memescript/entries.mmc: memescript/entries.mm
+# 	python -m pycompiler.compiler memescript/entries.mm
 
-cleanall: memeclean clean
-	rm -f core.img
-	rm -f $(PY_PARSER_FILES)
-	rm -f pyparsers/*pyc
+# memescript/ometa_base.mmc: memescript/ometa_base.mm
+# 	python -m pycompiler.compiler memescript/ometa_base.mm
 
-#################
+# memescript/ometa.mmc: memescript/ometa.mm
+# 	python -m pycompiler.compiler memescript/ometa.mm
 
-reboot_ometa: memescript/ometa.g memescript/ometa_tr.g memescript/ometa_base.mmc memescript/ometa.mmc memescript/ometa_tr.mmc memescript/gen_parser.mmc stdlib/io.mmc
-	./sf-vm gen_parser ometa
-	./sf-vm gen_parser ometa_tr
-	python -m pycompiler.compiler memescript/ometa.mm
-	python -m pycompiler.compiler memescript/ometa_tr.mm
+# memescript/ometa_tr.mmc: memescript/ometa_tr.mm
+# 	python -m pycompiler.compiler memescript/ometa_tr.mm
 
-memescript/gen_parser.mmc: memescript/gen_parser.mm
-	python -m pycompiler.compiler memescript/gen_parser.mm
+# memescript/meme.mmc: memescript/meme.mm
+# 	python -m pycompiler.compiler memescript/meme.mm
 
-memescript/meme.mm: memescript/meme.g memescript/ometa.mmc memescript/ometa_tr.mmc memescript/gen_parser.mmc
-	./sf-vm gen_parser meme
+# memescript/meme_tr.mmc: memescript/meme_tr.mm
+# 	python -m pycompiler.compiler memescript/meme_tr.mm
 
-memescript/meme_tr.mm: memescript/meme_tr.g memescript/ometa.mmc memescript/ometa_tr.mmc memescript/gen_parser.mmc
-	./sf-vm gen_parser meme_tr
+# stdlib/io.mmc: stdlib/io.mm
+# 	python -m pycompiler.compiler stdlib/io.mm
 
-#
+# stdlib/remote_repl.mmc: stdlib/remote_repl.mm
+# 	python -m pycompiler.compiler stdlib/remote_repl.mm
 
-memescript/bits.mmc: memescript/bits.mm
-	python -m pycompiler.compiler memescript/bits.mm
-
-memescript/comp_vmemory.mmc: memescript/comp_vmemory.mm
-	python -m pycompiler.compiler memescript/comp_vmemory.mm
-
-memescript/vmemory.mmc: memescript/vmemory.mm
-	python -m pycompiler.compiler memescript/vmemory.mm
-
-memescript/opcode.mmc: memescript/opcode.mm
-	python -m pycompiler.compiler memescript/opcode.mm
-
-memescript/mmc.mmc: memescript/mmc.mm
-	python -m pycompiler.compiler memescript/mmc.mm
-
-memescript/entries.mmc: memescript/entries.mm
-	python -m pycompiler.compiler memescript/entries.mm
-
-memescript/ometa_base.mmc: memescript/ometa_base.mm
-	python -m pycompiler.compiler memescript/ometa_base.mm
-
-memescript/ometa.mmc: memescript/ometa.mm
-	python -m pycompiler.compiler memescript/ometa.mm
-
-memescript/ometa_tr.mmc: memescript/ometa_tr.mm
-	python -m pycompiler.compiler memescript/ometa_tr.mm
-
-memescript/meme.mmc: memescript/meme.mm
-	python -m pycompiler.compiler memescript/meme.mm
-
-memescript/meme_tr.mmc: memescript/meme_tr.mm
-	python -m pycompiler.compiler memescript/meme_tr.mm
-
-stdlib/io.mmc: stdlib/io.mm
-	python -m pycompiler.compiler stdlib/io.mm
-
-stdlib/remote_repl.mmc: stdlib/remote_repl.mm
-	python -m pycompiler.compiler stdlib/remote_repl.mm
-
-memescript/compiler.mmc: memescript/compiler.mm
-	python -m pycompiler.compiler memescript/compiler.mm
+# memescript/compiler.mmc: memescript/compiler.mm
+# 	python -m pycompiler.compiler memescript/compiler.mm
 
 
-mcompiler: memescript/bits.mmc memescript/comp_vmemory.mmc memescript/vmemory.mmc memescript/opcode.mmc memescript/mmc.mmc \
-	memescript/entries.mmc memescript/ometa_base.mmc memescript/meme.mmc stdlib/io.mmc memescript/compiler.mmc stdlib/remote_repl.mmc \
-	memescript/meme_tr.mmc memescript/ometa.mmc
+# mcompiler: memescript/bits.mmc memescript/comp_vmemory.mmc memescript/vmemory.mmc memescript/opcode.mmc memescript/mmc.mmc \
+# 	memescript/entries.mmc memescript/ometa_base.mmc memescript/meme.mmc stdlib/io.mmc memescript/compiler.mmc stdlib/remote_repl.mmc \
+# 	memescript/meme_tr.mmc memescript/ometa.mmc

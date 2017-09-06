@@ -38,7 +38,7 @@ typedef boost::unordered_map<std::string, MMCImage*,
 class VM {
 
 public:
-  VM(int argc, char** argv, bool online, bool profile, const char* core_img_filepath);
+  VM(int argc, char** argv, bool online, bool profile, const std::string& core_img_filepath);
 
   int& argc() { return _argc; };
   char** argv() { return _argv; };

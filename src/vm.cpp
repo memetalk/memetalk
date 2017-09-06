@@ -19,7 +19,7 @@
 #define ERROR() MMLog::error() << "[VM|" << __FUNCTION__ << "] " << _log.normal
 
 
-VM::VM(int argc, char** argv, bool online, bool profile, const char* core_img_filepath)
+VM::VM(int argc, char** argv, bool online, bool profile, const std::string& core_img_filepath)
   : _log(LOG_VM), _argc(argc), _argv(argv), _online(online), _profile(profile),
     _core_image(new (GC) CoreImage(this, core_img_filepath)), _mmobj(new (GC) MMObj(_core_image)),
     _debugger_module(MM_NULL) {
@@ -95,12 +95,8 @@ int VM::start() {
 
   char* module_path;
   oop imod;
-  if (_argc == 2) {
-    //meme <filepath.mm> We might need to compile it
-    imod = maybe_compile_local_source(proc, _argv[1]);
-  } else if (_argc == 3) {
-    assert(strcmp(_argv[1], "-m") == 0);
-    //meme <repo:path@version>
+  if (strcmp(_argv[1], "-m") == 0) {
+    //meme -m <repo:path@version>
     module_path = _argv[2];
     try {
       imod = instantiate_meme_module(proc, module_path, _mmobj->mm_list_new());
@@ -108,6 +104,9 @@ int VM::start() {
       print_error(proc, e.mm_exception);
       return 1;//* (int*) (void*) &(e.mm_exception);
     }
+  } else {
+    //meme <filepath.mm> We might need to compile it
+    imod = maybe_compile_local_source(proc, _argv[1]);
   }
 
   int exc;
@@ -355,21 +354,26 @@ void VM::maybe_load_config() {
   try {
     boost::property_tree::read_json("meme.config", pt);
   } catch(...) {
-    DBG("No meme.config present");
-    return;
+    DBG("Unable to read meme.config in current directory" << endl);
+    try {
+      boost::property_tree::read_json(std::string(getenv("HOME")) + "/.meme.config", pt);
+    } catch(...) {
+      std::cerr << "fatal error:\n\tUnable to read configuration file\n";
+      bail();
+    }
   }
 
   try {
     ptree node = pt.get_child("repositories");
     boost::property_tree::ptree::iterator iter;
     for(iter = node.begin(); iter != node.end(); iter++) {
-      // std::cerr << iter->first << " " << iter->second.data() << std::endl;
+      DBG("config.repositories " << iter->first << " -> " << iter->second.data() << endl);
       _repo_locations[iter->first] = iter->second.data();
     }
 
     node = pt.get_child("override_to_local");
     for(iter = node.begin(); iter != node.end(); iter++) {
-      // std::cerr << iter->first << " " << iter->second.data() << std::endl;
+      DBG("override_to_local: " << iter->first << " -> " << iter->second.data() << std::endl);
       _repo_override[iter->first] = iter->second.data();
     }
   } catch(...) {
@@ -378,10 +382,11 @@ void VM::maybe_load_config() {
 }
 
 char* VM::fetch_module(const std::string& mod_path, int* file_size) {
-  DBG("fetch module " << mod_path << std::endl);
+  DBG("fetch module '" << mod_path << "'" << std::endl);
   //1-check for overriding rules
   boost::unordered_map<std::string, std::string>::iterator it;
   for (it = _repo_override.begin(); it != _repo_override.end(); it++) {
+    DBG("looking for overriding rules: '" << it->first << "'" << endl);
     if (mod_path.find(it->first) == 0) {
       std::string local_path =it->second + mod_path.substr(it->first.length());
       DBG("translating " << mod_path << " to local path " << local_path << std::endl);

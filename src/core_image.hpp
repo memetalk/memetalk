@@ -15,7 +15,7 @@ class CoreImage {
   static int TOTAL_PRIMES;
 
 public:
-  CoreImage(VM*, const char*);
+  CoreImage(VM*, const std::string&);
   void load();
   inline oop get_prime(const char* name) { return _primes.at(name); }
   bool has_class(const char*);
@@ -29,7 +29,7 @@ private:
 
   MMLog _log;
   VM* _vm;
-  const char* _filepath;
+  std::string _filepath;
   int _data_size;
   char* _data;
 

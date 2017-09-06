@@ -46,7 +46,7 @@ const char* CoreImage::PRIMES_NAMES[] = {"Behavior",
 int CoreImage::TOTAL_PRIMES = 30;
 
 
-CoreImage::CoreImage(VM* vm, const char* filepath)
+CoreImage::CoreImage(VM* vm, const std::string& filepath)
   : _log(LOG_CORE),_vm(vm), _filepath(filepath) {
   for (int i = 0; i < TOTAL_PRIMES; i++) {
     _primes[PRIMES_NAMES[i]] = MM_NULL;

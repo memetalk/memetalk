@@ -1,0 +1,119 @@
+meme central:memescript/compiler
+requires io
+where
+ io = central:stdlib/io
+
+
+//outside of Exception hierarchy, so
+//the catch blocks of exception tests won't suppress it
+class AssertionException
+  fields: message;
+  init new: fun(message) {
+    @message = message;
+  }
+  instance_method message: fun() {
+    return @message;
+  }
+  instance_method throw: fun() {
+    <primitive "exception_throw">
+  }
+  instance_method message: fun() {
+    return @message;
+  }
+  instance_method stack_trace: fun() {
+    return @message;
+  }
+  instance_method toString: fun() {
+    return this.message.toString();
+  }
+  class_method throw: fun(msg) {
+    this.new(msg).throw;
+  }
+end
+
+class Test
+fields: current_file, total_debugger_tests, debugger_test_module, test_idx;
+instance_method test_files: fun(path) {
+  <primitive "test_files">
+}
+
+instance_method test_import: fun(filepath, args) {
+  <primitive "test_import">
+}
+
+instance_method assert: fun(x,desc) {
+  if (!x) {
+    if (desc) {
+      AssertionException.throw("assertion failed: '" + desc + "'");
+    } else {
+      AssertionException.throw("assertion failed");
+    }
+  }
+}
+
+instance_method assertEqual: fun(x,y, desc) {
+  if (x != y) {
+    if (!desc) {
+      desc = "";
+    }
+    desc = desc + " " + x.toString + " != " + y.toString;
+    AssertionException.throw("assertion failed: " + desc);
+  }
+}
+
+instance_method assertLocation: fun(proc, expected_mod_fun, expected_loc) {
+  var frame = proc.frames[0];
+  var cf = frame.cp().compiledFunction();
+  var loc = cf.source_location_for(frame);
+  this.assertEqual(expected_mod_fun, cf.fullName, null);
+  this.assertEqual(loc, expected_loc, null);
+}
+
+instance_method do_test: fun(name, f) {
+  try {
+    io.print("test:executing " + name);
+    f();
+    io.print("test:passed " + name);
+  } catch(AssertionException e) {
+    io.print(e.message + " on " + name);
+    Exception.throw("test:interrupted");
+  }
+}
+
+instance_method test_file: fun(mmc_test_file) {
+  @current_file = mmc_test_file;
+  var m = this.test_import(mmc_test_file, [this]);
+  this.do_test(mmc_test_file, fun() {  m.main(); });
+}
+
+instance_method start: fun(path) {
+  this.test_files(path).each(fun(_, mmc_test_file) {
+    this.test_file(mmc_test_file)
+  });
+}
+
+instance_method process_paused: fun(_) {
+  var name = @current_file + "[step " + @test_idx.toString + "]";
+  var idx = @test_idx;
+  @test_idx = @test_idx + 1;
+  var fname = "step" + idx.toString;
+  this.do_test(name, fun() { @debugger_test_module.send(fname.toSymbol, []) });
+  return :resume;
+}
+
+instance_method set_debugger_tests: fun(mod, tests_number) {
+  @test_idx = 0;
+  @debugger_test_module = mod;
+  @total_debugger_tests = tests_number;
+}
+
+end
+
+main: fun() {
+  if (argv.size == 2) {
+    Test.new.start(argv[1]);
+  } else {
+    Test.new.start("../tests");
+  }
+  return 0;
+}
