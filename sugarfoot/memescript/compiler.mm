@@ -135,7 +135,7 @@ instance_method parse: fun() {
   var ast = ometa_base.parse(io.read_file(@filepath), meme.MemeScriptParser, :start);
   if (ast[0]) {
     io.print(ast[0]);
-    exit(1);
+    exit(1); //FIXME: we probably want to raise as this might be used as a library
   } else {
     return ast[1];
   }
@@ -148,7 +148,7 @@ instance_method translate: fun(ast) {
     parser.apply();
   } catch(e) {
     io.print(input.format_error);
-    exit(1);
+    exit(1); //FIXME: we probably want to raise as this might be used as a library
   }
 }
 instance_method compile: fun(filepath) {
@@ -175,4 +175,8 @@ main: fun() {
       Compiler.new.compile(path);
    });
   }
+}
+
+compile: fun(path) {
+  Compiler.new.compile(path);
 }

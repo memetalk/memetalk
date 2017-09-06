@@ -23,6 +23,12 @@ void create_cache_dir(std::string& path) {
   }
 }
 
+// char* read_first_line(char* filepath, int* file_size) {
+//   fstream file;
+//   file.open(filepath, fstream::in | fstream::binary);
+//   return read_file(file, file_size);
+// }
+
 char* read_file(fstream& file, int* file_size) {
   string contents(static_cast<stringstream const&>(stringstream() << file.rdbuf()).str());
   *file_size = file.tellg();

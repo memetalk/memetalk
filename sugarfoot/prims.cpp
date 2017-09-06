@@ -48,7 +48,7 @@ static int prim_remote_repl_instantiate_module(Process* proc) {
   try {
     DBG("instantiating module" << module_name << endl);
 
-    oop imod = proc->vm()->instantiate_module(proc, module_name,
+    oop imod = proc->vm()->instantiate_meme_module(proc, module_name,
                                               proc->mmobj()->mm_list_new());
     proc->stack_push(imod);
     return 0;

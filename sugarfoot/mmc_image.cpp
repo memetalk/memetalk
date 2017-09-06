@@ -136,7 +136,7 @@ void MMCImage::load_default_dependencies_and_assign_module_arguments(oop imodule
     oop mod_name = it->second; //_mmobj->mm_dictionary_entry_value(default_params_dict, i);
     char* str_mod_name = _mmobj->mm_string_cstr(_proc, mod_name);
     DBG(">>> instantiating default module: " << str_mod_name << endl);
-    oop imd = _proc->vm()->instantiate_module(_proc, str_mod_name,
+    oop imd = _proc->vm()->instantiate_meme_module(_proc, str_mod_name,
                                       _mmobj->mm_list_new());
     DBG("<<<< DONE instantiating default module: " << str_mod_name << endl);
     number midx = _mmobj->mm_list_index_of(_proc, params_list, _mmobj->mm_symbol_to_string(_proc, lhs_name));

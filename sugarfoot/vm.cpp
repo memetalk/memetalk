@@ -8,6 +8,7 @@
 #include "utils.hpp"
 #include "mmc_fun.hpp"
 #include <cstdlib>
+#include <boost/filesystem.hpp>
 
 #include <gc_cpp.h>
 #include "gc/gc_allocator.h"
@@ -87,21 +88,26 @@ Process* VM::init() {
 
 int VM::start() {
   if (_argc < 2) {
-    bail("usage: meme <module-path>");
+    bail("usage: meme <filepath.mm> | -m <module>");
   }
-
-  char* module_path = _argv[1];
 
   Process* proc = init();
 
-  // dump_prime_info();
-
+  char* module_path;
   oop imod;
-  try {
-    imod = instantiate_module(proc, module_path, _mmobj->mm_list_new());
-  } catch(mm_exception_rewind e) {
-    print_error(proc, e.mm_exception);
-    return * (int*) (void*) &(e.mm_exception);
+  if (_argc == 2) {
+    //meme <filepath.mm> We might need to compile it
+    imod = maybe_compile_local_source(proc, _argv[1]);
+  } else if (_argc == 3) {
+    assert(strcmp(_argv[1], "-m") == 0);
+    //meme <repo:path@version>
+    module_path = _argv[2];
+    try {
+      imod = instantiate_meme_module(proc, module_path, _mmobj->mm_list_new());
+    } catch(mm_exception_rewind e) {
+      print_error(proc, e.mm_exception);
+      return 1;//* (int*) (void*) &(e.mm_exception);
+    }
   }
 
   int exc;
@@ -130,7 +136,7 @@ std::pair<Process*, oop> VM::start_debugger(Process* target) {
     imod = _debugger_module;
   } else {
     try {
-      imod = instantiate_module(dbg_proc, "central:stdlib/remote_repl", _mmobj->mm_list_new());
+      imod = instantiate_meme_module(dbg_proc, "central:stdlib/remote_repl", _mmobj->mm_list_new());
     } catch(mm_exception_rewind e) {
       ERROR() << "uncaught exception while instantiating debugger module :(" << endl;
       dbg_proc->fail(e.mm_exception);
@@ -183,7 +189,7 @@ void VM::register_primitive(std::string name, prim_function_t fun) {
 //   return _primitives.at(name);
 // }
 
-oop VM::instantiate_module(Process* proc, const char* mod_path, oop module_args_list) {
+oop VM::instantiate_meme_module(Process* proc, const char* mod_path, oop module_args_list) {
   DBG( "instantiating module " << mod_path << endl);
   MMCImage* mmc;
   modules_map_t::iterator it = _modules.find(mod_path);
@@ -196,6 +202,24 @@ oop VM::instantiate_module(Process* proc, const char* mod_path, oop module_args_
     mmc->load();
   } else {
     DBG("module already loaded " << mod_path << endl);
+    mmc = it->second;
+  }
+  return mmc->instantiate_module(module_args_list);
+}
+
+oop VM::instantiate_local_module(Process* proc, const char* mmc_file_path, oop module_args_list) {
+  DBG( "instantiating module in file " << mmc_file_path << endl);
+  MMCImage* mmc;
+  modules_map_t::iterator it = _modules.find(mmc_file_path);
+  if (it == _modules.end()) {
+    DBG("loading new module " << mmc_file_path << endl);
+    int file_size;
+    char* data = read_mmc_file(mmc_file_path, &file_size);
+    mmc = new (GC) MMCImage(proc, _core_image, mmc_file_path, file_size, data);
+    _modules[mmc_file_path] = mmc;
+    mmc->load();
+  } else {
+    DBG("module already loaded " << mmc_file_path << endl);
     mmc = it->second;
   }
   return mmc->instantiate_module(module_args_list);
@@ -372,4 +396,55 @@ char* VM::fetch_module(const std::string& mod_path, int* file_size) {
   }
   bail(std::string("fatal error:\n\tmodule not found: ") + mod_path);
   return 0;
+}
+
+bool VM::is_mmc_file_older_then_source(std::string src_file_path) {
+  std::string mmc_file_path = src_file_path + "c";
+
+  boost::filesystem::path src_p(src_file_path);
+  boost::filesystem::path mmc_p(mmc_file_path);
+  if (boost::filesystem::exists(mmc_file_path)) {
+    std::time_t t_mmc = boost::filesystem::last_write_time(mmc_p) ;
+    std::time_t t_src = boost::filesystem::last_write_time(src_p) ;
+    return (t_mmc < t_src);
+  } else {
+    return true;
+  }
+}
+
+oop VM::maybe_compile_local_source(Process* proc, std::string filepath) {
+  std::string line;
+  std::fstream file;
+  if (is_mmc_file_older_then_source(filepath)) {
+    DBG("we need to compile " << filepath << endl);
+    file.open(filepath.c_str(), std::fstream::in | std::fstream::binary);
+    if (!file.is_open()) {
+      bail(std::string("file not found: ") + filepath);
+    }
+
+    std::getline(file, line);
+    if (line.find("meme") != 0) {
+      bail(std::string("file is not a memetalk source: ") + filepath);
+    }
+    std::string compiler_module_path = line.substr(5);
+    oop imod;
+    try {
+      DBG("instantiating compiler module : " << compiler_module_path << endl);
+      imod = instantiate_meme_module(proc, compiler_module_path.c_str(), _mmobj->mm_list_new());
+    } catch(mm_exception_rewind e) {
+      DBG("uops\n");
+      print_error(proc, e.mm_exception);
+      bail();
+    }
+    DBG("compiling source with compiler: " << compiler_module_path << endl);
+    int exc;
+    oop res = proc->send_1(imod, new_symbol("compile"), _mmobj->mm_string_new(filepath), &exc);
+    DBG("finished source with compiler: " << compiler_module_path << endl);
+    if (exc) {
+      DBG("compiler failed: " << compiler_module_path << endl);
+      proc->fail(res);
+      bail();
+    }
+  }
+  return instantiate_local_module(proc, (filepath + "c").c_str(), _mmobj->mm_list_new());
 }
