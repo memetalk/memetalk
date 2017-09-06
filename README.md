@@ -52,9 +52,10 @@ $ make test
 
 ## Running
 
-Copy meme.config.sample to ~/.meme.config and, from the repository directory,
-just run:
+Copy meme.config.sample to ~/.meme.config. Edit the paths within
+"override_to_local" key so they point to the correct directories. Then, from
+the repository directory, just run:
 
 ```
-$  ./meme memetalk/stdlib/hello_world.me
+$ ./meme central/stdlib/hello_world.me
    ```
