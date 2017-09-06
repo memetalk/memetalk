@@ -224,8 +224,11 @@ class Compiler(ASTBuilder):
             parser.has_fun_literal = pyutils.Flag() # pymeta uses eval() which disables assignment. This works around it
             return parser.apply(rule, *args)
         except Exception as err:
-            if hasattr(err,'formatError'):
+            print '\n'
+            if hasattr(err,'formatError') and isinstance(parser.input.data[0], (str, unicode)):
                 print err.formatError(''.join(parser.input.data))
+            elif hasattr(err,'formatError') :
+                print err.formatError(parser.input.data)
             else:
                 print err, traceback.format_exc()
             sys.exit(1)
