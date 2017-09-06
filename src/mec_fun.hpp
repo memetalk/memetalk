@@ -1,5 +1,5 @@
-#ifndef MMC_FUN
-#define MMC_FUN
+#ifndef MEC_FUN
+#define MEC_FUN
 
 #include "defs.hpp"
 #include "log.hpp"
@@ -10,11 +10,11 @@ class CoreImage;
 class VM;
 class MMObj;
 
-class MMCFunction {
+class MECFunction {
   static word MAGIC_NUMBER;
   static word HEADER_SIZE;
 public:
-  MMCFunction(VM*, CoreImage*, char* data, int size);
+  MECFunction(VM*, CoreImage*, char* data, int size);
   oop load(Process*);
 private:
   // void check_module_arity(oop module_arguments_list);

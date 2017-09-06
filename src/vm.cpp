@@ -1,12 +1,12 @@
 #include "vm.hpp"
 #include "process.hpp"
 #include "core_image.hpp"
-#include "mmc_image.hpp"
+#include "mec_image.hpp"
 #include "defs.hpp"
 #include "mmobj.hpp"
 #include "prims.hpp"
 #include "utils.hpp"
-#include "mmc_fun.hpp"
+#include "mec_fun.hpp"
 #include <cstdlib>
 #include <boost/filesystem.hpp>
 
@@ -24,9 +24,9 @@ VM::VM(int argc, char** argv, bool online, bool profile, const std::string& core
     _core_image(new (GC) CoreImage(this, core_img_filepath)), _mmobj(new (GC) MMObj(_core_image)),
     _debugger_module(MM_NULL) {
 
-  _mmc_cache_directory = getenv("HOME");
-  _mmc_cache_directory += "/.memetalk/cache/";
-  create_cache_dir(_mmc_cache_directory);
+  _mec_cache_directory = getenv("HOME");
+  _mec_cache_directory += "/.memetalk/cache/";
+  create_cache_dir(_mec_cache_directory);
   maybe_load_config();
 }
 
@@ -88,7 +88,7 @@ Process* VM::init() {
 
 int VM::start() {
   if (_argc < 2) {
-    bail("usage: meme <filepath.mm> | -m <module>");
+    bail("usage: meme <filepath.me> | -m <module>");
   }
 
   Process* proc = init();
@@ -105,7 +105,7 @@ int VM::start() {
       return 1;//* (int*) (void*) &(e.mm_exception);
     }
   } else {
-    //meme <filepath.mm> We might need to compile it
+    //meme <filepath.me> We might need to compile it
     imod = maybe_compile_local_source(proc, _argv[1]);
   }
 
@@ -190,38 +190,38 @@ void VM::register_primitive(std::string name, prim_function_t fun) {
 
 oop VM::instantiate_meme_module(Process* proc, const char* mod_path, oop module_args_list) {
   DBG( "instantiating module " << mod_path << endl);
-  MMCImage* mmc;
+  MECImage* mec;
   modules_map_t::iterator it = _modules.find(mod_path);
   if (it == _modules.end()) {
     DBG("loading new module " << mod_path << endl);
     int file_size;
     char* data = fetch_module(mod_path, &file_size);
-    mmc = new (GC) MMCImage(proc, _core_image, mod_path, file_size, data);
-    _modules[mod_path] = mmc;
-    mmc->load();
+    mec = new (GC) MECImage(proc, _core_image, mod_path, file_size, data);
+    _modules[mod_path] = mec;
+    mec->load();
   } else {
     DBG("module already loaded " << mod_path << endl);
-    mmc = it->second;
+    mec = it->second;
   }
-  return mmc->instantiate_module(module_args_list);
+  return mec->instantiate_module(module_args_list);
 }
 
-oop VM::instantiate_local_module(Process* proc, const char* mmc_file_path, oop module_args_list) {
-  DBG( "instantiating module in file " << mmc_file_path << endl);
-  MMCImage* mmc;
-  modules_map_t::iterator it = _modules.find(mmc_file_path);
+oop VM::instantiate_local_module(Process* proc, const char* mec_file_path, oop module_args_list) {
+  DBG( "instantiating module in file " << mec_file_path << endl);
+  MECImage* mec;
+  modules_map_t::iterator it = _modules.find(mec_file_path);
   if (it == _modules.end()) {
-    DBG("loading new module " << mmc_file_path << endl);
+    DBG("loading new module " << mec_file_path << endl);
     int file_size;
-    char* data = read_mmc_file(mmc_file_path, &file_size);
-    mmc = new (GC) MMCImage(proc, _core_image, mmc_file_path, file_size, data);
-    _modules[mmc_file_path] = mmc;
-    mmc->load();
+    char* data = read_mec_file(mec_file_path, &file_size);
+    mec = new (GC) MECImage(proc, _core_image, mec_file_path, file_size, data);
+    _modules[mec_file_path] = mec;
+    mec->load();
   } else {
-    DBG("module already loaded " << mmc_file_path << endl);
-    mmc = it->second;
+    DBG("module already loaded " << mec_file_path << endl);
+    mec = it->second;
   }
-  return mmc->instantiate_module(module_args_list);
+  return mec->instantiate_module(module_args_list);
 }
 
 // oop VM::get_prime(const char* name) {
@@ -279,8 +279,8 @@ oop VM::recompile_fun(Process* proc, oop cfun, int line, const char* text, int* 
 
     DBG("Done executing python compiler" << endl);
     if (pclose(p) == 0) {
-      MMCFunction* mmcf = new (GC) MMCFunction(this, _core_image, c_data, data.size());
-      oop new_cfun = mmcf->load(proc);
+      MECFunction* mecf = new (GC) MECFunction(this, _core_image, c_data, data.size());
+      oop new_cfun = mecf->load(proc);
       _mmobj->mm_overwrite_compiled_function(proc, cfun, new_cfun);
       return cfun;
     } else {
@@ -311,8 +311,8 @@ oop VM::compile_fun(Process* proc, const char* text, std::list<std::string> vars
     char* c_data = (char*) GC_MALLOC(sizeof(char) * data.size()+1);
     data.copy(c_data, data.size());
     if (pclose(p) == 0) {
-      MMCFunction* mmcf = new (GC) MMCFunction(this, _core_image, c_data, data.size());
-      oop cfun = mmcf->load(proc);
+      MECFunction* mecf = new (GC) MECFunction(this, _core_image, c_data, data.size());
+      oop cfun = mecf->load(proc);
       _mmobj->mm_compiled_function_set_cmod(proc, cfun, cmod);
       return cfun;
     } else {
@@ -390,7 +390,7 @@ char* VM::fetch_module(const std::string& mod_path, int* file_size) {
     if (mod_path.find(it->first) == 0) {
       std::string local_path =it->second + mod_path.substr(it->first.length());
       DBG("translating " << mod_path << " to local path " << local_path << std::endl);
-      return read_mmc_file(local_path + ".mmc", file_size);
+      return read_mec_file(local_path + ".mec", file_size);
     }
   }
   for (it = _repo_locations.begin(); it != _repo_locations.end(); it++) {
@@ -403,15 +403,15 @@ char* VM::fetch_module(const std::string& mod_path, int* file_size) {
   return 0;
 }
 
-bool VM::is_mmc_file_older_then_source(std::string src_file_path) {
-  std::string mmc_file_path = src_file_path + "c";
+bool VM::is_mec_file_older_then_source(std::string src_file_path) {
+  std::string mec_file_path = src_file_path + "c";
 
   boost::filesystem::path src_p(src_file_path);
-  boost::filesystem::path mmc_p(mmc_file_path);
-  if (boost::filesystem::exists(mmc_file_path)) {
-    std::time_t t_mmc = boost::filesystem::last_write_time(mmc_p) ;
+  boost::filesystem::path mec_p(mec_file_path);
+  if (boost::filesystem::exists(mec_file_path)) {
+    std::time_t t_mec = boost::filesystem::last_write_time(mec_p) ;
     std::time_t t_src = boost::filesystem::last_write_time(src_p) ;
-    return (t_mmc < t_src);
+    return (t_mec < t_src);
   } else {
     return true;
   }
@@ -420,7 +420,7 @@ bool VM::is_mmc_file_older_then_source(std::string src_file_path) {
 oop VM::maybe_compile_local_source(Process* proc, std::string filepath) {
   std::string line;
   std::fstream file;
-  if (is_mmc_file_older_then_source(filepath)) {
+  if (is_mec_file_older_then_source(filepath)) {
     DBG("we need to compile " << filepath << endl);
     file.open(filepath.c_str(), std::fstream::in | std::fstream::binary);
     if (!file.is_open()) {

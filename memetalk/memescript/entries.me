@@ -1,10 +1,10 @@
 meme central:memescript/compiler
 
-requires bits, opcode, mmc
+requires bits, opcode, mec
 where
   bits   = central:memescript/bits
   opcode = central:memescript/opcode
-  mmc    = central:memescript/mmc
+  mec    = central:memescript/mec
 
 
 class OrderedDict < Dictionary
@@ -118,7 +118,7 @@ instance_method fill: fun(vmem) {
 
   // emit our object
 
-  vmem.append_int(mmc.FRAME_TYPE_OBJECT, null);
+  vmem.append_int(mec.FRAME_TYPE_OBJECT, null);
   vmem.append_int(@slots.size * bits.WSIZE, null);
 
   var oop = vmem.append_label_ref(@slots[0][:value], @name);
@@ -207,16 +207,16 @@ init new: fun(name, parent_name) {
   super.new();
   @name = name;
   @parent_name = parent_name;
-  @parent_label = mmc.behavior_label(parent_name);
+  @parent_label = mec.behavior_label(parent_name);
   @dictionary = {};
 }
 instance_method label: fun() {
-  return mmc.behavior_label(@name);
+  return mec.behavior_label(@name);
 }
 instance_method fill: fun(vmem) {
   var oop_dict = vmem.append_sym_dict_emiting_entries(@dictionary);
 
-  vmem.append_int(mmc.FRAME_TYPE_OBJECT, null);
+  vmem.append_int(mec.FRAME_TYPE_OBJECT, null);
   vmem.append_int(4 * its.WSIZE, null);
 
   var oop = vmem.append_label_ref("Behavior", this.label); //vt
@@ -238,7 +238,7 @@ init new: fun(imod, cclass) {
   @dictionary = {};
 }
 instance_method label: fun() {
-  return mmc.class_label(@cclass.name);
+  return mec.class_label(@cclass.name);
 }
 instance_method new_instance_method: fun(name) {
   var cfun = @cclass.new_instance_method(name);
@@ -263,17 +263,17 @@ instance_method fill: fun(vmem) {
 
   var oop_dict = vmem.append_sym_dict_emiting_entries(@dictionary);
 
-  vmem.append_int(mmc.FRAME_TYPE_OBJECT, null);
+  vmem.append_int(mec.FRAME_TYPE_OBJECT, null);
   vmem.append_int(5 * bits.WSIZE, null);
 
   oop_vt = @behavior.fill(vmem);
 
   // oop = vmem.append_label_ref(behavior_label(self.cclass.name),  self.label())  // vt
   var oop = vmem.append_pointer_to(oop_vt, this.label); // vt
-  vmem.append_label_ref(mmc.class_label(@cclass.super_name), null);              // delegate
+  vmem.append_label_ref(mec.class_label(@cclass.super_name), null);              // delegate
   vmem.append_pointer_to(oop_dict, null);                                        // dict: "methods"
   vmem.append_int(@cclass.fields_list.size, null);                                  // payload
-  vmem.append_label_ref(mmc.cclass_label(@cclass.name), null);                   // compiled_class
+  vmem.append_label_ref(mec.cclass_label(@cclass.name), null);                   // compiled_class
   // vmem.append_pointer_to(self.cclass.oop)                                     // <-
   return this.set_oop(oop);
 }
@@ -294,7 +294,7 @@ instance_method fields_list: fun() {
   return @fields_list;
 }
 instance_method label: fun() {
-  return mmc.cclass_label(@name); //cmod.label() + '_' + self.name + "_CompiledClass"
+  return mec.cclass_label(@name); //cmod.label() + '_' + self.name + "_CompiledClass"
 }
 instance_method new_ctor: fun(name) {
   var fn = CompiledFunction.new(@cmod, this, name, [], true,
@@ -331,7 +331,7 @@ instance_method fill: fun(vmem) {
   var oop_methods = vmem.append_sym_dict_emiting_entries(@instance_methods);
   var oop_class_methods = vmem.append_sym_dict_emiting_entries(@class_methods);
 
-  vmem.append_int(mmc.FRAME_TYPE_OBJECT, null);
+  vmem.append_int(mec.FRAME_TYPE_OBJECT, null);
   vmem.append_int(8 * bits.WSIZE, null);
 
   var oop = vmem.append_external_ref("CompiledClass", this.label); // vt: CompiledClass
@@ -508,7 +508,7 @@ instance_method top_level_cfun: fun() {
 
 instance_method label: fun() {
   if (@label == null) {
-    @label = mmc.cfun_label(@owner.label_counter, @owner.label, @name, Mirror.vtFor(@owner) == CompiledClass);
+    @label = mec.cfun_label(@owner.label_counter, @owner.label, @name, Mirror.vtFor(@owner) == CompiledClass);
   }
   return @label;
 }
@@ -543,7 +543,7 @@ instance_method fill_literal_frame: fun(vmem) {
     }
   });
 
-  vmem.append_int(mmc.FRAME_TYPE_LITERAL_FRAME, null);
+  vmem.append_int(mec.FRAME_TYPE_LITERAL_FRAME, null);
   vmem.append_int(@literal_frame.size * bits.WSIZE, null);
 
   vmem.label_current(this.literal_frame_label);
@@ -572,7 +572,7 @@ instance_method fill_bytecodes: fun(vmem) {
 
   var bytecodes = @bytecodes.words.map(fun(w) { bits.pack32(w) }).join("");
 
-  vmem.append_int(mmc.FRAME_TYPE_BYTECODE_FRAME, null);
+  vmem.append_int(mec.FRAME_TYPE_BYTECODE_FRAME, null);
   vmem.append_int(bits.string_block_size(bytecodes + "\0"), null);
 
   vmem.label_current(this.bytecode_label);
@@ -593,8 +593,8 @@ instance_method fill_exceptions_frame: fun(vmem) {
     }
   });
 
-  vmem.append_int(mmc.FRAME_TYPE_EXCEPTIONS_FRAME, null);
-  vmem.append_int(@exceptions_frame.size * mmc.EXCEPTION_FRAME_SIZE * bits.WSIZE, null);
+  vmem.append_int(mec.FRAME_TYPE_EXCEPTIONS_FRAME, null);
+  vmem.append_int(@exceptions_frame.size * mec.EXCEPTION_FRAME_SIZE * bits.WSIZE, null);
 
   vmem.label_current(this.exceptions_frame_label);
 
@@ -642,7 +642,7 @@ instance_method fill: fun(vmem) {
 
   var oop_closures = vmem.append_list_of_oops_for_labels(@closures.map(fun(x) { x.label }));
 
-  vmem.append_int(mmc.FRAME_TYPE_OBJECT, null);
+  vmem.append_int(mec.FRAME_TYPE_OBJECT, null);
   vmem.append_int(28 * bits.WSIZE, null);
 
   var oop = vmem.append_external_ref("CompiledFunction", this.label); // ComppiledFunction vt
@@ -712,7 +712,7 @@ instance_method new_closure: fun(params) {
     top_level_cfun = @top_level_cfun;
   }
 
-  var cfun = CompiledFunction.new(@cmod, @owner, mmc.closure_name(@owner.label_counter), params,
+  var cfun = CompiledFunction.new(@cmod, @owner, mec.closure_name(@owner.label_counter), params,
                                   false, @var_declarations, false, this, top_level_cfun);
 
   if (@is_top_level) {
@@ -1157,12 +1157,12 @@ instance_method set_primitive: fun(prim_name) {
   @cfun.set_primitive(prim_name);
 }
 instance_method label: fun() {
-  return mmc.fun_label(@cfun.label);
+  return mec.fun_label(@cfun.label);
 }
 instance_method fill: fun(vmem) {
   var delegate = vmem.append_object_instance();
 
-  vmem.append_int(mmc.FRAME_TYPE_OBJECT, null);
+  vmem.append_int(mec.FRAME_TYPE_OBJECT, null);
   vmem.append_int(4 * bits.WSIZE, null);
 
   var oop = vmem.append_label_ref("Function", this.label); //vt
@@ -1221,7 +1221,7 @@ instance_method entry_labels: fun() {
   return @functions.keys() + @classes.keys();
 }
 instance_method label: fun() {
-  return mmc.cmod_label(@name);
+  return mec.cmod_label(@name);
 }
 
 instance_method new_function: fun(name, params) {
@@ -1250,7 +1250,7 @@ instance_method fill: fun(vmem) {
   var oop_functions = vmem.append_sym_dict_emiting_entries(@functions);
   var oop_classes = vmem.append_sym_dict_emiting_entries(@classes);
 
-  vmem.append_int(mmc.FRAME_TYPE_OBJECT, null);
+  vmem.append_int(mec.FRAME_TYPE_OBJECT, null);
   vmem.append_int(10 * bits.WSIZE, null);
 
   var oop = vmem.append_external_ref("CompiledModule", this.label); // vt: CompiledModule
@@ -1325,7 +1325,7 @@ instance_method emit_dict: fun(vmem) {
 instance_method fill: fun(vmem) {
   var oop_dict = this.emit_dict(vmem);
 
-  vmem.append_int(mmc.FRAME_TYPE_OBJECT, null);
+  vmem.append_int(mec.FRAME_TYPE_OBJECT, null);
   vmem.append_int((4 + @objects.size + @classes.size) * bits.WSIZE, null);
 
   var oop = vmem.append_label_ref(this.label, this.label); //vt

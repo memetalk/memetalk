@@ -1,10 +1,10 @@
 meme central:memescript/compiler
 
 
-requires bits, mmc, io
+requires bits, mec, io
 where
   bits     = central:memescript/bits
-  mmc      = central:memescript/mmc
+  mec      = central:memescript/mec
   io       = central:stdlib/io
 
 class Cell
@@ -294,7 +294,7 @@ instance_method append_dict_with_pairs: fun(pairs) {
   return oop;
 }
 instance_method _append_dict_frame: fun(pairs) {
-  this.append_int(mmc.FRAME_TYPE_ELEMENTS, null);
+  this.append_int(mec.FRAME_TYPE_ELEMENTS, null);
   this.append_int(pairs.size * 2 * bits.WSIZE, null);
 
   var oops = [];

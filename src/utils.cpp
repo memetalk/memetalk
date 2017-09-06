@@ -69,7 +69,7 @@ namespace fs = ::boost::filesystem;
 //   }
 // }
 
-char* read_mmc_file(const std::string& file_path, int* file_size) {
+char* read_mec_file(const std::string& file_path, int* file_size) {
   fstream file;
   file.open(file_path.c_str(), fstream::in | fstream::binary); //might be an absolute path
 

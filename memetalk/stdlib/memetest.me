@@ -80,15 +80,15 @@ instance_method do_test: fun(name, f) {
   }
 }
 
-instance_method test_file: fun(mmc_test_file) {
-  @current_file = mmc_test_file;
-  var m = this.test_import(mmc_test_file, [this]);
-  this.do_test(mmc_test_file, fun() {  m.main(); });
+instance_method test_file: fun(mec_test_file) {
+  @current_file = mec_test_file;
+  var m = this.test_import(mec_test_file, [this]);
+  this.do_test(mec_test_file, fun() {  m.main(); });
 }
 
 instance_method start: fun(path) {
-  this.test_files(path).each(fun(_, mmc_test_file) {
-    this.test_file(mmc_test_file)
+  this.test_files(path).each(fun(_, mec_test_file) {
+    this.test_file(mec_test_file)
   });
 }
 

@@ -1,6 +1,6 @@
 #include "defs.hpp"
 #include "utils.hpp"
-#include "mmc_fun.hpp"
+#include "mec_fun.hpp"
 #include "core_image.hpp"
 #include "mmobj.hpp"
 #include "vm.hpp"
@@ -8,18 +8,18 @@
 
 using namespace std;
 
-#define DBG() _log << _log.blue + _log.bold + "[MMCFun|" << __FUNCTION__ << "] " << _log.normal
-#define WARNING() MMLog::warning() << "[MMCFun|" << __FUNCTION__ << "] " << _log.normal
-#define ERROR() MMLog::error() << "[MMCFun|" << __FUNCTION__ << "] " << _log.normal
+#define DBG() _log << _log.blue + _log.bold + "[MECFun|" << __FUNCTION__ << "] " << _log.normal
+#define WARNING() MMLog::warning() << "[MECFun|" << __FUNCTION__ << "] " << _log.normal
+#define ERROR() MMLog::error() << "[MECFun|" << __FUNCTION__ << "] " << _log.normal
 
-word MMCFunction::HEADER_SIZE = 6 * WSIZE;
-word MMCFunction::MAGIC_NUMBER = 0x420;
+word MECFunction::HEADER_SIZE = 6 * WSIZE;
+word MECFunction::MAGIC_NUMBER = 0x420;
 
-MMCFunction::MMCFunction(VM* vm, CoreImage* core_image, char* data, int data_size)
-  : _log(LOG_MMCFUN), _vm(vm), _mmobj(vm->mmobj()), _core_image(core_image), _data_size(data_size), _data(data) {
+MECFunction::MECFunction(VM* vm, CoreImage* core_image, char* data, int data_size)
+  : _log(LOG_MECFUN), _vm(vm), _mmobj(vm->mmobj()), _core_image(core_image), _data_size(data_size), _data(data) {
 }
 
-void MMCFunction::load_header() {
+void MECFunction::load_header() {
   word magic_number = unpack_word(_data, 0 * WSIZE);
   _ot_size = unpack_word(_data,  1 * WSIZE);
   _er_size = unpack_word(_data, 2 * WSIZE);
@@ -28,7 +28,7 @@ void MMCFunction::load_header() {
   _cfun_addr = unpack_word(_data,  5 * WSIZE);
 
   DBG() << " ============ eval: ===========" << endl;
-  DBG() << "Header:magic: " << magic_number << " =?= " << MMCFunction::MAGIC_NUMBER << endl;
+  DBG() << "Header:magic: " << magic_number << " =?= " << MECFunction::MAGIC_NUMBER << endl;
   DBG() << "Header:ot_size: " << _ot_size << endl;
   DBG() << "Header:er_size: " << _er_size << endl;
   DBG() << "Header:es_size: " << _es_size << endl;
@@ -36,7 +36,7 @@ void MMCFunction::load_header() {
   DBG() << "Header:cfun_addr: " << _cfun_addr << endl;
 }
 
-void MMCFunction::link_external_references() {
+void MECFunction::link_external_references() {
   const char* base = _data;
   int start_external_refs = HEADER_SIZE + _names_size + _ot_size;
 
@@ -51,7 +51,7 @@ void MMCFunction::link_external_references() {
   }
 }
 
-oop MMCFunction::load(Process* proc /*, oop cmod*/) {
+oop MECFunction::load(Process* proc /*, oop cmod*/) {
   load_header();
   relocate_addresses(_data, _data_size, HEADER_SIZE + _names_size + _ot_size + _er_size + _es_size);
   link_external_references();

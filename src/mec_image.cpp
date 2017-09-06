@@ -1,6 +1,6 @@
 #include "defs.hpp"
 #include "utils.hpp"
-#include "mmc_image.hpp"
+#include "mec_image.hpp"
 #include "core_image.hpp"
 #include "mmobj.hpp"
 #include "vm.hpp"
@@ -9,33 +9,33 @@
 
 using namespace std;
 
-#define DBG(...) if(_log._enabled) { _log << _log.blue + _log.bold + "[MMCImg|" << __FUNCTION__ << "|" << _mod_path <<"] " << _log.normal << __VA_ARGS__; }
-#define WARNING() MMLog::warning() << "[MMCImg|" << __FUNCTION__ << "" << _mod_path << "] " << _log.normal
-#define ERROR() MMLog::error() << "[MMCImg|" << __FUNCTION__ << "|" << _mod_path << "] " << _log.normal
+#define DBG(...) if(_log._enabled) { _log << _log.blue + _log.bold + "[MECImg|" << __FUNCTION__ << "|" << _mod_path <<"] " << _log.normal << __VA_ARGS__; }
+#define WARNING() MMLog::warning() << "[MECImg|" << __FUNCTION__ << "" << _mod_path << "] " << _log.normal
+#define ERROR() MMLog::error() << "[MECImg|" << __FUNCTION__ << "|" << _mod_path << "] " << _log.normal
 
-word MMCImage::HEADER_SIZE = 5 * WSIZE;
-word MMCImage::MAGIC_NUMBER = 0x420;
+word MECImage::HEADER_SIZE = 5 * WSIZE;
+word MECImage::MAGIC_NUMBER = 0x420;
 
-MMCImage::MMCImage(Process* proc, CoreImage* core_image, const std::string& mod_path, int data_size, char* data)
-  : _log(LOG_MMCIMG), _proc(proc), _mmobj(proc->vm()->mmobj()), _core_image(core_image),
+MECImage::MECImage(Process* proc, CoreImage* core_image, const std::string& mod_path, int data_size, char* data)
+  : _log(LOG_MECIMG), _proc(proc), _mmobj(proc->vm()->mmobj()), _core_image(core_image),
     _mod_path(mod_path), _data_size(data_size), _data(data) {
 }
 
-void MMCImage::load_header() {
+void MECImage::load_header() {
   word magic_number = unpack_word(_data, 0 * WSIZE);
   _ot_size = unpack_word(_data,  1 * WSIZE);
   _er_size = unpack_word(_data, 2 * WSIZE);
   _st_size = unpack_word(_data, 3 * WSIZE);
   _names_size = unpack_word(_data,  4 * WSIZE);
 
-  DBG("Header:magic: " << magic_number << " =?= " << MMCImage::MAGIC_NUMBER << endl);
+  DBG("Header:magic: " << magic_number << " =?= " << MECImage::MAGIC_NUMBER << endl);
   DBG("Header:ot_size: " << _ot_size << endl);
   DBG("Header:er_size: " << _er_size << endl);
   DBG("Header:st_size: " << _st_size << endl);
   DBG("Header:names_size: " << _names_size << endl);
 }
 
-void MMCImage::link_external_references() {
+void MECImage::link_external_references() {
   const char* base = _data;
   int start_external_refs = HEADER_SIZE + _names_size + _ot_size;
 
@@ -50,7 +50,7 @@ void MMCImage::link_external_references() {
   }
 }
 
-oop MMCImage::instantiate_class(oop class_name, oop cclass, oop cclass_dict, std::map<std::string, oop>& mod_classes, oop imodule) {
+oop MECImage::instantiate_class(oop class_name, oop cclass, oop cclass_dict, std::map<std::string, oop>& mod_classes, oop imodule) {
   char* cname = _mmobj->mm_string_cstr(_proc, class_name);
   DBG("Instantiating class " << cname << endl);
   oop super_name = _mmobj->mm_compiled_class_super_name(_proc, cclass);
@@ -107,7 +107,7 @@ oop MMCImage::instantiate_class(oop class_name, oop cclass, oop cclass_dict, std
 }
 
 
-void MMCImage::assign_module_arguments(oop imodule, oop mod_arguments_list) {
+void MECImage::assign_module_arguments(oop imodule, oop mod_arguments_list) {
   oop cmod_params_list =   _mmobj->mm_compiled_module_params(_proc, _compiled_module);
 
   if (!(_mmobj->mm_list_size(_proc, cmod_params_list) >= _mmobj->mm_list_size(_proc, mod_arguments_list))) {
@@ -120,7 +120,7 @@ void MMCImage::assign_module_arguments(oop imodule, oop mod_arguments_list) {
   }
 }
 
-void MMCImage::load_default_dependencies_and_assign_module_arguments(oop imodule) {
+void MECImage::load_default_dependencies_and_assign_module_arguments(oop imodule) {
   //for each p in _cmod->default_params:
   //   imod = load it
   //   idx = index(p.name, cmod->params)
@@ -148,7 +148,7 @@ void MMCImage::load_default_dependencies_and_assign_module_arguments(oop imodule
   }
 }
 
-void MMCImage::load_imports(oop imodule, oop imports_dict, number num_params) {
+void MECImage::load_imports(oop imodule, oop imports_dict, number num_params) {
   // [print] <= test;
   number num_imports = _mmobj->mm_dictionary_size(_proc, imports_dict);
   oop cmod_params_list =   _mmobj->mm_compiled_module_params(_proc, _compiled_module);
@@ -178,7 +178,7 @@ void MMCImage::load_imports(oop imodule, oop imports_dict, number num_params) {
   }
 }
 
-void MMCImage::create_import_getters(oop imodule, oop imod_dict,
+void MECImage::create_import_getters(oop imodule, oop imod_dict,
                                     oop imports_dict, number num_params) {
   DBG("Creating imports: " << _mmobj->mm_dictionary_size(_proc, imports_dict) << endl);
 
@@ -197,7 +197,7 @@ void MMCImage::create_import_getters(oop imodule, oop imod_dict,
   }
 }
 
-void MMCImage::create_param_getters(oop imodule, oop imod_dict, oop params_list) {
+void MECImage::create_param_getters(oop imodule, oop imod_dict, oop params_list) {
   number num_params = _mmobj->mm_list_size(_proc, params_list);
 
   for (int i = 0; i < num_params; i++) {
@@ -210,7 +210,7 @@ void MMCImage::create_param_getters(oop imodule, oop imod_dict, oop params_list)
 }
 
 
-void MMCImage::check_module_arity(oop module_arguments_list) {
+void MECImage::check_module_arity(oop module_arguments_list) {
   oop params = _mmobj->mm_compiled_module_params(_proc, _compiled_module);
   number num_params = _mmobj->mm_list_size(_proc, params);
 
@@ -230,7 +230,7 @@ void MMCImage::check_module_arity(oop module_arguments_list) {
   }
 }
 
-oop MMCImage::instantiate_module(oop module_arguments_list) {
+oop MECImage::instantiate_module(oop module_arguments_list) {
   DBG(" ============ instantiate module ===========" << endl);
 
   // word* cmod = (word*) _compiled_module;
@@ -342,7 +342,7 @@ oop MMCImage::instantiate_module(oop module_arguments_list) {
 }
 
 
-oop MMCImage::load() {
+oop MECImage::load() {
   DBG(" ============ Load module ===========" << endl);
   load_header();
   relocate_addresses(_data, _data_size, HEADER_SIZE + _names_size + _ot_size + _er_size + _st_size);

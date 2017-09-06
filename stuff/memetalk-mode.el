@@ -596,7 +596,7 @@
 
 (defun memetalk-process-module-response (res file-part)
   (string-match "\\([a-zA-Z0-9_]+\\)[:/]" file-part)
-  (let ((mod-name (concat (match-string-no-properties 1 file-part) ".mm")))
+  (let ((mod-name (concat (match-string-no-properties 1 file-part) ".me")))
     ;(message (format "matched module '%s', path: %s" mod-name (memetalk-get-module-file-path mod-name)))
     (let ((mod-path (memetalk-get-module-file-path mod-name)))
       (with-current-buffer (find-file mod-path)
@@ -718,7 +718,7 @@
                 current-line)))))
 
 ;;;###autoload
-(add-to-list 'auto-mode-alist '("\\.mm\\'" . memetalk-mode))
+(add-to-list 'auto-mode-alist '("\\.me\\'" . memetalk-mode))
 
 (provide 'memetalk-mode)
 ;;; memetalk-mode ends here

@@ -3,13 +3,13 @@ MEME_STDLIB_DIR = $(ROOT_DIR)/memetalk/stdlib
 PY_DIR = $(ROOT_DIR)/py
 
 # compiling io using pycompiler
-io.mmc: io.mm
-	cd $(PY_DIR); python -m pycompiler.compiler $(MEME_STDLIB_DIR)/io.mm
+io.mec: io.me
+	cd $(PY_DIR); python -m pycompiler.compiler $(MEME_STDLIB_DIR)/io.me
 
-qt.mmc: qt.mm
-	cd $(PY_DIR); python -m pycompiler.compiler $(MEME_STDLIB_DIR)/qt.mm
+qt.mec: qt.me
+	cd $(PY_DIR); python -m pycompiler.compiler $(MEME_STDLIB_DIR)/qt.me
 
-all: io.mmc qt.mmc
+all: io.mec qt.mec
 
 clean:
-	rm -f *.mmc
+	rm -f *.mec

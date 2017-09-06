@@ -7,10 +7,10 @@
 ** Compilation (Major Issues) [0/5]
 *** DOING Compiler written in Memescript (dump python)
     * Likely needs some form of packaging to separate code into
-      different .mm files (otherwise a "compiler.mm" will be huge and
+      different .me files (otherwise a "compiler.me" will be huge and
       take a long time to compile; the compiler in python has 9 files!)
 *** TODO Loader written in MemeScript (dump C++ loader)
-    * Implement remote loader, caching of .mmc files and respecting
+    * Implement remote loader, caching of .mec files and respecting
       version information.
 *** TODO Measure & Improve Performance [0/2]
     * [ ] Dashboard for visualizing metrics

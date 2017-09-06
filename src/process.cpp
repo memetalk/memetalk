@@ -6,7 +6,7 @@
 #include "defs.hpp"
 #include "vm.hpp"
 #include "core_image.hpp"
-#include "mmc_image.hpp"
+#include "mec_image.hpp"
 #include "mmobj.hpp"
 #include "utils.hpp"
 #include "ctrl.hpp"
@@ -1588,7 +1588,7 @@ oop Process::unwind_with_exception(oop e) {
 
 void Process::raise(const char* ex_type_name, const char* msg) {
   WARNING() << ex_type_name << " -- " << msg << endl;
-  //TODO: this is used by mmc_image. I think we should just return the
+  //TODO: this is used by mec_image. I think we should just return the
   // exception and let that class deal with it.
   throw mm_exception_rewind(mm_exception(ex_type_name, msg));
 }

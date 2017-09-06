@@ -1,5 +1,5 @@
-#ifndef MMC_LOADER
-#define MMC_LOADER
+#ifndef MEC_LOADER
+#define MEC_LOADER
 
 #include "defs.hpp"
 #include "log.hpp"
@@ -10,11 +10,11 @@ class CoreImage;
 class Process;
 class MMObj;
 
-class MMCImage {
+class MECImage {
   static word MAGIC_NUMBER;
   static word HEADER_SIZE;
 public:
-  MMCImage(Process*, CoreImage*, const std::string&, int, char*);
+  MECImage(Process*, CoreImage*, const std::string&, int, char*);
   oop load();
   oop instantiate_module(oop);
 

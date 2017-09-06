@@ -12,7 +12,7 @@
 #include "core_image.hpp"
 
 class CoreImage;
-class MMCImage;
+class MECImage;
 class MMObj;
 class Process;
 
@@ -28,10 +28,10 @@ typedef boost::unordered_map<oop, prim_function_t,
                              gc_allocator<std::pair<oop,prim_function_t> > >
                             prim_map_t;
 
-typedef boost::unordered_map<std::string, MMCImage*,
+typedef boost::unordered_map<std::string, MECImage*,
                              boost::hash<std::string>,
                              std::equal_to<std::string>,
-                             gc_allocator<std::pair<std::string,MMCImage*> > >
+                             gc_allocator<std::pair<std::string,MECImage*> > >
                             modules_map_t;
 
 
@@ -92,7 +92,7 @@ private:
   // void dictionary_dump(oop dict);
   // void parse_repository_path();
   oop maybe_compile_local_source(Process* proc, std::string filepath);
-  bool is_mmc_file_older_then_source(std::string src_file_path);
+  bool is_mec_file_older_then_source(std::string src_file_path);
   void maybe_load_config();
   void print_retval(Process*, oop retval);
   Process* init();
@@ -111,7 +111,7 @@ private:
 
   prim_map_t _primitives;
   modules_map_t _modules;
-  std::string _mmc_cache_directory;
+  std::string _mec_cache_directory;
 
   //path configurations
   boost::unordered_map<std::string, std::string> _repo_locations;

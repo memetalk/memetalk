@@ -1,9 +1,9 @@
 meme central:memescript/compiler
 
-requires vmemory, mmc, bits
+requires vmemory, mec, bits
 where
   vmemory  = central:memescript/vmemory
-  mmc      = central:memescript/mmc
+  mec      = central:memescript/mec
   bits     = central:memescript/bits
 
 import VirtualMemory from vmemory
@@ -36,7 +36,7 @@ instance_method append_external_ref: fun(name, label) { //label defaults to null
   return oop;
 }
 instance_method append_object_instance: fun() {
-  this.append_int(mmc.FRAME_TYPE_OBJECT, null);
+  this.append_int(mec.FRAME_TYPE_OBJECT, null);
   this.append_int(2 * bits.WSIZE, null);
 
   var oop = this.append_external_ref("Object", null); //vt
@@ -44,7 +44,7 @@ instance_method append_object_instance: fun() {
   return oop;
 }
 instance_method append_symbol_instance: fun(string) {
-  this.append_int(mmc.FRAME_TYPE_OBJECT, null);
+  this.append_int(mec.FRAME_TYPE_OBJECT, null);
   this.append_int(1 * bits.WSIZE, null);
   if (string == "") {
     return this.append_null(null);
@@ -59,7 +59,7 @@ instance_method append_string_instance: fun(string) {
   } else {
     var delegate = this.append_object_instance();
 
-    this.append_int(mmc.FRAME_TYPE_BVAR_OBJECT, null);
+    this.append_int(mec.FRAME_TYPE_BVAR_OBJECT, null);
     this.append_int((3 * bits.WSIZE) + bits.string_block_size(string + "\0"), null);
 
    var oop = this.append_external_ref("String", null);
@@ -84,7 +84,7 @@ instance_method append_sym_to_string_dict: fun(mdict) {
 instance_method append_dict_prologue: fun(size, frame_oop) {
   var delegate = this.append_object_instance();
 
-  this.append_int(mmc.FRAME_TYPE_DVAR_OBJECT, null);
+  this.append_int(mec.FRAME_TYPE_DVAR_OBJECT, null);
   this.append_int(4 * bits.WSIZE, null);
 
   var oop = this.append_external_ref("Dictionary", null); //vt
@@ -100,7 +100,7 @@ instance_method append_dict_prologue: fun(size, frame_oop) {
 instance_method append_empty_list: fun() {
   var delegate = this.append_object_instance();
 
-  this.append_int(mmc.FRAME_TYPE_LIST_OBJECT, null);
+  this.append_int(mec.FRAME_TYPE_LIST_OBJECT, null);
   this.append_int(4 * bits.WSIZE, null);
 
   var oop = this.append_external_ref("List", null); //vt
@@ -114,7 +114,7 @@ instance_method append_list_of_strings: fun(lst){
   var delegate = this.append_object_instance();
 
   if (lst.size > 0) {
-    this.append_int(mmc.FRAME_TYPE_ELEMENTS, null);
+    this.append_int(mec.FRAME_TYPE_ELEMENTS, null);
     this.append_int(lst.size * bits.WSIZE, null);
     var oops = [];
     oops_elements.each(fun(_,oop_element) {
@@ -122,7 +122,7 @@ instance_method append_list_of_strings: fun(lst){
     });
   }
 
-  this.append_int(mmc.FRAME_TYPE_LIST_OBJECT, null);
+  this.append_int(mec.FRAME_TYPE_LIST_OBJECT, null);
   this.append_int(4 * bits.WSIZE, null);
 
   var oop = this.append_external_ref("List", null); //vt
@@ -140,7 +140,7 @@ instance_method append_list_of_symbols: fun(lst) {
   var delegate = this.append_object_instance();
 
   if (lst.size > 0) {
-    this.append_int(mmc.FRAME_TYPE_ELEMENTS, null);
+    this.append_int(mec.FRAME_TYPE_ELEMENTS, null);
     this.append_int(lst.size * bits.WSIZE, null);
     var oops = [];
     oops_elements.each(fun(_,oop_element) {
@@ -148,7 +148,7 @@ instance_method append_list_of_symbols: fun(lst) {
     });
   }
 
-  this.append_int(mmc.FRAME_TYPE_LIST_OBJECT, null);
+  this.append_int(mec.FRAME_TYPE_LIST_OBJECT, null);
   this.append_int(4 * bits.WSIZE, null);
 
   var oop = this.append_external_ref("List", null); //vt
@@ -167,7 +167,7 @@ instance_method append_list_of_ints: fun(lst) {
   var delegate = this.append_object_instance();
 
   if (lst.size > 0) {
-    this.append_int(mmc.FRAME_TYPE_ELEMENTS, null);
+    this.append_int(mec.FRAME_TYPE_ELEMENTS, null);
     this.append_int(lst.size * bits.WSIZE, null);
     var oops = [];
     lst.each(fun(_,oop_element) {
@@ -175,7 +175,7 @@ instance_method append_list_of_ints: fun(lst) {
     });
   }
 
-  this.append_int(mmc.FRAME_TYPE_LIST_OBJECT, null);
+  this.append_int(mec.FRAME_TYPE_LIST_OBJECT, null);
   this.append_int(4 * bits.WSIZE, null);
 
   var oop = this.append_external_ref("List", null); //vt
@@ -192,7 +192,7 @@ instance_method append_list_of_oops_for_labels: fun(lst) {
   var delegate = this.append_object_instance();
 
   if (lst.size > 0) {
-    this.append_int(mmc.FRAME_TYPE_ELEMENTS, null);
+    this.append_int(mec.FRAME_TYPE_ELEMENTS, null);
     this.append_int(lst.size * bits.WSIZE, null);
     var oops = [];
     lst.each(fun(_, label) {
@@ -200,7 +200,7 @@ instance_method append_list_of_oops_for_labels: fun(lst) {
     });
   }
 
-  this.append_int(mmc.FRAME_TYPE_LIST_OBJECT, null);
+  this.append_int(mec.FRAME_TYPE_LIST_OBJECT, null);
   this.append_int(4 * bits.WSIZE, null);
 
   var oop = this.append_external_ref("List", null); //vt

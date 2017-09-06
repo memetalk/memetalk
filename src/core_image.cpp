@@ -64,7 +64,7 @@ bool CoreImage::is_prime(const char* name) {
   // return false;
 }
 
-//temporary workaround used on mmc_loader to get superclass
+//temporary workaround used on mec_loader to get superclass
 bool CoreImage::has_class(const char* name) {
   return (strcmp(name, "Behavior") != 0) &&
     (strcmp(name, "Object_Behavior") != 0) &&
@@ -121,7 +121,7 @@ oop CoreImage::get_module_instance() {
 }
 
 void CoreImage::load() {
-  _data = read_mmc_file(_filepath, &_data_size);
+  _data = read_mec_file(_filepath, &_data_size);
   load_header();
   load_prime_objects_table();
 

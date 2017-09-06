@@ -4,7 +4,7 @@
 #include "process.hpp"
 #include "utils.hpp"
 #include "mmobj.hpp"
-#include "mmc_image.hpp"
+#include "mec_image.hpp"
 #include "qt_prims.hpp"
 #include <string>
 #include <iostream>
@@ -32,7 +32,7 @@ static int prim_remote_repl_compile_module(Process* proc) {
   oop module_name = proc->get_arg(0);
   char* mmpath = getenv("MEME_PATH");
   std::stringstream s;
-  s << "python -m pycompiler.compiler  "<< mmpath << proc->mmobj()->mm_string_stl_str(proc, module_name) << ".mm";
+  s << "python -m pycompiler.compiler  "<< mmpath << proc->mmobj()->mm_string_stl_str(proc, module_name) << ".me";
   DBG("Executing ... " << s.str() << std::endl);
   if (system(s.str().c_str()) == 0) {
     proc->stack_push(MM_TRUE);
@@ -2306,10 +2306,10 @@ static int prim_test_import(Process* proc) {
   std::string str_filepath = proc->mmobj()->mm_string_stl_str(proc, filepath);
   DBG(str_filepath << endl);
   int data_size;
-  char* data = read_mmc_file(str_filepath, &data_size);
-  MMCImage* mmc = new (GC) MMCImage(proc, proc->vm()->core(), str_filepath, data_size, data);
-  mmc->load();
-  proc->stack_push(mmc->instantiate_module(args));
+  char* data = read_mec_file(str_filepath, &data_size);
+  MECImage* mec = new (GC) MECImage(proc, proc->vm()->core(), str_filepath, data_size, data);
+  mec->load();
+  proc->stack_push(mec->instantiate_module(args));
   return 0;
 }
 
@@ -2338,7 +2338,7 @@ void get_mm_test_files(const fs::path& root, std::vector<std::string>& ret) {
     fs::directory_iterator endit;
     while(it != endit) {
       if (fs::is_regular_file(*it)
-          and it->path().extension() == ".mmc"
+          and it->path().extension() == ".mec"
           and it->path().filename().string().compare(0, prefix.length(), prefix) == 0)
       {
         //std::cerr << it->path() << endl;

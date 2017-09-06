@@ -12,7 +12,7 @@ void create_cache_dir(std::string&);
 
 char* read_file(char* filepath, int* file_size);
 char* read_file(std::fstream& file, int* file_size);
-char* read_mmc_file(const std::string& filepath, int* file_size);
+char* read_mec_file(const std::string& filepath, int* file_size);
 word unpack_word(const char* data, int offset);
 void relocate_addresses(char* data, int data_size, int start_reloc_table);
 void link_symbols(char* data, int es_size, int start_external_symbols, VM* vm, CoreImage* core);

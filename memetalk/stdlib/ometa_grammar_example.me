@@ -8,12 +8,12 @@
  [OMetaTranslator] <= ometa_tr;
 .code
 
-//this files generates mm/calc.mm, a parser for a simple calculator.
+//this files generates mm/calc.me, a parser for a simple calculator.
 
 //Usage:
-//  1- compile this file and run it. Make sure mm/calc.mm was generated
-//  2- compile calc.mm
-//  3- Read & compile using_calc.mm, an example of how to use the calculator.
+//  1- compile this file and run it. Make sure mm/calc.me was generated
+//  2- compile calc.me
+//  3- Read & compile using_calc.me, an example of how to use the calculator.
 
 main: fun() {
 
@@ -49,8 +49,8 @@ main: fun() {
     if (maybe_ast[0]) {
       io.print("translation error: " + maybe_ast[0].toString);
     } else {
-      io.write_file("mm/calc.mm", maybe_ast[1]);
-      io.print("Wrote to mm/calc.mm");
+      io.write_file("mm/calc.me", maybe_ast[1]);
+      io.print("Wrote to mm/calc.me");
     }
   }
 }

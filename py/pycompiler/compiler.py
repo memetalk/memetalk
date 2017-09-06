@@ -10,22 +10,22 @@ import sys
 import ejson
 from . import comp_vmemory
 
-class MMC(object):
+class MEC(object):
     MAGIC_NUMBER = 0x420
 
     def __init__(self, cmodule):
         self.cmodule = cmodule
 
-    def name_ptr_for(self, name, mmc):
+    def name_ptr_for(self, name, mec):
         acc = 0
-        for entry_name_t, bsize in mmc['names']:
+        for entry_name_t, bsize in mec['names']:
             if entry_name_t[0:-1] == name:
                 return self.HEADER_SIZE + acc
             acc += bsize
         raise Exception('entry {} not found in NAMES'.format(name))
 
-    def create_mmc_struct(self, vmem):
-        mmc = {'header':
+    def create_mec_struct(self, vmem):
+        mec = {'header':
                {'magic_number': None,
                 'ot_size': None,
                 'er_size': None,
@@ -39,92 +39,92 @@ class MMC(object):
             }
 
 
-        self.HEADER_SIZE = len(mmc['header']) * bits.WSIZE
+        self.HEADER_SIZE = len(mec['header']) * bits.WSIZE
         self.cmodule.fill(vmem)
 
-        mmc['header']['magic_number'] = self.MAGIC_NUMBER
+        mec['header']['magic_number'] = self.MAGIC_NUMBER
 
-        # mmc['names'] = [(name_t, bits.string_block_size(name_t)) for name_t in [name + '\0' for name in vmem.external_names()]]
+        # mec['names'] = [(name_t, bits.string_block_size(name_t)) for name_t in [name + '\0' for name in vmem.external_names()]]
 
         # labels = self.cmodule.entry_labels()
         names_list = [n + "\0" for n in vmem.external_names()]
 
-        mmc['names'] = [(name_t, bits.string_block_size(name_t)) for name_t in names_list]
-        mmc['header']['names_size'] = sum([x[1] for x in mmc['names']])
+        mec['names'] = [(name_t, bits.string_block_size(name_t)) for name_t in names_list]
+        mec['header']['names_size'] = sum([x[1] for x in mec['names']])
 
-        base = self.HEADER_SIZE + mmc['header']['names_size']
+        base = self.HEADER_SIZE + mec['header']['names_size']
         vmem.set_base(base)
 
-        mmc['object_table'] = vmem.object_table()
-        mmc['header']['ot_size'] = len(mmc['object_table'])
+        mec['object_table'] = vmem.object_table()
+        mec['header']['ot_size'] = len(mec['object_table'])
 
         for pair in vmem.external_references():
-            mmc['external_references'].append(self.name_ptr_for(pair[0], mmc))
-            mmc['external_references'].append(pair[1])
+            mec['external_references'].append(self.name_ptr_for(pair[0], mec))
+            mec['external_references'].append(pair[1])
 
-        mmc['header']['er_size'] = len(mmc['external_references']) * bits.WSIZE
+        mec['header']['er_size'] = len(mec['external_references']) * bits.WSIZE
 
         for pair in vmem.symbols_references():
-            mmc['symbol_table'].append(self.name_ptr_for(pair[0], mmc))
-            mmc['symbol_table'].append(pair[1])
+            mec['symbol_table'].append(self.name_ptr_for(pair[0], mec))
+            mec['symbol_table'].append(pair[1])
 
-        mmc['header']['st_size'] = len(mmc['symbol_table']) * bits.WSIZE
+        mec['header']['st_size'] = len(mec['symbol_table']) * bits.WSIZE
 
-        mmc['reloc_table'] = vmem.reloc_table()
+        mec['reloc_table'] = vmem.reloc_table()
 
-        return mmc
+        return mec
 
     def dump(self, filepath):
         vmem = comp_vmemory.CompVirtualMemory()
-        mmc = self.create_mmc_struct(vmem)
-        with open(filepath[:-2] + "mmc", "w") as fp:
+        mec = self.create_mec_struct(vmem)
+        with open(filepath[:-2] + "mec", "w") as fp:
             # header
-            fp.write(bits.pack_word(mmc['header']['magic_number']))
-            fp.write(bits.pack_word(mmc['header']['ot_size']))
-            fp.write(bits.pack_word(mmc['header']['er_size']))
-            fp.write(bits.pack_word(mmc['header']['st_size']))
-            fp.write(bits.pack_word(mmc['header']['names_size']))
+            fp.write(bits.pack_word(mec['header']['magic_number']))
+            fp.write(bits.pack_word(mec['header']['ot_size']))
+            fp.write(bits.pack_word(mec['header']['er_size']))
+            fp.write(bits.pack_word(mec['header']['st_size']))
+            fp.write(bits.pack_word(mec['header']['names_size']))
 
             # names
-            for name, chunk_size in mmc['names']:
+            for name, chunk_size in mec['names']:
                 text = name + ((chunk_size - len(name)) * '\0')
                 fp.write(text)
 
             # object table
-            for v in mmc['object_table']:
+            for v in mec['object_table']:
                 fp.write(bits.pack_byte(v))
 
             # external references
-            for v in mmc['external_references']:
+            for v in mec['external_references']:
                 fp.write(bits.pack_word(v))
 
             # symbols
-            for v in mmc['symbol_table']:
+            for v in mec['symbol_table']:
                 fp.write(bits.pack_word(v))
 
             # reloc table
-            for word in mmc['reloc_table']:
+            for word in mec['reloc_table']:
                 fp.write(bits.pack_word(word))
 
 
 
-class MMC_Fun(object):
+class MEC_Fun(object):
     MAGIC_NUMBER = 0x420
 
     def __init__(self, cmod, cfun):
         self.cmod = cmod
         self.cfun = cfun
 
-    def name_ptr_for(self, name, mmc):
+    def name_ptr_for(self, name, mec):
         acc = 0
-        for entry_name_t, bsize in mmc['names']:
+        for entry_name_t, bsize in mec['names']:
             if entry_name_t[0:-1] == name:
                 return self.HEADER_SIZE + acc
             acc += bsize
         raise Exception('entry {} not found in NAMES'.format(name))
 
-    def create_mmc_struct(self, vmem):
-        mmc = {'header':
+    def create_mec_struct(self, vmem):
+        mec = {'header':
                {'magic_number': None,
                 'ot_size': None,
                 'er_size': None,
@@ -139,72 +139,72 @@ class MMC_Fun(object):
             }
 
 
-        self.HEADER_SIZE = len(mmc['header']) * bits.WSIZE
+        self.HEADER_SIZE = len(mec['header']) * bits.WSIZE
         self.cmod.fill(vmem)
 
-        mmc['header']['magic_number'] = self.MAGIC_NUMBER
+        mec['header']['magic_number'] = self.MAGIC_NUMBER
 
         names_list = set([n + "\0" for n in vmem.external_names()])
 
-        mmc['names'] = [(name_t, bits.string_block_size(name_t)) for name_t in names_list]
-        mmc['header']['names_size'] = sum([x[1] for x in mmc['names']])
+        mec['names'] = [(name_t, bits.string_block_size(name_t)) for name_t in names_list]
+        mec['header']['names_size'] = sum([x[1] for x in mec['names']])
 
-        base = self.HEADER_SIZE + mmc['header']['names_size']
+        base = self.HEADER_SIZE + mec['header']['names_size']
         vmem.set_base(base)
 
-        mmc['object_table'] = vmem.object_table()
-        mmc['header']['ot_size'] = len(mmc['object_table'])
+        mec['object_table'] = vmem.object_table()
+        mec['header']['ot_size'] = len(mec['object_table'])
 
         for pair in vmem.external_references():
-            mmc['external_references'].append(self.name_ptr_for(pair[0], mmc))
-            mmc['external_references'].append(pair[1])
+            mec['external_references'].append(self.name_ptr_for(pair[0], mec))
+            mec['external_references'].append(pair[1])
 
-        mmc['header']['er_size'] = len(mmc['external_references']) * bits.WSIZE
+        mec['header']['er_size'] = len(mec['external_references']) * bits.WSIZE
 
         for pair in vmem.symbols_references():
-            mmc['symbol_table'].append(self.name_ptr_for(pair[0], mmc))
-            mmc['symbol_table'].append(pair[1])
+            mec['symbol_table'].append(self.name_ptr_for(pair[0], mec))
+            mec['symbol_table'].append(pair[1])
 
-        mmc['header']['st_size'] = len(mmc['symbol_table']) * bits.WSIZE
+        mec['header']['st_size'] = len(mec['symbol_table']) * bits.WSIZE
 
-        mmc['reloc_table'] = vmem.reloc_table()
+        mec['reloc_table'] = vmem.reloc_table()
 
-        mmc['header']['cfun_addr'] = vmem.physical_address(self.cfun.oop)
-        return mmc
+        mec['header']['cfun_addr'] = vmem.physical_address(self.cfun.oop)
+        return mec
 
     def dump(self):
         vmem = comp_vmemory.CompVirtualMemory()
-        mmc = self.create_mmc_struct(vmem)
+        mec = self.create_mec_struct(vmem)
 
         fp = sys.stdout
 
         # header
-        fp.write(bits.pack_word(mmc['header']['magic_number']))
-        fp.write(bits.pack_word(mmc['header']['ot_size']))
-        fp.write(bits.pack_word(mmc['header']['er_size']))
-        fp.write(bits.pack_word(mmc['header']['st_size']))
-        fp.write(bits.pack_word(mmc['header']['names_size']))
-        fp.write(bits.pack_word(mmc['header']['cfun_addr']))
+        fp.write(bits.pack_word(mec['header']['magic_number']))
+        fp.write(bits.pack_word(mec['header']['ot_size']))
+        fp.write(bits.pack_word(mec['header']['er_size']))
+        fp.write(bits.pack_word(mec['header']['st_size']))
+        fp.write(bits.pack_word(mec['header']['names_size']))
+        fp.write(bits.pack_word(mec['header']['cfun_addr']))
 
         # names
-        for name, chunk_size in mmc['names']:
+        for name, chunk_size in mec['names']:
             text = name + ((chunk_size - len(name)) * '\0')
             fp.write(text)
 
         # object table
-        for v in mmc['object_table']:
+        for v in mec['object_table']:
             fp.write(bits.pack_byte(v))
 
         # external references
-        for v in mmc['external_references']:
+        for v in mec['external_references']:
             fp.write(bits.pack_word(v))
 
         # symbols
-        for v in mmc['symbol_table']:
+        for v in mec['symbol_table']:
             fp.write(bits.pack_word(v))
 
         # reloc table
-        for word in mmc['reloc_table']:
+        for word in mec['reloc_table']:
             fp.write(bits.pack_word(word))
 
 
@@ -248,8 +248,8 @@ class Compiler(ASTBuilder):
 
         self.do_parse(self.parser, "start")
 
-        mmc = MMC(self.cmodule)
-        mmc.dump(filepath)
+        mec = MEC(self.cmodule)
+        mec.dump(filepath)
 
     def compile_lambda(self, text, env_names):
         self.filepath = '<eval>'
@@ -272,8 +272,8 @@ class Compiler(ASTBuilder):
         self.do_parse(self.parser, 'cfunliteral')
 
 
-        mmc = MMC_Fun(cmod, cfun)
-        mmc.dump()
+        mec = MEC_Fun(cmod, cfun)
+        mec.dump()
 
     def recompile_function(self, line, text):
         self.filepath = '<???>'
@@ -296,8 +296,8 @@ class Compiler(ASTBuilder):
 
         cfun = cmod.functions['random_name']
         cfun.uses_env(False)
-        mmc = MMC_Fun(cmod, cfun)
-        mmc.dump()
+        mec = MEC_Fun(cmod, cfun)
+        mec.dump()
 
 
 def main(*paths):
