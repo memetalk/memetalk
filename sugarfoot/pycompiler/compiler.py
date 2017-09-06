@@ -241,7 +241,7 @@ class Compiler(ASTBuilder):
 
         ast = self.do_parse(self.parser, 'start')[0]
 
-        print ast
+        print str(ast)[0:70] + "..."
 
         self.parser = MemeTr([ast])
         self.parser.i = self
