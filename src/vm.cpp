@@ -351,14 +351,21 @@ char* VM::get_argv(int i) {
 
 void VM::maybe_load_config() {
   ptree pt;
+  std::string home = std::string(getenv("HOME"));
+  char pwdc[PATH_MAX];
+  getcwd(pwdc, PATH_MAX);
+
   try {
     boost::property_tree::read_json("meme.config", pt);
   } catch(...) {
     DBG("Unable to read meme.config in current directory" << endl);
     try {
-      boost::property_tree::read_json(std::string(getenv("HOME")) + "/.meme.config", pt);
+      boost::property_tree::read_json(home + "/.meme.config", pt);
     } catch(...) {
       std::cerr << "fatal error:\n\tUnable to read configuration file\n";
+      std::cerr << "\tDirectories searched:\n";
+      std::cerr << "\t* " << pwdc << "/meme.config\n";
+      std::cerr << "\t* " << home << "/.meme.config\n";
       bail();
     }
   }
