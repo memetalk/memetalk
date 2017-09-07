@@ -1,8 +1,8 @@
-meme foo
+meme central:memescript/compiler
 requires qt, io
 where
-  qt = central:qt
-  io : central:stdlib/io;
+  qt = central:stdlib/qt
+  io = central:stdlib/io
 
 class RemoteDebugger
 fields: process, current_frame_idx, started, server, socket, vars;
