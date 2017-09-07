@@ -15,8 +15,7 @@ clean:
 debug:
 	$(foreach el,$(subdirs),$(MAKE) -C $(el) debug;)
 
-test:
-	$(foreach el,$(subdirs),$(MAKE) -C $(el) test;)
+test:; $(MAKE) -C $(MM_DIR)/tests $@
 
 src: core
 

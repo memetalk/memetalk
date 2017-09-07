@@ -17,5 +17,12 @@ RUN /bin/bash -c "pip install \
 
 WORKDIR /build
 
+RUN echo '{"repositories":                             \
+  {"central": "http://libraries.memetalk.org/"},       \
+ "override_to_local": {                                \
+   "central:memescript": "/build/central/memescript",  \
+   "central:stdlib": "/build/central/stdlib"           \
+}}' >> /root/.meme.config
+
 # Runs tests under xvfb to allow Qt to connect to a display
 CMD xvfb-run --server-args="-screen 0 1024x768x24" make test
