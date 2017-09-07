@@ -1,15 +1,11 @@
-ROOT_DIR = $(shell pwd)/../..
-MEME_STDLIB_DIR = $(ROOT_DIR)/central/stdlib
-PY_DIR = $(ROOT_DIR)/py
+all: build
 
-# compiling io using pycompiler
-io.mec: io.me
-	cd $(PY_DIR); python -m pycompiler.compiler $(MEME_STDLIB_DIR)/io.me
+include $(shell git rev-parse --show-toplevel)/common.mk
 
-qt.mec: qt.me
-	cd $(PY_DIR); python -m pycompiler.compiler $(MEME_STDLIB_DIR)/qt.me
+$(call GEN_MEC_RULE)
 
-all: io.mec qt.mec
+CODE := io.me qt.me
+BYTECODE := $(patsubst %.me,%.mec,$(CODE))
 
-clean:
-	rm -f *.mec
+build: $(BYTECODE)
+clean:; -rm $(BYTECODE)

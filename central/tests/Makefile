@@ -1,23 +1,13 @@
-ROOT_DIR = $(shell pwd)/../..
-#MEME_SCRIPT_DIR = $(shell pwd)
-MEME_STDLIB_DIR = $(ROOT_DIR)/central/stdlib
-PY_DIR = $(ROOT_DIR)/py
-TESTS_DIR = $(shell pwd)
-MEME = $(ROOT_DIR)/meme
+all: build
 
+include $(shell git rev-parse --show-toplevel)/common.mk
 
+$(call GEN_MEC_RULE)
 
-MEC_TESTS = $(TESTS_DIR)/*.mec
-MM_TESTS = $(TESTS_DIR)/*.me
-MEME_TESTER = $(MEME_STDLIB_DIR)/memetest.me
+CODE = $(wildcard *.me)
+BYTECODE := $(patsubst %.me,%.mec,$(CODE))
+MEME_TESTER = $(ROOT_DIR)/central/stdlib/memetest.me
 
-all: $(MEC_TESTS)
-
-clean:
-	rm -f $(MEC_TESTS)
-
-test: $(MEC_TESTS)
-	$(MEME) $(MEME_TESTER)
-
-$(MEC_TESTS): $(MM_TESTS)
-	cd $(PY_DIR); python -m pycompiler.compiler $(MM_TESTS)
+build: $(BYTECODE)
+test: build; $(MEME) $(MEME_TESTER)
+clean:; -rm -f $(BYTECODE)

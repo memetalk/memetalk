@@ -1,5 +1,11 @@
 subdirs = py src central
 
+include common.mk
+
+CORE_IMG = $(ROOT_DIR)/core.img
+
+CORE_ME = $(MM_DIR)/stdlib/core.me
+
 all:
 	$(foreach el,$(subdirs),$(MAKE) -C $(el) all;)
 
@@ -11,5 +17,12 @@ debug:
 
 test:
 	$(foreach el,$(subdirs),$(MAKE) -C $(el) test;)
+
+src: core
+
+core: $(CORE_IMG)
+
+$(CORE_IMG):
+	cd $(PY_DIR); python -m pycore.compiler $(CORE_ME) $(ROOT_DIR)
 
 .PHONY: $(subdirs) clean

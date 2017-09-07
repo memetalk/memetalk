@@ -1,11 +1,7 @@
 *.o
 *.pyc
-*.mmc
-src/evaluator.py
-src/loader.py
-src/parser.py
-src/core_module.py
-src/coreparser.py
-src/coretr.py
-sugarfoot/qsc.moc.cpp
-sugarfoot/sf-vm
+*.mec
+py/pyparsers/memetr.py
+py/pyparsers/parser.py
+src/qsc.moc.cpp
+meme

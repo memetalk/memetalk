@@ -1,8 +1,6 @@
-ROOT_DIR = $(shell pwd)/..
-PY_DIR = $(ROOT_DIR)/py
-MEME_DIR = $(ROOT_DIR)/central
+include $(shell git rev-parse --show-toplevel)/common.mk
 
-BIN = $(ROOT_DIR)/meme
+BIN = $(MEME)
 
 # General flags
 INC_DIRS = /usr/include /usr/local/include
@@ -27,7 +25,7 @@ HPP_FILES += qt_prims.hpp qsc.hpp ctrl.hpp
 OBJS = $(CPP_FILES:%.cpp=%.o)
 
 # Main targets
-all: release core
+all: release
 clean:; rm -f $(BIN) $(OBJS) qsc.moc.cpp
 build: $(BIN)
 
@@ -43,14 +41,3 @@ qsc.moc.cpp: qsc.hpp; moc $< > $@
 # Output binary
 %.o: %.cpp; g++ $(CXXFLAGS) -c -o $@ $^
 $(BIN): qsc.moc.cpp $(OBJS); g++ $(OBJS) $(LIBS) -o $@
-
-############ end VM Section ############
-
-############ Core Section ############
-CORE_IMG = $(ROOT_DIR)/core.img
-CORE_ME = $(MEME_DIR)/stdlib/core.me
-
-$(CORE_IMG): $(CORE_ME)
-	cd $(PY_DIR); python -m pycore.compiler $(CORE_ME) $(ROOT_DIR)
-
-core: $(CORE_IMG)

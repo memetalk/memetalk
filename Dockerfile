@@ -15,7 +15,7 @@ RUN /bin/bash -c "pip install \
     clime \
     git+git://github.com/thiago-silva/pymeta.git"
 
-WORKDIR /build/sugarfoot
+WORKDIR /build
 
 # Runs tests under xvfb to allow Qt to connect to a display
 CMD xvfb-run --server-args="-screen 0 1024x768x24" make test
