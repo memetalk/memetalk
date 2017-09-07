@@ -98,6 +98,7 @@ int VM::start() {
   if (strcmp(_argv[1], "-m") == 0) {
     //meme -m <repo:path@version>
     module_path = _argv[2];
+    _first_argv = 2; //first memetalk-land argv
     try {
       imod = instantiate_meme_module(proc, module_path, _mmobj->mm_list_new());
     } catch(mm_exception_rewind e) {
@@ -107,6 +108,7 @@ int VM::start() {
   } else {
     //meme <filepath.me> We might need to compile it
     imod = maybe_compile_local_source(proc, _argv[1]);
+    _first_argv = 1; //first memetalk-land argv
   }
 
   int exc;
@@ -342,7 +344,7 @@ oop VM::get_compiled_module(Process* proc, std::string name) {
 }
 
 char* VM::get_argv(int i) {
-  i += 1; //skip sf-vm
+  i += _first_argv; //skips vm and vm flags
   if (i < _argc) {
     return _argv[i];
   }

@@ -105,6 +105,7 @@ private:
   CoreImage* _core_image;
   MMObj* _mmobj;
   oop _debugger_module;
+  int _first_argv;
 //  std::list<Process*> _processes;
 
   symbol_map_t _symbols;
