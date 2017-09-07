@@ -1,3 +1,5 @@
+all: build
+
 subdirs = py src central
 
 include common.mk
@@ -6,7 +8,7 @@ CORE_IMG = $(ROOT_DIR)/core.img
 
 CORE_ME = $(MM_DIR)/stdlib/core.me
 
-all:
+build:
 	$(foreach el,$(subdirs),$(MAKE) -C $(el) all;)
 
 clean:
@@ -15,7 +17,7 @@ clean:
 debug:
 	$(MAKE) -C src debug
 
-test:; $(MAKE) -C $(MM_DIR)/tests $@
+test: build; $(MAKE) -C $(MM_DIR)/tests $@
 
 src: core
 
