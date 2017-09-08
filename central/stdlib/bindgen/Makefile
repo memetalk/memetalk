@@ -5,7 +5,7 @@ include $(shell git rev-parse --show-toplevel)/common.mk
 $(call GEN_TRS_RULE)
 $(call GEN_MEC_RULE)
 
-CODE := bindgen.me
+CODE := bindgen.me types.me
 BYTECODE := $(patsubst %.me,%.mec,$(CODE))
 
 GRAMMARS := definitions_pr.g definitions_tr.g
