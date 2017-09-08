@@ -82,9 +82,15 @@ testTranslateFuncDefinitions: fun() {
     "func"
   );
 }
+// :include rule
+testTranslateIncludeDefinitions: fun() {
+  var output = tr("#include <testFile.hpp>", :include, :include, null);
+  test.assertEqual(output, "#include <testFile.hpp>", "include");
+}
 // All definitions_pr grammar rules
 main: fun() {
   testTranslateTypeDefinitions();
   testTranslateParamsDefinitions();
   testTranslateFuncDefinitions();
+  testTranslateIncludeDefinitions();
 }

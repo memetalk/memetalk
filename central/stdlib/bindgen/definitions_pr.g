@@ -12,7 +12,19 @@ class SyscallDefinitionsParser < OMetaBase
 
 start = definition*;
 
-definition = "//" "sys" func:f "\n"* => f;
+definition
+    = prefix func:f "\n"* => f
+    | prefix include:i "\n"* => i
+    ;
+
+prefix = "//" "sys";
+
+include
+    = "#" spaces "include" spaces "<" {~">" _}+:fname ">"
+      => [:include, "<" + fname.join("") + ">"]
+    | "#" spaces "include" spaces '"' {~'"' _}+:fname '"'
+      => [:include, "\"" + fname.join("") + "\""]
+    ;
 
 func = rtype:rp spaces id:funcname spaces params:p
     => [:func, funcname, p, rp];

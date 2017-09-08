@@ -153,9 +153,14 @@ class SyscallDefinitionsTranslator < OMetaBase
 
 <ometa>
 
-start = funcs;
+start = definitions;
 
-funcs = [func+:x] => x.join("\n\n");
+definitions = [definition+:x] => x.join("\n\n");
+
+definition = include | func;
+
+include
+    = [:include string:name] => "#include " + name;
 
 func
     = [:func string:name !{Fun.new(name)}:fobj
