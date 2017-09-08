@@ -26,6 +26,7 @@ OBJS = $(CPP_FILES:%.cpp=%.o)
 
 # Main targets
 all: release
+cleanvm: clean
 clean:; rm -f $(BIN) $(OBJS) qsc.moc.cpp
 build: $(BIN)
 

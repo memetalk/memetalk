@@ -10,16 +10,19 @@ all:
 	$(foreach el,$(subdirs),$(MAKE) -C $(el) all;)
 
 clean:
-	$(foreach el,$(subdirs),$(MAKE) -C $(el) clean;)
+	$(MAKE) -C src clean
 
 debug:
-	$(foreach el,$(subdirs),$(MAKE) -C $(el) debug;)
+	$(MAKE) -C src debug
 
 test:; $(MAKE) -C $(MM_DIR)/tests $@
 
 src: core
 
 core: $(CORE_IMG)
+
+cleanall:
+	$(foreach el,$(subdirs),$(MAKE) -C $(el) clean;)
 
 $(CORE_IMG):
 	cd $(PY_DIR); python -m pycore.compiler $(CORE_ME) $(ROOT_DIR)
