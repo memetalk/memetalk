@@ -10,14 +10,17 @@ class SyscallDefinitionsParser < OMetaBase
 
 <ometa>
 
+space =  _:c ?{c.onlySpaces} => c
+      | comment;
+
+comment = '//' 'sys';
+
 start = definition*;
 
 definition
-    = prefix func:f "\n"* => f
-    | prefix include:i "\n"* => i
+    = func:f "\n"* => f
+    | include:i "\n"* => i
     ;
-
-prefix = "//" "sys";
 
 include
     = "#" spaces "include" spaces "<" {~">" _}+:fname ">"
