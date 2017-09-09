@@ -57,5 +57,5 @@ Copy meme.config.sample to ~/.meme.config. Edit the paths within
 the repository directory, just run:
 
 ```
-$ ./meme central/stdlib/hello_world.me
+$ ./meme central:stdlib/hello_world.me
    ```
