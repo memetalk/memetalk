@@ -20,6 +20,7 @@ start = definition*;
 definition
     = func:f "\n"* => f
     | include:i "\n"* => i
+    | struct_def:s "\n"* => s
     ;
 
 include
@@ -28,6 +29,16 @@ include
     | "#" spaces "include" spaces '"' {~'"' _}+:fname '"'
       => [:include, "\"" + fname.join("") + "\""]
     ;
+
+struct_def
+    = struct:s spaces struct_body:b
+        !{s.append(b)} => s
+    | struct:s => s
+    ;
+
+struct_body = "{" spaces struct_field*:fields "}" => fields;
+
+struct_field = typed:t ``;`` => t;
 
 func = rtype:rp spaces id:funcname spaces params:p
     => [:func, funcname, p, rp];

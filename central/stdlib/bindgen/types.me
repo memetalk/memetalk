@@ -27,6 +27,14 @@ class Param
   instance_method getIsConst: fun() { return @isConst; }
   instance_method getIsUnsigned: fun() { return @isUnsigned; }
 
+  instance_method genType: fun() {
+    var out = [];
+    if (this.getIsConst()) { out.append("const"); }
+    if (this.getIsUnsigned()) { out.append("unsigned"); }
+    out.append(this.getTypeName());
+    if (this.getIsPointer()) { out.append("*"); }
+    return out.join(" ");
+  }
   instance_method toString: fun() {
     return [
       "       Name: " + @name.toString,
@@ -39,6 +47,34 @@ class Param
   }
 end
 
+class Struct
+  fields: name, fieldList;
+
+  init new: fun() {
+    @fieldList = [];
+  }
+  instance_method newChild: fun() {
+    var newField = Param.new();
+    @fieldList.append(newField);
+    return newField;
+  }
+  instance_method getName: fun() {
+    return @name;
+  }
+  instance_method getFieldList: fun() {
+    return @fieldList;
+  }
+  instance_method setName: fun(name) {
+    @name = name;
+  }
+  instance_method toString: fun() {
+    var structFields = @fieldList
+      .map(fun(i) { return [" ", i.genType, i.getName].join(" ") + ";"; })
+      .join("\n");
+    return ["struct", @name, "{\n", structFields, "\n}"].join(" ");
+  }
+end
+
 class Fun
   fields: name, params, rtype;
 
@@ -46,7 +82,7 @@ class Fun
     @name = name;
     @params = [];
   }
-  instance_method newParam: fun() {
+  instance_method newChild: fun() {
     var param = Param.new();
     @params.append(param);
     return param;
@@ -65,52 +101,58 @@ class Fun
   instance_method getReturnType: fun() {
     return @rtype;
   }
-  instance_method genFunSignature: fun(fobj) {
-    return ["static", "int", "prim_" + fobj.getName(),
+  instance_method genFunSignature: fun() {
+    return ["static", "int", "prim_" + this.getName(),
             "(Process* proc)", "{"].join(" ");
   }
   instance_method genGetArg: fun(i, arg) {
     return ["  oop", "oop_" + arg.getName(), "=",
             "proc->get_arg(" + i.toString() + ");"].join(" ");
   }
+  instance_method getTypeNameFromParam: fun(param) {
+    var typeName = param.getTypeName();
+    if (typeName.substr(0, 7) == "struct ") {
+      return "struct";
+    }
+    return typeName;
+  }
   instance_method genChkArg: fun(arg) {
     var out = [];
+    var typeName = this.getTypeNameFromParam(arg);
     var primeType = {
-        "int": "Integer",
-        "char": "String"
-    }[arg.getTypeName()];
+      "int": "Integer",
+      "char": "String",
+      "struct": "Object"
+    }[typeName];
+    if (!primeType) {
+      Exception.throw("Unknown type `" + typeName + "'");
+    }
     out.append("  if (!(proc->mmobj()->mm_object_vt(oop_" + arg.getName() +
                ") == proc->vm()->get_prime(\"" + primeType + "\"))) {");
     out.append("    proc->raise(\"TypeError\", e);");
     out.append("  }");
     return out.join("\n");
   }
-  instance_method genType: fun(arg) {
-    var out = [];
-    if (arg.getIsConst()) { out.append("const"); }
-    if (arg.getIsUnsigned()) { out.append("unsigned"); }
-    out.append(arg.getTypeName());
-    if (arg.getIsPointer()) { out.append("*"); }
-    return out.join(" ");
-  }
   instance_method genUnwrapArg: fun(arg) {
-    var typeName = arg.getTypeName();
+    var typeName = this.getTypeNameFromParam(arg);
+    var type = arg.genType();
     var argName = "oop_" + arg.getName();
     var unwrap = {
       "int": "untag_small_int(" + argName + ")",
-      "char": "proc->mmobj()->mm_string_cstr(proc, " + argName + "))"
+      "char": "proc->mmobj()->mm_string_cstr(proc, " + argName + "))",
+      "struct": "(" + type + ") ((oop *) " + argName + ")[2]"
     }[typeName];
     if (!unwrap) {
       Exception.throw("Unknown type `" + typeName + "'");
     }
     var out = [" "];            // indentation
-    out.append(this.genType(arg));
-    return (out + [argName, "=", unwrap + ";"]).join(" ");
+    out.append(type);
+    return (out + [arg.getName(), "=", unwrap + ";"]).join(" ");
   }
-  instance_method genFunCall: fun(fobj) {
-    var paramNames = fobj.getParams().map(fun(p) { p.getName });
+  instance_method genFunCall: fun() {
+    var paramNames = this.getParams().map(fun(p) { p.getName });
     var params = "(" + paramNames.join(", ") + ");";
-    var rtype = fobj.getReturnType();
+    var rtype = this.getReturnType();
     var out = [];
     if (rtype) {
       var typeName = rtype.getTypeName();
@@ -123,24 +165,25 @@ class Fun
       }
 
       out.append(" ");          // indentation
-      out.append(this.genType(rtype));
-      out = out + ["output", "=", fobj.getName(), params, "\n",
-              " oop", "oop_output", "=", wrap + ";\n",
-              " proc->stack_push(oop_output);"];
+      out.append(rtype.genType());
+      out = out + ["output", "=", this.getName(), params, "\n",
+                   " oop", "oop_output", "=", wrap + ";\n",
+                   " proc->stack_push(oop_output);"];
     }
 
     return out.join(" ");
   }
-  instance_method genFun: fun(fobj) {
+  instance_method toString: fun() {
     var output = [];
-    output.append(this.genFunSignature(fobj));
-    fobj.getParams().each(fun(i, p) {
+    output.append(this.genFunSignature());
+    this.getParams().each(fun(i, p) {
+      output.append("\n  /* Argument[" + i.toString + "] */");
       output.append(this.genGetArg(i, p));
       output.append(this.genChkArg(p));
       output.append(this.genUnwrapArg(p));
     });
     output.append("\n  /* Call to the underlying function */");
-    output.append(this.genFunCall(fobj));
+    output.append(this.genFunCall());
     output.append("  return 0;");
     output.append("}");
     return output.join("\n");

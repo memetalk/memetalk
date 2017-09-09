@@ -8,6 +8,7 @@ where
   io             = central:stdlib/io
 import Fun from definitions_tr
 import Param from definitions_tr
+import Struct from definitions_tr
 
 // Translate strings
 tr: fun(definition, rule1, rule2, arg) {
@@ -75,9 +76,9 @@ testTranslateParamsDefinitions: fun() {
 }
 // :func rule
 testTranslateFuncDefinitions: fun() {
-  var funcSource = tr("int exit(int code)", :func, :func, null);
+  var func = tr("int exit(int code)", :func, :func, null);
   test.assertEqual(
-    funcSource.split("\n")[0],
+    func.toString.split("\n")[0],
     "static int prim_exit (Process* proc) {",
     "func"
   );
@@ -87,10 +88,26 @@ testTranslateIncludeDefinitions: fun() {
   var output = tr("#include <testFile.hpp>", :include, :include, null);
   test.assertEqual(output, "#include <testFile.hpp>", "include");
 }
+// :struct_def rule
+testTranslateStructDefDefinitions: fun() {
+  var output1 = tr("struct foo", :struct_def, :struct_def, []);
+  test.assertEqual(output1.getName(), "foo", "struct_def.getName#1");
+  test.assertEqual(output1.getFieldList(), [], "struct_def.getFieldList#1");
+
+  var output2 = tr("struct bar { int a; char *b; }", :struct_def, :struct_def, []);
+  test.assertEqual(output2.getName(), "bar", "struct_def.getName#2");
+  test.assertEqual(output2.getFieldList.size, 2, "struct_def.getFieldList.size#2");
+  test.assertEqual(output2.getFieldList()[0].getName, "a", "struct_def.getFieldList.0.getName#2");
+  test.assertEqual(output2.getFieldList()[0].getTypeName, "int", "struct_def.getFieldList.0.getTypeName#2");
+  test.assertEqual(output2.getFieldList()[1].getName, "b", "struct_def.getFieldList.1.getName#2");
+  test.assertEqual(output2.getFieldList()[1].getTypeName, "char", "struct_def.getFieldList.1.getTypeName#2");
+  test.assertEqual(output2.getFieldList()[1].getIsPointer, 1, "struct_def.getFieldList.1.getIsPointer#2");
+}
 // All definitions_pr grammar rules
 main: fun() {
   testTranslateTypeDefinitions();
   testTranslateParamsDefinitions();
   testTranslateFuncDefinitions();
   testTranslateIncludeDefinitions();
+  testTranslateStructDefDefinitions();
 }

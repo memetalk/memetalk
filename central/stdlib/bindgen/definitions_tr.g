@@ -7,6 +7,7 @@ where
 import OMetaBase from ometa_base
 import Fun from types
 import Param from types
+import Struct from types
 
 class SyscallDefinitionsTranslator < OMetaBase
 
@@ -14,26 +15,32 @@ class SyscallDefinitionsTranslator < OMetaBase
 
 start = definitions;
 
-definitions = [definition+:x] => x.join("\n\n");
+definitions
+    = [definition+:x] => x.map(fun(i) { i.toString }).join("\n\n");
 
-definition = include | func;
+definition = include | struct_def | func;
 
 include
     = [:include string:name] => "#include " + name;
+
+struct_def
+    = [:struct string:name !{Struct.new}:sobj !{sobj.setName(name)}
+               params(sobj)] => sobj
+    | [:struct string:name !{Struct.new}:sobj !{sobj.setName(name)}] => sobj;
 
 func
     = [:func string:name !{Fun.new(name)}:fobj
              params(fobj):p !{fobj.newReturnType()}:rtobj
              type(rtobj):rtype]
-      => fobj.genFun(fobj);
+      => fobj;
 
-params :fobj = [param(fobj)*:x];
+params :obj = [param(obj)*:x];
 
-param :fobj
-    = [:list !{fobj.newParam()}:pobj !{pobj.setIsArray(true)}
-       [type(pobj):type string:name !{pobj.setName(name)}]]
-    | [!{fobj.newParam()}:pobj
-       type(pobj):type string:name !{pobj.setName(name)}]
+param :obj
+    = [:list !{obj.newChild()}:pobj !{pobj.setIsArray(true)}
+       [type(pobj):type string:name !{pobj.setName(name)}]] => pobj
+    | [!{obj.newChild()}:pobj
+       type(pobj):type string:name !{pobj.setName(name)}] => pobj
     ;
 
 type :p = type_pointer(p) | type_const(p) | type_unsigned(p) | type0(p);

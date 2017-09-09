@@ -85,6 +85,17 @@ testParseIncludeDefinitions: fun() {
     "#include \"blah.h\"", :include),
     [:include, "\"blah.h\""], "include");
 }
+// :struct_def
+testParseStructDefDefinitions: fun() {
+  test.assertEqual(bindgen.parseRule(
+    "struct moo", :struct_def),
+    [:struct, "moo"], "struct_def");
+  test.assertEqual(bindgen.parseRule(
+    "struct meow { int a; char* b; }", :struct_def),
+    [:struct, "meow", [[[:builtin, "int"], "a"],
+                       [[:pointer, [:builtin, "char"], 1], "b"]]],
+     "struct_def#2");
+}
 // All definitions_pr grammar rules
 main: fun() {
   testParseIdDefinitions();
@@ -93,4 +104,5 @@ main: fun() {
   testParseRtypeDefinitions();
   testParseFuncDefinitions();
   testParseIncludeDefinitions();
+  testParseStructDefDefinitions();
 }
