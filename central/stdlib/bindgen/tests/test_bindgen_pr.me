@@ -20,6 +20,7 @@ testParseTypedDefinitions: fun() {
   test.assertEqual(bindgen.parseRule(
     "int* foo5", :typed),
     [[:pointer, [:builtin, "int"], 1], "foo5"], "typed");
+  // Structs
   test.assertEqual(bindgen.parseRule(
     "struct foo1 bar1", :typed),
     [[:struct, "foo1"], "bar1"], "typed");
@@ -29,6 +30,26 @@ testParseTypedDefinitions: fun() {
   test.assertEqual(bindgen.parseRule(
     "struct foo3 *bar3", :typed),
     [[:pointer, [:struct, "foo3"], 1], "bar3"], "typed");
+  test.assertEqual(bindgen.parseRule(
+    "struct foo3 *bar3", :typed),
+    [[:pointer, [:struct, "foo3"], 1], "bar3"], "typed");
+  // Lists and pointers
+  test.assertEqual(bindgen.parseRule(
+    "struct wu* wu4[]", :typed),
+    [[:list, [:pointer, [:struct, "wu"], 1]], "wu4"], "typed");
+  // Annotations
+  test.assertEqual(bindgen.parseRule(
+    "char *foo +out", :typed),
+    [[:annotations, [:pointer, [:builtin, "char"], 1], ["out"]], "foo"], "typed");
+  test.assertEqual(bindgen.parseRule(
+    "char *bar +null", :typed),
+    [[:annotations, [:pointer, [:builtin, "char"], 1], ["null"]], "bar"], "typed");
+  test.assertEqual(bindgen.parseRule(
+    "char *bar +null+out", :typed),
+    [[:annotations, [:pointer, [:builtin, "char"], 1], ["null", "out"]], "bar"], "typed");
+  test.assertEqual(bindgen.parseRule(
+    "char *bar +out+null", :typed),
+    [[:annotations, [:pointer, [:builtin, "char"], 1], ["out", "null"]], "bar"], "typed");
 }
 // :params rule
 testParseParamsDefinitions: fun() {
@@ -46,7 +67,7 @@ testParseParamsDefinitions: fun() {
     [[[:builtin, "float"], "si1"], [[:pointer, [:struct, "si"], 1], "si3"]], "params");
   test.assertEqual(bindgen.parseRule(
     "(float wu1, struct wu* wu3[])", :params),
-    [[[:builtin, "float"], "wu1"], [:list, [[:pointer, [:struct, "wu"], 1], "wu3"]]],
+    [[[:builtin, "float"], "wu1"], [[:list, [:pointer, [:struct, "wu"], 1]], "wu3"]],
     "params");
 }
 // :rtype rule

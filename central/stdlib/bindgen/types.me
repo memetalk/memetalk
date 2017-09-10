@@ -5,13 +5,16 @@ meme central:memescript/compiler
 //   io         = central:stdlib/io
 
 class Param
-  fields: name, typeName, isPointer, isArray, isConst, isUnsigned;
+  fields: name, typeName, isPointer, isArray, isConst, isUnsigned,
+    isOutput, isNullable;
 
   init new: fun() {
     @isPointer = false;
     @isArray = false;
     @isConst = false;
     @isUnsigned = false;
+    @isOutput = false;
+    @isNullable = false;
   }
   instance_method setName: fun(name) { @name = name; }
   instance_method setTypeName: fun(typeName) { @typeName = typeName; }
@@ -19,6 +22,17 @@ class Param
   instance_method setIsPointer: fun(isPointer) { @isPointer = isPointer; }
   instance_method setIsConst: fun(isConst) { @isConst = isConst; }
   instance_method setIsUnsigned: fun(isUnsigned) { @isUnsigned = isUnsigned; }
+  instance_method setIsOutput: fun(isOutput) { @isOutput = isOutput; }
+  instance_method setIsNullable: fun(isNullable) { @isNullable = isNullable; }
+  instance_method setAnnotations: fun(annotations) {
+    annotations.each(fun(_, a) {
+      if (a == "out") {
+        this.setIsOutput(true);
+      } elif (a == "null") {
+        this.setIsNullable(true);
+      }
+    });
+  }
 
   instance_method getName: fun() { return @name; }
   instance_method getTypeName: fun() { return @typeName; }
@@ -26,6 +40,8 @@ class Param
   instance_method getIsPointer: fun() { return @isPointer; }
   instance_method getIsConst: fun() { return @isConst; }
   instance_method getIsUnsigned: fun() { return @isUnsigned; }
+  instance_method getIsOutput: fun() { return @isOutput; }
+  instance_method getIsNullable: fun() { return @isNullable; }
 
   instance_method genType: fun() {
     var out = [];
@@ -42,7 +58,9 @@ class Param
       "    IsArray: " + @isArray.toString,
       "    IsConst: " + @isConst.toString,
       "  IsPointer: " + @isPointer.toString,
-      " IsUnsigned: " + @isUnsigned.toString
+      " IsUnsigned: " + @isUnsigned.toString,
+      "   IsOutput: " + @isOutput.toString,
+      " IsNullable: " + @isNullable.toString
     ].join("\n");
   }
 end

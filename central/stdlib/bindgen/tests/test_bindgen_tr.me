@@ -52,6 +52,25 @@ testTranslateTypeDefinitions: fun() {
   test.assertEqual(obj5.getIsPointer(), 1, "getIsPointer");
   test.assertEqual(obj5.getIsUnsigned(), false, "getIsUnsigned");
 }
+// :typed rule
+testTranslateTypedDefinitions: fun() {
+  var p1 = tr("const unsigned int *foo", :typed, :typed, [Fun.new("f1")]);
+  test.assertEqual(p1.getName(), "foo", "getName#1");
+  test.assertEqual(p1.getTypeName(), "int", "getTypeName#1");
+  test.assertEqual(p1.getIsConst(), true, "getIsConst#1");
+  test.assertEqual(p1.getIsPointer(), 1, "getIsPointer#1");
+  test.assertEqual(p1.getIsUnsigned(), true, "getIsUnsigned#1");
+
+  var p2 = tr("const unsigned int *foo[]+null+out", :typed, :typed, [Fun.new("f2")]);
+  test.assertEqual(p2.getName(), "foo", "getName");
+  test.assertEqual(p2.getTypeName(), "int", "getTypeName");
+  test.assertEqual(p2.getIsPointer(), 1, "getIsPointer");
+  test.assertEqual(p2.getIsArray(), true, "getIsArray");
+  test.assertEqual(p2.getIsConst(), true, "getIsConst");
+  test.assertEqual(p2.getIsNullable(), true, "getIsNullable");
+  test.assertEqual(p2.getIsOutput(), true, "getIsOutput");
+  test.assertEqual(p2.getIsUnsigned(), true, "getIsUnsigned");
+}
 // :params rule
 testTranslateParamsDefinitions: fun() {
   var obj1 = Fun.new("f1");
@@ -106,6 +125,7 @@ testTranslateStructDefDefinitions: fun() {
 // All definitions_pr grammar rules
 main: fun() {
   testTranslateTypeDefinitions();
+  testTranslateTypedDefinitions();
   testTranslateParamsDefinitions();
   testTranslateFuncDefinitions();
   testTranslateIncludeDefinitions();

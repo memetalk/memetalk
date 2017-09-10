@@ -16,45 +16,40 @@ class SyscallDefinitionsTranslator < OMetaBase
 start = definitions;
 
 definitions
-    = [definition+:x] => x.map(fun(i) { i.toString }).join("\n\n");
-
+    = [definition+:x] => x.map(fun(i) { i.toString }).join("\n\n")
+    ;
 definition = include | struct_def | func;
 
 include
-    = [:include string:name] => "#include " + name;
-
+    = [:include string:name] => "#include " + name
+    ;
 struct_def
     = [:struct string:name !{Struct.new}:sobj !{sobj.setName(name)}
                params(sobj)] => sobj
-    | [:struct string:name !{Struct.new}:sobj !{sobj.setName(name)}] => sobj;
-
+    | [:struct string:name !{Struct.new}:sobj !{sobj.setName(name)}] => sobj
+    ;
 func
     = [:func string:name !{Fun.new(name)}:fobj
-             params(fobj):p !{fobj.newReturnType()}:rtobj
-             type(rtobj):rtype]
-      => fobj;
-
-params :obj = [param(obj)*:x];
-
-param :obj
-    = [:list !{obj.newChild()}:pobj !{pobj.setIsArray(true)}
-       [type(pobj):type string:name !{pobj.setName(name)}]] => pobj
-    | [!{obj.newChild()}:pobj
-       type(pobj):type string:name !{pobj.setName(name)}] => pobj
+             params(fobj) !{fobj.newReturnType()}:rtobj
+             type(rtobj):rtype] => fobj
     ;
-
-type :p = type_pointer(p) | type_const(p) | type_unsigned(p) | type0(p);
-
-type_pointer :pobj
-    = [:pointer type(pobj):t _:c !{pobj.setIsPointer(c)}];
-type_const :pobj
-    = [:const type(pobj):t !{pobj.setIsConst(true)}];
-type_unsigned :pobj
-    = [:unsigned type(pobj):t !{pobj.setIsUnsigned(true)}];
-
-type0 :pobj
-    = [:builtin string:t !{pobj.setTypeName(t)}]
-    | [:struct string:t !{pobj.setTypeName("struct " + t)}]
+params :obj
+    = [typed(obj)*:x]
+    ;
+typed :obj
+    = [!{obj.newChild()}:p type(p) string:n !{p.setName(n)}] => p
+    ;
+type :p
+    = [:list type(p) !{p.setIsArray(true)}]
+    | [:annotations type(p) _:a !{p.setAnnotations(a)}]
+    | [:pointer type(p) _:c !{p.setIsPointer(c)}]
+    | [:const type(p) !{p.setIsConst(true)}]
+    | [:unsigned type(p) !{p.setIsUnsigned(true)}]
+    | type0(p)
+    ;
+type0 :p
+    = [:builtin string:t !{p.setTypeName(t)}]
+    | [:struct string:t !{p.setTypeName("struct " + t)}]
     ;
 
 </ometa>

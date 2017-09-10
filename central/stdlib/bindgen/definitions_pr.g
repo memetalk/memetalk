@@ -46,14 +46,17 @@ func = rtype:rp spaces id:funcname spaces params:p
 rtype = type_pointer | type;
 
 params = "(" paramlist:pl ")" => pl;
-
 paramlist = typed:x {"," spaces typed}*:xs => [x] + xs | => [];
 
-typed = type_list | type_id;
-type_list = type_id:x '[]' => [:list, x];
+typed = type_with_annotations | type_list_or_id;
+type_with_annotations = type_list_or_id:x spaces type_annotation+:as
+    => [[:annotations, x[0], as], x[1]];
+type_annotation = "+" {``out`` | ``null``}:x =>  x;
+
+type_list_or_id = type_list | type_id;
+type_list = type_id:x '[]' => [[:list, x[0]], x[1]];
 type_id = {type_pointer | type}:t spaces id:n => [t, n];
 type_pointer = type:x spaces "*"+:star => [:pointer, x, star.size()];
-
 type = unsigned | const | struct | builtins;
 
 struct = ``struct`` spaces id:x => [:struct, x];
