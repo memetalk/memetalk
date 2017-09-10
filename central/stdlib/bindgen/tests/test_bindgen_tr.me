@@ -122,7 +122,7 @@ testTranslateStructDefDefinitions: fun() {
   test.assertEqual(output2.getFieldList()[1].getTypeName, "char", "struct_def.getFieldList.1.getTypeName#2");
   test.assertEqual(output2.getFieldList()[1].getIsPointer, 1, "struct_def.getFieldList.1.getIsPointer#2");
 }
-// All definitions_pr grammar rules
+// All tests rules
 main: fun() {
   testTranslateTypeDefinitions();
   testTranslateTypedDefinitions();

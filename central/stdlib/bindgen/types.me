@@ -145,9 +145,19 @@ class Fun
     if (!primeType) {
       Exception.throw("Unknown type `" + typeName + "'");
     }
-    out.append("  if (!(proc->mmobj()->mm_object_vt(oop_" + arg.getName() +
-               ") == proc->vm()->get_prime(\"" + primeType + "\"))) {");
-    out.append("    proc->raise(\"TypeError\", e);");
+
+    var vname = "oop_" + arg.getName();
+    var errMessage = "Argument `" + arg.getName() + "' expected " + primeType;
+    var typeValidator =
+      "!(proc->mmobj()->mm_object_vt(" + vname + ") == proc->vm()->get_prime(\"" + primeType + "\"))";
+    var validation = typeValidator;
+    if (arg.getIsNullable) {
+      validation = "(" + vname + " != MM_NULL) && " + typeValidator;
+      errMessage = errMessage + " or null";
+    }
+
+    out.append("  if (" + validation + ") {");
+    out.append("    proc->raise(\"TypeError\", \"" + errMessage + "\");");
     out.append("  }");
     return out.join("\n");
   }
@@ -162,6 +172,9 @@ class Fun
     }[typeName];
     if (!unwrap) {
       Exception.throw("Unknown type `" + typeName + "'");
+    }
+    if (arg.getIsNullable()) {
+      unwrap = "(" + argName + " == MM_NULL ? NULL : " + unwrap + ")";
     }
     var out = [" "];            // indentation
     out.append(type);
