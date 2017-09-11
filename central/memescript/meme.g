@@ -87,7 +87,7 @@ alpha =  '+' | '*' | '-' | '/' | '=' | '<' | '>' | '?' | '!' | '&' | '|';
 
 meme_keyword = ``fun`` | ``var`` | ``class`` | ``fields``;
 
-id = spaces ~meme_keyword identifier;
+id = spaces ~meme_keyword identifier:i => i;
 
 alpha_name = spaces ~meme_keyword {alpha | letter | '_'}:x {identifier_rest|alpha}*:xs => ([x] + xs).join("");
 
@@ -173,7 +173,7 @@ top_level_fn = alpha_name:name ":" #
 
 top_level_fun = spaces !{@has_fun_literal = false}
                 alpha_name:name ":"
-                spaces fun_rest(name);
+                spaces fun_rest(name):r => r;
 
 fun_rest :name = # ``fun``  fparams:p "{"
                   top_fun_body:body
@@ -185,12 +185,12 @@ end_body = # "}" => #[:end-body];
 
 instance_method_decl = !{@has_fun_literal = false}
                        ``instance_method`` alpha_name:name ":"
-                       spaces fun_rest(name);
+                       spaces fun_rest(name):r => r;
 
 
 class_method_decl = !{@has_fun_literal = false}
                     ``class_method`` alpha_name:name ":"
-                    spaces fun_rest(name);
+                    spaces fun_rest(name):r => r;
 
 params = "(" idlist:xs ")" => xs;
 
@@ -205,11 +205,12 @@ idlist = id:x {"," id}*:xs => [x] + xs
           | => [];
 
 top_fun_body = primitive
-             | stmts;
+             | stmts
+             ;
 
 primitive =  "<primitive" spaces lit_string:s ">" => [[:primitive, s]];
 
-stmts  =  stmt*;
+stmts  =  stmt*:s => s;
 
 stmt = control_expr
      | non_control_expr:e ";" => e;
@@ -234,7 +235,8 @@ lhs =  expr:r ?{r.size > 0 and r[0] == :index} => r
 
 control_expr = expr_if
              | expr_while
-             | expr_try;
+             | expr_try
+             ;
 
 expr_if = # ``if`` "(" expr:e ")" "{"
            stmts:body
@@ -265,7 +267,7 @@ catch_part =  # ``catch`` "(" alpha_name:id ")"
 
 catch_type =  # alpha_name:type => #[:id, type];
 
-expr = spaces expr_or;
+expr = spaces expr_or:e => e;
 
 expr_or =  #! expr_or:a "or" spaces expr_and:b => #[:or, a, b]
         | expr_and;
@@ -380,7 +382,7 @@ lit_string  = # '"' { lit_escaped | ~'"' _}*:xs '"'
 
 lit_escaped = ~'"' '\\' _:x => "\\" + x;
 
-field_name = "@" id;
+field_name = "@" id:i => i;
 
 
 single_top_level_fun :name = # ``fun`` fparams:p "{"

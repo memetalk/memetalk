@@ -1,11 +1,9 @@
 meme central:memescript/compiler
-
 requires io, ometa_base
 where
   io = central:stdlib/io
   ometa_base = central:memescript/ometa_base
 import OMetaBase from ometa_base
-
 
 class OMetaTranslator < OMetaBase
 fields: vars, indent;
@@ -37,58 +35,48 @@ instance_method mm_module: fun() {
   var p = null;
   var r = null;
   var e = null;
-  return this._or([fun() {
-    this._form(fun() {
-      this._apply_with_args(:exactly, [:module]);
-      p = this._apply(:string);
-      r = this._apply(:rules);
-      e = this._apply(:string);});
-    return [p, r.join("\n"), e].join("\n");
-  }]);
+  this._form(fun() {
+    this._apply_with_args(:exactly, [:module]);
+    p = this._apply(:string);
+    r = this._apply(:rules);
+    e = this._apply(:string);});
+  return [p, r.join("\n"), e].join("\n");
 }
 instance_method ometa: fun() {
   var name = null;
   var base = null;
   var r = null;
-  return this._or([fun() {
-    this._form(fun() {
-      this._apply_with_args(:exactly, [:grammar]);
-      name = this._apply(:string);
-      base = this._apply(:inheritance);
-      r = this._apply(:rules);});
-    return ["class ", name," < ", base,"\n", r.join("\n"),"\nend"].join("");
-  }]);
+  this._form(fun() {
+    this._apply_with_args(:exactly, [:grammar]);
+    name = this._apply(:string);
+    base = this._apply(:inheritance);
+    r = this._apply(:rules);});
+  return ["class ", name," < ", base,"\n", r.join("\n"),"\nend"].join("");
 }
 instance_method inheritance: fun() {
   var base = null;
-  return this._or([fun() {
-    this._form(fun() {
-      this._apply_with_args(:exactly, [:parent]);
-      base = this._apply(:string);});
-    return base;
-  }]);
+  this._form(fun() {
+    this._apply_with_args(:exactly, [:parent]);
+    base = this._apply(:string);});
+  return base;
 }
 instance_method rules: fun() {
   var x = null;
-  return this._or([fun() {
-    this._form(fun() {
-      x = this._many1(fun() {
-        this._apply(:rule);});});
-    return x;
-  }]);
+  this._form(fun() {
+    x = this._many1(fun() {
+      this._apply(:rule);});});
+  return x;
 }
 instance_method rule: fun() {
   var name = null;
   var args = null;
   var p = null;
-  return this._or([fun() {
-    this._form(fun() {
-      this._apply_with_args(:exactly, [:rule]);
-      name = this._apply(:anything);
-      args = this._apply(:rule_args);
-      p = this._apply(:body);});
-    return (["instance_method ", name,": fun() {\n"] + this._local_vars() + [args, p,"\n}"]).join("");
-  }]);
+  this._form(fun() {
+    this._apply_with_args(:exactly, [:rule]);
+    name = this._apply(:anything);
+    args = this._apply(:rule_args);
+    p = this._apply(:body);});
+  return (["instance_method ", name,": fun() {\n"] + this._local_vars() + [args, p,"\n}"]).join("");
 }
 instance_method rule_args: fun() {
   var args = null;
@@ -105,13 +93,26 @@ instance_method rule_args: fun() {
 instance_method body: fun() {
   var p = null;
   return this._or([fun() {
+    this._not(fun() {
+      this._not(fun() {
+        this._form(fun() {
+          this._apply_with_args(:exactly, [:or]);
+          this._apply(:anything);
+          this._many1(fun() {
+            this._apply(:anything);});});});});
     this._form(fun() {
       this._apply_with_args(:exactly, [:or]);
       this.incr_indent();
       p = this._many1(fun() {
         this._apply(:expr);});
+      this._pred(p.size > 1);
       this.decr_indent();});
     return [@indent,"return this._or([", p.map(fun(x) { ["fun() {\n", x,"\n", @indent,"}"].join("") }).join(", "),"]);"].join("");
+  }, fun() {
+    this._form(fun() {
+      this._apply_with_args(:exactly, [:or]);
+      p = this._apply(:expr);});
+    return p;
   }]);
 }
 instance_method expr: fun() {

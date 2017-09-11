@@ -51,11 +51,14 @@ instance_method _local_vars: fun() {
             | => ""
             ;
 
-   body = [:or
-           !{this.incr_indent()}
-             expr+:p
-           !{this.decr_indent()}]
-        => [@indent,"return this._or([", p.map(fun(x) { ["fun() {\n", x, "\n", @indent, "}"].join("") }).join(", "), "]);"].join("");
+   body = ~~[:or _ _+]
+            [:or
+             !{this.incr_indent()}
+               expr+:p ?{p.size > 1}
+             !{this.decr_indent()}]
+        => [@indent,"return this._or([", p.map(fun(x) { ["fun() {\n", x, "\n", @indent, "}"].join("") }).join(", "), "]);"].join("")
+        |  [:or expr:p] => p
+        ;
 
   expr = [:and expr+:p] => p.join("\n")
        | [:and] => ""

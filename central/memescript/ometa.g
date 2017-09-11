@@ -68,7 +68,7 @@ init new: fun(input) {
               | => [:parent, "OMetaBase"]
               ;
 
-  rules = rule+;
+  rules = rule+:x => x;
 
 
   rule = identifier:name !{@current_production = name} rule_rest(name):r ";" => r;
@@ -78,7 +78,7 @@ init new: fun(input) {
                   |  prod_param+:params  action:ac    => [:rule, name, [:args] + params, ac]
                   |  prod_param+:params "=" choices:c => [:rule, name, [:args] + params, c]
                   ;
-  prod_param = spaces binding;
+  prod_param = spaces binding:b => b;
 
   choices  = choice:x { "|" choice }*:xs => [:or, x] + xs;
 
