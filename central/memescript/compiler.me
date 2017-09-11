@@ -153,15 +153,21 @@ instance_method translate: fun(ast) {
 }
 instance_method compile: fun(filepath) {
   @filepath = filepath;
-  var ast = this.parse();
 
-  //io.print(ast.toSource);
+  var ast = bench("parsing", fun() {
+    this.parse();
+  });
+
   //io.print("translating...");
 
-  this.translate(ast);
+  bench("translate", fun() {
+    this.translate(ast);
+  });
 
-  var mec = MEC.new(@cmodule);
-  mec.dump(filepath);
+  bench("mec dump", fun() {
+    var mec = MEC.new(@cmodule);
+    mec.dump(filepath);
+  });
 }
 end
 

@@ -2767,6 +2767,35 @@ static int prim_basename(Process* proc) {
   return 0;
 }
 
+#include <time.h>
+
+static int prim_bench(Process* proc) {
+  oop oop_name = proc->get_arg(0);
+  oop fun = proc->get_arg(1);
+
+  std::string name = proc->mmobj()->mm_string_stl_str(proc, oop_name);
+
+  struct timespec now, tmstart;
+
+  std::cerr << "*bench begin: " << name << std::endl;
+  clock_gettime(CLOCK_REALTIME, &tmstart);
+
+  int exc;
+  oop val = proc->do_call(fun, &exc);
+
+  clock_gettime(CLOCK_REALTIME, &now);
+  double time_used = (double)((now.tv_sec+now.tv_nsec*1e-9) - (double)(tmstart.tv_sec+tmstart.tv_nsec*1e-9));
+
+  std::cerr << "*bench end  : " << name << ": " <<  time_used << std::endl;
+
+  proc->stack_push(val);
+  if (exc != 0) {
+    return PRIM_RAISED;
+  } else {
+    return 0;
+  }
+}
+
 void init_primitives(VM* vm) {
   vm->register_primitive("io_print", prim_io_print);
   vm->register_primitive("io_read_file", prim_io_read_file);
@@ -2971,6 +3000,7 @@ void init_primitives(VM* vm) {
   vm->register_primitive("get_argv", prim_get_argv);
   vm->register_primitive("exit", prim_exit);
   vm->register_primitive("basename", prim_basename);
+  vm->register_primitive("bench", prim_bench);
 
   qt_init_primitives(vm);
 }

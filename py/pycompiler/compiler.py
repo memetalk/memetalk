@@ -9,6 +9,14 @@ import os
 import sys
 import ejson
 from . import comp_vmemory
+import time
+
+def bench(name, fn):
+    print '*bench begin:', name
+    b = time.time()
+    ret = fn()
+    print '*bench end:', name, ': ', time.time()-b
+    return ret
 
 class MEC(object):
     MAGIC_NUMBER = 0x420
@@ -239,17 +247,17 @@ class Compiler(ASTBuilder):
         self.parser = MemeParser(open(filepath, 'r').read())
         self.parser.i = self
 
-        ast = self.do_parse(self.parser, 'start')[0]
-
-        print str(ast)[0:70] + "..."
+        ast = bench('parsing', lambda: self.do_parse(self.parser, 'start')[0])
+        # print ast
+        # print str(ast)[0:70] + "..."
 
         self.parser = MemeTr([ast])
         self.parser.i = self
 
-        self.do_parse(self.parser, "start")
+        bench('translate', lambda: self.do_parse(self.parser, "start"))
 
         mec = MEC(self.cmodule)
-        mec.dump(filepath)
+        bench('mec dump', lambda: mec.dump(filepath))
 
     def compile_lambda(self, text, env_names):
         self.filepath = '<eval>'
