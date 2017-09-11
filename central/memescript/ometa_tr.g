@@ -1,4 +1,4 @@
-meme foo
+meme central:memescript/compiler
 requires io, ometa_base
 where
   io = central:stdlib/io
