@@ -948,6 +948,11 @@ instance_method emit_call: fun(ast, arity) {
   @bytecodes.append(:call, arity);
   this.update_line_mapping(bpos, ast);
 }
+instance_method emit_opt_send: fun(ast, arity) {
+  var bpos = this.current_bytecode_pos();
+  @bytecodes.append(:send, arity);
+  this.update_line_mapping(bpos, ast);
+}
 instance_method emit_send: fun(ast, selector, arity) {
   var bpos = this.current_bytecode_pos();
   var idx = this.create_and_register_symbol_literal(selector);

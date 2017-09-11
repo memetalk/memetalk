@@ -872,6 +872,11 @@ class CompiledFunction(Entry):
         self.bytecodes.append('call', arity)
 
     @emitter
+    def emit_opt_send(self, ast, arity):
+        # obj.send(x, [x,y,z ,...]) -> obj.x(x,y,z,...)
+        self.bytecodes.append('send', arity)
+
+    @emitter
     def emit_send(self, _, selector, arity):
         idx = self.create_and_register_symbol_literal(selector)
         self.bytecodes.append('push_literal', idx)

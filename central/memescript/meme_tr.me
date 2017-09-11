@@ -465,6 +465,7 @@ instance_method stm: fun() {
   var arity = null;
   var name = null;
   var e = null;
+  var v = null;
   var lb_next = null;
   var lb_end = null;
   var lbs_end = null;
@@ -474,7 +475,6 @@ instance_method stm: fun() {
   var end_pos = null;
   var label_begin_catch = null;
   var cp = null;
-  var v = null;
   var lhs = null;
   var f = null;
   var x = null;
@@ -517,6 +517,24 @@ instance_method stm: fun() {
     this._apply_with_args(:exactly, [:super-send]);
     arity = this._apply_with_args(:args, [fnobj]);
     return fnobj.emit_super_send(ast, arity);
+  }, fun() {
+    this._apply_with_args(:exactly, [:send]);
+    e = this._apply(:anything);
+    this._apply_with_args(:exactly, ["send"]);
+    this._form(fun() {
+      this._apply_with_args(:exactly, [:args]);
+      this._form(fun() {
+        v = this._form(fun() {
+          this._apply_with_args(:exactly, [:id]);
+          this._apply(:anything);});
+        this._form(fun() {
+          this._apply_with_args(:exactly, [:literal-array]);
+          this._form(fun() {
+            arity = this._many(fun() {
+              this._apply_with_args(:expr, [fnobj]);}, null);});});});});
+    this._apply_with_args(:expr, [fnobj,e]);
+    this._apply_with_args(:expr, [fnobj,v]);
+    return fnobj.emit_opt_send(ast, arity.size);
   }, fun() {
     this._apply_with_args(:exactly, [:send]);
     e = this._apply(:anything);
