@@ -10,28 +10,53 @@ import Param from types
 import Struct from types
 
 class SyscallDefinitionsTranslator < OMetaBase
+  fields: funs;
+
+  init new: fun(input) {
+    super.new(input);
+    @funs = [];
+  }
+  instance_method newFun: fun(name) {
+     var f = Fun.new(name);
+     @funs.append(f);
+     return f;
+  }
+  instance_method genMainFunction: fun(moduleName) {
+    var output = ["void init_primitives(VM *vm) {"];
+    @funs.each(fun(_, d) {
+      var prim_name = moduleName + "_" + d.getName();
+      output.append("  vm->register_primitive(\"" + prim_name + "\", prim_" + d.getName() + ");");
+    });
+    output.append("}");
+    return output.join("\n");
+  }
+  instance_method gen: fun(moduleName, definitions) {
+    var output = [definitions.map(fun(i) { i.toString }).join("\n\n"), ""];
+    output.append(this.genMainFunction(moduleName));
+    return output.join("\n");
+  }
 
 <ometa>
 
 start = definitions;
 
-definitions
-    = [definition+:x] => x.map(fun(i) { i.toString }).join("\n\n")
-    ;
+module :m = definitions:xs => this.gen(m, xs);
+
+definitions = [definition+:xs] => xs;
+
 definition = include | struct_def | func;
 
 include
     = [:include string:name] => "#include " + name
     ;
 struct_def
-    = [:struct string:name !{Struct.new}:sobj !{sobj.setName(name)}
-               params(sobj)] => sobj
-    | [:struct string:name !{Struct.new}:sobj !{sobj.setName(name)}] => sobj
+    = [:struct string:n !{Struct.new}:s !{s.setName(n)} params(s)] => s
+    | [:struct string:n !{Struct.new}:s !{s.setName(n)}] => s
     ;
 func
-    = [:func string:name !{Fun.new(name)}:fobj
-             params(fobj) !{fobj.newReturnType()}:rtobj
-             type(rtobj):rtype] => fobj
+    = [:func string:n !{this.newFun(n)}:f
+             params(f) !{f.newReturnType()}:r
+             type(r):rt] => f
     ;
 params :obj
     = [typed(obj)*:x]

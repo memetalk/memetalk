@@ -59,8 +59,12 @@ translate: fun(defs) {
 main: fun() {
   var args = argv();
   if (args.size() == 2) {
-    var contents = io.read_file(args[1]);
-    io.print(translate([parse(contents)]));
+    var path = args[1];
+    var contents = io.read_file(path);
+
+    // File name without extension will name the primitives module
+    var fileName = path.split("/").last().split(".")[0];
+    io.print(translateRule([parse(contents)], :module, [fileName]));
   }
   return 0;
 }

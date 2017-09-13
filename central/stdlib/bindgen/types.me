@@ -48,7 +48,7 @@ class Param
     if (this.getIsConst()) { out.append("const"); }
     if (this.getIsUnsigned()) { out.append("unsigned"); }
     out.append(this.getTypeName());
-    if (this.getIsPointer()) { out.append("*"); }
+    if (this.getIsPointer()) { out.append("*".times(this.getIsPointer())); }
     return out.join(" ");
   }
   instance_method toString: fun() {
@@ -167,7 +167,7 @@ class Fun
     var argName = "oop_" + arg.getName();
     var unwrap = {
       "int": "untag_small_int(" + argName + ")",
-      "char": "proc->mmobj()->mm_string_cstr(proc, " + argName + "))",
+      "char": "proc->mmobj()->mm_string_cstr(proc, " + argName + ")",
       "struct": "(" + type + ") ((oop *) " + argName + ")[2]"
     }[typeName];
     if (!unwrap) {
@@ -178,30 +178,27 @@ class Fun
     }
     var out = [" "];            // indentation
     out.append(type);
-    return (out + [arg.getName(), "=", unwrap + ";"]).join(" ");
+    return (out + ["prim_" + arg.getName(), "=", unwrap + ";"]).join(" ");
   }
   instance_method genFunCall: fun() {
-    var paramNames = this.getParams().map(fun(p) { p.getName });
+    var paramNames = this.getParams().map(fun(p) { "prim_" + p.getName });
     var params = "(" + paramNames.join(", ") + ");";
     var rtype = this.getReturnType();
     var out = [];
     if (rtype) {
-      var typeName = rtype.getTypeName();
+      var typeName = this.getTypeNameFromParam(rtype);
       var wrap = {
-        "int": "tag_small_int(oop_output)",
-        "char": "proc->mmobj()->mm_string_new(proc, oop_output)"
+        "int": "tag_small_int(output)",
+        "char": "proc->mmobj()->mm_string_new(proc, output)"
       }[typeName];
       if (!wrap) {
         Exception.throw("Unknown type `" + typeName + "'");
       }
-
-      out.append(" ");          // indentation
-      out.append(rtype.genType());
-      out = out + ["output", "=", this.getName(), params, "\n",
-                   " oop", "oop_output", "=", wrap + ";\n",
-                   " proc->stack_push(oop_output);"];
+      out.append([" ", rtype.genType(), "output", "=", this.getName(), params, "\n\n"].join(" "));
+      out.append(" /* Push output to the stack */\n");
+      out.append(" oop oop_output = " + wrap + ";\n");
+      out.append(" proc->stack_push(oop_output);\n");
     }
-
     return out.join(" ");
   }
   instance_method toString: fun() {
