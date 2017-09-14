@@ -28,6 +28,7 @@ cleanall:
 	rm -f core.img
 
 $(CORE_IMG):
+	$(MAKE) -C py parsers
 	PYTHONPATH=$(PY_PATH) python -m pycore.compiler $(CORE_ME) $(ROOT_DIR)
 
 .PHONY: $(subdirs) clean

@@ -14,4 +14,4 @@ GCODE := $(patsubst %.g,%.me,$(GRAMMARS))
 GBCODE := $(patsubst %.g,%.mec,$(GRAMMARS))
 
 build: $(BYTECODE) $(GCODE) $(GBCODE)
-clean:; -rm $(BYTECODE) $(GBCODE)
+clean:; -rm -f $(BYTECODE) $(GBCODE)
