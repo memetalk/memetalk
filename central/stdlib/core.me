@@ -127,18 +127,20 @@ meme central:memescript/compiler
   end
 
   class CompiledFunction
-   fields: name, params, is_ctor, is_prim, prim_name, accessor_flags,
-           accessor_field, owner, len_params, has_env, is_top_level,
-           outer_cfun, storage_size, env_offset, lit_frame_size,
-           literal_frame_addr, bytecode_size, bytecode_addr,
-           exception_frames_len, exception_frame_addr,
-           env_table, text, line_mappings,
-           loc_mappings, closures;
+    fields: header, name, params, prim_name, accessor_flags,
+            accessor_field, owner, outer_cfun, lit_frame_size,
+            literal_frame_addr, bytecode_size, bytecode_addr,
+            exception_frames_len, exception_frame_addr,
+            env_table, text, line_mappings, loc_mappings,
+            closures;
     init withEnv: fun(text, scope_names, cmod) {
       <primitive "compiled_function_with_env">
     }
     init withFrame: fun(text, frame, cmod) {
       <primitive "compiled_function_with_frame">
+    }
+    instance_method is_prim: fun() {
+      return (@header & 0x2) >> 1;
     }
     instance_method new_context: fun(fp, module) {
       <primitive "compiled_function_new_context">
@@ -160,7 +162,7 @@ meme central:memescript/compiler
       <primitive "compiled_function_loc_for">
     }
     instance_method lineFor: fun(frame) {
-      if (@is_prim) {
+      if (this.is_prim) {
         return 0;
       } else {
         return this.source_location_for(frame)[0];
@@ -176,7 +178,7 @@ meme central:memescript/compiler
       return @owner.fullName + "/" + @name;
     }
     instance_method isTopLevel: fun() {
-      return @is_top_level;
+      return (@header & 0x10) >> 4;
     }
     instance_method outerCompiledFunction: fun() {
       return @outer_cfun;

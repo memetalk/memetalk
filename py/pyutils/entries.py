@@ -573,6 +573,12 @@ class CompiledFunction(Entry):
         self.bytecodes.append("ret_top",0)
         self.add_exception_entry(lb_begin_try, lb_begin_catch, catch_type)
 
+    def encode_header(self):
+        flags = (int(self.is_top_level) << 4) + (int(self.var_arg) << 3) + (int(self.has_env) << 2) + \
+                (int(self.is_prim) << 1) + int(self.is_ctor)
+
+        header = (self.var_declarations.env_offset(self) << 15) + (len(self.params) << 10) + (self.var_declarations.total() << 5) + flags
+        return header
 
     def fill(self, vmem):
         if self.should_wrap_catch_for_non_local_return:
@@ -594,25 +600,27 @@ class CompiledFunction(Entry):
         oop_closures = vmem.append_list_of_oops_for_labels([x.label() for x in self.closures])
 
         vmem.append_int(FRAME_TYPE_OBJECT)
-        vmem.append_int(28 * bits.WSIZE)
+        vmem.append_int(21 * bits.WSIZE)
 
         oop = vmem.append_external_ref('CompiledFunction', self.label()) # CompiledFunction vt
         vmem.append_pointer_to(oop_delegate)
+        vmem.append_int(self.encode_header())
+
         vmem.append_pointer_to(oop_name)
         vmem.append_pointer_to(oop_params)
-        vmem.append_int(int(self.is_ctor))
-        vmem.append_int(int(self.is_prim))
-        vmem.append_pointer_to(oop_prim_name)
+        # vmem.append_int(int(self.is_ctor))
+        # vmem.append_int(int(self.is_prim))
+        vmem.append_pointer_to(oop_prim_name) # 5
 
         vmem.append_int(self.accessor_flag) # normal=0/getter=1/setter=2
         vmem.append_int(self.accessor_field) # getter/setter field index
 
         vmem.append_label_ref(self.owner.label())
 
-        vmem.append_int(len(self.params))  # 10
+        # vmem.append_int(len(self.params))
 
-        vmem.append_int(self.has_env)
-        vmem.append_int(self.is_top_level)
+        # vmem.append_int(self.has_env)
+        # vmem.append_int(self.is_top_level)
 
         if self.outer_cfun is None:
             vmem.append_null()
@@ -620,15 +628,15 @@ class CompiledFunction(Entry):
             vmem.append_label_ref(self.outer_cfun.label())
 
         # local size or env size
-        vmem.append_int(self.var_declarations.total())
+        # vmem.append_int(self.var_declarations.total())
         # else:
         #     vmem.append_int(0) # closures do not need to allocate space in ep or stack
 
         # env offset
         # print 'offset:' ,self.name, self.var_declarations.env_offset(self), 'storage:', self.var_declarations.total()
-        vmem.append_int(self.var_declarations.env_offset(self))
+        # vmem.append_int(self.var_declarations.env_offset(self))
 
-        vmem.append_int(lit_frame_size)
+        vmem.append_int(lit_frame_size)  # 10
         if lit_frame_size > 0:
             vmem.append_label_ref(self.literal_frame_label())
         else:
@@ -640,8 +648,8 @@ class CompiledFunction(Entry):
         else:
             vmem.append_null()
 
-        vmem.append_int(exception_frames) # 20
-        if exception_frames > 0:
+        vmem.append_int(exception_frames)
+        if exception_frames > 0: # 15
             vmem.append_label_ref(self.exceptions_frame_label())
         else:
             vmem.append_null()
@@ -651,7 +659,7 @@ class CompiledFunction(Entry):
         vmem.append_pointer_to(oop_line_mappings)
         vmem.append_pointer_to(oop_loc_mappings)
         vmem.append_pointer_to(oop_closures)
-        vmem.append_int(self.var_arg)
+        # vmem.append_int(self.var_arg)
 
         # vmem.append_label_ref(self.cmod.label())
         self.oop = oop

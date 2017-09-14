@@ -315,7 +315,9 @@ oop VM::compile_fun(Process* proc, const char* text, std::list<std::string> vars
     if (pclose(p) == 0) {
       MECFunction* mecf = new (GC) MECFunction(this, _core_image, c_data, data.size());
       oop cfun = mecf->load(proc);
-      _mmobj->mm_compiled_function_set_cmod(proc, cfun, cmod);
+      //FIXME: this might be necessary?
+      assert(0);
+      //_mmobj->mm_compiled_function_set_cmod(proc, cfun, cmod);
       return cfun;
     } else {
       *exc = 1;

@@ -25,6 +25,19 @@ class VM;
 
 typedef struct {} InternalError;
 
+
+
+#define CFUN_IS_TOP_LEVEL(header) ((header & 0x10) >> 4)
+#define CFUN_HAS_VAR_ARG(header)  ((header & 0x8) >> 3)
+#define CFUN_HAS_ENV(header)      ((header & 0x4) >> 2)
+#define CFUN_IS_PRIM(header)      ((header & 0x2) >> 1)
+#define CFUN_IS_CTOR(header)      (header & 0x1)
+
+#define CFUN_ENV_OFFSET(header)   ((header & 0xf8000) >> 15)
+#define CFUN_NUM_PARAMS(header)   ((header & 0x7c00) >> 10)
+#define CFUN_STORAGE_SIZE(header) ((header & 0x3e0) >> 5)
+
+
 class MMObj {
 public:
   MMObj(CoreImage*);
@@ -164,87 +177,67 @@ public:
   oop mm_context_get_env(Process*, oop, bool should_assert = false);
 
   oop mm_function_from_cfunction(Process*, oop cfun, oop imod, bool should_assert = false);
-  bool mm_function_is_prim(Process*, oop fun, bool should_assert = false);
+
+
+  long mm_function_get_header(Process*, oop fun, bool should_assert = false);
   oop mm_function_get_name(Process*, oop fun, bool should_assert = false);
-
-  oop mm_function_get_module(Process*, oop fun, bool should_assert = false);
   oop mm_function_get_prim_name(Process*, oop fun, bool should_assert = false);
-  //oop mm_function_get_cfun(Process*, oop fun, bool should_assert = false);
-  inline oop mm_function_get_cfun(Process* p, oop fun, bool should_assert = false) {
-    return (oop) ((oop*)fun)[2];
-  }
-
-  bytecode* mm_function_get_code(Process*, oop fun, bool should_assert = false);
-  number mm_function_get_code_size(Process*, oop fun, bool should_assert = false);
-  oop mm_function_get_literal_by_index(Process*, oop fun, int idx, bool should_assert = false);
-  number mm_function_get_num_locals_or_env(Process*, oop fun, bool should_assert = false);
-  number mm_function_get_env_offset(Process*, oop fun, bool should_assert = false);
-//  number mm_function_get_num_params(Process*, oop fun, bool should_assert = false);
-  inline number mm_function_get_num_params(Process* p, oop fun, bool should_assert = false) {
-  // TYPE_CHECK(!( mm_object_vt(fun) == _core_image->get_prime("Function") ||
-  //               mm_object_vt(fun) == _core_image->get_prime("Context")),
-  //            "TypeError","Expected Function or Context")
-  oop cfun = mm_function_get_cfun(p, fun, should_assert);
-  return mm_compiled_function_get_num_params(p, cfun, should_assert);
-}
-
-  bool mm_function_is_ctor(Process*, oop fun, bool should_assert = false);
   bool mm_function_is_getter(Process*, oop fun, bool should_assert = false);
-  bool mm_function_uses_env(Process*, oop fun, bool should_assert = false);
   number mm_function_access_field(Process*, oop fun, bool should_assert = false);
-
   oop mm_function_get_owner(Process*, oop fun, bool should_assert = false);
-
+  oop mm_function_get_literal_by_index(Process*, oop fun, int idx, bool should_assert = false);
+  number mm_function_get_code_size(Process*, oop fun, bool should_assert = false);
+  bytecode* mm_function_get_code(Process*, oop fun, bool should_assert = false);
   number mm_function_exception_frames_count(Process*, oop fun, bool should_assert = false);
   oop mm_function_exception_frames(Process*, oop fun, bool should_assert = false);
   oop mm_function_env_table(Process*, oop fun, bool should_assert = false);
-
   oop mm_function_get_text(Process*, oop fun, bool should_assert = false);
   oop mm_function_get_line_mapping(Process*, oop fun, bool should_assert = false);
   oop mm_function_get_loc_mapping(Process*, oop fun, bool should_assert = false);
   oop mm_function_get_closures(Process*, oop fun, bool should_assert = false);
-  bool mm_function_get_vararg(Process*, oop fun, bool should_assert = false);
   bytecode* mm_function_next_expr(Process*, oop fun, bytecode* ip, bool should_assert = false);
   bytecode* mm_function_next_line_expr(Process*, oop fun, bytecode* ip, bool should_assert = false);
   number mm_function_get_line_for_instruction(Process*, oop fun, bytecode* ip, bool should_assert = false);
 
-  void mm_overwrite_compiled_function(Process*, oop target_cfun, oop origin_cfun, bool should_assert = false);
-  bytecode* mm_compiled_function_get_code(Process*, oop cfun, bool should_assert = false);
-  number mm_compiled_function_get_code_size(Process*, oop cfun, bool should_assert = false);
-  number mm_compiled_function_get_num_locals_or_env(Process*, oop cfun, bool should_assert = false);
-  number mm_compiled_function_get_env_offset(Process*, oop cfun, bool should_assert = false);
-//  number mm_compiled_function_get_num_params(Process*, oop cfun, bool should_assert = false);
-  inline number mm_compiled_function_get_num_params(Process* p, oop cfun, bool should_assert = false) {
-    return (number) ((oop*)cfun)[10];
+  oop mm_function_get_module(Process*, oop fun, bool should_assert = false);
+
+  inline oop mm_function_get_cfun(Process* p, oop fun, bool should_assert = false) {
+    return (oop) ((oop*)fun)[2];
   }
 
+  void mm_overwrite_compiled_function(Process*, oop target_cfun, oop origin_cfun, bool should_assert = false);
+
+  //
+  long mm_compiled_function_get_header(Process*, oop fun, bool should_assert = false);
+  oop mm_compiled_function_get_name(Process*, oop cfun, bool should_assert = false);
+  oop mm_compiled_function_get_params(Process*, oop cfun, bool should_assert = false);
+  oop mm_compiled_function_get_prim_name(Process*, oop cfun, bool should_assert = false);
   bool mm_compiled_function_is_getter(Process*, oop cfun, bool should_assert = false);
   number mm_compiled_function_access_field(Process*, oop cfun, bool should_assert = false);
-  bool mm_compiled_function_is_ctor(Process*, oop cfun, bool should_assert = false);
-  bool mm_compiled_function_is_prim(Process*, oop cfun, bool should_assert = false);
-  oop mm_compiled_function_get_prim_name(Process*, oop cfun, bool should_assert = false);
-  bool mm_compiled_function_uses_env(Process*, oop cfun, bool should_assert = false);
-  bool mm_compiled_function_is_top_level(Process*, oop cfun, bool should_assert = false);
-  oop mm_compiled_function_outer_cfun(Process*, oop cfun, bool should_assert = false);
   oop mm_compiled_function_get_owner(Process*, oop cfun, bool should_assert = false);
   void mm_compiled_function_set_owner(Process*, oop cfun, oop owner, bool should_assert = false);
-  oop mm_compiled_function_get_name(Process*, oop cfun, bool should_assert = false);
-
+  oop mm_compiled_function_outer_cfun(Process*, oop cfun, bool should_assert = false);
+  number mm_compiled_function_get_literal_frame_size(Process*, oop cfun, bool should_assert = false);
+  oop mm_compiled_function_get_literal_by_index(Process*, oop cfun, int idx, bool should_assert = false);
+  number mm_compiled_function_get_code_size(Process*, oop cfun, bool should_assert = false);
+  bytecode* mm_compiled_function_get_code(Process*, oop cfun, bool should_assert = false);
+  number mm_compiled_function_exception_frames_count(Process*, oop cfun, bool should_assert = false);
+  oop mm_compiled_function_exception_frames(Process*, oop cfun, bool should_assert = false);
+  oop mm_compiled_function_env_table(Process*, oop cfun, bool should_assert = false);
   oop mm_compiled_function_get_text(Process*, oop cfun, bool should_assert = false);
   oop mm_compiled_function_get_line_mapping(Process*, oop cfun, bool should_assert = false);
   oop mm_compiled_function_get_loc_mapping(Process*, oop cfun, bool should_assert = false);
   oop mm_compiled_function_get_closures(Process*, oop cfun, bool should_assert = false);
-  bool mm_compiled_function_get_vararg(Process*, oop cfun, bool should_assert = false);
-  // oop mm_compiled_function_get_cmod(Process*, oop cfun, bool should_assert = false);
-  void mm_compiled_function_set_cmod(Process*, oop cfun, oop cmod, bool should_assert = false);
 
   number mm_compiled_function_get_line_for_instruction(Process*, oop fun, bytecode* ip, bool should_assert = false);
-
   bytecode* mm_compiled_function_get_instruction_for_line(Process* p, oop cfun, number lineno, bool should_assert = false);
-
-  // bool mm_compiled_function_loc_mapping_matches_ip(Process*, oop, bytecode*, bool should_assert = false);
   bytecode* mm_compiled_function_next_expr(Process*, oop cfun, bytecode* ip, bool should_assert = false);
   bytecode* mm_compiled_function_next_line_expr(Process*, oop cfun, bytecode* ip, bool should_assert = false);
+
+  // oop mm_compiled_function_get_cmod(Process*, oop cfun, bool should_assert = false);
+  // void mm_compiled_function_set_cmod(Process*, oop cfun, oop cmod, bool should_assert = false);
+
+  // bool mm_compiled_function_loc_mapping_matches_ip(Process*, oop, bytecode*, bool should_assert = false);
 
   oop mm_compiled_class_name(Process*, oop cclass, bool should_assert = false);
   oop mm_compiled_class_super_name(Process*, oop cclass, bool should_assert = false);
@@ -254,12 +247,7 @@ public:
   oop mm_compiled_class_fields(Process*, oop cclass, bool should_assert = false);
   number mm_compiled_class_num_fields(Process*, oop cclass, bool should_assert = false);
 
-  oop mm_compiled_function_get_literal_by_index(Process*, oop cfun, int idx, bool should_assert = false);
-  number mm_compiled_function_get_literal_frame_size(Process*, oop cfun, bool should_assert = false);
 
-  number mm_compiled_function_exception_frames_count(Process*, oop cfun, bool should_assert = false);
-  oop mm_compiled_function_exception_frames(Process*, oop cfun, bool should_assert = false);
-  oop mm_compiled_function_env_table(Process*, oop cfun, bool should_assert = false);
 
   oop mm_class_behavior_new(Process*, oop super_class, oop funs_dict, bool should_assert = false);
   oop mm_class_new(Process*, oop class_behavior, oop super_class, oop dict, oop compiled_class, number payload, bool should_assert = false);

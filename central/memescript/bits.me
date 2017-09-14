@@ -72,6 +72,15 @@ string_block_size: fun(string) {
   return (string.size / WSIZE).ceil * WSIZE;
 }
 
+encode_bits: fun(bitlist) {
+  var res = 0;
+  bitlist.reverse.each(fun(idx, b) {
+    if (b) {
+      res = res + (1 << idx);
+    }
+  });
+  return res;
+}
 // tests
 
 // main: fun() {

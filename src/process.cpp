@@ -403,6 +403,7 @@ bool Process::load_fun(oop recv, oop drecv, oop fun, bool should_allocate, numbe
   }
 
   DBG(fun << endl);
+  long header = _mmobj->mm_function_get_header(this, fun, true);
 
   if (_mmobj->mm_function_is_getter(this, fun, true)) {
     number idx = _mmobj->mm_function_access_field(this, fun, true);
@@ -413,10 +414,10 @@ bool Process::load_fun(oop recv, oop drecv, oop fun, bool should_allocate, numbe
     return false;
   }
 
-  number org_num_params = _mmobj->mm_function_get_num_params(this, fun, true);
+  number org_num_params = CFUN_NUM_PARAMS(header);
   number num_params = arity != -1? arity : org_num_params;
   _current_args_number = num_params;
-  number storage_size = _mmobj->mm_function_get_num_locals_or_env(this, fun, true);
+  number storage_size = CFUN_STORAGE_SIZE(header);
   push_frame(recv, drecv, num_params, arity != -1? storage_size + (arity-org_num_params) : storage_size);
 
 
@@ -442,9 +443,9 @@ bool Process::load_fun(oop recv, oop drecv, oop fun, bool should_allocate, numbe
   // }
 
   if (_mmobj->mm_is_context(fun)) {
-    restore_fp(_mmobj->mm_context_get_env(this, fun, true), num_params, _mmobj->mm_function_get_env_offset(this, fun, true));
+    restore_fp(_mmobj->mm_context_get_env(this, fun, true), num_params, CFUN_ENV_OFFSET(header));
   } else {
-    if (_mmobj->mm_function_uses_env(this, fun, true)) {
+    if (CFUN_HAS_ENV(header)) {
       setup_fp(num_params, storage_size);
     }
   }
@@ -454,11 +455,12 @@ bool Process::load_fun(oop recv, oop drecv, oop fun, bool should_allocate, numbe
   DBG("MP for fun load: " << _mp << endl);
   DBG("_cp is " << _cp << endl);
 
-  if (_mmobj->mm_function_is_ctor(this, fun, true) and should_allocate) {
+  if (CFUN_IS_CTOR(header) and should_allocate) {
+    DBG("recv is a class: " << recv << endl);
     basic_new_and_load(recv);
   }
 
-  if (_mmobj->mm_function_is_prim(this, fun, true)) {
+  if (CFUN_IS_PRIM(header)) {
     oop prim_name = _mmobj->mm_function_get_prim_name(this, fun, true);
     //std::string str_prim_name = _mmobj->mm_string_cstr(this, prim_name, true);
     int ret = execute_primitive(prim_name);
@@ -552,7 +554,7 @@ oop Process::super_send(oop recv, oop selector, oop args, int* exc) {
     return ex;
   }
 
-  number arity = _mmobj->mm_function_get_num_params(this, fun);
+  number arity = CFUN_NUM_PARAMS(_mmobj->mm_function_get_header(this, fun));
   if (num_args != arity) {
     std::stringstream s;
     s << _mmobj->mm_symbol_cstr(this, selector, true) << ": expects " <<  arity << " but got " << num_args;
@@ -588,7 +590,7 @@ oop Process::do_send(oop recv, oop selector, int num_args, int *exc) {
     return ex;
   }
 
-  number arity = _mmobj->mm_function_get_num_params(this, fun);
+  number arity = CFUN_NUM_PARAMS(_mmobj->mm_function_get_header(this, fun));
   if (num_args != arity) {
     std::stringstream s;
     s << _mmobj->mm_symbol_cstr(this, selector, true) << ": expects " <<  arity << " but got " << num_args;
@@ -661,7 +663,7 @@ oop Process::call(oop fun, oop args, int* exc) {
     raise("TypeError", "expecting Context");
   }
   number num_args = _mmobj->mm_list_size(this, args);
-  number arity = _mmobj->mm_function_get_num_params(this, fun);
+  number arity = CFUN_NUM_PARAMS(_mmobj->mm_function_get_header(this, fun));
   if (num_args != arity) {
     std::stringstream s;
     s << _mmobj->mm_string_cstr(this, _mmobj->mm_function_get_name(this, fun)) << ": expects " <<  arity << " but got " << num_args;
@@ -684,7 +686,7 @@ oop Process::call_1(oop fun, oop arg, int* exc) {
     raise("TypeError", "expecting Context");
   }
   number num_args = 1;
-  number arity = _mmobj->mm_function_get_num_params(this, fun);
+  number arity = CFUN_NUM_PARAMS(_mmobj->mm_function_get_header(this, fun));
   if (num_args != arity) {
     std::stringstream s;
     s << _mmobj->mm_string_cstr(this, _mmobj->mm_function_get_name(this, fun)) << ": expects " <<  arity << " but got " << num_args;
@@ -705,7 +707,7 @@ oop Process::call_2(oop fun, oop arg0, oop arg1, int* exc) {
     raise("TypeError", "expecting Context");
   }
   number num_args = 2;
-  number arity = _mmobj->mm_function_get_num_params(this, fun);
+  number arity = CFUN_NUM_PARAMS(_mmobj->mm_function_get_header(this, fun));
   if (num_args != arity) {
     std::stringstream s;
     s << _mmobj->mm_string_cstr(this, _mmobj->mm_function_get_name(this, fun)) << ": expects " <<  arity << " but got " << num_args;
@@ -1081,7 +1083,7 @@ void Process::handle_super_send(number num_args) {
     return;
   }
 
-  number arity = _mmobj->mm_function_get_num_params(this, fun);
+  number arity = CFUN_NUM_PARAMS(_mmobj->mm_function_get_header(this, fun));
   if (num_args != arity) {
     std::stringstream s;
     s << _mmobj->mm_string_cstr(this, _mmobj->mm_function_get_name(this, fun)) << ": expects " <<  arity << " but got " << num_args;
@@ -1127,8 +1129,9 @@ void Process::handle_send(number num_args) {
     return;
   }
 
-  bool vararg = _mmobj->mm_function_get_vararg(this, fun);
-  number arity = _mmobj->mm_function_get_num_params(this, fun);
+  long header = _mmobj->mm_function_get_header(this, fun);
+  bool vararg = CFUN_HAS_VAR_ARG(header);
+  number arity = CFUN_NUM_PARAMS(header);
   if (!vararg && num_args != arity) {
     std::stringstream s;
     s << _mmobj->mm_string_cstr(this, _mmobj->mm_function_get_name(this, fun)) << ": expects " <<  arity << " but got " << num_args;
@@ -1175,7 +1178,7 @@ void Process::handle_super_ctor_send(number num_args) {
   DBG("Lookup FOUND " << fun << endl);
 
 
-  number arity = _mmobj->mm_function_get_num_params(this, fun);
+  number arity = CFUN_NUM_PARAMS(_mmobj->mm_function_get_header(this, fun));
   if (num_args != arity) {
     std::stringstream s;
     s << "arity and num_args differ: " << num_args << " != " << arity;
@@ -1197,7 +1200,7 @@ void Process::handle_call(number num_args) {
   // DBG("handle_call" << endl);
   oop fun = stack_pop();
   // DBG("handle_call: fn " << fun << endl);
-  number arity = _mmobj->mm_function_get_num_params(this, fun);
+  number arity = CFUN_NUM_PARAMS(_mmobj->mm_function_get_header(this, fun));
   // DBG("handle_call: arity " << arity << endl);
   if (num_args != arity) {
     std::stringstream s;
@@ -1397,7 +1400,9 @@ bool Process::exception_has_handler(oop e, oop cp, bytecode* ip, oop next_bp) {
 
   DBG("exception_has_handler: " << _mmobj->mm_string_cstr(this, _mmobj->mm_function_get_name(this, cp, true), true) << endl);
 
-  if (_mmobj->mm_function_is_prim(this, cp, true)) {
+  long header = _mmobj->mm_function_get_header(this, cp);
+
+  if (CFUN_IS_PRIM(header)) {
     cp = cp_from_base(next_bp);
     ip = ip_from_base(next_bp);
     return exception_has_handler(e, cp, ip, *(oop*)next_bp);
@@ -1514,7 +1519,7 @@ oop Process::unwind_with_exception(oop e) {
 
   DBG("unwind_with_exception: " << CTXNAME(_cp) << endl);
 
-  if (_mmobj->mm_function_is_prim(this, _cp, true)) {
+  if (CFUN_IS_PRIM(_mmobj->mm_function_get_header(this, _cp, true))) {
     DBG("->> unwind reached primitive " << _mmobj->mm_string_cstr(this, _mmobj->mm_function_get_prim_name(this, _cp, true), true) << endl);
     throw mm_exception_rewind(e);
   }
@@ -1758,7 +1763,7 @@ void Process::unwind_with_frame(oop bp) {
     DBG("found bp. stop unwinding" << endl);
     reload_frame();
     return;
-  } else if (_mmobj->mm_function_is_prim(this, _cp, true)) {
+  } else if (CFUN_IS_PRIM(_mmobj->mm_function_get_header(this, _cp, true))) {
     DBG("prim, lets throw" << endl);
       throw mm_frame_rewind(bp);
   } else {

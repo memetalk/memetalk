@@ -622,6 +622,22 @@ instance_method wrap_catch_for_non_local_return: fun() {
   @bytecodes.append(:ret_top, 0);
   this.add_exception_entry(lb_begin_try, lb_begin_catch, catch_type);
 }
+instance_method encode_header: fun() {
+  //header: [unused:44|env_offset:5|params:5|locals:5|flags:5]: 64 bits
+
+  var flags = bits.encode_bits([@is_top_level, @var_arg, @has_env, @is_prim, @is_ctor]);
+
+  return (@var_declarations.env_offset(this) << 15) + (@params.size << 10) + (@var_declarations.total << 5) + flags;
+  //vmem.append_int(@is_ctor, null);
+  //vmem.append_int(@is_prim, null);
+  //vmem.append_int(@has_env, null);
+  //vmem.append_int(@var_arg, null);
+  //vmem.append_int(@is_top_level, null); //probably we don't need that
+  //vmem.append_int(@params.size, null); //10
+  //vmem.append_int(@var_declarations.total, null);
+  //vmem.append_int(@var_declarations.env_offset(this), null);
+
+}
 instance_method fill: fun(vmem) {
   if (@should_wrap_catch_for_non_local_return) {
     this.wrap_catch_for_non_local_return();
@@ -643,25 +659,28 @@ instance_method fill: fun(vmem) {
   var oop_closures = vmem.append_list_of_oops_for_labels(@closures.map(fun(x) { x.label }));
 
   vmem.append_int(mec.FRAME_TYPE_OBJECT, null);
-  vmem.append_int(28 * bits.WSIZE, null);
+  vmem.append_int(21 * bits.WSIZE, null);
 
   var oop = vmem.append_external_ref("CompiledFunction", this.label); // ComppiledFunction vt
   vmem.append_pointer_to(oop_delegate, null);
+
+  vmem.append_int(this.encode_header(), null);
+
   vmem.append_pointer_to(oop_name, null);
   vmem.append_pointer_to(oop_params, null);
-  vmem.append_int(@is_ctor, null);
-  vmem.append_int(@is_prim, null);
-  vmem.append_pointer_to(oop_prim_name, null);
+  //vmem.append_int(@is_ctor, null);
+  //vmem.append_int(@is_prim, null);
+  vmem.append_pointer_to(oop_prim_name, null); //5
 
   vmem.append_int(@accessor_flag, null); //normal=0/getter=1/setter=2
   vmem.append_int(@accessor_field, null); //getter/setter field index
 
   vmem.append_label_ref(@owner.label, null);
 
-  vmem.append_int(@params.size, null); //10
+  //vmem.append_int(@params.size, null);
 
-  vmem.append_int(@has_env, null);
-  vmem.append_int(@is_top_level, null);
+  //vmem.append_int(@has_env, null);
+  //vmem.append_int(@is_top_level, null);
 
   if (@outer_cfun == null) {
     vmem.append_null(null);
@@ -670,11 +689,11 @@ instance_method fill: fun(vmem) {
   }
 
   // local size or env size
-  vmem.append_int(@var_declarations.total, null);
+  //vmem.append_int(@var_declarations.total, null);
 
-  vmem.append_int(@var_declarations.env_offset(this), null);
+  //vmem.append_int(@var_declarations.env_offset(this), null);
 
-  vmem.append_int(lit_frame_size, null);
+  vmem.append_int(lit_frame_size, null); //10
   if (lit_frame_size > 0) {
     vmem.append_label_ref(this.literal_frame_label, null);
   } else {
@@ -688,8 +707,8 @@ instance_method fill: fun(vmem) {
     vmem.append_null(null);
   }
 
-  vmem.append_int(exception_frames, null); //20
-  if (exception_frames > 0) {
+  vmem.append_int(exception_frames, null);
+  if (exception_frames > 0) { //15
     vmem.append_label_ref(this.exceptions_frame_label, null);
   } else {
     vmem.append_null(null);
@@ -700,7 +719,7 @@ instance_method fill: fun(vmem) {
   vmem.append_pointer_to(oop_line_mappings, null);
   vmem.append_pointer_to(oop_loc_mappings, null);
   vmem.append_pointer_to(oop_closures, null);
-  vmem.append_int(@var_arg, null);
+  //vmem.append_int(@var_arg, null);
   return this.set_oop(oop);
 }
 instance_method new_closure: fun(params) {

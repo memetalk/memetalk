@@ -1,31 +1,31 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ufwb version="1.17">
-    <grammar name="mmc" start="id:42" author="thiago silva">
+    <grammar name="mmc" start="id:318" author="thiago silva">
         <description>Grammar for my file format</description>
-        <structure name="mmc" id="42" encoding="ISO_8859-1:1987" endian="big" signed="no">
-            <structref name="header" id="44" structure="id:43"/>
-            <structref name="names" id="46" structure="id:45"/>
-            <structref name="object_table" id="48" structure="id:47"/>
-            <structref name="external_references" id="50" structure="id:49"/>
-            <structref name="external_symbols" id="52" structure="id:51"/>
-            <structref name="reloc_table" id="54" structure="id:53"/>
+        <structure name="mmc" id="318" encoding="ISO_8859-1:1987" endian="big" signed="no">
+            <structref name="header" id="320" structure="id:319"/>
+            <structref name="names" id="322" structure="id:321"/>
+            <structref name="object_table" id="324" structure="id:323"/>
+            <structref name="external_references" id="326" structure="id:325"/>
+            <structref name="external_symbols" id="328" structure="id:327"/>
+            <structref name="reloc_table" id="330" structure="id:329"/>
         </structure>
-        <structure name="header" id="43" encoding="ISO_8859-1:1987" endian="little" signed="no">
-            <number name="magic" mustmatch="yes" id="56" fillcolor="59F970" type="integer" length="8" display="hex">
+        <structure name="header" id="319" encoding="ISO_8859-1:1987" endian="little" signed="no">
+            <number name="magic" mustmatch="yes" id="332" fillcolor="59F970" type="integer" length="8" display="hex">
                 <fixedvalues>
                     <fixedvalue value="0x420"/>
                 </fixedvalues>
             </number>
-            <number name="ot_size" id="57" fillcolor="59F970" type="integer" length="8"/>
-            <number name="er_size" id="58" fillcolor="59F970" type="integer" length="8"/>
-            <number name="es_size" id="59" fillcolor="59F970" type="integer" length="8"/>
-            <number name="names_size" id="60" fillcolor="59F970" type="integer" length="8"/>
+            <number name="ot_size" id="333" fillcolor="59F970" type="integer" length="8"/>
+            <number name="er_size" id="334" fillcolor="59F970" type="integer" length="8"/>
+            <number name="es_size" id="335" fillcolor="59F970" type="integer" length="8"/>
+            <number name="names_size" id="336" fillcolor="59F970" type="integer" length="8"/>
         </structure>
-        <structure name="names" id="45" length="names_size" encoding="ISO_8859-1:1987" endian="big" signed="no">
-            <structure name="entry" id="62" length="0" repeatmax="-1">
-                <string name="aString" id="63" fillcolor="FFB200" type="zero-terminated"/>
-                <structure name="padding" id="64" repeatmin="0">
-                    <number name="null" mustmatch="yes" id="65" fillcolor="CACACA" repeatmax="-1" type="integer" length="1">
+        <structure name="names" id="321" length="names_size" encoding="ISO_8859-1:1987" endian="big" signed="no">
+            <structure name="entry" id="338" length="0" repeatmax="-1">
+                <string name="aString" id="339" fillcolor="FFB200" type="zero-terminated"/>
+                <structure name="padding" id="340" repeatmin="0">
+                    <number name="null" mustmatch="yes" id="341" fillcolor="CACACA" repeatmax="-1" type="integer" length="1">
                         <fixedvalues>
                             <fixedvalue value="0"/>
                         </fixedvalues>
@@ -33,23 +33,23 @@
                 </structure>
             </structure>
         </structure>
-        <structure name="object_table" id="47" length="ot_size" encoding="ISO_8859-1:1987" endian="big" signed="no">
-            <grammarref name="object" id="69" filename="/Users/thiago/src/memetalk/sugarfoot/stuff/syn_object_table.grammar"/>
+        <structure name="object_table" id="323" length="ot_size" encoding="ISO_8859-1:1987" endian="big" signed="no">
+            <grammarref name="object" id="345" filename="/Users/thiago/src/memetalk/stuff/syn_object_table.grammar"/>
         </structure>
-        <structure name="external_references" id="49" length="er_size" encoding="ISO_8859-1:1987" endian="little" signed="no">
-            <structure name="entry" id="71" length="0" repeatmax="-1">
-                <number name="name_addr" id="72" type="integer" length="8" display="hex"/>
-                <number name="obj_addr" id="73" type="integer" length="8" display="hex"/>
+        <structure name="external_references" id="325" length="er_size" encoding="ISO_8859-1:1987" endian="little" signed="no">
+            <structure name="entry" id="347" length="0" repeatmax="-1">
+                <number name="name_addr" id="348" type="integer" length="8" display="hex"/>
+                <number name="obj_addr" id="349" type="integer" length="8" display="hex"/>
             </structure>
         </structure>
-        <structure name="external_symbols" id="51" length="es_size" encoding="ISO_8859-1:1987" endian="little" signed="no">
-            <structure name="entry" id="76" repeatmax="-1">
-                <number name="name_addr" id="77" type="integer" length="8" display="hex"/>
-                <number name="obj_addr" id="78" type="integer" length="8" display="hex"/>
+        <structure name="external_symbols" id="327" length="es_size" encoding="ISO_8859-1:1987" endian="little" signed="no">
+            <structure name="entry" id="352" repeatmax="-1">
+                <number name="name_addr" id="353" type="integer" length="8" display="hex"/>
+                <number name="obj_addr" id="354" type="integer" length="8" display="hex"/>
             </structure>
         </structure>
-        <structure name="reloc_table" id="53" encoding="ISO_8859-1:1987" endian="big" signed="no">
-            <number name="addr" id="81" repeatmax="-1" type="integer" length="8" endian="little" display="hex"/>
+        <structure name="reloc_table" id="329" encoding="ISO_8859-1:1987" endian="big" signed="no">
+            <number name="addr" id="357" repeatmax="-1" type="integer" length="8" endian="little" display="hex"/>
         </structure>
     </grammar>
 </ufwb>

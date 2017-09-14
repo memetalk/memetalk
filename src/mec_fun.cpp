@@ -59,9 +59,9 @@ oop MECFunction::load(Process* proc /*, oop cmod*/) {
 
   oop cfun = (oop) & (_data[_cfun_addr]);
   DBG() << "New cfun outer: " << _mmobj->mm_compiled_function_outer_cfun(proc, cfun)
-          << " is_top: " << _mmobj->mm_compiled_function_is_top_level(proc, cfun)
-          << " env_size: " << _mmobj->mm_compiled_function_get_num_locals_or_env(proc, cfun)
-          << " env_offset: " << _mmobj->mm_compiled_function_get_env_offset(proc, cfun) << endl;
+        << " is_top: " << CFUN_IS_TOP_LEVEL(_mmobj->mm_compiled_function_get_header(proc, cfun))
+        << " env_size: " << CFUN_STORAGE_SIZE(_mmobj->mm_compiled_function_get_header(proc, cfun))
+        << " env_offset: " << CFUN_ENV_OFFSET(_mmobj->mm_compiled_function_get_header(proc, cfun)) << endl;
   //TODO:
   // _mmobj->mm_compiled_function_set_owner(cmod);
   return cfun;

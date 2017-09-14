@@ -2080,7 +2080,7 @@ static int prim_compiled_function_as_context_with_vars(Process* proc) {
   oop imod = proc->get_arg(0);
   oop vars = proc->get_arg(1);
 
-  number env_size = proc->mmobj()->mm_compiled_function_get_num_locals_or_env(proc, self);
+  number env_size = CFUN_STORAGE_SIZE(proc->mmobj()->mm_compiled_function_get_header(proc, self));
   oop env = (oop) GC_MALLOC(sizeof(oop) * (env_size + 2)); //+2: rp, dp
 
   if (vars != MM_NULL) {
@@ -2142,7 +2142,7 @@ static int prim_compiled_function_get_text(Process* proc) {
 
 static int prim_compiled_function_loc_for(Process* proc) {
   oop self =  proc->dp();
-  if (proc->mmobj()->mm_compiled_function_is_prim(proc, self)) {
+  if (CFUN_IS_PRIM(proc->mmobj()->mm_compiled_function_get_header(proc, self))) {
     DBG("LOCINFO IS NULL" << endl);
     proc->stack_push(MM_NULL);
     return 0;
