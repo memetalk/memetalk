@@ -27,7 +27,7 @@ cleanall:
 	$(foreach el,$(subdirs),$(MAKE) -C $(el) clean;)
 	rm -f core.img
 
-$(CORE_IMG):
+$(CORE_IMG): $(MM_DIR)/stdlib/core.me
 	$(MAKE) -C py parsers
 	PYTHONPATH=$(PY_PATH) python -m pycore.compiler $(CORE_ME) $(ROOT_DIR)
 
