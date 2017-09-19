@@ -182,22 +182,29 @@ class Fun
   }
   instance_method genFunCall: fun() {
     var paramNames = this.getParams().map(fun(p) { "prim_" + p.getName });
-    var params = "(" + paramNames.join(", ") + ");";
+    var params = "(" + paramNames.join(", ") + ");\n\n";
     var rtype = this.getReturnType();
     var out = [];
     if (rtype) {
       var typeName = this.getTypeNameFromParam(rtype);
-      var wrap = {
-        "int": "tag_small_int(output)",
-        "char": "proc->mmobj()->mm_string_new(proc, output)"
-      }[typeName];
-      if (!wrap) {
-        Exception.throw("Unknown type `" + typeName + "'");
+      if (typeName == "void") {
+        out.append([" ", this.getName(), params].join(" "));
+        out.append(" /* Push output to the stack */\n");
+        out.append(" proc->stack_push(MM_NULL);\n");
+      } else {
+        var wrap = {
+          "int": "tag_small_int(output)",
+          "char": "proc->mmobj()->mm_string_new(proc, output)",
+          "struct": "create_struct_instance(proc, \"" + typeName + "\", output)"
+        }[typeName];
+        if (!wrap) {
+          Exception.throw("Unknown type `" + typeName + "'");
+        }
+        out.append([" ", rtype.genType(), "output", "=", this.getName(), params].join(" "));
+        out.append(" /* Push output to the stack */\n");
+        out.append(" oop oop_output = " + wrap + ";\n");
+        out.append(" proc->stack_push(oop_output);\n");
       }
-      out.append([" ", rtype.genType(), "output", "=", this.getName(), params, "\n\n"].join(" "));
-      out.append(" /* Push output to the stack */\n");
-      out.append(" oop oop_output = " + wrap + ";\n");
-      out.append(" proc->stack_push(oop_output);\n");
     }
     return out.join(" ");
   }

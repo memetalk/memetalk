@@ -1,0 +1,51 @@
+meme central:memescript/compiler
+
+requires test, io, bindgen, types
+where
+  bindgen = central:stdlib/bindgen/bindgen
+  types   = central:stdlib/bindgen/types
+  io      = central:stdlib/io
+import Fun from types
+
+// void foo();
+testGenFunCallInt: fun() {
+  // Given a function with a `void` return type
+  var f = Fun.new("foo");
+  var r = f.newReturnType();
+  r.setTypeName("int");
+
+  // When the call is built
+  var o = f.genFunCall();
+
+  // Then the output code shouldn't assign the output of the function
+  // called to any variable
+  test.assertEqual(o, [
+    "", // Indentation
+    " int output = foo ();\n\n",
+    " /* Push output to the stack */\n",
+    " oop oop_output = tag_small_int(output);\n",
+    " proc->stack_push(oop_output);\n"
+  ].join(" "), "call for `int foo()`");
+}
+// void foo();
+testGenFunCallVoid: fun() {
+  // Given a function with a `void` return type
+  var f = Fun.new("foo");
+  var r = f.newReturnType();
+  r.setTypeName("void");
+
+  // When the call is built
+  var o = f.genFunCall();
+
+  // Then the output code shouldn't assign the output of the function
+  // called to any variable
+  test.assertEqual(o, ["  foo ();\n\n",
+                       " /* Push output to the stack */\n",
+                       " proc->stack_push(MM_NULL);\n"
+                       ].join(" "), "call for `void foo()`");
+}
+// All tests
+main: fun() {
+  testGenFunCallInt();
+  testGenFunCallVoid();
+}
