@@ -13,26 +13,6 @@ class_method throw: fun() {
 }
 end
 
-class OMetaLeftRecursion
-fields: used;
-init new: fun() {
-  @used = false;
-}
-instance_method set_used: fun() {
-  @used = true;
-}
-instance_method used: fun() {
-  return @used;
-}
-instance_method throw: fun() {
-  <primitive "exception_throw">
-}
-class_method throw: fun() {
-  this.new.throw;
-}
-end
-
-
 class OMetaStream
 fields: memo, idx, hd, tl, data;
 init new: fun(memo, idx, data, hd, tl) {
@@ -204,22 +184,18 @@ instance_method _apply: fun(rule) {
   var memo = @input.memo;
   if (!memo.has(rule)) {
     var input = @input;
-    var lr = OMetaLeftRecursion.new;
+    var lr = {:used: false};
     memo[rule] = {:fail : lr};
     var res = this.send(rule, []);
-    var zz = @input;
-    //debug(); //io.print(@input)
     memo[rule] = {:input : @input, :ans : res, :fail : null};
-    if (lr.used) {
+    if (lr[:used]) {
       var sentinel = @input;
       var loop = true;
       while (loop) {
         try {
           @input = input;
           res = this.send(rule, []);
-          var xx = @input;
           if (@input.equals(sentinel)) {
-             //io.print(@input == sentinel);
              OMetaException.throw;
           }
           memo[rule] = {:input : @input, :ans : res, :fail : null};
@@ -229,8 +205,7 @@ instance_method _apply: fun(rule) {
       }
     }
   } elif (memo[rule][:fail]) {
-    lr = memo[rule][:fail]   ;
-    lr.set_used();
+    memo[rule][:fail][:used] = true;
     OMetaException.throw();
   }
   @input = memo[rule][:input];
@@ -240,12 +215,12 @@ instance_method _apply_with_args: fun(rule, args) {
   args.reverse.each(fun(_, arg) {
     this.prepend_input(arg);
   });
-  try {
+  // try {
     return this._apply(rule);
-  } catch(OMetaException e) {
-      this.set_error(rule.toString + "(" + args.toString + ")", @input);
-      e.throw();
-  }
+  // } catch(OMetaException e) {
+  //     this.set_error(rule.toString + "(" + args.toString + ")", @input);
+  //     e.throw();
+  // }
 }
 
 instance_method _apply_super: fun(rule) {
