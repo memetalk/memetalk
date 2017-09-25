@@ -70,6 +70,7 @@ type :p
     | [:pointer type(p) _:c !{p.setIsPointer(c)}]
     | [:const type(p) !{p.setIsConst(true)}]
     | [:unsigned type(p) !{p.setIsUnsigned(true)}]
+    | [:unsigned !{p.setIsUnsigned(true)} !{p.setTypeName("")}] // just to keep it implicit how it was found in the API
     | type0(p)
     ;
 type0 :p

@@ -24,6 +24,13 @@ testTranslateTypeDefinitions: fun() {
   test.assertEqual(obj1.getIsPointer(), false, "getIsPointer");
   test.assertEqual(obj1.getIsUnsigned(), false, "getIsUnsigned");
 
+  var obju = Param.new;
+  tr("unsigned", :type, :type, [obju]);
+  test.assertEqual(obju.getTypeName(), "", "getTypeName");
+  test.assertEqual(obju.getIsConst(), false, "getIsConst");
+  test.assertEqual(obju.getIsPointer(), false, "getIsPointer");
+  test.assertEqual(obju.getIsUnsigned(), true, "getIsUnsigned");
+
   var obj2 = Param.new;
   tr("const char", :type, :type, [obj2]);
   test.assertEqual(obj2.getTypeName(), "char", "getTypeName");

@@ -30,13 +30,30 @@ testParseTypedDefinitions: fun() {
   test.assertEqual(bindgen.parseRule(
     "void*", :typed),
     [:pointer, [:builtin, "void"], 1], "typed");
-  // Int
+  // Numeric values
+  test.assertEqual(bindgen.parseRule(
+    "short n1", :typed), [[:builtin, "short"], "n1"], "typed");
+  test.assertEqual(bindgen.parseRule(
+    "short int n2", :typed), [[:builtin, "short int"], "n2"], "typed");
+  test.assertEqual(bindgen.parseRule(
+    "long int n3", :typed), [[:builtin, "long int"], "n3"], "typed");
+  test.assertEqual(bindgen.parseRule(
+    "long long int n4", :typed), [[:builtin, "long long int"], "n4"], "typed");
+  test.assertEqual(bindgen.parseRule(
+    "unsigned long long int n5", :typed),
+    [[:unsigned, [:builtin, "long long int"]], "n5"], "typed");
+  test.assertEqual(bindgen.parseRule(
+    "unsigned n6", :typed),
+    [[:unsigned], "n6"], "typed");
   test.assertEqual(bindgen.parseRule(
     "int *foo4", :typed),
     [[:pointer, [:builtin, "int"], 1], "foo4"], "typed");
   test.assertEqual(bindgen.parseRule(
     "int* foo5", :typed),
     [[:pointer, [:builtin, "int"], 1], "foo5"], "typed");
+  test.assertEqual(bindgen.parseRule(
+    "complex long double foo6", :typed),
+    [[:builtin, "complex long double"], "foo6"], "typed");
   // Structs
   test.assertEqual(bindgen.parseRule(
     "struct foo1 bar1", :typed),
@@ -54,10 +71,18 @@ testParseTypedDefinitions: fun() {
   test.assertEqual(bindgen.parseRule(
     "my_typedef_t *bar3", :typed),
     [[:pointer, [:unknown, "my_typedef_t"], 1], "bar3"], "typed");
+  test.assertEqual(bindgen.parseRule(
+    "const foo_t *bar4", :typed),
+    [[:pointer, [:const, [:unknown, "foo_t"]], 1], "bar4"], "typed");
+  test.assertEqual(bindgen.parseRule(
+    "blah_t v", :typed),
+    [[:unknown, "blah_t"], "v"], "typed");
   // Lists and pointers
   test.assertEqual(bindgen.parseRule(
     "struct wu* wu4[]", :typed),
     [[:list, [:pointer, [:struct, "wu"], 1]], "wu4"], "typed");
+  // varargs
+  test.assertEqual(bindgen.parseRule("...", :typed), [:varargs], "typed");
   // Annotations
   test.assertEqual(bindgen.parseRule(
     "char *foo +out", :typed),
@@ -98,7 +123,18 @@ testParseParamsDefinitions: fun() {
   test.assertEqual(bindgen.parseRule(
     "(void*)", :params),
     [[:pointer, [:builtin, "void"], 1]], "params");
+  test.assertEqual(bindgen.parseRule(
+    "(foo_t*)", :params),
+    [[:pointer, [:unknown, "foo_t"], 1]], "params");
+  test.assertEqual(bindgen.parseRule(
+    "(foo_t)", :params),
+    [[:unknown, "foo_t"]], "params");
+  test.assertEqual(bindgen.parseRule(
+    "(unsigned)", :params),
+    [[:unsigned]], "params");
   // No parameters
+  test.assertEqual(bindgen.parseRule(
+    "()", :params), [], "params");
   test.assertEqual(bindgen.parseRule(
     "(void)", :params), [], "params");
 }

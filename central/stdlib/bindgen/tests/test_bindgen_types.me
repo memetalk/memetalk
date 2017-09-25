@@ -5,9 +5,39 @@ where
   bindgen = central:stdlib/bindgen/bindgen
   types   = central:stdlib/bindgen/types
   io      = central:stdlib/io
+import Param from types
 import Fun from types
 
-// void foo();
+numericTypes: [
+  "complex long double",
+  "complex long",
+  "complex double",
+  "complex float",
+  "short int",
+  "short",
+  "long long int",
+  "long long",
+  "long double",
+  "long int",
+  "long",
+  "double",
+  "float",
+  "int"
+];
+
+// Value types
+testParamGenType: fun() {
+  numericTypes.each(fun(_, type) {
+    // Given a value with the type `short int`
+    var value = Param.new;
+    value.setTypeName(type);
+
+    // When the type is generated; Then the generated type should just
+    // be the same
+    test.assertEqual(value.genType(), type, "Type " + type + " doesn't work");
+  });
+}
+// int foo();
 testGenFunCallInt: fun() {
   // Given a function with a `void` return type
   var f = Fun.new("foo");
@@ -46,6 +76,7 @@ testGenFunCallVoid: fun() {
 }
 // All tests
 main: fun() {
+  testParamGenType();
   testGenFunCallInt();
   testGenFunCallVoid();
 }

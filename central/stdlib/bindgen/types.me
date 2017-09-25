@@ -138,6 +138,7 @@ class Fun
     var out = [];
     var typeName = this.getTypeNameFromParam(arg);
     var primeType = {
+      "": "Integer",
       "int": "Integer",
       "char": "String",
       "struct": "Object"
@@ -166,6 +167,7 @@ class Fun
     var type = arg.genType();
     var argName = "oop_" + arg.getName();
     var unwrap = {
+      "": "untag_small_int(" + argName + ")",
       "int": "untag_small_int(" + argName + ")",
       "char": "proc->mmobj()->mm_string_cstr(proc, " + argName + ")",
       "struct": "(" + type + ") ((oop *) " + argName + ")[2]"
@@ -193,6 +195,7 @@ class Fun
         out.append(" proc->stack_push(MM_NULL);\n");
       } else {
         var wrap = {
+          "": "tag_small_int(output)",
           "int": "tag_small_int(output)",
           "char": "proc->mmobj()->mm_string_new(proc, output)",
           "struct": "create_struct_instance(proc, \"" + typeName + "\", output)"
