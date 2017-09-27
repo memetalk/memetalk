@@ -19,6 +19,9 @@ init new: fun() {
 instance_method symbol_table: fun() {
   return @symb_table;
 }
+instance_method ext_ref_table: fun() {
+  return @ext_ref_table;
+}
 instance_method external_references: fun() {
   return @ext_ref_table.map(fun(x) {
     [x[0], this.physical_address(x[1])]

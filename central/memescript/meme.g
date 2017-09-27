@@ -85,7 +85,7 @@ instance_method maybe_append_semicol_expr: fun(body, no_semicol_expr) {
 <ometa>
 alpha =  '+' | '*' | '-' | '/' | '=' | '<' | '>' | '?' | '!' | '&' | '|';
 
-meme_keyword = ``fun`` | ``var`` | ``class`` | ``fields``;
+meme_keyword = ``fun`` | ``var`` | ``class``;
 
 id = spaces ~meme_keyword identifier:i => i;
 

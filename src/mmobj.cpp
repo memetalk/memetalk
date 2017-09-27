@@ -302,7 +302,13 @@ void MMObj::mm_list_prepend(Process* p, oop list, oop element, bool should_asser
     oop_vector* elements = mm_list_frame(p, list, should_assert);
   elements->insert(elements->begin(), element);
 }
+void MMObj::mm_list_insert(Process* p, oop list, number idx, oop element, bool should_assert) {
+  TYPE_CHECK(!( mm_object_vt(list) == _core_image->get_prime("List")),
+             "TypeError","Expected List")
 
+    oop_vector* elements = mm_list_frame(p, list, should_assert);
+  elements->insert(elements->begin() + idx, element);
+}
 void MMObj::mm_list_append(Process* p, oop list, oop element, bool should_assert) {
   TYPE_CHECK(!( mm_object_vt(list) == _core_image->get_prime("List")),
              "TypeError","Expected List")

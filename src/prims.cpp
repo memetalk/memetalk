@@ -444,33 +444,102 @@ static std::string  escape_format_fun(smatch const &what)
   ret += (char) num;
   return ret;
 }
+
+static std::string str_escape(std::string str) {
+  std::string ret;
+
+  std::string null;
+  null += (char) 0;
+
+  std::string::iterator it = str.begin();
+  bool escaped = false;
+  for ( ; it < str.end(); it++) {
+    switch(*it) {
+      case '\\':
+        if (escaped) {
+          ret += '\\';
+          escaped = false;
+          break;
+        } else {
+          escaped = true;
+          break;
+        }
+      case '0':
+        if (escaped) {
+          ret += null;
+          escaped = false;
+          break;
+        } else {
+          goto def;
+        }
+      case 'n':
+        if (escaped) {
+          ret += '\n';
+          escaped = false;
+          break;
+        }
+      case 't':
+        if (escaped) {
+          ret += '\t';
+          escaped = false;
+          break;
+        }
+      case 'b':
+        if (escaped) {
+          ret += '\b';
+          escaped = false;
+          break;
+        }
+      case 'f':
+        if (escaped) {
+          ret += '\f';
+          escaped = false;
+          break;
+        }
+      case 'r':
+        if (escaped) {
+          ret += '\r';
+          escaped = false;
+          break;
+        }
+      case 'v':
+        if (escaped) {
+          ret += '\v';
+          escaped = false;
+          break;
+        }
+      case '"':
+        if (escaped) {
+          ret += '\"';
+          escaped = false;
+          break;
+        }
+      default:
+        goto def;
+    }
+    continue;
+    def:
+      if (escaped) {
+        ret += '\\';
+      }
+      escaped = false;
+      ret += *it;
+  }
+  return ret;
+}
+
 static int prim_string_escape(Process* proc) {
   oop self =  proc->dp();
 
   std::string str = proc->mmobj()->mm_string_stl_str(proc, self);
 
-  int size = str.length();
-
-  //some dirty substitutions follow...
-
-  std::string null;
-  null += (char) 0;
-
-  boost::replace_all(str, "\\0", null);
-  boost::replace_all(str, "\\t",  "\t");
-  boost::replace_all(str, "\\n",  "\n");
-  boost::replace_all(str, "\\b",  "\b");
-  boost::replace_all(str, "\\f",  "\f");
-  boost::replace_all(str, "\\r",  "\r");
-  boost::replace_all(str, "\\v",  "\v");
-  boost::replace_all(str, "\\\"",  "\""); //\"
-  boost::replace_all(str, "\\\\",  "\\"); //\"
+  std::string ret = str_escape(str);
 
   //\x[0-9]+
   sregex exp = sregex::compile( "\\\\x(\\d+)");
-  str = regex_replace(str, exp, escape_format_fun);
+  ret = regex_replace(ret, exp, escape_format_fun);
 
-  oop oop_ret = proc->mmobj()->mm_string_new(str);
+  oop oop_ret = proc->mmobj()->mm_string_new(ret);
 
   proc->stack_push(oop_ret);
   return 0;
@@ -970,6 +1039,18 @@ static int prim_list_append(Process* proc) {
   oop element = proc->get_arg(0);
 
   proc->mmobj()->mm_list_append(proc, self, element);
+
+  proc->stack_push(proc->rp());
+  return 0;
+}
+
+static int prim_list_insert(Process* proc) {
+  oop self =  proc->dp();
+  oop oop_idx = proc->get_arg(0);
+  oop element = proc->get_arg(1);
+
+  number index = untag_small_int(oop_idx);
+  proc->mmobj()->mm_list_insert(proc, self, index, element);
 
   proc->stack_push(proc->rp());
   return 0;
@@ -1543,6 +1624,21 @@ static int prim_dictionary_new(Process* proc) {
   proc->mmobj()->mm_dictionary_init(self);
   DBG(self << endl);
   proc->stack_push(proc->rp());
+  return 0;
+}
+
+static int prim_dictionary_copy(Process* proc) {
+  //oop self = proc->mmobj()->mm_dictionary_new();
+  oop self =  proc->dp();
+
+  oop d = proc->mmobj()->mm_dictionary_new();
+
+  oop_map::iterator it = proc->mmobj()->mm_dictionary_begin(proc, self);
+  oop_map::iterator end = proc->mmobj()->mm_dictionary_end(proc, self);
+  for ( ; it != end; it++) {
+    proc->mmobj()->mm_dictionary_set(proc, d, it->first, it->second);
+  }
+  proc->stack_push(d);
   return 0;
 }
 
@@ -2852,6 +2948,7 @@ void init_primitives(VM* vm) {
 
   vm->register_primitive("list_new", prim_list_new);
   vm->register_primitive("list_new_from_stack", prim_list_new_from_stack);
+  vm->register_primitive("list_insert", prim_list_insert);
   vm->register_primitive("list_append", prim_list_append);
   vm->register_primitive("list_prepend", prim_list_prepend);
   vm->register_primitive("list_index", prim_list_index);
@@ -2880,6 +2977,7 @@ void init_primitives(VM* vm) {
 
 
   vm->register_primitive("dictionary_new", prim_dictionary_new);
+  vm->register_primitive("dictionary_copy", prim_dictionary_copy);
   vm->register_primitive("dictionary_set", prim_dictionary_set);
   vm->register_primitive("dictionary_index", prim_dictionary_index);
   vm->register_primitive("dictionary_plus", prim_dictionary_plus);

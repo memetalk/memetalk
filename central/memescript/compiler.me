@@ -1,9 +1,10 @@
 meme central:memescript/compiler
 
-requires bits, comp_vmemory, io, entries, ometa_base, meme, meme_tr
+requires bits, comp_vmemory, core_vmemory, io, entries, ometa_base, meme, meme_tr
 where
   bits         = central:memescript/bits
   comp_vmemory = central:memescript/comp_vmemory
+  core_vmemory = central:memescript/core_vmemory
   io           = central:stdlib/io
   entries      = central:memescript/entries
   ometa_base   = central:memescript/ometa_base
@@ -14,12 +15,7 @@ import OMetaException from ometa_base
 
 MAGIC_NUMBER: 0x420;
 
-class MEC
-fields: cmodule, HEADER_SIZE;
-init new: fun(cmodule) {
-  @cmodule = cmodule;
-}
-instance_method name_ptr_for: fun(name, mec) {
+name_ptr_for: fun(name, mec, header_size) {
   var acc = 0;
   var names = mec[:names];
   for (var i = 0; i < names.size; i += 1) {
@@ -27,11 +23,18 @@ instance_method name_ptr_for: fun(name, mec) {
     var entry_name_t = pair[0];
     var bsize = pair[1];
     if (entry_name_t == name + "\0") {
-      return @HEADER_SIZE + acc;
+      return header_size + acc;
     }
     acc = acc + bsize;
   }
   Exception.throw("entry " + name.toString + " not found in NAMES");
+}
+
+
+class MEC
+fields: cmodule;
+init new: fun(cmodule) {
+  @cmodule = cmodule;
 }
 instance_method create_mec_struct: fun(vmem) {
   var mec = {:header: {:magic_number: null,
@@ -46,7 +49,7 @@ instance_method create_mec_struct: fun(vmem) {
              :reloc_table: []          //addresses within the OT that need relocation on load
     };
 
-  @HEADER_SIZE = mec[:header].size * bits.WSIZE;
+  var header_size = mec[:header].size * bits.WSIZE;
   @cmodule.fill(vmem);
 
   mec[:header][:magic_number] = MAGIC_NUMBER;
@@ -57,7 +60,7 @@ instance_method create_mec_struct: fun(vmem) {
 
   mec[:header][:names_size] = mec[:names].map(fun(x) { x[1] }).sum;
 
-  var base = @HEADER_SIZE + mec[:header][:names_size];
+  var base = header_size + mec[:header][:names_size];
   vmem.set_base(base);
 
   mec[:object_table] = vmem.object_table();
@@ -67,7 +70,7 @@ instance_method create_mec_struct: fun(vmem) {
   var ext_refs = vmem.external_references();
   for (var i = 0; i < ext_refs.size; i += 1) {
     var pair = ext_refs[i];
-    mec[:external_references].append(this.name_ptr_for(pair[0], mec));
+    mec[:external_references].append(name_ptr_for(pair[0], mec, header_size));
     mec[:external_references].append(pair[1]);
   }
 
@@ -76,7 +79,7 @@ instance_method create_mec_struct: fun(vmem) {
   var sref = vmem.symbols_references;
   for (i = 0; i < sref.size; i += 1) {
    var p2 = sref[i];
-    mec[:symbol_table].append(this.name_ptr_for(p2[0], mec));
+    mec[:symbol_table].append(name_ptr_for(p2[0], mec, header_size));
     mec[:symbol_table].append(p2[1]);
   }
 
@@ -136,15 +139,16 @@ instance_method dump: fun(filepath) {
 end
 
 
-class Compiler
-fields: cmodule, filepath;
-instance_method new_module: fun() {
-  var module_name = basename(@filepath); //provisory function to get the basename
-  @cmodule = entries.CompiledModule.new(module_name);
-  return @cmodule;
+class BaseCompiler
+fields: filepath;
+init new: fun(filepath) {
+  @filepath = filepath;
+}
+instance_method filepath: fun() {
+  return @filepath;
 }
 instance_method parse: fun() {
-  var ast = ometa_base.parse(io.read_file(@filepath), meme.MemeScriptParser, :start);
+  var ast = ometa_base.parse(io.read_file(this.filepath), meme.MemeScriptParser, :start);
   if (ast[0]) {
     io.print(ast[0]);
     exit(1); //FIXME: we probably want to raise as this might be used as a library
@@ -163,22 +167,153 @@ instance_method translate: fun(ast) {
     exit(1); //FIXME: we probably want to raise as this might be used as a library
   }
 }
-instance_method compile: fun(filepath) {
-  @filepath = filepath;
-
+instance_method parse_and_translate: fun() {
   var ast = bench("parsing", fun() {
     this.parse();
   });
-
   //io.print("translating...");
-
   bench("translate", fun() {
     this.translate(ast);
   });
+}
+end
+
+class MECCompiler < BaseCompiler
+fields: cmodule;
+init new: fun(filepath) {
+  super.new(filepath);
+  @cmodule = null;
+}
+instance_method new_module: fun() {
+  var module_name = basename(this.filepath); //provisory function to get the basename
+  @cmodule = entries.CompiledModule.new(module_name);
+  return @cmodule;
+}
+instance_method compile: fun() {
+  this.parse_and_translate();
 
   bench("mec dump", fun() {
     var mec = MEC.new(@cmodule);
-    mec.dump(filepath);
+    mec.dump(this.filepath);
+  });
+}
+end
+
+class CoreCompiler < BaseCompiler
+fields: cmodule;
+init new: fun(filepath) {
+  super.new(filepath);
+  @cmodule = entries.CoreCompiledModule.new;
+}
+instance_method new_module: fun() {
+  return @cmodule;
+}
+instance_method compile: fun() {
+  this.parse_and_translate();
+  this.dump();
+}
+instance_method create_img_struct: fun(vmem) {
+  var img = {
+        :header: {
+        :entries: null,             // number of labeled objects (top-levels, behaviors, cclasses)
+        :names_size: null,          // size in bytes of NAMES section
+        :st_size: null,             // size of Symbols table
+        :ot_size: null},            // size of OBJECT TABLE in bytes
+      :names: [],
+      :index: [],                   // index of top level entities
+      :object_table: [],
+      :symbols: [],                 // Symbol references
+      :reloc_table: []};
+
+  var header_size = 4 * bits.WSIZE; // bytes. 3 = entries, names_size, es_size, ot_size
+  @cmodule.fill(vmem);
+
+  // -- HEADER and NAMES section
+  var labels = @cmodule.entry_labels();
+  img[:header][:entries] = labels.size;
+
+  // names :: [(string, alloc-size in bytes, self-ptr)]
+
+  var names_list = (labels.map(fun(l) { l + "\0"  }) + vmem.external_names.map(fun(n) { n + "\0" })).unique.sorted;
+
+  img[:names] = names_list.map(fun(name_t) { [name_t, bits.string_block_size(name_t)] });
+
+  img[:header][:names_size] = img[:names].map(fun(x) { x[1] }).sum;
+
+  var index_size = img[:header][:entries] * 2 * bits.WSIZE; // *2: pair (name, entry),
+  var base = header_size + img[:header][:names_size] + index_size;
+  vmem.set_base(base);
+
+  // - OBJECT TABLE
+  img[:object_table] = vmem.object_table();
+
+  // - HEADER ot_size
+  img[:header][:ot_size] = img[:object_table].size;
+
+  // symbols
+  var sref = vmem.symbols_references();
+  for (var i = 0; i < sref.size; i += 1) {
+    var pair = sref[i];
+    img[:symbols].append(name_ptr_for(pair[0], img, header_size));
+    img[:symbols].append(pair[1]);
+  }
+
+  img[:header][:st_size] = img[:symbols].size * bits.WSIZE;
+
+  // reloc
+  img[:reloc_table] = vmem.reloc_table();
+
+  // - INDEX section
+  labels.each(fun(_, name) {
+    img[:index].append(name_ptr_for(name, img, header_size));  // ptr to string
+    img[:index].append(vmem.index_for(name));           // ptr to object
+  });
+  return img;
+}
+instance_method dump: fun() {
+  var vmem = core_vmemory.CoreVirtualMemory.new();
+  var img = this.create_img_struct(vmem);
+
+  io.with_file("core.img", fun(write) {
+    // header
+
+    write(bits.pack(img[:header][:entries]));
+    write(bits.pack(img[:header][:names_size]));
+    write(bits.pack(img[:header][:st_size]));
+    write(bits.pack(img[:header][:ot_size]));
+
+    // names
+    var names = img[:names];
+    for (var i = 0; i < names.size; i += 1) {
+      var entry = names[i];
+      var name = entry[0];
+      var chunk_size = entry[1];
+
+      var text = name + "\0".times(chunk_size - name.size);
+      write(text);
+    }
+
+    // index
+    var core_index = img[:index];
+    for (i = 0; i < core_index.size; i += 1) {
+        write(bits.pack(core_index[i]));
+    }
+    // object table
+    var core_ot = img[:object_table];
+    for (i = 0; i < core_ot.size; i += 1) {
+      write(bits.pack_byte(core_ot[i]));
+    }
+
+    // symbols
+    var core_symb = img[:symbols];
+    for (i = 0; i < core_symb.size; i += 1) {
+      write(bits.pack(core_symb[i]));
+    }
+    // reloc table
+    var reloc_table = img[:reloc_table];
+    for (i = 0; i < reloc_table.size; i += 1) {
+      write(bits.pack(reloc_table[i]));
+    }
   });
 }
 end
@@ -188,13 +323,21 @@ main: fun() {
   if (args.size < 2) {
     io.print("usage: compiler <path to file.me>");
   } else {
-    argv().from(1).each(fun(_, path) {
-      io.print(path);
-      Compiler.new.compile(path);
+    argv().from(1).each(fun(_, fpath) {
+      io.print(fpath);
+      if (fpath.find("core.me") >= 0) { //FIXME: be more precise.
+        compile_core(fpath);
+      } else {
+        compile(fpath);
+      }
    });
   }
 }
 
-compile: fun(path) {
-  Compiler.new.compile(path);
+compile_core: fun(source_path) {
+  CoreCompiler.new(source_path).compile();
+}
+
+compile: fun(source_path) {
+  MECCompiler.new(source_path).compile();
 }

@@ -1,0 +1,37 @@
+meme central:memescript/compiler
+
+requires comp_vmemory, mec, bits
+where
+  comp_vmemory  = central:memescript/comp_vmemory
+  mec      = central:memescript/mec
+  bits     = central:memescript/bits
+import CompVirtualMemory from comp_vmemory
+
+class CoreVirtualMemory < CompVirtualMemory
+instance_method index_for: fun(name) {
+  return this.base + this.index[name];
+}
+instance_method external_names: fun() {
+  return this.symbol_table.map(fun(x) { x[0] }).unique.sorted;
+}
+instance_method append_external_ref: fun(name, label) {
+  return this.append_label_ref(name, label);
+}
+instance_method append_symbol_instance: fun(string) {
+  //TODO: maybe check for empty symbol strings?
+  // if (string == "") {
+  //   return this.append_null(null);
+  // }
+  var delegate = this.append_object_instance();
+  this.append_int(mec.FRAME_TYPE_BVAR_OBJECT, null);
+  this.append_int((3 * bits.WSIZE) + bits.string_block_size(string + "\0"), null);
+
+  var oop = this.append_label_ref("Symbol", null);  // vt
+  this.append_pointer_to(delegate, null);           // delegate
+  this.append_int(string.size, null);
+  this.append_string(string, null);
+
+  this.symbol_table.append([string, oop]);
+  return oop;
+}
+end

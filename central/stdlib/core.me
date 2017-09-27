@@ -224,13 +224,6 @@ meme central:memescript/compiler
   end
 
   class Boolean
-  instance_method toString: fun() {
-    if (this == true) {
-      return "true";
-    } else {
-      return "false";
-    }
-  }
   instance_method and: fun(other) {
     if (this) {
       if (other) {
@@ -378,6 +371,9 @@ meme central:memescript/compiler
   instance_method +: fun(other) {
     <primitive "dictionary_plus">
   }
+  instance_method copy: fun() {
+    <primitive "dictionary_copy">
+  }
   instance_method has: fun(key) {
     <primitive "dictionary_has">
   }
@@ -411,6 +407,9 @@ meme central:memescript/compiler
   }
   instance_method prepend: fun(x) {
     <primitive "list_prepend">
+  }
+  instance_method insert: fun(idx, x) {
+    <primitive "list_insert">
   }
   instance_method index: fun(idx) {
     <primitive "list_index">
@@ -649,9 +648,6 @@ class Exception
   }
   instance_method throw: fun() {
     <primitive "exception_throw">
-  }
-  instance_method message: fun() {
-    return @message;
   }
   instance_method toString: fun() {
     return "Exception: " + this.message.toString();

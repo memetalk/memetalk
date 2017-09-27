@@ -96,6 +96,7 @@ public:
   number mm_list_index_of(Process*, oop list, oop elem, bool should_assert = false);
   oop mm_list_entry(Process*, oop list, number idx, bool should_assert = false);
   oop_vector* mm_list_frame(Process*, oop, bool should_assert = false);
+  void mm_list_insert(Process*, oop list, number idx, oop element, bool should_assert = false);
   void mm_list_prepend(Process*, oop list, oop element, bool should_assert = false);
   void mm_list_append(Process*, oop list, oop element, bool should_assert = false);
   void mm_list_set(Process*, oop list, number idx, oop element, bool should_assert = false);

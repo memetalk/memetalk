@@ -95,7 +95,7 @@ class Object(Entry):
                 refs_to_literals[idx] = vmem.append_empty_dict()
             elif slot['type'] == 'dict':
                 fun_dict = {}
-                for name, cfun in slot['value'].items():
+                for name, cfun in sorted(slot['value'].items()):
                     cfun.fill(vmem)
                     fun_dict[name] = Function(self.imod, cfun)
                 refs_to_literals[idx] = vmem.append_sym_dict_emiting_entries(fun_dict)
@@ -267,6 +267,8 @@ class CompiledClass(Entry):
 
     def new_instance_method(self, name):
         fn = CompiledFunction(self.cmod, self, name)
+        if name in self.instance_methods:
+            raise Exception("duplicated method: " + name + " in " + self.name)
         self.instance_methods[name] = fn
         return fn
 
@@ -1149,7 +1151,7 @@ class CompiledModule(Entry):
         self.top_level_names.append(name)
 
     def entry_labels(self):
-        return self.functions.keys() + self.classes.keys()
+        return sorted(self.functions.keys() + self.classes.keys())
 
     def label(self):
         return cmod_label(self.name)
@@ -1219,7 +1221,7 @@ class CoreModule(Entry):
         res = [f.label() for f in self.functions.values()]
         res += [c.label() for c in self.classes]
         res += [o.label() for o in self.objects if o.label() in top_objects]
-        return res + [self.label()]
+        return sorted(res + [self.label()])
 
     def label(self):
         return '@core_module'

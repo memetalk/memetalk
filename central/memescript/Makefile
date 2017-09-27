@@ -5,7 +5,7 @@ include $(shell git rev-parse --show-toplevel)/common.mk
 $(call GEN_TRS_RULE)
 $(call GEN_MEC_RULE)
 
-CODE := bits.me comp_vmemory.me meme.me mec.me opcode.me compiler.me	\
+CODE := bits.me comp_vmemory.me core_vmemory.me meme.me mec.me opcode.me compiler.me	\
 	entries.me ometa_base.me vmemory.me gen_parser.me
 BYTECODE := $(patsubst %.me,%.mec,$(CODE))
 
