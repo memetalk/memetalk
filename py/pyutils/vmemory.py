@@ -80,33 +80,36 @@ class PointerCell(Cell):
     def __len__(self):
         return bits.WSIZE
 
+    def is_target_reachable(self):
+        # assumes `target_cell` always exists in etable
+        return self.target_cell or self.target_label in self.etable.index
+
     def __call__(self, offset=0):
         if self.target_cell:
-            to = self.etable.cells.index(self.target_cell)
-            return bits.bytelist(self.etable.base + sum(self.etable.cell_sizes[0:to]))
+            return bits.bytelist(self.etable.base + self.etable.opt_physical_addresses[self.target_cell])
         else:
             return bits.bytelist(self.etable.base + self.etable.index[self.target_label])
 
 class VirtualMemory(object):
     def __init__(self):
         self.cells = []
-        self.cell_sizes = []
         self.index = {} # label -> memory pos
         self.base = 0
         self.cell_index = {} # label -> cells index
+        self.symb_references = []
 
         # opt
         self.total_size = 0
         self.opt_cell_indexes = {}
         self.opt_ptr_cells = []
         self.opt_physical_addresses = {}
-
+        self.opt_object_table = []
+        self.opt_pending_ptr = {}
 
     def _append_cell(self, cell, label):
         if label is not None:
             self.label_current(label)
         self.cells.append(cell)
-        self.cell_sizes.append(len(cell))
 
         # opt
         self.opt_physical_addresses[cell] = self.total_size
@@ -114,7 +117,15 @@ class VirtualMemory(object):
         self.opt_cell_indexes[cell] = len(self.cells) -1 # subst self.cells.index(cell)
         if type(cell) == PointerCell:
             self.opt_ptr_cells.append(cell)
-
+            if cell.is_target_reachable():
+                self.opt_object_table += cell()
+            else:
+                if cell.target_label not in self.opt_pending_ptr:
+                    self.opt_pending_ptr[cell.target_label] = []
+                self.opt_pending_ptr[cell.target_label].append((cell, len(self.opt_object_table)))
+                self.opt_object_table += bits.bytelist(0xDDDDDDDD)
+        else:
+            self.opt_object_table += cell()
 
     def set_base(self, base):
         self.base = base
@@ -122,8 +133,13 @@ class VirtualMemory(object):
     def label_current(self, label):
         if label in self.index:
             raise Exception('Duplicated label ' + label)
-        self.index[label] = sum(self.cell_sizes)
+        self.index[label] = self.total_size
         self.cell_index[label] = len(self.cells)
+        if label in self.opt_pending_ptr:
+            for cell, ot_addr in self.opt_pending_ptr[label]:
+                new_val = cell()
+                self.opt_object_table[ot_addr:ot_addr+len(new_val)] = new_val
+            del self.opt_pending_ptr[label]
 
     def get_pointer_to(self, label):
         return self.cells[self.cell_index[label]]
@@ -148,9 +164,12 @@ class VirtualMemory(object):
         self._append_cell(cell, label)
         return cell
 
-    def append_pointer_to(self, cell, label=None):
-        cell = PointerCell(self, cell=cell)
+    def append_pointer_to(self, target_cell, label=None):
+        cell = PointerCell(self, cell=target_cell)
         self._append_cell(cell, label)
+        if target_cell in self.symb_table.keys():
+            #self.symb_references.append((self.symb_table[target_cell], cell))
+            self.symb_references.append((self.symb_table[target_cell], self.physical_address(cell)))
         return cell
 
     def append_label_ref(self, target_label, label=None):
@@ -165,43 +184,20 @@ class VirtualMemory(object):
 
     def object_table(self):
         # return reduce(lambda x,y: x+y, [e() for e in self.cells])
-        # b = time.time()
-        # print 'begin obj table' #, self.total_size)
+        return self.opt_object_table
+        # # b = time.time()
+        # # print 'begin obj table' #, self.total_size)
 
-        def split_list(alist, parts=1):
-            length = len(alist)
-            return [ alist[i*length // parts: (i+1)*length // parts]
-                     for i in range(parts)]
-
-        def aggregate(cells):
-            # res = reduce(lambda x,y: x+y, [e() for e in self.cells])
-            res = []
-            for e in cells:
-                sub = e()
-                for v in sub:
-                    res.append(v)
-            return res
-
-        if True: #self.total_size < 100000:
-            # res = reduce(lambda x,y: x+y, [e() for e in self.cells])
-            res = [None] * self.total_size
-            i = 0
-            for e in self.cells:
-                sub = e()
-                for v in sub:
-                    res[i] = v
-                    i += 1
-            # print 'end obj table', time.time()-b
-            return res
-        else:
-            num_workers = self.total_size / 1000
-            # print 'num_workers', num_workers
-            pres = parmap(aggregate, split_list(self.cells, num_workers))
-            # print 'done multiproc', time.time()-b
-            res = []
-            for x in pres:
-                res += x
-            return res
+        # # res = reduce(lambda x,y: x+y, [e() for e in self.cells])
+        # res = [None] * self.total_size
+        # i = 0
+        # for e in self.cells:
+        #     sub = e()
+        #     for v in sub:
+        #         res[i] = v
+        #         i += 1
+        # # print 'end obj table', time.time()-b
+        # return res
 
     def reloc_table(self):
         # print 'reloc table xx'
@@ -211,14 +207,18 @@ class VirtualMemory(object):
         return res
 
     def symbols_references(self):
-        sr = []
-        # print 'symb references'
-        # b = time.time()
-        for text, ptr in self.symb_table:
-            for referer in [x for x in self.opt_ptr_cells if x.target_cell == ptr]:
-                sr.append((text, self.physical_address(referer)))
-        # print 'end symb references', time.time()-b
-        return sr
+        return self.symb_references
+        # # assert(sorted([(x[0], self.physical_address(x[1])) for x in self.symb_references]) == sorted(sr))
+
+        # sr = []
+        # # print 'symb references'
+        # # b = time.time()
+        # for ptr, text in self.symb_table.items():
+        #     for referer in [x for x in self.opt_ptr_cells if x.target_cell == ptr]:
+        #         sr.append((text, self.physical_address(referer)))
+        # # print 'end symb references', time.time()-b
+        # assert sorted(self.symb_references) == sorted(sr)
+        # return sr
 
     def append_int_to_int_dict(self, pydict):
         pairs_oop = []

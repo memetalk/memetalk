@@ -89,7 +89,7 @@ void CoreImage::load_header() {
 }
 
 void CoreImage::load_prime_objects_table() {
-  int start_index = HEADER_SIZE + _names_size;
+  int start_index = HEADER_SIZE + _ot_size + _names_size;
   const char* base = _data;
 
   for (word i = 0; i < _num_entries * 2; i += 2) {
@@ -127,6 +127,6 @@ void CoreImage::load() {
   load_prime_objects_table();
 
   word index_size = _num_entries * 2 * WSIZE;
-  relocate_addresses(_data, _data_size, HEADER_SIZE + _names_size + index_size + _ot_size + _es_size);
-  link_symbols(_data, _es_size, HEADER_SIZE + _names_size + index_size + _ot_size, _vm, this);
+  relocate_addresses(_data, _data_size, HEADER_SIZE + _ot_size + _names_size + index_size +  _es_size);
+  link_symbols(_data, _es_size, HEADER_SIZE + _ot_size + _names_size + index_size, _vm, this);
 }

@@ -60,18 +60,21 @@ class MEC(object):
         names_list = [n + "\0" for n in vmem.external_names()]
 
         mec['object_table'] = vmem.object_table()
+
         mec['header']['ot_size'] = len(mec['object_table'])
 
         mec['names'] = [(name_t, bits.string_block_size(name_t)) for name_t in names_list]
         mec['header']['names_size'] = sum([x[1] for x in mec['names']])
 
-        for pair in vmem.external_references():
+        ext_ref = vmem.external_references()
+        for pair in ext_ref:
             mec['external_references'].append(self.name_ptr_for(pair[0], mec))
             mec['external_references'].append(pair[1])
 
         mec['header']['er_size'] = len(mec['external_references']) * bits.WSIZE
 
-        for pair in vmem.symbols_references():
+        sym_ref = vmem.symbols_references()
+        for pair in sym_ref:
             mec['symbol_table'].append(self.name_ptr_for(pair[0], mec))
             mec['symbol_table'].append(pair[1])
 

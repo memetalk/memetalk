@@ -9,7 +9,7 @@ class CoreVirtualMemory(comp_vmemory.CompVirtualMemory):
         return self.base + self.index[name]
 
     def external_names(self):
-        return sorted(set([x[0] for x in self.symb_table]))
+        return sorted(set([text for text in self.symb_table.values()]))
 
     def append_external_ref(self, name, label=None):
         return self.append_label_ref(name, label) # core is self contained and does not require external names
@@ -28,6 +28,6 @@ class CoreVirtualMemory(comp_vmemory.CompVirtualMemory):
         self.append_int(len(string))
         self.append_string(string)
 
-        self.symb_table.append((string, oop))
+        self.symb_table[oop] = string
         return oop
 

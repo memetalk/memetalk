@@ -8,7 +8,7 @@ class CompVirtualMemory(vmemory.VirtualMemory):
     def __init__(self):
         super(CompVirtualMemory, self).__init__()
         self.ext_ref_table = []
-        self.symb_table = []
+        self.symb_table = {}
         self.string_table = {}
 
     def external_references(self):
@@ -21,7 +21,7 @@ class CompVirtualMemory(vmemory.VirtualMemory):
     def external_names(self):
         # print 'begin external names'
         # b = time.time()
-        res = sorted(set([x[0] for x in self.ext_ref_table] + [x[0] for x in self.symb_table]))
+        res = sorted(set([x[0] for x in self.ext_ref_table] + [text for text in self.symb_table.values()]))
         # print 'end external names', time.time()-b
         return res
 
@@ -51,7 +51,7 @@ class CompVirtualMemory(vmemory.VirtualMemory):
         if string == '':
             return self.append_null()
         oop = self.append_int(0xBBBB)
-        self.symb_table.append((string, oop))
+        self.symb_table[oop] = string
         return oop
 
     def append_string_instance(self, string):
