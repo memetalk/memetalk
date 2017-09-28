@@ -323,7 +323,7 @@ static int prim_qt_server_listen(Process* proc) {
   QTcpServer* server = (QTcpServer*) get_qt_instance(proc->mmobj(), data_self);
   number _port = untag_small_int(port);
 
-  server->listen(QHostAddress("127.0.0.1"), _port);
+  server->listen(QHostAddress("0.0.0.0"), _port);
   proc->stack_push(proc->rp());
   return 0;
 }
