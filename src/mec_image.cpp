@@ -37,7 +37,7 @@ void MECImage::load_header() {
 
 void MECImage::link_external_references() {
   const char* base = _data;
-  int start_external_refs = HEADER_SIZE + _names_size + _ot_size;
+  int start_external_refs = HEADER_SIZE + _ot_size + _names_size;
 
   for (word i = 0; i < _er_size; i += (2 * WSIZE)) {
     word name_offset = unpack_word(_data, start_external_refs + i);
@@ -345,10 +345,10 @@ oop MECImage::instantiate_module(oop module_arguments_list) {
 oop MECImage::load() {
   DBG(" ============ Load module ===========" << endl);
   load_header();
-  relocate_addresses(_data, _data_size, HEADER_SIZE + _names_size + _ot_size + _er_size + _st_size);
+  relocate_addresses(_data, _data_size, HEADER_SIZE + _ot_size + _names_size + _er_size + _st_size);
   link_external_references();
-  link_symbols(_data, _st_size, HEADER_SIZE + _names_size + _ot_size + _er_size, _proc->vm(), _core_image);
-  _compiled_module = (oop) * (word*)(& _data[HEADER_SIZE + _names_size]);
+  link_symbols(_data, _st_size, HEADER_SIZE + _ot_size + _names_size + _er_size, _proc->vm(), _core_image);
+  _compiled_module = (oop) * (word*)(& _data[HEADER_SIZE]);
 
   DBG(" ============ Done load module ===========" << endl);
   return _compiled_module;

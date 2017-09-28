@@ -28,7 +28,7 @@ class MEC(object):
         acc = 0
         for entry_name_t, bsize in mec['names']:
             if entry_name_t[0:-1] == name:
-                return self.HEADER_SIZE + acc
+                return self.HEADER_SIZE + mec['header']['ot_size'] + acc
             acc += bsize
         raise Exception('entry {} not found in NAMES'.format(name))
 
@@ -39,8 +39,8 @@ class MEC(object):
                 'er_size': None,
                 'st_size': None,
                 'names_size': None},
-               'names': [],
                'object_table': [],         # the loaded objects of this module
+               'names': [],
                'external_references': [],  # references to core objects
                'symbol_table': [],         # Symbol objects needed
                'reloc_table': []           # addresses within the OT that need relocation on load
@@ -48,6 +48,8 @@ class MEC(object):
 
 
         self.HEADER_SIZE = len(mec['header']) * bits.WSIZE
+        #base = self.HEADER_SIZE + mec['header']['names_size']
+        vmem.set_base(self.HEADER_SIZE)
         self.cmodule.fill(vmem)
 
         mec['header']['magic_number'] = self.MAGIC_NUMBER
@@ -57,14 +59,11 @@ class MEC(object):
         # labels = self.cmodule.entry_labels()
         names_list = [n + "\0" for n in vmem.external_names()]
 
-        mec['names'] = [(name_t, bits.string_block_size(name_t)) for name_t in names_list]
-        mec['header']['names_size'] = sum([x[1] for x in mec['names']])
-
-        base = self.HEADER_SIZE + mec['header']['names_size']
-        vmem.set_base(base)
-
         mec['object_table'] = vmem.object_table()
         mec['header']['ot_size'] = len(mec['object_table'])
+
+        mec['names'] = [(name_t, bits.string_block_size(name_t)) for name_t in names_list]
+        mec['header']['names_size'] = sum([x[1] for x in mec['names']])
 
         for pair in vmem.external_references():
             mec['external_references'].append(self.name_ptr_for(pair[0], mec))
@@ -93,14 +92,14 @@ class MEC(object):
             fp.write(bits.pack_word(mec['header']['st_size']))
             fp.write(bits.pack_word(mec['header']['names_size']))
 
+            # object table
+            for v in mec['object_table']:
+                fp.write(bits.pack_byte(v))
+
             # names
             for name, chunk_size in mec['names']:
                 text = name + ((chunk_size - len(name)) * '\0')
                 fp.write(text)
-
-            # object table
-            for v in mec['object_table']:
-                fp.write(bits.pack_byte(v))
 
             # external references
             for v in mec['external_references']:
