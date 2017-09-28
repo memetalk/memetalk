@@ -528,7 +528,7 @@ static std::string str_escape(std::string str) {
   return ret;
 }
 
-static int prim_string_escape(Process* proc) {
+static int prim_string_unescape(Process* proc) {
   oop self =  proc->dp();
 
   std::string str = proc->mmobj()->mm_string_stl_str(proc, self);
@@ -3017,7 +3017,7 @@ void init_primitives(VM* vm) {
   vm->register_primitive("string_trim", prim_string_trim);
   vm->register_primitive("string_each", prim_string_each);
   vm->register_primitive("string_map", prim_string_map);
-  vm->register_primitive("string_escape", prim_string_escape);
+  vm->register_primitive("string_unescape", prim_string_unescape);
   vm->register_primitive("string_lt", prim_string_lt);
 
 

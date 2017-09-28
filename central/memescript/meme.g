@@ -388,7 +388,7 @@ base_16 = '0' 'x' {digit | 'A' | 'B' | 'C' | 'D' | 'E' | 'F'}+:xs ~letter => xs.
 
 
 lit_string  = # '"' { lit_escaped | ~'"' _}*:xs '"'
-               => #[:literal-string, xs.join("").escape];
+               => #[:literal-string, xs.join("").unescape];
 
 lit_escaped = ~'"' '\\' _:x => "\\" + x;
 

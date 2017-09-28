@@ -1333,7 +1333,7 @@ instance_method lit_string: fun() {
       this._apply(:anything);
     }]);}, null);
   this._apply_with_args(:seq, ["\""]);
-  return [:literal-string, xs.join("").escape].at(this, _pos);
+  return [:literal-string, xs.join("").unescape].at(this, _pos);
 }
 instance_method lit_escaped: fun() {
   var x = null;
