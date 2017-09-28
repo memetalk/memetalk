@@ -1,57 +1,56 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ufwb version="1.17">
-    <grammar name="memetalk core image" start="id:1" author="thiago silva">
+    <grammar name="memetalk core image" start="id:473" author="thiago silva">
         <description>Grammar for my file format</description>
-        <structure name="core" id="1" encoding="ISO_8859-1:1987" endian="little" signed="no">
-            <structref name="header" id="3" strokecolor="1F78F5" fillcolor="F29274" structure="id:2"/>
-            <structref name="names" id="5" structure="id:4"/>
-            <structref name="index" id="7" structure="id:6"/>
-            <structref name="object_table" id="9" structure="id:8"/>
-            <structref name="external_symbols" id="11" structure="id:10"/>
-            <structref name="reloc_table" id="13" structure="id:12"/>
+        <structure name="core" id="473" encoding="ISO_8859-1:1987" endian="little" signed="no">
+            <structref name="header" id="475" strokecolor="1F78F5" fillcolor="F29274" structure="id:474"/>
+            <structref name="names" id="477" structure="id:476"/>
+            <structref name="index" id="479" structure="id:478"/>
+            <structref name="object_table" id="481" structure="id:480"/>
+            <structref name="external_symbols" id="483" structure="id:482"/>
+            <structref name="reloc_table" id="485" structure="id:484"/>
         </structure>
-        <structure name="header" id="2" length="32" encoding="ISO_8859-1:1987" endian="little" signed="no">
-            <number name="entries" id="15" fillcolor="00F900" type="integer" length="8"/>
-            <number name="names_size" id="16" fillcolor="00F900" type="integer" length="8"/>
-            <number name="es_size" id="17" fillcolor="00F900" type="integer" length="8"/>
-            <number name="ot_size" id="18" fillcolor="00F900" type="integer" length="8"/>
+        <structure name="header" id="474" length="32" encoding="ISO_8859-1:1987" endian="little" signed="no">
+            <number name="entries" id="487" fillcolor="00F900" type="integer" length="8"/>
+            <number name="names_size" id="488" fillcolor="00F900" type="integer" length="8"/>
+            <number name="es_size" id="489" fillcolor="00F900" type="integer" length="8"/>
+            <number name="ot_size" id="490" fillcolor="00F900" type="integer" length="8"/>
         </structure>
-        <structure name="names" id="4" length="names_size" alignment="0" encoding="ISO_8859-1:1987" endian="big" signed="no" fillcolor="F5FC92">
-            <structure name="name" id="20">
-                <structref name="name_entry" id="22" repeatmax="-1" structure="id:21"/>
+        <structure name="names" id="476" length="names_size" alignment="0" encoding="ISO_8859-1:1987" endian="big" signed="no" fillcolor="F5FC92">
+            <structure name="name" id="492">
+                <structref name="name_entry" id="494" repeatmax="-1" structure="id:493"/>
             </structure>
         </structure>
-        <structure name="name_entry" id="21" repeatmax="-1" encoding="ISO_8859-1:1987" endian="big" signed="no">
-            <string name="aString" id="25" fillcolor="FFEFA0" type="zero-terminated"/>
-            <structref name="padding" id="27" fillcolor="CACACA" repeatmin="0" structure="id:26"/>
+        <structure name="name_entry" id="493" repeatmax="-1" encoding="ISO_8859-1:1987" endian="big" signed="no">
+            <string name="aString" id="497" fillcolor="FFEFA0" type="zero-terminated"/>
+            <structref name="padding" id="499" fillcolor="CACACA" repeatmin="0" structure="id:498"/>
         </structure>
-        <structure name="index" id="6" length="entries * 8 * 2" alignment="1" extends="id:29" encoding="ISO_8859-1:1987" endian="little" signed="no" fillcolor="B4BEF8">
-            <number name="name_addr" id="47" type="integer"/>
-            <structure name="index_entry" id="30">
-                <structref name="pair" id="31" fillcolor="B4BEF8" repeatmax="-1" structure="id:29"/>
+        <structure name="index" id="478" length="entries * 8 * 2" alignment="1" extends="id:501" encoding="ISO_8859-1:1987" endian="little" signed="no" fillcolor="B4BEF8">
+            <structure name="index_entry" id="504">
+                <structref name="pair" id="505" fillcolor="B4BEF8" repeatmax="-1" structure="id:501"/>
             </structure>
         </structure>
-        <structure name="pair" id="29" encoding="ISO_8859-1:1987" endian="little" signed="no">
-            <number name="name_addr" id="34" fillcolor="D0F6B6" type="integer" length="8" display="hex"/>
-            <number name="obj_addr" id="35" fillcolor="B4BEF8" type="integer" length="8" display="hex"/>
+        <structure name="pair" id="501" encoding="ISO_8859-1:1987" endian="little" signed="no">
+            <number name="name_addr" id="508" fillcolor="D0F6B6" type="integer" length="8" display="hex"/>
+            <number name="obj_addr" id="509" fillcolor="B4BEF8" type="integer" length="8" display="hex"/>
         </structure>
-        <structure name="padding" id="26" length="0" encoding="ISO_8859-1:1987" endian="big" signed="no">
-            <binary name="nil" mustmatch="yes" id="37" fillcolor="CACACA" repeatmax="-1" length="1">
+        <structure name="padding" id="498" length="0" encoding="ISO_8859-1:1987" endian="big" signed="no">
+            <binary name="nil" mustmatch="yes" id="511" fillcolor="CACACA" repeatmax="-1" length="1">
                 <fixedvalues>
                     <fixedvalue name="null" value="00"/>
                 </fixedvalues>
             </binary>
         </structure>
-        <structure name="object_table" id="8" length="ot_size" encoding="ISO_8859-1:1987" endian="little" signed="no" fillcolor="D8C5FF">
-            <grammarref name="ot" id="39" filename="/Users/thiago/src/memetalk/stuff/syn_object_table.grammar"/>
+        <structure name="object_table" id="480" length="ot_size" encoding="ISO_8859-1:1987" endian="little" signed="no" fillcolor="D8C5FF">
+            <grammarref name="ot" id="513" filename="/Users/thiago/src/memetalk/stuff/syn_object_table.grammar"/>
         </structure>
-        <structure name="external_symbols" id="10" length="es_size" encoding="ISO_8859-1:1987" endian="little" signed="no" fillcolor="71C7FF">
-            <structure name="es_entry" id="41" repeatmax="-1">
-                <structref name="pair" id="42" structure="id:29"/>
+        <structure name="external_symbols" id="482" length="es_size" encoding="ISO_8859-1:1987" endian="little" signed="no" fillcolor="71C7FF">
+            <structure name="es_entry" id="515" repeatmax="-1">
+                <structref name="pair" id="516" structure="id:501"/>
             </structure>
         </structure>
-        <structure name="reloc_table" id="12" length="0" encoding="ISO_8859-1:1987" endian="little" signed="no">
-            <number name="addr" id="45" repeatmax="-1" type="integer" length="8" display="hex"/>
+        <structure name="reloc_table" id="484" length="0" encoding="ISO_8859-1:1987" endian="little" signed="no">
+            <number name="addr" id="519" repeatmax="-1" type="integer" length="8" display="hex"/>
         </structure>
     </grammar>
 </ufwb>
