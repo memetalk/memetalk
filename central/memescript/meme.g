@@ -402,4 +402,4 @@ single_top_level_fun :name = # ``fun`` fparams:p "{"
                               [:body, body + [e]]];
 </ometa>
 
-end //OMeta
+end

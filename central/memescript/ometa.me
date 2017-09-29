@@ -204,28 +204,6 @@ instance_method epilogue_code: fun() {
     this._apply(:anything);}, null);
   return r.join("");
 }
-instance_method ometa: fun() {
-  var name = null;
-  var i = null;
-  var r = null;
-  this._apply_with_args(:keyword,["ometa"]);
-  name = this._apply(:identifier);
-  i = this._apply(:inheritance);
-  this._apply_with_args(:token, ["{"]);
-  r = this._apply(:rules);
-  this._apply_with_args(:token, ["}"]);
-  return [:grammar, name, i, r];
-}
-instance_method inheritance: fun() {
-  var i = null;
-  return this._or([fun() {
-    this._apply_with_args(:token, ["<:"]);
-    i = this._apply(:identifier);
-    return [:parent, i];
-  }, fun() {
-    return [:parent,"OMetaBase"];
-  }]);
-}
 instance_method rules: fun() {
   var x = null;
   x = this._many1(fun() {

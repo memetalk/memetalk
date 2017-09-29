@@ -59,14 +59,6 @@ init new: fun(input) {
 
   epilogue_code = "</ometa>" _*:r => r.join("");
 
-  ometa = ``ometa`` identifier:name inheritance:i  "{"
-            rules:r
-          "}"
-        => [:grammar, name, i, r];
-
-  inheritance = "<:" identifier:i => [:parent, i]
-              | => [:parent, "OMetaBase"]
-              ;
 
   rules = rule+:x => x;
 
