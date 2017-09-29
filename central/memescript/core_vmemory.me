@@ -13,7 +13,7 @@ instance_method index_for: fun(name) {
   return this.base + this.index[name];
 }
 instance_method external_names: fun() {
-  return this.symbol_table.map(fun(x) { x[0] }).unique.sorted;
+  return this.symbol_table.values.unique.sorted;
 }
 instance_method append_external_ref: fun(name, label) {
   return this.append_label_ref(name, label);
@@ -32,7 +32,7 @@ instance_method append_symbol_instance: fun(string) {
   this.append_int(string.size, null);
   this.append_string(string, null);
 
-  this.symbol_table.append([string, oop]);
+  this.symbol_table[oop] = string;
   return oop;
 }
 end

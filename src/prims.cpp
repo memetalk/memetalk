@@ -1115,6 +1115,47 @@ static int prim_list_set(Process* proc) {
   return 0;
 }
 
+static int prim_list_replace(Process* proc) {
+  oop self =  proc->dp();
+  oop begin_oop = proc->get_arg(0);
+  oop end_oop = proc->get_arg(1);
+  oop lst = proc->get_arg(2);
+
+  number size = proc->mmobj()->mm_list_size(proc, self);
+  number lst_size = proc->mmobj()->mm_list_size(proc, lst);
+
+  number begin = untag_small_int(begin_oop);
+  number end = untag_small_int(end_oop);
+
+  if (!(begin < size and end < size and begin < end)) {
+    proc->raise("TypeError", "begin and end must be smaller than list size");
+  }
+
+  oop_vector* sframe = proc->mmobj()->mm_list_frame(proc, self);
+
+  int i;
+  for (i = 0; i < lst_size; i++) {
+    oop next = proc->mmobj()->mm_list_entry(proc, lst, i);
+    sframe->insert(sframe->begin() + begin + i, next);
+  }
+
+  sframe->erase(sframe->begin() + begin + i, sframe->begin() + end + i);
+  proc->stack_push(proc->rp());
+  return 0;
+}
+
+static int prim_list_extend(Process* proc) {
+  oop self =  proc->dp();
+  oop lst = proc->get_arg(0);
+
+  number size = proc->mmobj()->mm_list_size(proc, lst);
+  for (int i = 0; i < size; i++) {
+    oop next = proc->mmobj()->mm_list_entry(proc, lst, i);
+    proc->mmobj()->mm_list_append(proc, self, next);
+  }
+  proc->stack_push(proc->rp());
+  return 0;
+}
 
 static int prim_list_pos(Process* proc) {
   oop self =  proc->dp();
@@ -1836,6 +1877,17 @@ static int prim_dictionary_plus(Process* proc) {
     proc->mmobj()->mm_dictionary_set(proc, d, it->first, it->second);
   }
   proc->stack_push(d);
+  return 0;
+}
+
+static int prim_dictionary_delete(Process* proc) {
+  oop self =  proc->dp();
+  oop key = proc->get_arg(0);
+
+  oop_map* dframe = proc->mmobj()->mm_dictionary_frame(proc, self);
+
+  dframe->erase(key);
+  proc->stack_push(self);
   return 0;
 }
 
@@ -3070,6 +3122,8 @@ void init_primitives(VM* vm) {
   vm->register_primitive("list_equals", prim_list_equals);
   vm->register_primitive("list_set", prim_list_set);
   vm->register_primitive("list_any", prim_list_any);
+  vm->register_primitive("list_replace", prim_list_replace);
+  vm->register_primitive("list_extend", prim_list_extend);
 
 
   vm->register_primitive("dictionary_new", prim_dictionary_new);
@@ -3085,6 +3139,7 @@ void init_primitives(VM* vm) {
   vm->register_primitive("dictionary_equals", prim_dictionary_equals);
   vm->register_primitive("dictionary_to_string", prim_dictionary_to_string);
   vm->register_primitive("dictionary_to_source", prim_dictionary_to_source);
+  vm->register_primitive("dictionary_delete", prim_dictionary_delete);
 
   vm->register_primitive("string_to_integer", prim_string_to_integer);
   vm->register_primitive("string_to_byte", prim_string_to_byte);

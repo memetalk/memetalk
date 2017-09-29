@@ -101,10 +101,21 @@ instance_method size: fun() {
 instance_method target_cell: fun() {
   return @target_cell;
 }
+instance_method target_label: fun() {
+  return @target_label;
+}
+
+instance_method is_target_reachable: fun() {
+  //assumes `target_cell` always exists in etable
+  if (@target_cell) {
+    return true;
+  } else {
+    return this.etable.index.has(@target_label);
+  }
+}
 instance_method value: fun(_) {
   if (@target_cell) {
-    var to = this.etable.cells.pos(@target_cell);
-    return bits.bytelist(this.etable.base + this.etable.cell_sizes.range(0,to).sum());
+    return bits.bytelist(this.etable.base + this.etable.opt_physical_addresses[@target_cell]);
   } else {
     return bits.bytelist(this.etable.base + this.etable.index[@target_label]);
   }
@@ -113,16 +124,18 @@ end
 
 
 class VirtualMemory
-fields: cells, cell_sizes, index, base, cell_index,
+fields: cells, index, base, cell_index,
       //opt
       total_size,
       opt_cell_indexes,
       opt_ptr_cells,
-      opt_physical_addresses;
+      opt_physical_addresses,
+      symb_references,
+      opt_object_table,
+      opt_pending_ptr;
 
 init new: fun() {
   @cells = [];
-  @cell_sizes = [];
   @index = {}; //label -> memory pos
   @base = 0;
   @cell_index = {}; //label -> cells index
@@ -132,6 +145,9 @@ init new: fun() {
   @opt_cell_indexes = {};
   @opt_ptr_cells = [];
   @opt_physical_addresses = {};
+  @symb_references = [];
+  @opt_object_table = [];
+  @opt_pending_ptr = {};
 
 }
 instance_method index: fun() {
@@ -143,15 +159,14 @@ instance_method base: fun() {
 instance_method cells: fun() {
   return @cells;
 }
-instance_method cell_sizes: fun() {
-  return @cell_sizes;
+instance_method opt_physical_addresses: fun() {
+  return @opt_physical_addresses;
 }
 instance_method _append_cell: fun(cell, label) {
   if (label != null) {
     this.label_current(label);
   }
   @cells.append(cell);
-  @cell_sizes.append(cell.size());
 
   //opt
   @opt_physical_addresses[cell] = @total_size;
@@ -159,6 +174,18 @@ instance_method _append_cell: fun(cell, label) {
   @opt_cell_indexes[cell] = @cells.size -1; // subst @cells.index(cell)
   if (Mirror.vtFor(cell) == PointerCell) {
     @opt_ptr_cells.append(cell);
+
+    if (cell.is_target_reachable()) {
+      @opt_object_table.extend(cell.value(null));
+    } else {
+      if (!@opt_pending_ptr.has(cell.target_label)) {
+        @opt_pending_ptr[cell.target_label] = [];
+      }
+      @opt_pending_ptr[cell.target_label].append([cell, @opt_object_table.size]);
+      @opt_object_table.extend(bits.bytelist(0xDDDDDDDD));
+    }
+  } else {
+    @opt_object_table.extend(cell.value(null));
   }
 }
 instance_method set_base: fun(base) {
@@ -168,8 +195,20 @@ instance_method label_current: fun(label) {
   if (@index.has(label)) {
     Exception.throw("Duplicated label " + label);
   }
-  @index[label] = @cell_sizes.sum();
+  @index[label] = @total_size;
   @cell_index[label] = @cells.size;
+
+  if (@opt_pending_ptr.has(label)) {
+    var lst = @opt_pending_ptr[label];
+    for (var i = 0; i < lst.size; i += 1) {
+      var entry = @opt_pending_ptr[label][i];
+      var c = entry[0];
+      var ot_addr = entry[1];
+      var new_val = c.value(null);
+      @opt_object_table.replace(ot_addr, ot_addr + new_val.size, new_val);
+    }
+    @opt_pending_ptr.delete(label);
+  }
 }
 instance_method get_pointer_to: fun(label) {
   return @cells[@cell_index[label]];
@@ -197,6 +236,9 @@ instance_method append_string: fun(string, label) { //label defaults to null
 instance_method append_pointer_to: fun(target_cell, label) { //label defaults to null
   var cell = PointerCell.new(this, null, target_cell);
   this._append_cell(cell, label);
+  if (this.symbol_table.keys.has(target_cell)) {
+    @symb_references.append([this.symbol_table[target_cell], this.physical_address(cell)]);
+  }
   return cell;
 }
 instance_method append_label_ref: fun(target_label, label) { //label defaults to null
@@ -215,22 +257,23 @@ instance_method physical_address: fun(cell) {
 
 }
 instance_method object_table: fun() {
-  // return bench("vmemory:object_table", fun() {
-  //   return @cells.map(fun(c) { c.value(null) }).sum();
-  // });
+   return @opt_object_table;
+//   // return bench("vmemory:object_table", fun() {
+//   //   return @cells.map(fun(c) { c.value(null) }).sum();
+//   // });
 
-//  return bench("vmemory:object_table", fun() {
-  var res = [null].times(@total_size);
-  var x = 0;
-  for (var i = 0; i < @cells.size; i += 1) {
-    var sub = @cells[i].value(null);
-    for (var j = 0; j < sub.size; j += 1) {
-      res[x] = sub[j];
-      x = x + 1;
-    }
-  }
-  return res;
-//  });
+// //  return bench("vmemory:object_table", fun() {
+//   var res = [null].times(@total_size);
+//   var x = 0;
+//   for (var i = 0; i < @cells.size; i += 1) {
+//     var sub = @cells[i].value(null);
+//     for (var j = 0; j < sub.size; j += 1) {
+//       res[x] = sub[j];
+//       x = x + 1;
+//     }
+//   }
+//   return res;
+// //  });
 }
 instance_method reloc_table: fun() {
   // return bench("vmemory:reloc_table", fun() {
@@ -241,21 +284,38 @@ instance_method reloc_table: fun() {
 //  });
 }
 instance_method symbols_references: fun() {
-//  return bench("vmemory:symbols_references", fun() {
-    var sr = [];
-    var st = this.symbol_table;
-    for (var i = 0; i < st.size; i += 1) {
-      var entry = st[i];
-      var text = entry[0];
-      var ptr = entry[1];
-      var filtered = @opt_ptr_cells.filter(fun(x) { x.target_cell == ptr });
-      for (var j = 0; j < filtered.size; j += 1) {
-        var referer = filtered[j];
-        sr.append([text, this.physical_address(referer)]);
-      }
-    }
-    return sr.ordered_by(fun(x, y) { x[1] <= y[1] });
-//  });
+  return @symb_references;
+// //  return bench("vmemory:symbols_references", fun() {
+//     var sr = [];
+//     var st = this.symbol_table;
+//     for (var i = 0; i < st.size; i += 1) {
+//       var entry = st[i];
+//       var text = entry[0];
+//       var ptr = entry[1];
+//       var filtered = @opt_ptr_cells.filter(fun(x) { x.target_cell == ptr });
+//       for (var j = 0; j < filtered.size; j += 1) {
+//         var referer = filtered[j];
+//         sr.append([text, this.physical_address(referer)]);
+//       }
+//     }
+//     return sr.ordered_by(fun(x, y) { x[1] <= y[1] });
+// //  });
+  // return @symb_references;
+// //  return bench("vmemory:symbols_references", fun() {
+//     var sr = [];
+//     var st = this.symbol_table;
+//     for (var i = 0; i < st.size; i += 1) {
+//       var entry = st[i];
+//       var text = entry[0];
+//       var ptr = entry[1];
+//       var filtered = @opt_ptr_cells.filter(fun(x) { x.target_cell == ptr });
+//       for (var j = 0; j < filtered.size; j += 1) {
+//         var referer = filtered[j];
+//         sr.append([text, this.physical_address(referer)]);
+//       }
+//     }
+//     return sr;
+// //  });
 }
 instance_method append_int_to_int_dict: fun(mdict) {
   var pairs_oop = [];

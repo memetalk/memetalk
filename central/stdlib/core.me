@@ -395,6 +395,9 @@ meme central:memescript/compiler
   instance_method ==: fun(other) {
     <primitive "dictionary_equals">
   }
+  instance_method delete: fun(key) {
+    <primitive "dictionary_delete">
+  }
   end
 
   class List
@@ -410,6 +413,9 @@ meme central:memescript/compiler
   }
   instance_method prepend: fun(x) {
     <primitive "list_prepend">
+  }
+  instance_method extend: fun(lst) {
+    <primitive "list_extend">
   }
   instance_method insert: fun(idx, x) {
     <primitive "list_insert">
@@ -491,6 +497,9 @@ meme central:memescript/compiler
   }
   instance_method any: fun(fn) {
     <primitive "list_any">
+  }
+  instance_method replace: fun(begin, end, lst) {
+    <primitive "list_replace">
   }
   end
 

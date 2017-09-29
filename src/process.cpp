@@ -554,7 +554,7 @@ oop Process::super_send(oop recv, oop selector, oop args, int* exc) {
     return ex;
   }
 
-  number arity = CFUN_NUM_PARAMS(_mmobj->mm_function_get_header(this, fun));
+  number arity = CFUN_NUM_PARAMS(_mmobj->mm_function_get_header(this, fun, true));
   if (num_args != arity) {
     std::stringstream s;
     s << _mmobj->mm_symbol_cstr(this, selector, true) << ": expects " <<  arity << " but got " << num_args;
@@ -590,7 +590,7 @@ oop Process::do_send(oop recv, oop selector, int num_args, int *exc) {
     return ex;
   }
 
-  number arity = CFUN_NUM_PARAMS(_mmobj->mm_function_get_header(this, fun));
+  number arity = CFUN_NUM_PARAMS(_mmobj->mm_function_get_header(this, fun, true));
   if (num_args != arity) {
     std::stringstream s;
     s << _mmobj->mm_symbol_cstr(this, selector, true) << ": expects " <<  arity << " but got " << num_args;
@@ -663,10 +663,10 @@ oop Process::call(oop fun, oop args, int* exc) {
     raise("TypeError", "expecting Context");
   }
   number num_args = _mmobj->mm_list_size(this, args);
-  number arity = CFUN_NUM_PARAMS(_mmobj->mm_function_get_header(this, fun));
+  number arity = CFUN_NUM_PARAMS(_mmobj->mm_function_get_header(this, fun, true));
   if (num_args != arity) {
     std::stringstream s;
-    s << _mmobj->mm_string_cstr(this, _mmobj->mm_function_get_name(this, fun)) << ": expects " <<  arity << " but got " << num_args;
+    s << _mmobj->mm_string_cstr(this, _mmobj->mm_function_get_name(this, fun, true)) << ": expects " <<  arity << " but got " << num_args;
     DBG(s.str() << endl);
     oop ex = mm_exception("ArityError", s.str().c_str());
     WARNING() << "returning ArityError exception object " << ex << endl;
@@ -686,10 +686,10 @@ oop Process::call_1(oop fun, oop arg, int* exc) {
     raise("TypeError", "expecting Context");
   }
   number num_args = 1;
-  number arity = CFUN_NUM_PARAMS(_mmobj->mm_function_get_header(this, fun));
+  number arity = CFUN_NUM_PARAMS(_mmobj->mm_function_get_header(this, fun, true));
   if (num_args != arity) {
     std::stringstream s;
-    s << _mmobj->mm_string_cstr(this, _mmobj->mm_function_get_name(this, fun)) << ": expects " <<  arity << " but got " << num_args;
+    s << _mmobj->mm_string_cstr(this, _mmobj->mm_function_get_name(this, fun, true)) << ": expects " <<  arity << " but got " << num_args;
     DBG(s.str() << endl);
     oop ex = mm_exception("ArityError", s.str().c_str());
     WARNING() << "returning ArityError exception object " << ex << endl;
@@ -707,10 +707,10 @@ oop Process::call_2(oop fun, oop arg0, oop arg1, int* exc) {
     raise("TypeError", "expecting Context");
   }
   number num_args = 2;
-  number arity = CFUN_NUM_PARAMS(_mmobj->mm_function_get_header(this, fun));
+  number arity = CFUN_NUM_PARAMS(_mmobj->mm_function_get_header(this, fun, true));
   if (num_args != arity) {
     std::stringstream s;
-    s << _mmobj->mm_string_cstr(this, _mmobj->mm_function_get_name(this, fun)) << ": expects " <<  arity << " but got " << num_args;
+    s << _mmobj->mm_string_cstr(this, _mmobj->mm_function_get_name(this, fun, true)) << ": expects " <<  arity << " but got " << num_args;
     DBG(s.str() << endl);
     oop ex = mm_exception("ArityError", s.str().c_str());
     WARNING() << "returning ArityError exception object " << ex << endl;
@@ -1058,7 +1058,7 @@ void Process::reload_frame() {
 
 void Process::handle_super_send(number num_args) {
   oop recv = rp();
-  oop selector = _vm->new_symbol(this, _mmobj->mm_function_get_name(this, _cp));
+  oop selector = _vm->new_symbol(this, _mmobj->mm_function_get_name(this, _cp, true));
 
 
   oop fun;
@@ -1083,10 +1083,10 @@ void Process::handle_super_send(number num_args) {
     return;
   }
 
-  number arity = CFUN_NUM_PARAMS(_mmobj->mm_function_get_header(this, fun));
+  number arity = CFUN_NUM_PARAMS(_mmobj->mm_function_get_header(this, fun, true));
   if (num_args != arity) {
     std::stringstream s;
-    s << _mmobj->mm_string_cstr(this, _mmobj->mm_function_get_name(this, fun)) << ": expects " <<  arity << " but got " << num_args;
+    s << _mmobj->mm_string_cstr(this, _mmobj->mm_function_get_name(this, fun, true)) << ": expects " <<  arity << " but got " << num_args;
     DBG(s.str() << endl);
     oop ex = mm_exception("ArityError", s.str().c_str());
     WARNING() << "will raise ArityError: " << s.str() << endl;
@@ -1129,12 +1129,12 @@ void Process::handle_send(number num_args) {
     return;
   }
 
-  long header = _mmobj->mm_function_get_header(this, fun);
+  long header = _mmobj->mm_function_get_header(this, fun, true);
   bool vararg = CFUN_HAS_VAR_ARG(header);
   number arity = CFUN_NUM_PARAMS(header);
   if (!vararg && num_args != arity) {
     std::stringstream s;
-    s << _mmobj->mm_string_cstr(this, _mmobj->mm_function_get_name(this, fun)) << ": expects " <<  arity << " but got " << num_args;
+    s << _mmobj->mm_string_cstr(this, _mmobj->mm_function_get_name(this, fun, true)) << ": expects " <<  arity << " but got " << num_args;
     DBG(s.str() << endl);
     oop ex = mm_exception("ArityError", s.str().c_str());
     WARNING() << "will raise ArityError: " << s.str() << endl;
@@ -1178,7 +1178,7 @@ void Process::handle_super_ctor_send(number num_args) {
   DBG("Lookup FOUND " << fun << endl);
 
 
-  number arity = CFUN_NUM_PARAMS(_mmobj->mm_function_get_header(this, fun));
+  number arity = CFUN_NUM_PARAMS(_mmobj->mm_function_get_header(this, fun, true));
   if (num_args != arity) {
     std::stringstream s;
     s << "arity and num_args differ: " << num_args << " != " << arity;
@@ -1200,11 +1200,11 @@ void Process::handle_call(number num_args) {
   // DBG("handle_call" << endl);
   oop fun = stack_pop();
   // DBG("handle_call: fn " << fun << endl);
-  number arity = CFUN_NUM_PARAMS(_mmobj->mm_function_get_header(this, fun));
+  number arity = CFUN_NUM_PARAMS(_mmobj->mm_function_get_header(this, fun, true));
   // DBG("handle_call: arity " << arity << endl);
   if (num_args != arity) {
     std::stringstream s;
-    s << _mmobj->mm_string_cstr(this, _mmobj->mm_function_get_name(this, fun)) << ": expects " <<  arity << " but got " << num_args;
+    s << _mmobj->mm_string_cstr(this, _mmobj->mm_function_get_name(this, fun, true)) << ": expects " <<  arity << " but got " << num_args;
     DBG(s.str() << endl);
     oop oo_ex = mm_exception("ArityError", s.str().c_str());
     WARNING() << "will raise ArityError: " << s.str() << endl;
@@ -1400,7 +1400,7 @@ bool Process::exception_has_handler(oop e, oop cp, bytecode* ip, oop next_bp) {
 
   DBG("exception_has_handler: " << _mmobj->mm_string_cstr(this, _mmobj->mm_function_get_name(this, cp, true), true) << endl);
 
-  long header = _mmobj->mm_function_get_header(this, cp);
+  long header = _mmobj->mm_function_get_header(this, cp, true);
 
   if (CFUN_IS_PRIM(header)) {
     cp = cp_from_base(next_bp);

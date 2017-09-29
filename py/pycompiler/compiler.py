@@ -50,7 +50,7 @@ class MEC(object):
         self.HEADER_SIZE = len(mec['header']) * bits.WSIZE
         #base = self.HEADER_SIZE + mec['header']['names_size']
         vmem.set_base(self.HEADER_SIZE)
-        self.cmodule.fill(vmem)
+        bench("cmodule.fill", lambda: self.cmodule.fill(vmem))
 
         mec['header']['magic_number'] = self.MAGIC_NUMBER
 

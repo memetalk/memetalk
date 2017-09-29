@@ -13,7 +13,7 @@ fields: ext_ref_table, symb_table, string_table;
 init new: fun() {
   super.new();
   @ext_ref_table = [];
-  @symb_table = [];
+  @symb_table = {};
   @string_table = {};
 }
 instance_method symbol_table: fun() {
@@ -28,7 +28,7 @@ instance_method external_references: fun() {
   });
 }
 instance_method external_names: fun() {
-  return (@ext_ref_table.map(fun(x) { x[0] }) + @symb_table.map(fun(x) { x[0] })).unique.sorted;
+  return (@ext_ref_table.map(fun(x) { x[0] }) + @symb_table.values).unique.sorted;
 }
 instance_method reloc_table: fun() {
   return this.cells.filter(fun(entry) { Mirror.vtFor(entry) == vmemory.PointerCell}).map(fun(entry) { this.physical_address(entry) });
@@ -53,7 +53,7 @@ instance_method append_symbol_instance: fun(string) {
     return this.append_null(null);
   }
   var oop = this.append_int(0xBBBB, null);
-  @symb_table.append([string, oop]);
+  @symb_table[oop] = string;
   return oop;
 }
 instance_method append_string_instance: fun(string) {

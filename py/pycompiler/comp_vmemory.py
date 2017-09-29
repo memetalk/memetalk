@@ -21,7 +21,7 @@ class CompVirtualMemory(vmemory.VirtualMemory):
     def external_names(self):
         # print 'begin external names'
         # b = time.time()
-        res = sorted(set([x[0] for x in self.ext_ref_table] + [text for text in self.symb_table.values()]))
+        res = sorted(set([x[0] for x in self.ext_ref_table] + self.symb_table.values()))
         # print 'end external names', time.time()-b
         return res
 
