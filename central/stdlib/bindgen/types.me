@@ -1,12 +1,12 @@
 meme central:memescript/compiler
 
-// requires io
-// where
-//   io         = central:stdlib/io
+requires io
+where
+  io         = central:stdlib/io
 
 class Param
   fields: name, typeName, isPointer, isArray, isConst, isUnsigned,
-    isOutput, isNullable;
+    isOutput, isNullable, isUnknown;
 
   init new: fun() {
     @isPointer = false;
@@ -15,6 +15,7 @@ class Param
     @isUnsigned = false;
     @isOutput = false;
     @isNullable = false;
+    @isUnknown = false;
   }
   instance_method setName: fun(name) { @name = name; }
   instance_method setTypeName: fun(typeName) { @typeName = typeName; }
@@ -24,6 +25,7 @@ class Param
   instance_method setIsUnsigned: fun(isUnsigned) { @isUnsigned = isUnsigned; }
   instance_method setIsOutput: fun(isOutput) { @isOutput = isOutput; }
   instance_method setIsNullable: fun(isNullable) { @isNullable = isNullable; }
+  instance_method setIsUnknown: fun(isUnknown) { @isUnknown = isUnknown; }
   instance_method setAnnotations: fun(annotations) {
     annotations.each(fun(_, a) {
       if (a == "out") {
@@ -42,6 +44,7 @@ class Param
   instance_method getIsUnsigned: fun() { return @isUnsigned; }
   instance_method getIsOutput: fun() { return @isOutput; }
   instance_method getIsNullable: fun() { return @isNullable; }
+  instance_method getIsUnknown: fun() { return @isUnknown; }
 
   instance_method genType: fun() {
     var out = [];
@@ -60,7 +63,8 @@ class Param
       "  IsPointer: " + @isPointer.toString,
       " IsUnsigned: " + @isUnsigned.toString,
       "   IsOutput: " + @isOutput.toString,
-      " IsNullable: " + @isNullable.toString
+      " IsNullable: " + @isNullable.toString,
+      "  isUnknown: " + @isUnknown.toString
     ].join("\n");
   }
 end
@@ -68,7 +72,8 @@ end
 class Struct
   fields: name, fieldList;
 
-  init new: fun() {
+  init new: fun(name) {
+    @name = name;
     @fieldList = [];
   }
   instance_method newChild: fun() {
@@ -86,10 +91,11 @@ class Struct
     @name = name;
   }
   instance_method toString: fun() {
-    var structFields = @fieldList
-      .map(fun(i) { return [" ", i.genType, i.getName].join(" ") + ";"; })
-      .join("\n");
-    return ["struct", @name, "{\n", structFields, "\n}"].join(" ");
+    return "MEME_INSTANCE(" + @name + ", \"" + @name + "\")";
+    // var structFields = @fieldList
+    //   .map(fun(i) { return [" ", i.genType, i.getName].join(" ") + ";"; })
+    //   .join("\n");
+    // return ["struct", @name, "{\n", structFields, "\n}"].join(" ");
   }
 end
 
@@ -129,17 +135,21 @@ class Fun
   }
   instance_method getTypeNameFromParam: fun(param) {
     var typeName = param.getTypeName();
+    if (param.getIsUnknown()) {
+      return "";
+    }
     if (typeName.substr(0, 7) == "struct ") {
       return "struct";
     }
     return typeName;
   }
-  instance_method genChkArg: fun(arg) {
+  instance_method genChkArg: fun(module, arg) {
     var out = [];
-    var typeName = this.getTypeNameFromParam(arg);
+    var typeName = module.getTypeNameFromParam(arg);
     var primeType = {
       "": "Integer",
       "int": "Integer",
+      "long": "LongNum",
       "char": "String",
       "struct": "Object"
     }[typeName];
@@ -149,9 +159,8 @@ class Fun
 
     var vname = "oop_" + arg.getName();
     var errMessage = "Argument `" + arg.getName() + "' expected " + primeType;
-    var typeValidator =
+    var validation =
       "!(proc->mmobj()->mm_object_vt(" + vname + ") == proc->vm()->get_prime(\"" + primeType + "\"))";
-    var validation = typeValidator;
     if (arg.getIsNullable) {
       validation = "(" + vname + " != MM_NULL) && " + typeValidator;
       errMessage = errMessage + " or null";
@@ -162,13 +171,14 @@ class Fun
     out.append("  }");
     return out.join("\n");
   }
-  instance_method genUnwrapArg: fun(arg) {
+  instance_method genUnwrapArg: fun(module, arg) {
     var typeName = this.getTypeNameFromParam(arg);
     var type = arg.genType();
     var argName = "oop_" + arg.getName();
     var unwrap = {
       "": "untag_small_int(" + argName + ")",
       "int": "untag_small_int(" + argName + ")",
+      "long": "proc->mmobj()->mm_longnum_get(proc, " + argName + ")",
       "char": "proc->mmobj()->mm_string_cstr(proc, " + argName + ")",
       "struct": "(" + type + ") ((oop *) " + argName + ")[2]"
     }[typeName];
@@ -182,7 +192,7 @@ class Fun
     out.append(type);
     return (out + ["prim_" + arg.getName(), "=", unwrap + ";"]).join(" ");
   }
-  instance_method genFunCall: fun() {
+  instance_method genFunCall: fun(module) {
     var paramNames = this.getParams().map(fun(p) { "prim_" + p.getName });
     var params = "(" + paramNames.join(", ") + ");\n\n";
     var rtype = this.getReturnType();
@@ -197,33 +207,121 @@ class Fun
         var wrap = {
           "": "tag_small_int(output)",
           "int": "tag_small_int(output)",
-          "char": "proc->mmobj()->mm_string_new(proc, output)",
-          "struct": "create_struct_instance(proc, \"" + typeName + "\", output)"
+          "char": "proc->mmobj()->mm_string_new(output)",
+          "struct": "meme_instance(proc, meme_mapping, \"" + typeName + "\", output, &exc)"
         }[typeName];
         if (!wrap) {
           Exception.throw("Unknown type `" + typeName + "'");
         }
         out.append([" ", rtype.genType(), "output", "=", this.getName(), params].join(" "));
         out.append(" /* Push output to the stack */\n");
+        if (typeName == "struct") {
+          out.append(" int exc = 0;\n");
+        }
         out.append(" oop oop_output = " + wrap + ";\n");
         out.append(" proc->stack_push(oop_output);\n");
       }
     }
     return out.join(" ");
   }
-  instance_method toString: fun() {
+  instance_method gen: fun(module) {
     var output = [];
     output.append(this.genFunSignature());
     this.getParams().each(fun(i, p) {
       output.append("\n  /* Argument[" + i.toString + "] */");
       output.append(this.genGetArg(i, p));
-      output.append(this.genChkArg(p));
-      output.append(this.genUnwrapArg(p));
+      output.append(this.genChkArg(module, p));
+      output.append(this.genUnwrapArg(module, p));
     });
     output.append("\n  /* Call to the underlying function */");
-    output.append(this.genFunCall());
+    output.append(this.genFunCall(module));
     output.append("  return 0;");
     output.append("}");
+    return output.join("\n");
+  }
+end
+
+class Typedef
+  fields: name, type;
+
+  init new: fun(name) {
+    @name = name;
+    @type = Param.new;
+  }
+  instance_method getName: fun() {
+    return @name;
+  }
+  instance_method getType: fun() {
+    return @type;
+  }
+end
+
+class Module
+  fields: name, includes, structs, typedefs, funs;
+
+  init new: fun(name) {
+    @name = name;
+    @includes = [];
+    @structs = [];
+    @typedefs = {};
+    @funs = [];
+  }
+  instance_method appendInclude: fun(include) {
+    @includes.append(include);
+  }
+  instance_method appendStruct: fun(o) {
+    @structs.append(o);
+    return o;
+  }
+  instance_method appendTypedef: fun(o) {
+    @typedefs[o.getName()] = o.getType();
+    return o;
+  }
+  instance_method appendFun: fun(o) {
+    @funs.append(o);
+    return o;
+  }
+
+  instance_method getIncludes: fun() {
+    return @includes;
+  }
+
+  instance_method getTypeNameFromParam: fun(param) {
+    var typeName = param.getTypeName();
+    if (param.getIsUnknown()) {
+      var alias = @typedefs[typeName];
+      if (alias) {
+        return alias.getTypeName();
+      }
+    }
+    if (typeName.substr(0, 7) == "struct ") {
+      return "struct";
+    }
+    return typeName;
+  }
+
+  instance_method genMainFunction: fun(moduleName) {
+    var output = ["void init_primitives(VM *vm) {"];
+    @funs.each(fun(_, d) {
+      var prim_name = moduleName + "_" + d.getName();
+      output.append("  vm->register_primitive(\"" + prim_name + "\", prim_" + d.getName() + ");");
+    });
+    output.append("}");
+    return output.join("\n");
+  }
+  instance_method toString: fun() {
+    var output = [];
+    output.append("#include <vm.hpp>");
+    output.append("#include <bindgen.hpp>");
+    output.append(@includes.map(fun(i) { "#include " + i.toString }).join("\n\n"));
+    output.append("");
+    output.append("static std::map<void*, oop> meme_mapping;\n");
+    output.append("");
+    output.append(@structs.map(fun(i) { i.toString }).join("\n"));
+    output.append("");
+    output.append(@funs.map(fun(i) { i.gen(this) }).join("\n\n"));
+    output.append("");
+    output.append(this.genMainFunction(@name));
     return output.join("\n");
   }
 end

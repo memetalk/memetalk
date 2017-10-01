@@ -13,7 +13,8 @@ class SyscallDefinitionsParser < OMetaBase
 start = definition*:xs => xs;
 
 definition
-    = prefix func:f => f
+    = prefix typedef:t => t
+    | prefix func:f => f
     | prefix include:i => i
     | prefix struct_def:s => s
     ;
@@ -26,6 +27,8 @@ include
     | "#" spaces "include" spaces '"' {~'"' _}+:fname '"'
       => [:include, "\"" + fname.join("") + "\""]
     ;
+
+typedef = ``typedef`` spaces type_only:t spaces id:id => [:typedef, id, t];
 
 struct_def
     = struct:s spaces struct_body:b !{s.append(b)} => s

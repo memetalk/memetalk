@@ -7,6 +7,8 @@ where
   io      = central:stdlib/io
 import Param from types
 import Fun from types
+import Module from types
+import Typedef from types
 
 numericTypes: [
   "complex long double",
@@ -37,15 +39,71 @@ testParamGenType: fun() {
     test.assertEqual(value.genType(), type, "Type " + type + " doesn't work");
   });
 }
+// function signature
+testGenFunSignature: fun() {
+  var f = Fun.new("name");
+  var r = f.newReturnType();
+  r.setTypeName("char");
+  r.setIsPointer(true);
+
+  test.assertEqual(
+    f.genFunSignature(),
+    "static int prim_name (Process* proc) {",
+    "genFunSignature()");
+}
+// function argument check
+testGenChkArg: fun() {
+  var m = Module.new("m");
+  var f = Fun.new("myfunc");
+  var p = Param.new;
+  p.setName("arg0");
+  p.setTypeName("char");
+
+  test.assertEqual(
+    f.genChkArg(m, p),
+    ["  if (!((proc->mmobj()->mm_object_vt(oop_arg0) == proc->vm()->get_prime(\"String\")))) {",
+     "    proc->raise(\"TypeError\", \"Argument `arg0' expected String\");",
+     "  }"].join("\n"),
+    "genChkArg()");
+}
+// function argument check with unknown argument declared with typedef
+testGenChkArgTypedef: fun() {
+  // Given a module and a function with one parameter
+  var m = Module.new("m");
+  var f = Fun.new("myfunc");
+  var p = Param.new;
+
+  // And that a typedef was declared creating the alias `foo'
+  var t = Typedef.new("foo");
+  t.getType().setTypeName("char");
+  m.appendTypedef(t);
+
+  // And Given that the parameter doesn't have a type
+  p.setName("arg0");
+  p.setTypeName("foo");
+  p.setIsUnknown(true);
+
+  // When the argument check is generated
+  var output = f.genChkArg(m, p);
+
+  // Then it should validate with the type referenced by the alias
+  test.assertEqual(
+    output,
+    ["  if (!((proc->mmobj()->mm_object_vt(oop_arg0) == proc->vm()->get_prime(\"String\")))) {",
+     "    proc->raise(\"TypeError\", \"Argument `arg0' expected String\");",
+     "  }"].join("\n"),
+    "genChkArg()");
+}
 // int foo();
 testGenFunCallInt: fun() {
+  var m = Module.new("m");
   // Given a function with a `void` return type
   var f = Fun.new("foo");
   var r = f.newReturnType();
   r.setTypeName("int");
 
   // When the call is built
-  var o = f.genFunCall();
+  var o = f.genFunCall(m);
 
   // Then the output code shouldn't assign the output of the function
   // called to any variable
@@ -59,13 +117,14 @@ testGenFunCallInt: fun() {
 }
 // void foo();
 testGenFunCallVoid: fun() {
+  var m = Module.new("m");
   // Given a function with a `void` return type
   var f = Fun.new("foo");
   var r = f.newReturnType();
   r.setTypeName("void");
 
   // When the call is built
-  var o = f.genFunCall();
+  var o = f.genFunCall(m);
 
   // Then the output code shouldn't assign the output of the function
   // called to any variable
@@ -77,6 +136,9 @@ testGenFunCallVoid: fun() {
 // All tests
 main: fun() {
   testParamGenType();
+  testGenFunSignature();
+  testGenChkArg();
+  testGenChkArgTypedef();
   testGenFunCallInt();
   testGenFunCallVoid();
 }

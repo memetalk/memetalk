@@ -97,6 +97,21 @@ testParseTypedDefinitions: fun() {
     "char *bar +out+null", :typed),
     [[:annotations, [:pointer, [:builtin, "char"], 1], ["out", "null"]], "bar"], "typed");
 }
+// :typedef
+testParseTypedefDefinitions: fun() {
+  test.assertEqual(
+    bindgen.parseRule("typedef int foo", :typedef),
+    [:typedef, "foo", [:builtin, "int"]],
+    "typedef");
+  test.assertEqual(
+    bindgen.parseRule("typedef char* bar", :typedef),
+    [:typedef, "bar", [:pointer, [:builtin, "char"], 1]],
+    "typedef");
+  test.assertEqual(
+    bindgen.parseRule("typedef struct st* baz", :typedef),
+    [:typedef, "baz", [:pointer, [:struct, "st"], 1]],
+    "typedef");
+}
 // :params rule
 testParseParamsDefinitions: fun() {
   test.assertEqual(bindgen.parseRule(
@@ -215,6 +230,7 @@ main: fun() {
   testParseIdDefinitions();
   testParseTypeDefinitions();
   testParseTypedDefinitions();
+  testParseTypedefDefinitions();
   testParseParamsDefinitions();
   testParseRtypeDefinitions();
   testParseFuncDefinitions();
