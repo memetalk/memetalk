@@ -105,11 +105,7 @@ testTranslateParamsDefinitions: fun() {
 testTranslateFuncDefinitions: fun() {
   var m = Module.new("m");
   var func = tr("int exit(int code)", :func, :func, [m]);
-  test.assertEqual(
-    func.gen(m).split("\n")[0],
-    "static int prim_exit (Process* proc) {",
-    "func"
-  );
+  test.assertEqual(func.getName(), "exit", "func.getName");
 }
 // :include rule
 testTranslateIncludeDefinitions: fun() {

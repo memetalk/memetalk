@@ -4,6 +4,118 @@ requires io
 where
   io         = central:stdlib/io
 
+c_comment: fun(i, c) {
+  var sp = " ".times(i);
+  return sp + "/* " + c + " */";
+}
+c_obj_vt: fun(n) {
+  return "proc->mmobj()->mm_object_vt(" + n + ")";
+}
+c_vm_prime: fun(p) {
+  return "proc->vm()->get_prime(\"" + p + "\")";
+}
+c_if: fun(i, t, p) {
+  var sp = " ".times(i);
+  return sp + "if (" + t + ") {\n" +
+         sp + p + "\n" +
+         sp + "}\n";
+}
+c_else: fun(i, p) {
+  var sp = " ".times(i);
+  return sp + "else {\n" +
+         sp + p + "\n" +
+         sp + "}\n";
+}
+c_elseif: fun(i, t, p) {
+  var sp = " ".times(i);
+  return sp + "else if (" + t + ") {\n" +
+         sp + p + "\n" +
+         sp + "}\n";
+}
+c_or: fun(a, b) {
+  return a + " || " + b;
+}
+c_eq: fun(a, b) {
+  return a + " == " + b;
+}
+c_neq: fun(a, b) {
+  return a + " != " + b;
+}
+c_stm: fun(i, s) {
+  return " ".times(i) + s + ";";
+}
+c_declare: fun(type, varn) {
+  return type + " " + varn;
+}
+c_assign: fun(varn, val) {
+  return varn + " = " + val;
+}
+c_return: fun(what) {
+  return "proc->stack_push(" + what + ")";
+}
+c_type_error: fun(msg) {
+  return "proc->raise(\"TypeError\", \"" + msg + "\")";
+}
+// Each prime type gets one
+c_unwrap_int: fun(varn) {
+  return "untag_small_int(" + varn + ")";
+}
+c_unwrap_long: fun(varn) {
+  return "proc->mmobj()->mm_longnum_get(proc, " + varn + ")";
+}
+c_unwrap_string: fun(varn) {
+  return "proc->mmobj()->mm_string_cstr(proc, " + varn + ")";
+}
+c_unwrap_object: fun(type, varn) {
+  return "(" + type + ") ((oop *) " + varn + ")[2]";
+}
+cc_unwrap_type: fun(prime, type, varn) {
+  var f = {
+    "Integer": fun(_, x) { c_unwrap_int(x) },
+    "LongNum": fun(_, x) { c_unwrap_long(x) },
+    "String": fun(_, x) { c_unwrap_string(x) },
+    "Object": fun(t, x) { c_unwrap_object(t, x) }
+  }[prime];
+  if (!f) {
+    Exception.throw("Unknown type `" + type + "'");
+  }
+  return f(type, varn);
+}
+cc_find_primes: fun(param) {
+  var typeName = param.getTypeName();
+  if (typeName.substr(0, 7) == "struct ") {
+    typeName = "struct";
+  }
+  var primes = {
+    "": ["Integer"],
+    "int": ["Integer"],
+    "long": ["LongNum", "Integer"],
+    "char": ["String"],
+    "struct": ["Object"]
+  }[typeName];
+  if (!primes) {
+    Exception.throw("Unknown type `" + typeName + "'");
+  }
+  return primes;
+}
+cc_wrap_type: fun(param, ogparam) {
+  var typeName = param.getTypeName();
+  var className = ogparam.getTypeName().replace_all(" ", "_");
+  if (typeName.substr(0, 7) == "struct ") {
+    typeName = "struct";
+  }
+  var wrap = {
+    "": "tag_small_int(output)", // e.g.: `unsigned foo`
+    "int": "tag_small_int(output)",
+    "char": "proc->mmobj()->mm_string_new(output)",
+    "struct": "meme_instance(proc, meme_mapping, \"" + className + "\", output, &exc)"
+  }[typeName];
+  if (!wrap) {
+    Exception.throw("Unknown type `" + typeName + "'");
+  }
+  return wrap;
+}
+
 class Param
   fields: name, typeName, isPointer, isArray, isConst, isUnsigned,
     isOutput, isNullable, isUnknown;
@@ -130,108 +242,68 @@ class Fun
             "(Process* proc)", "{"].join(" ");
   }
   instance_method genGetArg: fun(i, arg) {
-    return ["  oop", "oop_" + arg.getName(), "=",
-            "proc->get_arg(" + i.toString() + ");"].join(" ");
-  }
-  instance_method getTypeNameFromParam: fun(param) {
-    var typeName = param.getTypeName();
-    if (param.getIsUnknown()) {
-      return "";
-    }
-    if (typeName.substr(0, 7) == "struct ") {
-      return "struct";
-    }
-    return typeName;
-  }
-  instance_method genChkArg: fun(module, arg) {
-    var out = [];
-    var typeName = module.getTypeNameFromParam(arg);
-    var primeType = {
-      "": "Integer",
-      "int": "Integer",
-      "long": "LongNum",
-      "char": "String",
-      "struct": "Object"
-    }[typeName];
-    if (!primeType) {
-      Exception.throw("Unknown type `" + typeName + "'");
-    }
-
-    var vname = "oop_" + arg.getName();
-    var errMessage = "Argument `" + arg.getName() + "' expected " + primeType;
-    var validation =
-      "!(proc->mmobj()->mm_object_vt(" + vname + ") == proc->vm()->get_prime(\"" + primeType + "\"))";
-    if (arg.getIsNullable) {
-      validation = "(" + vname + " != MM_NULL) && " + typeValidator;
-      errMessage = errMessage + " or null";
-    }
-
-    out.append("  if (" + validation + ") {");
-    out.append("    proc->raise(\"TypeError\", \"" + errMessage + "\");");
-    out.append("  }");
-    return out.join("\n");
-  }
-  instance_method genUnwrapArg: fun(module, arg) {
-    var typeName = this.getTypeNameFromParam(arg);
-    var type = arg.genType();
-    var argName = "oop_" + arg.getName();
-    var unwrap = {
-      "": "untag_small_int(" + argName + ")",
-      "int": "untag_small_int(" + argName + ")",
-      "long": "proc->mmobj()->mm_longnum_get(proc, " + argName + ")",
-      "char": "proc->mmobj()->mm_string_cstr(proc, " + argName + ")",
-      "struct": "(" + type + ") ((oop *) " + argName + ")[2]"
-    }[typeName];
-    if (!unwrap) {
-      Exception.throw("Unknown type `" + typeName + "'");
-    }
-    if (arg.getIsNullable()) {
-      unwrap = "(" + argName + " == MM_NULL ? NULL : " + unwrap + ")";
-    }
-    var out = [" "];            // indentation
-    out.append(type);
-    return (out + ["prim_" + arg.getName(), "=", unwrap + ";"]).join(" ");
+    var v = "proc->get_arg(" + i.toString() + ")";
+    return c_stm(2, c_declare("oop", c_assign("oop_" + arg.getName(), v)));
   }
   instance_method genFunCall: fun(module) {
     var paramNames = this.getParams().map(fun(p) { "prim_" + p.getName });
-    var params = "(" + paramNames.join(", ") + ");\n\n";
+    var params = "(" + paramNames.join(", ") + ")";
     var rtype = this.getReturnType();
-    var out = [];
     if (rtype) {
-      var typeName = this.getTypeNameFromParam(rtype);
+      var resolvedType = module.resolveType(rtype);
+      var typeName = resolvedType.getTypeName();
+
       if (typeName == "void") {
-        out.append([" ", this.getName(), params].join(" "));
-        out.append(" /* Push output to the stack */\n");
-        out.append(" proc->stack_push(MM_NULL);\n");
-      } else {
-        var wrap = {
-          "": "tag_small_int(output)",
-          "int": "tag_small_int(output)",
-          "char": "proc->mmobj()->mm_string_new(output)",
-          "struct": "meme_instance(proc, meme_mapping, \"" + typeName + "\", output, &exc)"
-        }[typeName];
-        if (!wrap) {
-          Exception.throw("Unknown type `" + typeName + "'");
-        }
-        out.append([" ", rtype.genType(), "output", "=", this.getName(), params].join(" "));
-        out.append(" /* Push output to the stack */\n");
-        if (typeName == "struct") {
-          out.append(" int exc = 0;\n");
-        }
-        out.append(" oop oop_output = " + wrap + ";\n");
-        out.append(" proc->stack_push(oop_output);\n");
+        return [
+          c_stm(2, [this.getName(), params].join(" ")),
+          c_comment(2, "Push output to the stack"),
+          c_stm(2, c_return("MM_NULL"))
+        ].join("\n");
       }
+
+      return [
+        c_stm(2, c_declare("int", c_assign("exc", "0"))),
+        c_stm(2, c_declare(rtype.genType(), c_assign("output", [this.getName(), params].join(" ")))),
+        c_stm(2, c_declare("oop", c_assign("oop_output", cc_wrap_type(resolvedType, rtype)))),
+        c_comment(2, "Push output to the stack"),
+        c_stm(2, c_return("oop_output"))
+      ].join("\n");
     }
-    return out.join(" ");
+    return "";
   }
+
+  instance_method genReadParam: fun(module, param) {
+    var arg = param.getName();
+    var type = module.resolveType(param);
+    var prim_arg = "prim_" + arg;
+    var oop_arg = "oop_" + arg;
+    var primes = cc_find_primes(type);
+    var errMessage = "Argument `" + arg + "' expected " + primes.join(" or ");
+
+    var r = [];
+    r.append(c_stm(2, c_declare(param.genType(), prim_arg)));
+    r.append(primes.map(fun(p) {
+      c_if(2,
+           c_eq(c_obj_vt(oop_arg), c_vm_prime(p)),
+           c_stm(2, c_assign(
+             prim_arg, cc_unwrap_type(p, param.genType(), oop_arg))))
+    }).join("  else"));
+    if (param.getIsNullable) {
+      r.append(c_elseif(2, c_eq(oop_arg, "MM_NULL"),
+                        c_stm(2, c_assign(prim_arg, "NULL"))));
+      errMessage = errMessage + " or null";
+    }
+    r.append(c_else(2, c_stm(2, c_type_error(errMessage))));
+    return r.join("\n");
+  }
+
   instance_method gen: fun(module) {
     var output = [];
     output.append(this.genFunSignature());
     this.getParams().each(fun(i, p) {
       output.append("\n  /* Argument[" + i.toString + "] */");
       output.append(this.genGetArg(i, p));
-      output.append(this.genChkArg(module, p));
-      output.append(this.genUnwrapArg(module, p));
+      output.append(this.genReadParam(module, p));
     });
     output.append("\n  /* Call to the underlying function */");
     output.append(this.genFunCall(module));
@@ -286,22 +358,18 @@ class Module
     return @includes;
   }
 
-  instance_method getTypeNameFromParam: fun(param) {
-    var typeName = param.getTypeName();
+  instance_method resolveType: fun(param) {
     if (param.getIsUnknown()) {
-      var alias = @typedefs[typeName];
-      if (alias) {
-        return alias.getTypeName();
+      var aliased = @typedefs[param.getTypeName()];
+      if (aliased) {
+        return aliased;
       }
     }
-    if (typeName.substr(0, 7) == "struct ") {
-      return "struct";
-    }
-    return typeName;
+    return param;
   }
 
   instance_method genMainFunction: fun(moduleName) {
-    var output = ["void init_primitives(VM *vm) {"];
+    var output = ["void init_primitives_" + moduleName + " (VM *vm) {"];
     @funs.each(fun(_, d) {
       var prim_name = moduleName + "_" + d.getName();
       output.append("  vm->register_primitive(\"" + prim_name + "\", prim_" + d.getName() + ");");
