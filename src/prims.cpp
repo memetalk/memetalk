@@ -293,14 +293,22 @@ static int prim_string_rindex(Process* proc) {
 static int prim_string_index(Process* proc) {
   oop self =  proc->dp();
   oop arg = proc->get_arg(0);
+  if (!is_numeric(proc, arg)) {
+    proc->raise("IndexError", "string index should be a number");
+  }
+
   number idx = untag_small_int(arg);
 
   std::string str = proc->mmobj()->mm_string_stl_str(proc, self);
-  char res[2];
-  res[0] = str[idx];
-  res[1] = '\0';
-  proc->stack_push(proc->mmobj()->mm_string_new(res));
-  return 0;
+  if (idx < proc->mmobj()->mm_string_size(proc, self)) {
+    char res[2];
+    res[0] = str[idx];
+    res[1] = '\0';
+    proc->stack_push(proc->mmobj()->mm_string_new(res));
+    return 0;
+  } else {
+    proc->raise("IndexError", "out of bounds");
+  }
 }
 
 static int prim_string_from(Process* proc) {
