@@ -21,6 +21,7 @@ RUN echo '{"repositories":                             \
   {"central": "http://libraries.memetalk.org/"},       \
  "override_to_local": {                                \
    "central:memescript": "/build/central/memescript",  \
+   "central:ometa": "/build/central/ometa",            \
    "central:stdlib": "/build/central/stdlib"           \
 }}' >> /root/.meme.config
 
