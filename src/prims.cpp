@@ -1228,10 +1228,6 @@ static int prim_list_sorted(Process* proc) {
   oop self =  proc->dp();
 
   //dirty sorting of lists
-
-
-  number size = proc->mmobj()->mm_list_size(proc, self);
-
   oop ret = proc->mmobj()->mm_list_new();
 
   oop_vector* this_vector = proc->mmobj()->mm_list_frame(proc, self);
@@ -1410,8 +1406,6 @@ static int prim_list_plus(Process* proc) {
   if (proc->mmobj()->mm_is_list(other)) { //fast concatenation
     number other_size = proc->mmobj()->mm_list_size(proc, other);
 
-
-    std::stringstream s;
     for (int i = 0; i < this_size; i++) {
       oop next = proc->mmobj()->mm_list_entry(proc, self, i);
       proc->mmobj()->mm_list_append(proc, res, next);
