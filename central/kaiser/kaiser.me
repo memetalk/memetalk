@@ -217,6 +217,12 @@ instance_method top_expression: fun() {
     this._apply(:bind_expression);
   }, fun() {
     this._apply(:repeated_expression);
+  }, fun() {
+    this._apply_with_args(:token, ["#!"]);
+    return [:ns-position];
+  }, fun() {
+    this._apply_with_args(:token, ["#"]);
+    return [:position];
   }]);
 }
 instance_method bind_expression: fun() {

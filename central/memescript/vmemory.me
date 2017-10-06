@@ -254,7 +254,7 @@ instance_method symbols_references: fun() {
         sr.append([text, this.physical_address(referer)]);
       }
     }
-    return sr;
+    return sr.ordered_by(fun(x, y) { x[1] <= y[1] });
 //  });
 }
 instance_method append_int_to_int_dict: fun(mdict) {

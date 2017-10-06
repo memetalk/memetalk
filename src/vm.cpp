@@ -339,8 +339,15 @@ void VM::bail() {
 }
 
 oop VM::get_compiled_module(Process* proc, std::string name) {
+  modules_map_t::iterator it = _modules.begin();
+  name = std::string("/") + name;
+  for ( ; it != _modules.end(); it++) {
+    if (it->first.find(name) != std::string::npos) {
+      return it->second->compiled_module();
+    }
+  }
   if (_modules.find(name) == _modules.end()) {
-    proc->raise("KeyError", "module not found");
+    proc->raise("KeyError", (std::string("module not found: ") + name).c_str());
   }
   return _modules[name]->compiled_module();
 }

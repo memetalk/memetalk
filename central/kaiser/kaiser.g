@@ -73,6 +73,8 @@ init new: fun(input) {
 
   top_expression =   bind_expression
                  |   repeated_expression
+                 |   "#!" => [:ns-position]
+                 |   "#" => [:position]
                  ;
 
 

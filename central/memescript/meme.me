@@ -27,8 +27,8 @@ instance_method text: fun() {
 }
 instance_method toSource: fun() {
   var ret = super();
-  // var pos = "@<" + @start_line.toString + ":" + @start_col.toString + ":" + @end_line.toString + ":" + @end_col.toString + ">";
-  return ret;// + pos;
+  var pos = "@<" + @start_line.toString + ":" + @start_col.toString + ":" + @end_line.toString + ":" + @end_col.toString + ">";
+  return ret + pos;
 }
 instance_method at: fun(parser, begin_pos) {
   var end_pos = parser.input.idx;
@@ -704,8 +704,6 @@ instance_method expr_for: fun() {
   var c = null;
   var n = null;
   var st = null;
-  this._apply(:spaces);
-  var _pos = this.input.idx();
   this._apply_with_args(:keyword,["for"]);
   this._apply_with_args(:token, ["("]);
   v = this._or([fun() {
@@ -819,10 +817,8 @@ instance_method catch_part: fun() {
 }
 instance_method catch_type: fun() {
   var type = null;
-  this._apply(:spaces);
-  var _pos = this.input.idx();
   type = this._apply(:alpha_name);
-  return [:id, type].at(this, _pos);
+  return [:id, type];
 }
 instance_method expr: fun() {
   var e = null;

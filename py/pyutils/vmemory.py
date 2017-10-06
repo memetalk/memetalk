@@ -207,7 +207,7 @@ class VirtualMemory(object):
         return res
 
     def symbols_references(self):
-        return self.symb_references
+        return sorted(self.symb_references, key=lambda x: x[1])
         # # assert(sorted([(x[0], self.physical_address(x[1])) for x in self.symb_references]) == sorted(sr))
 
         # sr = []

@@ -8,8 +8,58 @@ where
   import ParseError from kaiser_base
 end
 
+class List < List
+fields: start_line, end_line, start_col, end_col, text;
+instance_method start_line: fun() {
+  return @start_line;
+}
+instance_method end_line: fun() {
+  return @end_line;
+}
+instance_method start_col: fun() {
+  return @start_col;
+}
+instance_method end_col: fun() {
+  return @end_col;
+}
+instance_method text: fun() {
+  return @text;
+}
+instance_method toSource: fun() {
+  var ret = super();
+  var pos = "@<" + @start_line.toString + ":" + @start_col.toString + ":" + @end_line.toString + ":" + @end_col.toString + ">";
+  return ret + pos;
+}
+instance_method at: fun(parser, begin_pos_pair) {
+  var end_pos = parser.current_position[0];
+  var full_input = parser.input; //assert type == String?
+  // io.print(begin_pos_pair);
+  var begin_pos = begin_pos_pair[0];
+  @text = full_input.substr(begin_pos, end_pos - begin_pos);
+
+  @start_line = (begin_pos_pair[1] - 1);
+  @start_col = begin_pos - full_input.rindex_from("\n", begin_pos) - 1;
+  @end_line = @start_line + @text.count("\n");
+  var inside_nl = @text.rindex("\n");
+  if (inside_nl == -1) {
+    @end_col = @start_col + @text.size;
+  } else {
+    @end_col = @text.substr(inside_nl, @text.size - inside_nl).size;
+  }
+}
+instance_method +: fun(other) { //#[] + [] yields a Core.List. This is a workaround
+  var ret = [];
+  this.each(fun(_, x) { ret.append(x) });
+  other.each(fun(_, x) { ret.append(x) });
+  return ret;
+}
+instance_method extends: fun(other) {
+  other.each(fun(_, x) { this.append(x) });
+}
+end
+
 class MemeScriptParser < KaiserBase
-fields: has_fun_literal;
+fields: has_fun_literal, line_offset;
 <kaiser>
 tokens {
   key T_FUN = "fun";
@@ -224,24 +274,24 @@ constructors_more = constructor:x constructors_more:xs => [x] + xs
                   ;
 
 constructor =  T_INIT T_FUN_ID:name T_COLON
-               T_FUN fparams:p T_OPEN_CURLY
+               # T_FUN fparams:p T_OPEN_CURLY
                {@has_fun_literal = false}
                top_fun_body:body
-               T_CLOSE_CURLY
-             => [:ctor, name, [:params, p],
-                  @has_fun_literal, [:body,  body + [[:end-body]]]];
+               end_function:e
+             => #[:ctor, name, [:params, p],
+                  @has_fun_literal, [:body,  body + [e]]];
 
 instance_method_decls = instance_method_decl:x instance_method_decls:xs => [x] + xs
                       | => []
                       ;
 
 instance_method_decl = T_INSTANCE_METHOD T_FUN_ID:name T_COLON
-                       T_FUN fparams:p T_OPEN_CURLY
+                       # T_FUN fparams:p T_OPEN_CURLY
                        {@has_fun_literal = false}
                        top_fun_body:body
-                       T_CLOSE_CURLY
-                     => [:fun, name, [:params, p], @has_fun_literal,
-                       [:body, body + [[:end-body]]]]
+                       end_function:e
+                     => #[:fun, name, [:params, p], @has_fun_literal,
+                       [:body, body + [e]]]
                      ;
 
 class_method_decls = class_method_decl:x class_method_decls:xs => [x] + xs
@@ -249,26 +299,28 @@ class_method_decls = class_method_decl:x class_method_decls:xs => [x] + xs
                    ;
 
 class_method_decl = T_CLASS_METHOD T_FUN_ID:name T_COLON
-                       T_FUN fparams:p T_OPEN_CURLY
+                       # T_FUN fparams:p T_OPEN_CURLY
                        {@has_fun_literal = false}
                        top_fun_body:body
-                       T_CLOSE_CURLY
-                     => [:fun, name, [:params, p], @has_fun_literal,
-                       [:body, body + [[:end-body]]]]
+                       end_function:e
+                     => #[:fun, name, [:params, p], @has_fun_literal,
+                       [:body, body + [e]]]
                      ;
 
 
-top_level_fn :name = data_literal:e T_SEMICOLON
-                   => [:fun, name, [:params, []], false, [:body, [[:return, e]]]];
+top_level_fn :name = # data_literal:e T_SEMICOLON
+                   => #[:fun, name, [:params, []], false, #[:body, #[[:return, e]]]];
 
-top_level_fun :name =  T_FUN
+top_level_fun :name =  # T_FUN
                        fparams:p T_OPEN_CURLY
                        {@has_fun_literal = false}
                        top_fun_body:body
-                       T_CLOSE_CURLY
-                      => [:fun, name, [:params, p], @has_fun_literal,
-                           [:body, body + [[:end-body]]]]
+                       end_function:e
+                      => #[:fun, name, [:params, p], @has_fun_literal,
+                           [:body, body + [e]]]
                       ;
+
+end_function = # T_CLOSE_CURLY => #[:end-body];
 
 fparams = T_OPEN_PAREN fparam_list:x T_CLOSE_PAREN => x;
 
@@ -300,50 +352,50 @@ control_expr = expr_if:x => x
              | expr_try:x => x
              | expr_for:x => x
              ;
-expr_if = T_IF T_OPEN_PAREN expr:e T_CLOSE_PAREN T_OPEN_BRACKET
+expr_if = # T_IF T_OPEN_PAREN expr:e T_CLOSE_PAREN T_OPEN_BRACKET
            stmts:body
           T_CLOSE_BRACKET
           expr_elifs:elif_
           expr_else:else_
-         => [:if, e, body, elif_, else_ or []]
+         => #[:if, e, body, elif_, else_ or []]
          ;
 
 expr_elifs =  expr_elif:x expr_elifs:xs => [x] + xs
           | => []
           ;
 
-expr_elif = T_ELIF T_OPEN_PAREN  expr:e T_CLOSE_PAREN T_OPEN_BRACKET
+expr_elif = # T_ELIF T_OPEN_PAREN  expr:e T_CLOSE_PAREN T_OPEN_BRACKET
              stmts:body
              T_CLOSE_BRACKET
-           => [:elif, e, body];
+           => #[:elif, e, body];
 
 expr_else = T_ELSE T_OPEN_BRACKET stmts:body T_CLOSE_BRACKET => body
           | => null
           ;
 
-expr_while = T_WHILE T_OPEN_PAREN expr:e T_CLOSE_PAREN T_OPEN_BRACKET
+expr_while = # T_WHILE T_OPEN_PAREN expr:e T_CLOSE_PAREN T_OPEN_BRACKET
              stmts:xs
              T_CLOSE_BRACKET
-           => [:while, e, xs]
+           => #[:while, e, xs]
            ;
 
-expr_try = T_TRY T_OPEN_BRACKET
+expr_try = # T_TRY T_OPEN_BRACKET
              stmts:s_try
            T_CLOSE_BRACKET catch_part:c T_OPEN_BRACKET
              stmts:s_catch
            T_CLOSE_BRACKET
-          => [:try, s_try, c, s_catch]
+          => #[:try, s_try, c, s_catch]
           ;
 
-catch_part =  T_CATCH T_OPEN_PAREN catch_expr:x T_CLOSE_PAREN => x;
+catch_part =  # T_CATCH T_OPEN_PAREN catch_expr(_pos):x T_CLOSE_PAREN => x;
 
-catch_expr = T_ID:a catch_expr_rest(a):b => b;
+catch_expr :_pos = T_ID:a catch_expr_rest(a, _pos):b => b;
 
-catch_expr_rest :a = T_ID:b => [:catch, [:id, a], b]
-                   | => [:catch, a]
-                   ;
+catch_expr_rest :a :_pos = T_ID:b => #[:catch, [:id, a], b]
+                         | => #[:catch, a]
+                         ;
 
-expr_for = T_FOR T_OPEN_PAREN for_init:v T_SEMICOLON expr:c T_SEMICOLON
+expr_for =  T_FOR T_OPEN_PAREN for_init:v T_SEMICOLON expr:c T_SEMICOLON
                expr_or_assignment:n T_CLOSE_PAREN T_OPEN_BRACKET
                stmts:st
              T_CLOSE_BRACKET
@@ -355,19 +407,19 @@ for_init = expr_decl:x => x
          ;
 
 //TODO: prevent "foo() = a" code
-expr_or_assignment = expr:a maybe_assignment(a):b => b;
-maybe_assignment :a = T_ASSIGN  expr:b => [:=, a, b]
-                   | T_INCR expr:b => [:=, a, [:+, a, b]]
-                   | T_DECR expr:b => [:=, a, [:-, a, b]]
-                   | => [:expression, a]
-                   ;
+expr_or_assignment = # expr:a maybe_assignment(a, _pos):b => b;
+maybe_assignment :a :_pos = T_ASSIGN  expr:b => #[:=, a, b]
+                          | T_INCR expr:b => #[:=, a, [:+, a, b]]
+                          | T_DECR expr:b => #[:=, a, [:-, a, b]]
+                          | => [:expression, a]
+                          ;
 
-for_expr_assign = expr:a for_expr_assign_rest(a):b => b;
-for_expr_assign_rest :a = T_ASSIGN  expr:b => [:=, a, b]
-                        ;
+for_expr_assign = # expr:a for_expr_assign_rest(a, _pos):b => b;
+for_expr_assign_rest :a :_pos = T_ASSIGN  expr:b => #[:=, a, b]
+                               ;
 
 
-expr_decl = T_VAR T_ID:name T_ASSIGN expr:e => [:var-def, name, e];
+expr_decl = # T_VAR T_ID:name T_ASSIGN expr:e => #[:var-def, name, e];
 
 non_control_expr = expr_ret:x => x
                  | expr_non_local_ret:x => x
@@ -376,88 +428,87 @@ non_control_expr = expr_ret:x => x
                  ;
 
 
-expr_ret = T_RETURN expr:e => [:return, e]
+expr_ret = # T_RETURN expr:e => #[:return, e]
          ;
 
-expr_non_local_ret =  T_CARET  expr:e => [:non-local-return, e]
+expr_non_local_ret =  # T_CARET  expr:e => #[:non-local-return, e]
                    ;
 
 expr = expr_or:e => e;
 
-expr_or = expr_and:a expr_or_(a):b => b;
-expr_or_ :a = T_OR expr_and:b expr_or_([:or, a, b]):c => c
-           | => a
-           ;
+expr_or = # expr_and:a expr_or_(a, _pos):b => b;
+expr_or_ :a :_pos = T_OR expr_and:b expr_or_(#[:or, a, b], _pos):c => c
+                  | => a
+                  ;
 
-expr_and = expr_eq:a expr_and_(a):b => b;
-expr_and_ :a = T_AND expr_eq:b expr_and_([:and, a, b]):c => c
-             | => a
-             ;
+expr_and = # expr_eq:a expr_and_(a, _pos):b => b;
+expr_and_ :a :_pos = T_AND expr_eq:b expr_and_(#[:and, a, b], _pos):c => c
+                   | => a
+                   ;
 
-expr_eq = expr_rel:a expr_eq_(a):b => b;
-expr_eq_ :a = T_EQ expr_rel:b expr_eq_([:==, a, b]):c => c
-            | T_NEQ expr_rel:b expr_eq_([:!=, a, b]):c => c
-            | => a
-            ;
+expr_eq = # expr_rel:a expr_eq_(a, _pos):b => b;
+expr_eq_ :a :_pos = T_EQ expr_rel:b expr_eq_(#[:==, a, b], _pos):c => c
+                  | T_NEQ expr_rel:b expr_eq_(#[:!=, a, b], _pos):c => c
+                  | => a
+                  ;
 
-expr_rel = expr_add:a expr_rel_(a):b => b;
-expr_rel_ :a = T_LTE expr_add:b expr_rel_([:<=, a, b]):c => c
-             | T_GTE expr_add:b expr_rel_([:>=, a, b]):c => c
-             | T_LT  expr_add:b expr_rel_([:<, a, b]):c => c
-             | T_GT  expr_add:b expr_rel_([:>, a, b]):c => c
-             | => a
-             ;
+expr_rel = # expr_add:a expr_rel_(a, _pos):b => b;
+expr_rel_ :a :_pos = T_LTE expr_add:b expr_rel_(#[:<=, a, b], _pos):c => c
+                   | T_GTE expr_add:b expr_rel_(#[:>=, a, b], _pos):c => c
+                   | T_LT  expr_add:b expr_rel_(#[:<, a, b], _pos):c => c
+                   | T_GT  expr_add:b expr_rel_(#[:>, a, b], _pos):c => c
+                   | => a
+                   ;
 
-expr_add = expr_mul:a expr_add_(a):b => b;
-expr_add_ :a = ?T_INCR => a
-             | ?T_DECR => a
-             | T_PLUS expr_mul:b expr_add_([:+, a, b]):c => c
-             | T_MINUS expr_mul:b expr_add_([:-, a, b]):c => c
-             | T_AMP expr_mul:b expr_add_([:&, a, b]):c => c
-             | T_PIPE expr_mul:b expr_add_([:|, a, b]):c => c
-             | T_SL expr_mul:b expr_add_([:<<, a, b]):c => c
-             | T_SR expr_mul:b expr_add_([:>>, a, b]):c => c
-             | => a
-             ;
+expr_add = # expr_mul:a expr_add_(a, _pos):b => b;
+expr_add_ :a :_pos = ?T_INCR => a
+                  | ?T_DECR => a
+                  | T_PLUS expr_mul:b expr_add_(#[:+, a, b], _pos):c => c
+                  | T_MINUS expr_mul:b expr_add_(#[:-, a, b], _pos):c => c
+                  | T_AMP expr_mul:b expr_add_(#[:&, a, b], _pos):c => c
+                  | T_PIPE expr_mul:b expr_add_(#[:|, a, b], _pos):c => c
+                  | T_SL expr_mul:b expr_add_(#[:<<, a, b], _pos):c => c
+                  | T_SR expr_mul:b expr_add_(#[:>>, a, b], _pos):c => c
+                  | => a
+                  ;
 
-expr_mul = expr_unary:a expr_mul_(a):b => b;
-expr_mul_ :a = T_STAR expr_unary:b expr_mul_([:*, a, b]):c => c
-             | T_SLASH expr_unary:b expr_mul_([:/, a, b]):c => c
-             | => a
-             ;
+expr_mul = # expr_unary:a expr_mul_(a, _pos):b => b;
+expr_mul_ :a :_pos = T_STAR expr_unary:b expr_mul_(#[:*, a, b], _pos):c => c
+                   | T_SLASH expr_unary:b expr_mul_(#[:/, a, b], _pos):c => c
+                   | => a
+                   ;
 
-expr_unary = T_PLUS suffix_expr:a => [:positive, a]
-           | T_MINUS suffix_expr:a => [:negative, a]
-           | T_NOT suffix_expr:a => [:not, a]
-           | T_BIT_NOT suffix_expr:a => [:bit-neg, a]
+expr_unary = # T_PLUS suffix_expr:a => #[:positive, a]
+           | # T_MINUS suffix_expr:a => #[:negative, a]
+           | # T_NOT suffix_expr:a => #[:not, a]
+           | # T_BIT_NOT suffix_expr:a => #[:bit-neg, a]
            | super_expr:a => a
            ;
 
 
-super_expr = T_SUPER super_call_rest:x => x
+super_expr = # T_SUPER super_call_rest(_pos):x => x
             | suffix_expr:x => x
             ;
 
-super_call_rest = T_DOT T_ID:sel args:p => [:super-ctor-send, sel, [:args, p]]
-                | args:p => [:super-send, [:args, p]]
-                ;
+super_call_rest :_pos = T_DOT T_ID:sel args:p => #[:super-ctor-send, sel, [:args, p]]
+                      | args:p => #[:super-send, [:args, p]]
+                      ;
 
 
-suffix_expr = prim_expr:r suffix_expr_(r):e => e;
+suffix_expr = # prim_expr:r suffix_expr_(r, _pos):e => e;
 
-suffix_expr_ :r = send_expr(r):x suffix_expr_(x):y => y
-                | index_expr(r):x suffix_expr_(x):y => y
-                | call_expr(r):x suffix_expr_(x):y => y
-                | => r
-                ;
+suffix_expr_ :r :_pos = send_expr(r, _pos):x suffix_expr_(x, _pos):y => y
+                      | index_expr(r, _pos):x suffix_expr_(x, _pos):y => y
+                      | call_expr(r, _pos):x suffix_expr_(x, _pos):y => y
+                      | => r
+                      ;
 
 
-index_expr :r = T_OPEN_SBRACKET expr:i T_CLOSE_SBRACKET => [:index, r, i];
+index_expr :r :_pos = T_OPEN_SBRACKET expr:i T_CLOSE_SBRACKET => #[:index, r, i];
 
-send_expr :r = T_DOT T_ID:sel maybe_args:p  => [:send, r, sel, [:args, p]];
+send_expr :r :_pos = T_DOT T_ID:sel maybe_args:p  => #[:send, r, sel, [:args, p]];
 
-call_expr :r = args:p  => [:call, r, [:args, p]];
-
+call_expr :r :_pos = args:p  => #[:call, r, [:args, p]];
 
 maybe_args = args:x => x
           | => []
@@ -468,13 +519,13 @@ args = T_OPEN_PAREN expr_list:p T_CLOSE_PAREN => p;
 
 prim_expr = T_OPEN_PAREN expr:e T_CLOSE_PAREN => e
           | literal:x => x
-          | field_name:x => [:field, x.send(:from, [1])]
-          | T_ID:x maybe_call(x):y => y
+          | # field_name:x => #[:field, x.from(1)]
+          | # T_ID:x maybe_call(x, _pos):y => y
           ;
 
-maybe_call :r = args:p => [:send-or-local-call, r, [:args, p]]
-              | => [:id, r]
-              ;
+maybe_call :r :_pos = args:p => #[:send-or-local-call, r, [:args, p]]
+                    | => #[:id, r]
+                    ;
 
 
 field_name = T_AT_ID:i => i;
@@ -495,30 +546,30 @@ pair_list_rest = T_COMMA pair_list:x => x
                | => []
                ;
 
-pair = expr:key T_COLON expr:val => [:pair, key, val];
+pair = # expr:key T_COLON expr:val => #[:pair, key, val];
 
 
 
 data_literal = lit_number:x => x
-             | T_THIS_MODULE => [:literal, :module]
-             | T_THIS_CONTEXT => [:literal, :context]
-             | T_SYMBOL:x => [:literal-symbol, x.send(:from, [1])]
-             | T_THIS => [:literal, :this]
-             | T_NULL => [:literal, :null]
-             | T_TRUE => [:literal, :true]
-             | T_FALSE => [:literal, :false]
+             | # T_THIS_MODULE => #[:literal, :module]
+             | # T_THIS_CONTEXT => #[:literal, :context]
+             | # T_SYMBOL:x => #[:literal-symbol, x.from(1)]
+             | # T_THIS => #[:literal, :this]
+             | # T_NULL => #[:literal, :null]
+             | # T_TRUE => #[:literal, :true]
+             | # T_FALSE => #[:literal, :false]
              | lit_string:x => x
-             | T_OPEN_SBRACKET expr_list:e T_CLOSE_SBRACKET => ([:literal-array].extends([e]))
-             | T_OPEN_CURLY pair_list:e T_CLOSE_CURLY    => ([:literal-dict]).extends(e);
+             | # T_OPEN_SBRACKET expr_list:e T_CLOSE_SBRACKET => #([:literal-array].extends([e]))
+             | # T_OPEN_CURLY pair_list:e T_CLOSE_CURLY    => #([:literal-dict]).extends(e);
 
 
 literal = data_literal:x => x
         | funliteral:x {@has_fun_literal = true} => x;
 
-funliteral = T_FUN params:p T_OPEN_CURLY
+funliteral = # T_FUN params:p T_OPEN_CURLY
                funliteral_body:body
-             T_CLOSE_CURLY
-           => [:fun-literal, [:params, p], [:body, body + [[:end-body]]]];
+             end_function:e
+           => #[:fun-literal, [:params, p], [:body, body + [e]]];
 
 maybe_expr = expr:x => x
            | => null
@@ -550,24 +601,23 @@ funliteral_stmt_sep_more = T_SEMICOLON funliteral_stmts:x => x
                          ;
 
 
-lit_string = T_DOUBLE_QUOTE {this.consume_rest_lit_string()}:x
-           => [:literal-string, x]
+lit_string = # T_DOUBLE_QUOTE {this.consume_rest_lit_string()}:x
+           => #[:literal-string, x]
            ;
 
-lit_number = T_HEXNUM:x => [:literal-number, x.asHex]
-           | T_NUMBER:x => [:literal-number, x.toInteger]
+lit_number = # T_HEXNUM:x => #[:literal-number, x.asHex]
+           | # T_NUMBER:x => #[:literal-number, x.toInteger]
            ;
 
 </kaiser>
 instance_method consume_rest_lit_string: fun() {
   var res = "";
-  var rx = this.scanner.engine;
   while (true) {
-    var x = rx.match_regexp("[[:graph:]]|[ \t]");
+    var x = this.scanner.match_regexp("[[:graph:]]|[ \t]");
     if (x == "\"") {
       return res.unescape;
     } elif (x == "\\") {
-      var y = rx.match_regexp("[[:graph:]]|[\t ]");
+      var y = this.scanner.match_regexp("[[:graph:]]|[\t ]");
       res = res + x + y;
     } elif (x == null) {
       ParseError.throw(this.current_line, "string literals can't contain newline character");
@@ -595,4 +645,13 @@ instance_method rewrite_last_stmt: fun(last) {
   }
   return last;
 }
-end
+instance_method initialize: fun() {
+  @has_fun_literal = false;
+  @line_offset = 0;
+}
+instance_method set_line_offset: fun(line_offset) {
+  @line_offset = line_offset;
+}
+instance_method line_offset: fun() {
+  return @line_offset;
+}end

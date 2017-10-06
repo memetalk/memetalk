@@ -45,18 +45,27 @@ instance_method check_pred_ambiguity: fun(name, lst) {
 instance_method maybe_proc_more_terms: fun(name, x, asts) {
   //iterate over each term in a choice checking for :empty
   //to accumulate the preditive table for the rule `name`
+  // io.print("maybe_proc_more_terms: " + name + " -- " + x.toSource);
+  var res = [];
+  var i = 0;
+  if (x == [:skip]) {
+    x = this._apply_with_args(:pred_expr, [asts[i]]);
+    i += 1;
+  }
   if (x.has(:empty)) {
-    var res = x;
-    for (var i = 0; i < asts.size; i += 1) {
+    while (i < asts.size) {
       var xs = this._apply_with_args(:pred_expr, [asts[i]]);
-      if (xs.has(:empty)) {
-        res = res + flatten(xs);
-      } else {
+      res += flatten(xs);
+      if (!xs.has(:empty)) {
+        // io.print("RETURN LOOPEND: " + name + " = " + res.toSource);
         return res;
       }
+      i += 1;
     }
+    // io.print("RETURN END:" + name + " = " + res.toSource);
     return res;
   } else {
+    // io.print("RETURN LAST: " + name + " = " + x.toSource);
     return x;
   }
 }
@@ -137,9 +146,12 @@ instance_method _local_vars: fun() {
 }
 
 instance_method code_for_choice: fun(first, rest) {
+  if (first[:lookahead] == :skip) {
+    return first[:text] + "\n" + this.code_for_choice(rest[0], rest.from(1));
+  }
   if (first[:lookahead].size > 0) {
     return [@indent, "if(this.lookahead_any(",first[:lookahead].toSource,")) {\n",@indent.times(2), first[:text], "\n",
-            rest.map(fun(x) { @indent.times(2) + x[:text]}).join("\n"), "\n", @indent.times(2), "return null;\n", @indent, "}\n"].join("");
+              rest.map(fun(x) { @indent.times(2) + x[:text]}).join("\n"), "\n", @indent.times(2), "return null;\n", @indent, "}\n"].join("");
   } else {
     return [@indent, first[:text], "\n",rest.map(fun(x) { @indent.times(2) + x[:text]}).join("\n")].join("");
   }
@@ -149,9 +161,10 @@ instance_method code_for_body: fun(name, first, rest) {
   return ([first] + rest + [epilogue]).join("\n");
 }
 instance_method basic_methods: fun() {
-  var ctor = ["init new: fun(text) {\n",
-              @indent, "super.new(text, ", @terminals.toSource, ", ", (@keyword_terminals.last + 1).toSource, ",", @id_terminal.toSource,");\n",
-             "}\n"].join("");
+  var ctor = ["init new: fun(text) {",
+              [@indent, "super.new(text, ", @terminals.toSource, ", ", (@keyword_terminals.last + 1).toSource, ",", @id_terminal.toSource,");"].join(""),
+              @indent, "this.initialize();",
+             "}\n"].join("\n");
   return ctor;
 }
 <ometa>
@@ -172,7 +185,7 @@ instance_method basic_methods: fun() {
                         | pred_choice(name):x => x
                         ;
 
-   pred_choice :name = [pred_expr:x _*:asts !{this.maybe_proc_more_terms(name, x, asts)}:xs] => (flatten(x) + flatten(xs)).unique
+   pred_choice :name = [pred_expr:x _*:asts !{this.maybe_proc_more_terms(name, x, asts)}:xs] => flatten(xs).unique
                      | [] => [:empty]
                      ;
 
@@ -186,6 +199,8 @@ instance_method basic_methods: fun() {
                  => [:empty]
              | [:action _] // rule = foo | => action
                  => []
+             | [:position] => [:skip]
+             | [:ns-position] => [:skip]
              | _:x => Exception.throw("pred_expr: UNEXPECTED " + x.toSource)
              ;
 
@@ -218,6 +233,8 @@ instance_method basic_methods: fun() {
             | [:apply-with-args [rule_arg+:a] _:t] => {:lookahead: this.lookaheads_for(t, true), :text: ["this.", t, "(",a.join(", "), ");"].join("")}
             | [:sem_action _:x] => {:lookahead: [], :text: x + ";"}
             | [:lookahead [:terminal _:t]] => {:lookahead: [this.get_terminal_info(t.toSymbol)[:id]], :text: ""}
+            | [:position] !{this._add_local_var("_pos")} => {:lookahead: :skip, :text: "_pos = this.position_after_spaces();"}
+            | [:ns-position] !{this._add_local_var("_pos")} => {:lookahead: :skip, :text: "_pos = this.current_position();"}
             | _:x => Exception.throw("expr:UNEXPECTED " + x.toSource)
             ;
 

@@ -45,18 +45,27 @@ instance_method check_pred_ambiguity: fun(name, lst) {
 instance_method maybe_proc_more_terms: fun(name, x, asts) {
   //iterate over each term in a choice checking for :empty
   //to accumulate the preditive table for the rule `name`
+  // io.print("maybe_proc_more_terms: " + name + " -- " + x.toSource);
+  var res = [];
+  var i = 0;
+  if (x == [:skip]) {
+    x = this._apply_with_args(:pred_expr, [asts[i]]);
+    i += 1;
+  }
   if (x.has(:empty)) {
-    var res = x;
-    for (var i = 0; i < asts.size; i += 1) {
+    while (i < asts.size) {
       var xs = this._apply_with_args(:pred_expr, [asts[i]]);
-      if (xs.has(:empty)) {
-        res = res + flatten(xs);
-      } else {
+      res += flatten(xs);
+      if (!xs.has(:empty)) {
+        // io.print("RETURN LOOPEND: " + name + " = " + res.toSource);
         return res;
       }
+      i += 1;
     }
+    // io.print("RETURN END:" + name + " = " + res.toSource);
     return res;
   } else {
+    // io.print("RETURN LAST: " + name + " = " + x.toSource);
     return x;
   }
 }
@@ -137,9 +146,12 @@ instance_method _local_vars: fun() {
 }
 
 instance_method code_for_choice: fun(first, rest) {
+  if (first[:lookahead] == :skip) {
+    return first[:text] + "\n" + this.code_for_choice(rest[0], rest.from(1));
+  }
   if (first[:lookahead].size > 0) {
     return [@indent, "if(this.lookahead_any(",first[:lookahead].toSource,")) {\n",@indent.times(2), first[:text], "\n",
-            rest.map(fun(x) { @indent.times(2) + x[:text]}).join("\n"), "\n", @indent.times(2), "return null;\n", @indent, "}\n"].join("");
+              rest.map(fun(x) { @indent.times(2) + x[:text]}).join("\n"), "\n", @indent.times(2), "return null;\n", @indent, "}\n"].join("");
   } else {
     return [@indent, first[:text], "\n",rest.map(fun(x) { @indent.times(2) + x[:text]}).join("\n")].join("");
   }
@@ -149,9 +161,10 @@ instance_method code_for_body: fun(name, first, rest) {
   return ([first] + rest + [epilogue]).join("\n");
 }
 instance_method basic_methods: fun() {
-  var ctor = ["init new: fun(text) {\n",
-              @indent, "super.new(text, ", @terminals.toSource, ", ", (@keyword_terminals.last + 1).toSource, ",", @id_terminal.toSource,");\n",
-             "}\n"].join("");
+  var ctor = ["init new: fun(text) {",
+              [@indent, "super.new(text, ", @terminals.toSource, ", ", (@keyword_terminals.last + 1).toSource, ",", @id_terminal.toSource,");"].join(""),
+              @indent, "this.initialize();",
+             "}\n"].join("\n");
   return ctor;
 }
 
@@ -254,7 +267,7 @@ instance_method pred_choice: fun() {
       asts = this._many(fun() {
         this._apply(:anything);}, null);
       xs = this.maybe_proc_more_terms(name, x, asts);});
-    return (flatten(x) + flatten(xs)).unique;
+    return flatten(xs).unique;
   }, fun() {
     this._form(fun() {
 });
@@ -305,6 +318,14 @@ instance_method pred_expr: fun() {
       this._apply_with_args(:exactly, [:action]);
       this._apply(:anything);});
     return [];
+  }, fun() {
+    this._form(fun() {
+      this._apply_with_args(:exactly, [:position]);});
+    return [:skip];
+  }, fun() {
+    this._form(fun() {
+      this._apply_with_args(:exactly, [:ns-position]);});
+    return [:skip];
   }, fun() {
     x = this._apply(:anything);
     return Exception.throw("pred_expr: UNEXPECTED " + x.toSource);
@@ -426,6 +447,16 @@ instance_method expr: fun() {
         this._apply_with_args(:exactly, [:terminal]);
         t = this._apply(:anything);});});
     return {:lookahead: [this.get_terminal_info(t.toSymbol)[:id]], :text:""};
+  }, fun() {
+    this._form(fun() {
+      this._apply_with_args(:exactly, [:position]);});
+    this._add_local_var("_pos");
+    return {:lookahead: :skip, :text:"_pos = this.position_after_spaces();"};
+  }, fun() {
+    this._form(fun() {
+      this._apply_with_args(:exactly, [:ns-position]);});
+    this._add_local_var("_pos");
+    return {:lookahead: :skip, :text:"_pos = this.current_position();"};
   }, fun() {
     x = this._apply(:anything);
     return Exception.throw("expr:UNEXPECTED " + x.toSource);

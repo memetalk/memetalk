@@ -27,8 +27,8 @@ instance_method text: fun() {
 }
 instance_method toSource: fun() {
   var ret = super();
-  // var pos = "@<" + @start_line.toString + ":" + @start_col.toString + ":" + @end_line.toString + ":" + @end_col.toString + ">";
-  return ret;// + pos;
+  var pos = "@<" + @start_line.toString + ":" + @start_col.toString + ":" + @end_line.toString + ":" + @end_col.toString + ">";
+  return ret + pos;
 }
 instance_method at: fun(parser, begin_pos) {
   var end_pos = parser.input.idx;
@@ -240,7 +240,7 @@ control_expr = expr_if
              | expr_for
              ;
 
-expr_for = # ``for`` "(" {expr_decl | expr_assign}:v ";" expr:c ";" expr_assign:n ")" "{"
+expr_for = ``for`` "(" {expr_decl | expr_assign}:v ";" expr:c ";" expr_assign:n ")" "{"
                stmts:st
              "}"
            => [:for, v, c, st, n]
@@ -273,7 +273,7 @@ catch_part =  # ``catch`` "(" alpha_name:id ")"
            |  # ``catch`` "(" catch_type:t alpha_name:id ")"
              => #[:catch, t, id];
 
-catch_type =  # alpha_name:type => #[:id, type];
+catch_type =  alpha_name:type => [:id, type];
 
 expr = spaces expr_or:e => e;
 

@@ -306,6 +306,22 @@ static int prim_string_rindex(Process* proc) {
   return 0;
 }
 
+static int prim_string_rindex_from(Process* proc) {
+  oop self =  proc->dp();
+  oop arg = proc->get_arg(0);
+  oop begin = proc->get_arg(1);
+
+  std::string str = proc->mmobj()->mm_string_stl_str(proc, self);
+  std::string str_arg = proc->mmobj()->mm_string_stl_str(proc, arg);
+  std::size_t pos = str.rfind(str_arg, untag_small_int(begin));
+  if (pos == std::string::npos) {
+    proc->stack_push(tag_small_int(-1));
+  } else {
+    proc->stack_push(tag_small_int(pos));
+  }
+  return 0;
+}
+
 static int prim_string_index(Process* proc) {
   oop self =  proc->dp();
   oop arg = proc->get_arg(0);
@@ -3080,6 +3096,7 @@ void init_primitives(VM* vm) {
   vm->register_primitive("string_size", prim_string_size);
   vm->register_primitive("string_find", prim_string_find);
   vm->register_primitive("string_rindex", prim_string_rindex);
+  vm->register_primitive("string_rindex_from", prim_string_rindex_from);
   vm->register_primitive("string_index", prim_string_index);
 
   vm->register_primitive("string_from", prim_string_from);
