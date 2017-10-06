@@ -4,8 +4,8 @@ requires ometa_base, io
 where
   ometa_base = central:ometa/ometa_base
   io         = central:stdlib/io
-import OMetaBase from ometa_base
-
+  import OMetaBase from ometa_base
+end
 
 //extending List for AST node information
 class List < List
@@ -251,26 +251,30 @@ instance_method meta_variable: fun() {
 }
 instance_method requirements_section: fun() {
   var params = null;
-  var specs = null;
-  var imp = null;
+  var x = null;
   return this._or([fun() {
     this._apply_with_args(:keyword,["requires"]);
     params = this._apply(:module_params);
-    specs = this._apply(:where_section);
-    imp = this._many(fun() {
-      this._apply(:module_import);}, null);
-    return [:requirements, params, [:default-locations, specs], [:imports, imp]];
+    x = this._apply_with_args(:requirements_rest, [params]);
+    return x;
   }, fun() {
     return [:requirements, [], [:default-locations, []], [:imports, []]];
   }]);
 }
-instance_method where_section: fun() {
+instance_method requirements_rest: fun() {
+  var specs = null;
+  var imp = null;
+  var params = this._apply(:anything);
   return this._or([fun() {
     this._apply_with_args(:keyword,["where"]);
-    this._many(fun() {
+    specs = this._many(fun() {
       this._apply(:module_default);}, null);
+    imp = this._many(fun() {
+      this._apply(:module_import);}, null);
+    this._apply_with_args(:keyword,["end"]);
+    return [:requirements, params, [:default-locations, specs], [:imports, imp]];
   }, fun() {
-    return [];
+    return [:requirements, params, [:default-locations, []], [:imports, []]];
   }]);
 }
 instance_method module_params: fun() {
@@ -315,10 +319,10 @@ instance_method module_import: fun() {
 instance_method code_section: fun() {
   var d = null;
   d = this._many(fun() {
-    this._apply(:module_decl);}, null);
+    this._apply(:top_level_decl);}, null);
   return [:code, d];
 }
-instance_method module_decl: fun() {
+instance_method top_level_decl: fun() {
   return this._or([fun() {
     this._apply(:obj_decl);
   }, fun() {

@@ -3,6 +3,7 @@ requires qt, io
 where
   qt = central:stdlib/qt
   io = central:stdlib/io
+end
 
 class RemoteDebugger
 fields: process, current_frame_idx, started, server, socket, vars;

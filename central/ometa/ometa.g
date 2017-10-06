@@ -2,8 +2,8 @@ meme central:memescript/compiler
 requires ometa_base
 where
   ometa_base = central:ometa/ometa_base
-import OMetaBase from ometa_base
-
+  import OMetaBase from ometa_base
+end
 
 escaped: fun(chr) {
   if (chr == "b") { return  "\b"; }

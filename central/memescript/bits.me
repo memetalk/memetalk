@@ -3,9 +3,13 @@ meme central:memescript/compiler
 
 WSIZE: 8;
 
-TAG_MASK: (-4611686018427387903 - 1) * 2; //0x8000000000000000
+TAG_MASK: fun() {
+  return (-4611686018427387903 - 1) * 2; //0x8000000000000000
+}
 
-UNTAG_MASK: (4611686018427387903 * 2) + 1; //0x7FFFFFFFFFFFFFFF
+UNTAG_MASK: fun() {
+  return (4611686018427387903 * 2) + 1; //0x7FFFFFFFFFFFFFFF
+}
 
 class FormatException < Exception
 class_method check: fun(pred, message) {

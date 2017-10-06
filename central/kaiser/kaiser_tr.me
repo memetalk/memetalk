@@ -1,0 +1,450 @@
+meme central:memescript/compiler
+requires io, ometa_base
+where
+  io = central:stdlib/io
+  ometa_base = central:memescript/ometa_base
+  import OMetaBase from ometa_base
+end
+
+flatten: fun(lst) {
+  var res = [];
+  for (var i = 0; i < lst.size; i = i + 1) {
+    var x = lst[i];
+    if (Mirror.vtFor(x) == List) {
+      res = res + flatten(x);
+    } else {
+      res.append(x);
+    }
+  }
+  return res;
+}
+
+class KaiserTranslator < OMetaBase
+fields: rules, terminals, keyword_terminals, id_terminal, pred_table, rec_table, local_vars, indent;
+init new: fun(input) {
+  super.new(input);
+  @rules = {};
+  @terminals = {};
+  @keyword_terminals = [];
+  @id_terminal = null;
+  @pred_table = {};
+  @rec_table = {};
+  @local_vars = [];
+  @indent = "  ";
+}
+
+instance_method set_rule: fun(name, ast) {
+  @rules[name] = ast;
+}
+instance_method check_pred_ambiguity: fun(name, lst) {
+  if (lst.size != lst.unique.size) {
+    Exception.throw("rule '" + name + "' is ambiguous: " + lst.toSource);
+  }
+  return lst;
+}
+instance_method maybe_proc_more_terms: fun(name, x, asts) {
+  //iterate over each term in a choice checking for :empty
+  //to accumulate the preditive table for the rule `name`
+  if (x.has(:empty)) {
+    var res = x;
+    for (var i = 0; i < asts.size; i += 1) {
+      var xs = this._apply_with_args(:pred_expr, [asts[i]]);
+      if (xs.has(:empty)) {
+        res = res + flatten(xs);
+      } else {
+        return res;
+      }
+    }
+    return res;
+  } else {
+    return x;
+  }
+}
+
+instance_method proc_pred_rule_body: fun(name) {
+  if (@rec_table.has(name)) {
+    if (@rec_table[name]) {
+      Exception.throw("Recursive rules are not supported: " + n);
+    }
+  }
+  @rec_table[name] = true;
+  try {
+    var res = this._apply_with_args(:pred_rule_body, [name, @rules[name]]);
+  } catch(e) {
+    @rec_table[name] = true;
+    e.throw();
+  }
+  @rec_table[name] = false;
+  return this.check_pred_ambiguity(name, res);
+}
+instance_method add_pred_entry: fun(name, x) {
+  @pred_table[name] = x;
+}
+instance_method lookaheads_for: fun(rule, include_empty) {
+  var filtered = null;
+  if (include_empty) {
+    filtered = @pred_table[rule];
+  } else {
+    filtered = @pred_table[rule].filter(fun(x) { x != :empty });
+  }
+  return filtered.map(fun(t) {
+    if (t == :empty) {
+      return t;
+    } else {
+      return this.get_terminal_info(t.toSymbol)[:id];
+    }
+  });
+}
+instance_method get_terminal_info: fun(k) {
+  if (@terminals.has(k)) {
+    return @terminals[k];
+  } else {
+    Exception.throw("Undeclared terminal: " + k.toString);
+  }
+}
+instance_method add_terminal: fun(name, rx) {
+  var id = @terminals.size;
+  if (@terminals.has(name)) {
+    Exception.throw("Duplicated terminal: " + name);
+  }
+  @terminals[name] = {:regexp: rx, :name: name, :id: id};
+  return id;
+}
+instance_method add_keyword_terminal: fun(name, rx) {
+  var id = this.add_terminal(name, rx + "\\b");
+  @keyword_terminals.append(id);
+}
+instance_method set_id_terminal: fun(name ,rx) {
+  var id = this.add_terminal(name, rx);
+  if (@id_terminal != null) {
+    Exception.throw("Duplicated id token definition");
+  } else {
+    @id_terminal = id;
+  }
+}
+instance_method token_id: fun(name) {
+  return this.get_terminal_info(name.toSymbol)[:id];
+}
+instance_method _add_local_var: fun(name) {
+  if (!@local_vars.has(name)) {
+    @local_vars.append(name);
+  }
+}
+instance_method _local_vars: fun() {
+  var locals = @local_vars.map(fun(name) { ["  var ", name, " = null;\n"].join("") });
+  @local_vars = [];
+  return locals;
+}
+
+instance_method code_for_choice: fun(first, rest) {
+  if (first[:lookahead].size > 0) {
+    return [@indent, "if(this.lookahead_any(",first[:lookahead].toSource,")) {\n",@indent.times(2), first[:text], "\n",
+            rest.map(fun(x) { @indent.times(2) + x[:text]}).join("\n"), "\n", @indent.times(2), "return null;\n", @indent, "}\n"].join("");
+  } else {
+    return [@indent, first[:text], "\n",rest.map(fun(x) { @indent.times(2) + x[:text]}).join("\n")].join("");
+  }
+}
+instance_method code_for_body: fun(name, first, rest) {
+  var epilogue = [@indent, "this.unexpected(" + this.lookaheads_for(name, false).toSource + ");"].join("");
+  return ([first] + rest + [epilogue]).join("\n");
+}
+instance_method basic_methods: fun() {
+  var ctor = ["init new: fun(text) {\n",
+              @indent, "super.new(text, ", @terminals.toSource, ", ", (@keyword_terminals.last + 1).toSource, ",", @id_terminal.toSource,");\n",
+             "}\n"].join("");
+  return ctor;
+}
+
+instance_method start: fun() {
+  var b = null;
+  var r = null;
+  var e = null;
+  var x = null;
+  var txt = null;
+  x = this._form(fun() {
+    this._apply_with_args(:exactly, [:module]);
+    b = this._apply(:anything);
+    this._form(fun() {
+      this._many1(fun() {
+        this._apply(:token);});});
+    r = this._apply(:anything);
+    e = this._apply(:anything);});
+  this._apply_with_args(:store_rules, [r]);
+  this._apply_with_args(:compute_pred_tables, [r]);
+  txt = this._apply_with_args(:translate, [r]);
+  return b + txt + e;
+}
+instance_method token: fun() {
+  var name = null;
+  var rx = null;
+  return this._or([fun() {
+    this._form(fun() {
+      this._apply_with_args(:exactly, [:token_rule]);
+      name = this._apply(:anything);
+      this._form(fun() {
+        this._apply_with_args(:exactly, [:token_string]);
+        rx = this._apply(:anything);});});
+    return this.add_terminal(name.toSymbol, rx);
+  }, fun() {
+    this._form(fun() {
+      this._apply_with_args(:exactly, [:key_rule]);
+      name = this._apply(:anything);
+      this._form(fun() {
+        this._apply_with_args(:exactly, [:token_string]);
+        rx = this._apply(:anything);});});
+    return this.add_keyword_terminal(name.toSymbol, rx);
+  }, fun() {
+    this._form(fun() {
+      this._apply_with_args(:exactly, [:id_rule]);
+      name = this._apply(:anything);
+      this._form(fun() {
+        this._apply_with_args(:exactly, [:token_string]);
+        rx = this._apply(:anything);});});
+    return this.set_id_terminal(name.toSymbol, rx);
+  }]);
+}
+instance_method store_rules: fun() {
+  var name = null;
+  var v = null;
+  this._form(fun() {
+    this._many1(fun() {
+      this._form(fun() {
+        this._apply_with_args(:exactly, [:rule]);
+        name = this._apply(:anything);
+        this._apply(:anything);
+        v = this._apply(:anything);
+        this.set_rule(name, v);});});});
+}
+instance_method compute_pred_tables: fun() {
+  var name = null;
+  var x = null;
+  this._form(fun() {
+    this._many1(fun() {
+      this._form(fun() {
+        this._apply_with_args(:exactly, [:rule]);
+        name = this._apply(:anything);
+        this._apply(:anything);
+        this._apply(:anything);
+        x = this.proc_pred_rule_body(name);
+        this.add_pred_entry(name, x);});});});
+}
+instance_method pred_rule_body: fun() {
+  var xs = null;
+  var x = null;
+  var name = this._apply(:anything);
+  return this._or([fun() {
+    this._form(fun() {
+      this._apply_with_args(:exactly, [:or]);
+      xs = this._many1(fun() {
+        this._apply_with_args(:pred_choice, [name]);});});
+    return flatten(xs);
+  }, fun() {
+    x = this._apply_with_args(:pred_choice, [name]);
+    return x;
+  }]);
+}
+instance_method pred_choice: fun() {
+  var x = null;
+  var asts = null;
+  var xs = null;
+  var name = this._apply(:anything);
+  return this._or([fun() {
+    this._form(fun() {
+      x = this._apply(:pred_expr);
+      asts = this._many(fun() {
+        this._apply(:anything);}, null);
+      xs = this.maybe_proc_more_terms(name, x, asts);});
+    return (flatten(x) + flatten(xs)).unique;
+  }, fun() {
+    this._form(fun() {
+});
+    return [:empty];
+  }]);
+}
+instance_method pred_expr: fun() {
+  var x = null;
+  var n = null;
+  return this._or([fun() {
+    this._form(fun() {
+      this._apply_with_args(:exactly, [:lookahead]);
+      x = this._apply(:pred_expr);});
+    return x;
+  }, fun() {
+    this._form(fun() {
+      this._apply_with_args(:exactly, [:sem_action]);
+      this._apply(:anything);});
+    return [];
+  }, fun() {
+    this._form(fun() {
+      this._apply_with_args(:exactly, [:bind]);
+      this._apply(:anything);
+      x = this._apply(:pred_expr);});
+    return x;
+  }, fun() {
+    this._form(fun() {
+      this._apply_with_args(:exactly, [:apply-with-args]);
+      this._apply(:anything);
+      n = this._apply(:anything);});
+    return this.proc_pred_rule_body(n);
+  }, fun() {
+    this._form(fun() {
+      this._apply_with_args(:exactly, [:apply]);
+      n = this._apply(:anything);});
+    return this.proc_pred_rule_body(n);
+  }, fun() {
+    this._form(fun() {
+      this._apply_with_args(:exactly, [:terminal]);
+      n = this._apply(:anything);});
+    return [n];
+  }, fun() {
+    this._apply_with_args(:exactly, [:action]);
+    this._apply(:anything);
+    return [:empty];
+  }, fun() {
+    this._form(fun() {
+      this._apply_with_args(:exactly, [:action]);
+      this._apply(:anything);});
+    return [];
+  }, fun() {
+    x = this._apply(:anything);
+    return Exception.throw("pred_expr: UNEXPECTED " + x.toSource);
+  }]);
+}
+instance_method translate: fun() {
+  var xs = null;
+  this._form(fun() {
+    xs = this._many1(fun() {
+      this._apply(:rule);});});
+  return ([this.basic_methods] + xs).join("\n");
+}
+instance_method rule: fun() {
+  var name = null;
+  var p = null;
+  var b = null;
+  this._form(fun() {
+    this._apply_with_args(:exactly, [:rule]);
+    name = this._apply(:anything);
+    p = this._apply(:rule_params);
+    b = this._apply_with_args(:rule_body, [name]);});
+  return (["instance_method ", name,": fun(", p.join(", "),") {\n"] + this._local_vars() + [b,"\n}"]).join("");
+}
+instance_method rule_params: fun() {
+  var args = null;
+  this._form(fun() {
+    this._apply_with_args(:exactly, [:args]);
+    args = this._many(fun() {
+      this._apply(:anything);}, null);});
+  return args;
+}
+instance_method rule_body: fun() {
+  var x = null;
+  var xs = null;
+  var name = this._apply(:anything);
+  return this._or([fun() {
+    this._form(fun() {
+      this._apply_with_args(:exactly, [:or]);
+      x = this._apply(:choice);
+      xs = this._many(fun() {
+        this._apply(:choice);}, null);});
+    return this.code_for_body(name, x, xs);
+  }, fun() {
+    this._apply(:terms);
+  }]);
+}
+instance_method choice: fun() {
+  var x = null;
+  var xs = null;
+  return this._or([fun() {
+    this._form(fun() {
+      x = this._apply(:expr);
+      xs = this._many(fun() {
+        this._apply(:expr);}, null);});
+    return this.code_for_choice(x, xs);
+  }, fun() {
+    this._form(fun() {
+});
+    return [@indent,"return null;"].join("");
+  }]);
+}
+instance_method terms: fun() {
+  var p = null;
+  this._form(fun() {
+    p = this._many1(fun() {
+      this._apply(:expr);});});
+  return p.map(fun(x) { @indent + x[:text] }).join("\n");
+}
+instance_method expr: fun() {
+  var name = null;
+  var e = null;
+  var x = null;
+  var t = null;
+  var a = null;
+  return this._or([fun() {
+    this._form(fun() {
+      this._apply_with_args(:exactly, [:bind]);
+      name = this._apply(:anything);
+      e = this._apply(:expr);});
+    this._add_local_var(name);
+    return {:lookahead: e[:lookahead], :text: [name," = ", e[:text].trim()].join("")};
+  }, fun() {
+    this._form(fun() {
+      this._apply_with_args(:exactly, [:sem_action]);
+      x = this._apply(:anything);});
+    return {:lookahead: [], :text: x};
+  }, fun() {
+    this._form(fun() {
+      this._apply_with_args(:exactly, [:terminal]);
+      t = this._apply(:anything);});
+    return {:lookahead: [this.get_terminal_info(t.toSymbol)[:id]], :text: ["this.match(",this.token_id(t).toSource,");"].join("")};
+  }, fun() {
+    this._form(fun() {
+      this._apply_with_args(:exactly, [:action]);
+      t = this._apply(:anything);});
+    return {:lookahead: [], :text: ["return ", t,";"].join("")};
+  }, fun() {
+    this._form(fun() {
+      this._apply_with_args(:exactly, [:apply]);
+      t = this._apply(:anything);});
+    return {:lookahead: this.lookaheads_for(t, true), :text: ["this.", t,"();"].join("")};
+  }, fun() {
+    this._form(fun() {
+      this._apply_with_args(:exactly, [:apply-with-args]);
+      this._form(fun() {
+        a = this._many1(fun() {
+          this._apply(:rule_arg);});});
+      t = this._apply(:anything);});
+    return {:lookahead: this.lookaheads_for(t, true), :text: ["this.", t,"(",a.join(", "),");"].join("")};
+  }, fun() {
+    this._form(fun() {
+      this._apply_with_args(:exactly, [:sem_action]);
+      x = this._apply(:anything);});
+    return {:lookahead: [], :text: x +";"};
+  }, fun() {
+    this._form(fun() {
+      this._apply_with_args(:exactly, [:lookahead]);
+      this._form(fun() {
+        this._apply_with_args(:exactly, [:terminal]);
+        t = this._apply(:anything);});});
+    return {:lookahead: [this.get_terminal_info(t.toSymbol)[:id]], :text:""};
+  }, fun() {
+    x = this._apply(:anything);
+    return Exception.throw("expr:UNEXPECTED " + x.toSource);
+  }]);
+}
+instance_method rule_arg: fun() {
+  var x = null;
+  return this._or([fun() {
+    this._form(fun() {
+      this._apply_with_args(:exactly, [:id]);
+      x = this._apply(:anything);});
+    return x;
+  }, fun() {
+    this._form(fun() {
+      this._apply_with_args(:exactly, [:host-expr]);
+      x = this._apply(:anything);});
+    return x;
+  }]);
+}
+
+
+end

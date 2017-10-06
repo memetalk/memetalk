@@ -11,8 +11,8 @@ QT_PKGLIBS = QtCore QtGui QtScript QtWebKit QtNetwork
 QT_CXXFLAGS = $(shell pkg-config --cflags $(QT_PKGLIBS)) -I$(INC_QSCI)
 QT_LIBS = $(shell pkg-config --libs $(QT_PKGLIBS)) -lqscintilla2
 
-CXXFLAGS = -Wall $(QT_CXXFLAGS)
-LIBS = -lboost_system -lboost_iostreams -lboost_filesystem -lgc $(QT_LIBS)
+CXXFLAGS = --std=c++11 -Wall $(QT_CXXFLAGS)
+LIBS = -lboost_system -lboost_iostreams -lboost_filesystem -lgc -lre2 $(QT_LIBS)
 
 CPP_FILES = log.cpp mec_image.cpp core_image.cpp vm.cpp utils.cpp	\
 	mmobj.cpp main.cpp process.cpp prims.cpp mec_fun.cpp
@@ -21,6 +21,10 @@ HPP_FILES = mec_image.hpp core_image.hpp vm.hpp log.hpp utils.hpp	\
 
 CPP_FILES += qt_prims.cpp qsc.cpp ctrl.cpp
 HPP_FILES += qt_prims.hpp qsc.hpp ctrl.hpp
+
+CPP_FILES += re2_prims.cpp
+HPP_FILES += re2_prims.hpp
+
 
 OBJS = $(CPP_FILES:%.cpp=%.o)
 

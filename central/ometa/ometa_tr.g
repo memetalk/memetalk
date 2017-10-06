@@ -3,7 +3,8 @@ requires io, ometa_base
 where
   io = central:stdlib/io
   ometa_base = central:ometa/ometa_base
-import OMetaBase from ometa_base
+  import OMetaBase from ometa_base
+end
 
 class OMetaTranslator < OMetaBase
 fields: vars, indent;

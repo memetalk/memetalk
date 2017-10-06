@@ -5,8 +5,8 @@ where
   vmemory  = central:memescript/vmemory
   mec      = central:memescript/mec
   bits     = central:memescript/bits
-
-import VirtualMemory from vmemory
+  import VirtualMemory from vmemory
+end
 
 class CompVirtualMemory < VirtualMemory
 fields: ext_ref_table, symb_table, string_table;

@@ -45,15 +45,20 @@ define GEN_MEC_RULE
  %.mec: %.me; PYTHONPATH=$(PY_PATH) $(PY_COMPILER_CMD) $$^
 endef
 
-## Macro GEN_TRS_RULE: Create implicit rules for building .g into .me
+## Create implicit rules for building .g and .k into .me
 ##
-##   Use this macro whenever you got grammar files to be compiled into
+##   Use this macro whenever you got grammar files to be translated into
 ##   MemeTalk files. This is supposed to be the only way the compiler
 ##   gets executed. If we ever need to change parameters that affect
 ##   everyone, here's the ideal place.
 ##
-define GEN_TRS_RULE
+
+define GEN_OMETA_TR_RULE
  %.me: %.g; $(call RUN_VM_CMD,$(MM_DIR)/ometa/gen_parser.me $$(CURDIR)/$$^)
+endef
+
+define GEN_KAISER_TR_RULE
+ %.me: %.k; $(call RUN_VM_CMD,$(MM_DIR)/kaiser/gen_parser.me $$(CURDIR)/$$^)
 endef
 
 ## Macro TEST_RUNNER_CMD: Outputs the command to call the test runner

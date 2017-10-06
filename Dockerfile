@@ -6,7 +6,7 @@ RUN apt-get -qy update && apt-get -qy --fix-missing install \
     build-essential git pkg-config xvfb libgc-dev libatomic-ops-dev \
     libqt4-dev libqtwebkit-dev libqscintilla2-dev \
     libboost-system-dev libboost-filesystem-dev libboost-iostreams-dev \
-    python-pip gdb
+    python-pip gdb libre2-dev
 
 RUN mkdir /build
 
@@ -22,7 +22,8 @@ RUN echo '{"repositories":                             \
  "override_to_local": {                                \
    "central:memescript": "/build/central/memescript",  \
    "central:ometa": "/build/central/ometa",            \
-   "central:stdlib": "/build/central/stdlib"           \
+   "central:stdlib": "/build/central/stdlib",          \
+   "central:kaiser": "/build/central/kaiser"           \
 }}' >> /root/.meme.config
 
 # Runs tests under xvfb to allow Qt to connect to a display

@@ -15,6 +15,7 @@ Current stage of development is **alpha**.
 The Memetalk VM is currently developed in C++ and depends on:
 
 * Boost (1.58.0.1)
+* Google's [re2 (v. 2017-08-01)](https://github.com/google/re2)
 * [Boehm GC (gc-7.6.0)](http://www.hboehm.info/gc/)
 
 Memetalk also has unfortunate dependencies at the moment, such as:

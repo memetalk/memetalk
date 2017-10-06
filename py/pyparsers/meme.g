@@ -30,14 +30,12 @@ meta_section = meta_variable*:xs -> ["meta", xs]
 
 meta_variable = spaces '@' spaces id:key token(":")  (~'\n' anything)+:xs -> [key, "".join(xs)]
 
-requirements_section = token("requires") module_params:params
-                       where_section:specs
-                       module_import*:imp
-                      -> ["requirements", params, ["default-locations", specs], ["imports", imp]]
-                    | -> ["requirements", [], ["default-locations", []], ["imports", []]]
+requirements_section = token("requires") module_params:params requirements_rest(params)
+                     | -> ["requirements", [], ["default-locations", []], ["imports", []]]
 
-where_section = token("where") module_default*
-              | -> []
+requirements_rest :params = token("where") module_default*:specs module_import*:imp token("end")
+                             -> ["requirements", params, ["default-locations", specs], ["imports", imp]]
+                          |  -> ["requirements", params, ["default-locations", []], ["imports", []]]
 
 module_params = id:x (token(",") id)*:xs -> [x] + xs
 

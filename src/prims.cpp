@@ -6,6 +6,7 @@
 #include "mmobj.hpp"
 #include "mec_image.hpp"
 #include "qt_prims.hpp"
+#include "re2_prims.hpp"
 #include <string>
 #include <iostream>
 #include <fstream>
@@ -27,6 +28,21 @@ namespace fs = ::boost::filesystem;
 
 
 static MMLog _log(LOG_PRIMS);
+
+static inline bool is_numeric(Process* proc, oop o) {
+  return is_small_int(o) || proc->mmobj()->mm_object_vt(o) == proc->vm()->core()->get_prime("LongNum");
+}
+
+static inline number extract_number(Process* proc, oop o) {
+  if (is_small_int(o)) {
+    return untag_small_int(o);
+  } else if (proc->mmobj()->mm_object_vt(o) == proc->vm()->core()->get_prime("LongNum")) {
+    return proc->mmobj()->mm_longnum_get(proc, o);
+  } else {
+    proc->raise("TypeError", "Expecting numeric value");
+  }
+  return 0; // unreachable
+}
 
 static int prim_remote_repl_compile_module(Process* proc) {
   oop module_name = proc->get_arg(0);
@@ -769,20 +785,6 @@ static int prim_string_is_upper(Process* proc) {
 
 /// numeric
 
-static inline bool is_numeric(Process* proc, oop o) {
-  return is_small_int(o) || proc->mmobj()->mm_object_vt(o) == proc->vm()->core()->get_prime("LongNum");
-}
-
-static inline number extract_number(Process* proc, oop o) {
-  if (is_small_int(o)) {
-    return untag_small_int(o);
-  } else if (proc->mmobj()->mm_object_vt(o) == proc->vm()->core()->get_prime("LongNum")) {
-    return proc->mmobj()->mm_longnum_get(proc, o);
-  } else {
-    proc->raise("TypeError", "Expecting numeric value");
-  }
-  return 0; // unreachable
-}
 
 static int prim_numeric_sum(Process* proc) {
   oop self =  proc->dp();
@@ -1148,6 +1150,57 @@ static int prim_list_each(Process* proc) {
   return 0;
 }
 
+static oop mm_quicksort(Process* proc, oop lst, oop fun, int* exc) {
+  number size = proc->mmobj()->mm_list_size(proc, lst);
+  if (size <= 1) {
+    return lst;
+  }
+  oop pivot = proc->mmobj()->mm_list_entry(proc, lst, 0);
+  oop g1 = proc->mmobj()->mm_list_new();
+  oop g2 = proc->mmobj()->mm_list_new();
+  for (int i = 1; i < size; i++) {
+    oop item = proc->mmobj()->mm_list_entry(proc, lst, i);
+    oop val = proc->call_2(fun, pivot, item, exc);
+    if (*exc != 0) {
+      return val;
+    }
+    if (val == MM_FALSE or val == MM_NULL) {
+      proc->mmobj()->mm_list_append(proc, g1, item);
+    } else {
+      proc->mmobj()->mm_list_append(proc, g2, item);
+    }
+  }
+  oop sorted_1 = mm_quicksort(proc, g1, fun, exc);
+  if (*exc != 0) {
+    return sorted_1;
+  }
+  oop sorted_2 = mm_quicksort(proc, g2, fun, exc);
+  if (*exc != 0) {
+    return sorted_2;
+  }
+  proc->mmobj()->mm_list_append(proc, sorted_1, pivot);
+  number s2_size = proc->mmobj()->mm_list_size(proc, sorted_2);
+  for (int i = 0; i < s2_size; i++) {
+    oop next = proc->mmobj()->mm_list_entry(proc, sorted_2, i);
+    proc->mmobj()->mm_list_append(proc, sorted_1, next);
+  }
+  return sorted_1;
+}
+
+static int prim_list_ordered_by(Process* proc) {
+  oop self =  proc->dp();
+  oop fun = proc->get_arg(0);
+
+  int exc = 0;
+  oop sorted =  mm_quicksort(proc, self, fun, &exc);
+  proc->stack_push(sorted);
+  if (exc != 0) {
+    return PRIM_RAISED;
+  } else {
+    return 0;
+  }
+}
+
 static int prim_list_map(Process* proc) {
   oop self =  proc->dp();
   oop fun = proc->get_arg(0);
@@ -1236,6 +1289,29 @@ static int prim_list_sorted(Process* proc) {
   *ret_vector = *this_vector;
   std::sort(ret_vector->begin(), ret_vector->end(), less_then_oop(proc));
   proc->stack_push(ret);
+  return 0;
+}
+
+static int prim_list_any(Process* proc) {
+  oop self =  proc->dp();
+  oop fun = proc->get_arg(0);
+
+  number size = proc->mmobj()->mm_list_size(proc, self);
+  for (int i = 0; i < size; i++) {
+    oop next = proc->mmobj()->mm_list_entry(proc, self, i);
+    int exc;
+    oop val = proc->call_1(fun, next, &exc);
+    if (exc != 0) {
+      DBG("raised" << endl);
+      proc->stack_push(val);
+      return PRIM_RAISED;
+    }
+    if (!(val == MM_FALSE || val == MM_NULL)) {
+      proc->stack_push(MM_TRUE);
+      return 0;
+    }
+  }
+  proc->stack_push(MM_FALSE);
   return 0;
 }
 
@@ -2956,6 +3032,7 @@ void init_primitives(VM* vm) {
   vm->register_primitive("list_index", prim_list_index);
   vm->register_primitive("list_pos", prim_list_pos);
   vm->register_primitive("list_each", prim_list_each);
+  vm->register_primitive("list_ordered_by", prim_list_ordered_by);
   vm->register_primitive("list_map", prim_list_map);
   vm->register_primitive("list_sum", prim_list_sum);
   vm->register_primitive("list_sorted", prim_list_sorted);
@@ -2976,6 +3053,7 @@ void init_primitives(VM* vm) {
   vm->register_primitive("list_plus", prim_list_plus);
   vm->register_primitive("list_equals", prim_list_equals);
   vm->register_primitive("list_set", prim_list_set);
+  vm->register_primitive("list_any", prim_list_any);
 
 
   vm->register_primitive("dictionary_new", prim_dictionary_new);
@@ -3103,4 +3181,5 @@ void init_primitives(VM* vm) {
   vm->register_primitive("bench", prim_bench);
 
   qt_init_primitives(vm);
+  re2_init_primitives(vm);
 }

@@ -1,0 +1,31 @@
+meme central:memescript/compiler
+
+requires ometa_base, kaiser, kaiser_tr, io
+where
+ ometa_base = central:memescript/ometa_base
+ io         = central:stdlib/io
+ kaiser     = central:kaiser/kaiser
+ kaiser_tr  = central:kaiser/kaiser_tr
+end
+
+gen: fun(grammar_in_file_path, grammar_out_file_path) {
+  var maybe_ast = ometa_base.parse(io.read_file(argv()[1]), kaiser.Kaiser, :start);
+  io.print(maybe_ast.toSource);
+  if (maybe_ast[0]) {
+    io.print("parse error: " + maybe_ast[0].toString);
+  } else {
+    io.print("\n\ntranslating...\n\n");
+    maybe_ast = ometa_base.parse([maybe_ast[1]], kaiser_tr.KaiserTranslator, :start);
+    if (maybe_ast[0]) {
+      io.print("translation error: " + maybe_ast[0].toString);
+    } else {
+      io.write_file(grammar_out_file_path, maybe_ast[1]);
+      io.print("Wrote to " + grammar_out_file_path);
+    }
+  }
+}
+
+main: fun() {
+  var path = argv()[1];
+  gen(path, path.replace_all(".k", ".me"));
+}

@@ -1,0 +1,106 @@
+meme central:memescript/compiler
+requires re2, io
+where
+  re2 = central:stdlib/re2
+  io = central:stdlib/io
+end
+
+class ParseError < Exception
+class_method throw: fun(line, msg) {
+  return this.new("line " + line.toString + ": " + msg).throw;
+}
+end
+
+class Skol
+fields: parser, rx, current_match, line;
+init new: fun(parser, text, r_tokens, total_keywords, id_token) {
+  @parser = parser;
+  @rx = re2.Scanner.new(r_tokens, total_keywords, id_token, text);
+  @line = 1;
+  @current_match = :invalid;
+}
+instance_method engine: fun() {
+  return @rx;
+}
+instance_method consume_whitespace: fun() {
+  var spaces = @rx.match_regexp("(\s|//[^\\n]*)*");
+  if (spaces) {
+    @line = @line + spaces.count("\n");
+  }
+}
+instance_method match_next: fun() {
+  this.consume_whitespace();
+  return @rx.match();
+}
+instance_method match: fun(num) {
+  var res = @current_match;
+  @current_match = :invalid;
+
+  if (res == :invalid) {
+    res = this.match_next();
+  }
+
+  if (!res) { //either EOF or tokens can't parse
+    ParseError.throw(@line, "expected: " + @parser.token_name(num) + ", got EOF");
+  }
+
+  if (res.has(num)) {
+    var x = @rx.consume(num);
+    return x;
+  } else {
+    ParseError.throw(@line, "expected: " + @parser.token_name(num) + ", got: " + res.map(fun(x) { @parser.token_name(x) }).toString);
+  }
+}
+instance_method current_line: fun() {
+  return @line;
+}
+instance_method looakead_any: fun(token_id_list) {
+  if (@current_match == :invalid) {
+    @current_match = this.match_next();
+  }
+
+  if (@current_match) {
+    return token_id_list.any(fun(x) { @current_match.has(x) });
+  } else {
+    return false;
+  }
+}
+end
+
+class KaiserBase
+fields: scanner, token_mappings;
+init new: fun(text, token_mappings, total_keywords, id_token) {
+  var regexps = token_mappings.values.ordered_by(fun(x,y) {
+                   x[:id] < y[:id]
+                }).map(fun(v) { v[:regexp] });
+  @scanner = Skol.new(this, text, regexps, total_keywords, id_token);
+  @token_mappings = token_mappings;
+}
+instance_method scanner: fun() {
+  return @scanner;
+}
+instance_method lookahead_any: fun(token_id_list) {
+  if (token_id_list.has(:empty)) {
+    return true;
+  } else {
+    return @scanner.looakead_any(token_id_list);
+  }
+}
+instance_method match: fun(token_id) {
+  return @scanner.match(token_id);
+}
+instance_method token_name: fun(id) {
+  @token_mappings.each(fun(_, x) {
+    if (x[:id] == id) {
+      ^ x[:name].toString;
+    }
+  });
+  Exception.throw("token not found: " + id.toString);
+}
+instance_method current_line: fun() {
+  return @scanner.current_line;
+}
+instance_method unexpected: fun(tokens) {
+  ParseError.throw(this.current_line, "expected one of " + tokens.map(fun(x) { this.token_name(x) }).toSource);
+}
+end

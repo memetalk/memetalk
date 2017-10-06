@@ -1,0 +1,61 @@
+meme central:memescript/compiler
+requires test, re2, io
+where
+  re2 = central:stdlib/re2
+  io = central:stdlib/io
+end
+
+basic: fun() {
+  var tokens = ["[0-9]+",
+                "\+",
+                "\-",
+                "\*",
+                "/",
+                "\s+"];
+  var s = re2.Scanner.new(tokens, 0, -1, "10 +20 *  30xxx ");
+  test.assertEqual(s.match(), [0], "1st token");
+  test.assertEqual(s.consume(0), "10", "1st token text");
+
+  test.assertEqual(s.match(), [5], "2nd token");
+  test.assertEqual(s.consume(5), " ", "2nd token text");
+
+  test.assertEqual(s.match(), [1], "3rd token");
+  test.assertEqual(s.consume(1), "+", "3rd token text");
+
+  test.assertEqual(s.match(), [0], "4th token");
+  test.assertEqual(s.consume(0), "20", "4th token text");
+
+  test.assertEqual(s.match(), [5], "5th token");
+  test.assertEqual(s.consume(5), " ", "5th token text");
+
+  test.assertEqual(s.match(), [3], "6th token");
+  test.assertEqual(s.consume(3), "*", "6th token text");
+
+  test.assertEqual(s.match(), [5], "7th token");
+  test.assertEqual(s.consume(5), "  ", "7th token text");
+
+  test.assertEqual(s.match(), [0], "8th token");
+  test.assertEqual(s.consume(0), "30", "8th token text");
+
+  test.assertEqual(s.match_regexp("x+\s+"), "xxx ", "match_regexp");
+
+  test.assertEqual(s.match(), null, "eof");
+}
+
+keywords: fun() {
+  var tokens = [ "classified", //keyword
+                 "classy",     //keyword
+                 "class[[:^word:]]",  //keyword
+                 "\\w+"];      //id token
+  var s = re2.Scanner.new(tokens, 3, 3, "class-");
+  test.assertEqual(s.match(), [2], "match keyword, but not id");
+
+  s = re2.Scanner.new(tokens, 3, 3, "classe");
+  test.assertEqual(s.match(), [3], "match id");
+}
+
+
+main: fun() {
+  basic();
+  keywords();
+}

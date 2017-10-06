@@ -5,7 +5,8 @@ where
   comp_vmemory  = central:memescript/comp_vmemory
   mec      = central:memescript/mec
   bits     = central:memescript/bits
-import CompVirtualMemory from comp_vmemory
+  import CompVirtualMemory from comp_vmemory
+end
 
 class CoreVirtualMemory < CompVirtualMemory
 instance_method index_for: fun(name) {

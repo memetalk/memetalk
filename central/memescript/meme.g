@@ -4,8 +4,8 @@ requires ometa_base, io
 where
   ometa_base = central:ometa/ometa_base
   io         = central:stdlib/io
-import OMetaBase from ometa_base
-
+  import OMetaBase from ometa_base
+end
 
 //extending List for AST node information
 class List < List
@@ -113,15 +113,13 @@ meta_section = meta_variable*:xs => [:meta, xs];
 
 meta_variable = spaces '@' spaces id:key ":" {~'\n' _}+:xs => [key, xs.join("")];
 
-requirements_section = ``requires`` module_params:params
-                         where_section:specs
-                         module_import*:imp
-                       => [:requirements, params, [:default-locations, specs], [:imports, imp]]
-                     | => [:requirements, [], [:default-locations, []], [:imports, []]];
+requirements_section = ``requires`` module_params:params requirements_rest(params):x => x
+                    | => [:requirements, [], [:default-locations, []], [:imports, []]]
+                    ;
 
-where_section = ``where`` module_default*
-              | => []
-              ;
+requirements_rest :params = ``where`` module_default*:specs module_import*:imp ``end``
+                       => [:requirements, params, [:default-locations, specs], [:imports, imp]]
+                     | => [:requirements, params, [:default-locations, []], [:imports, []]];
 
 module_params = id:x {"," id}*:xs => [x] + xs;
 
@@ -132,9 +130,9 @@ module_location = {~'\n' _}+:xs => xs.join("");
 module_import = ``import`` id:name ``from`` id:lib => [name, lib];
 
 
-code_section = module_decl*:d => [:code, d];
+code_section = top_level_decl*:d => [:code, d];
 
-module_decl = obj_decl | class_decl | top_level_fun | top_level_fn;
+top_level_decl = obj_decl | class_decl | top_level_fun | top_level_fn;
 
 obj_decl = ``object`` id:name
              object_slot+:s

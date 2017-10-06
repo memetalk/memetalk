@@ -1,0 +1,21 @@
+meme central:memescript/compiler
+
+class Scanner
+fields: self;
+init new: fun(token_list, total_keywords, id_tokens, input) {
+  <primitive "re2_scanner_new">
+}
+
+instance_method match: fun() {
+  <primitive "re2_scanner_match">
+}
+instance_method consume: fun(num) {
+  <primitive "re2_scanner_consume">
+}
+instance_method match_regexp: fun(rx) {
+  <primitive "re2_scanner_match_regexp">
+}
+instance_method input: fun() {
+  <primitive "re2_scanner_input">
+}
+end

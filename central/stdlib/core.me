@@ -411,6 +411,9 @@ meme central:memescript/compiler
   instance_method insert: fun(idx, x) {
     <primitive "list_insert">
   }
+  instance_method extends: fun(other) {
+    other.each(fun(_, x) { this.append(x) });
+  }
   instance_method index: fun(idx) {
     <primitive "list_index">
   }
@@ -479,6 +482,12 @@ meme central:memescript/compiler
   }
   instance_method ==: fun(other) {
     <primitive "list_equals">
+  }
+  instance_method ordered_by: fun(fn) {
+    <primitive "list_ordered_by">
+  }
+  instance_method any: fun(fn) {
+    <primitive "list_any">
   }
   end
 

@@ -1,0 +1,169 @@
+meme central:memescript/compiler
+requires test, ometa_meme, kaiser_meme, ometa_base, io
+where
+  ometa_meme = central:memescript/meme
+  kaiser_meme = central:kaiser/meme
+  ometa_base = central:memescript/ometa_base
+  io = central:stdlib/io
+end
+
+
+test_parsing: fun(text, desc) {
+  // io.print(text);
+  var parser = kaiser_meme.MemeScriptParser.new(text);
+  var kast = parser.start();
+  var oast = ometa_base.parse(text, ometa_meme.MemeScriptParser, :start);
+  // io.print("kast: " + kast.toSource);
+  // io.print("oast: " + oast[1].toSource);
+  test.assertEqual(oast[1], kast, desc); //order is important, as oast is a subclass of List
+}
+
+test_header: fun() {
+  test_parsing("meme repo:p", "test header 1;");
+  test_parsing("meme repo:x/y", "test header 2;");
+
+  test_parsing(["meme repo:x/y",
+                "requires x, y, z"].join("\n"), "test header 3");
+
+  test_parsing(["meme repo:x/y",
+                "requires x, y, z",
+                "where",
+                " x = x:y",
+                " y = a:b",
+               "end"].join("\n"), "test header 4");
+
+  test_parsing(["meme repo:x/y",
+                "requires x, y, z",
+                "where",
+                " x = x:y",
+                " y = a:b",
+                "import A from x",
+                "import B from y end"].join("\n"), "test header 5");
+}
+
+test_object: fun() {
+  test_parsing(["meme x:x",
+                "object A",
+                " x:a;",
+                "end"].join("\n"), "test obj 1");
+
+  test_parsing(["meme x:x",
+                "object A",
+                " x:null;",
+                " y:true;",
+                " z:false;",
+                " w:123;",
+                "end"].join("\n"), "test obj 2");
+
+  test_parsing(["meme x:x",
+                "object A",
+                " w:\"hi\";",
+                "end"].join("\n"), "test obj 2");
+
+}
+
+test_fun: fun() {
+  test_parsing(["meme x:x",
+                "x: fun() {",
+                " return null;",
+                "}"].join("\n"), "test fun 1");
+
+  test_parsing(["meme x:x",
+                "x: fun() {",
+                " <primitive \"x\">",
+                "}"].join("\n"), "test fun 1");
+
+  test_parsing(["meme x:x",
+                "x: fun(a, b, c) {",
+                " return a + b * c;",
+                "}"].join("\n"), "test fun 1");
+
+  test_parsing(["meme x:x",
+                "x: fun(a, b) {",
+                " var c = 1;",
+                " return a + b * c;",
+                "}"].join("\n"), "test fun 1");
+
+  test_parsing(["meme x:x",
+                "!: fun(a, b) {",
+                " return null;",
+                "}"].join("\n"), "test fun 1");
+
+  test_parsing(["meme x:x",
+                "&: fun(a, b) {",
+                " return null;",
+                "}"].join("\n"), "test fun 1");
+
+  test_parsing(["meme x:x",
+                "*: fun(a, b) {",
+                " return null;",
+                "}"].join("\n"), "test fun 1");
+
+  test_parsing(["meme x:x",
+                "-: fun(a, b) {",
+                " return null;",
+                "}"].join("\n"), "test fun 1");
+
+  test_parsing(["meme x:x",
+                "+: fun(a, b) {",
+                " return null;",
+                "}"].join("\n"), "test fun 1");
+
+  test_parsing(["meme x:x",
+                "|: fun(a, b) {",
+                " return null;",
+                "}"].join("\n"), "test fun 1");
+
+  test_parsing(["meme x:x",
+                "<: fun(a, b) {",
+                " return null;",
+                "}"].join("\n"), "test fun 1");
+
+  test_parsing(["meme x:x",
+                "<=: fun(a, b) {",
+                " return null;",
+                "}"].join("\n"), "test fun 1");
+
+  test_parsing(["meme x:x",
+                ">=: fun(a, b) {",
+                " return null;",
+                "}"].join("\n"), "test fun 1");
+
+  test_parsing(["meme x:x",
+                "==: fun(a, b) {",
+                " return null;",
+                "}"].join("\n"), "test fun 1");
+
+  test_parsing(["meme x:x",
+                "!=: fun(a, b) {",
+                " return null;",
+                "}"].join("\n"), "test fun 1");
+
+
+  test_parsing(["meme x:x",
+                "main: fun() {",
+                " assertEqual(X.throw + X.new(2).x, 12);",
+                "}"].join("\n"), "test fun 1");
+
+  test_parsing(["meme x:x",
+                "class A",
+                "fields: x;",
+                "init new: fun(x) {",
+                "  @x = x;",
+                "}",
+                "end"].join("\n"), "test fun 1");
+
+  test_parsing(["meme x:x",
+                "main: fun() {",
+                "x += 1 + 2;",
+                "}"].join("\n"), "test fun 1");
+}
+
+main: fun() {
+  var parser = kaiser_meme.MemeScriptParser.new("x = x + 2;");
+  var kast = parser.non_control_expr();
+  // io.print(kast);
+  test_header();
+  test_object();
+  test_fun();
+}
