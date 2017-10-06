@@ -2,16 +2,16 @@ meme central:memescript/compiler
 
 requires io, ometa_base, ometa, ometa_tr
 where
-  io = meme:io
-  ometa_base = meme:ometa_base
-  ometa = meme:ometa
-  ometa_tr = meme:ometa_tr
-import OMetaBase from ometa_base
-import OMetaStream from ometa_base
-import OMetaException from ometa_base
-import OMeta from ometa
-import OMetaTranslator from ometa_tr
-
+  io = central:stdlib/io
+  ometa_base = central:ometa/ometa_base
+  ometa= central:ometa/ometa
+  ometa_tr = central:ometa/ometa_tr
+  import OMetaBase from ometa_base
+  import OMetaStream from ometa_base
+  import OMetaException from  ometa_base
+  import OMeta from ometa
+  import OMetaTranslator from ometa_tr
+end
 
 //this files generates mm/calc.me, a parser for a simple calculator.
 
@@ -54,8 +54,8 @@ main: fun() {
     if (maybe_ast[0]) {
       io.print("translation error: " + maybe_ast[0].toString);
     } else {
-      io.write_file("mm/calc.me", maybe_ast[1]);
-      io.print("Wrote to mm/calc.me");
+      io.write_file("calc.me", maybe_ast[1]);
+      io.print("Wrote to calc.me");
     }
   }
 }
