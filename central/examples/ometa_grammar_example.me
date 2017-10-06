@@ -1,12 +1,17 @@
-.preamble(io, ometa_base, ometa, ometa_tr)
- io : meme:io;
- ometa_base: meme:ometa_base;
- ometa: meme:ometa;
- ometa_tr: meme:ometa_tr;
- [OMetaBase, OMetaStream, OMetaException] <= ometa_base;
- [OMeta] <= ometa;
- [OMetaTranslator] <= ometa_tr;
-.code
+meme central:memescript/compiler
+
+requires io, ometa_base, ometa, ometa_tr
+where
+  io = meme:io
+  ometa_base = meme:ometa_base
+  ometa = meme:ometa
+  ometa_tr = meme:ometa_tr
+import OMetaBase from ometa_base
+import OMetaStream from ometa_base
+import OMetaException from ometa_base
+import OMeta from ometa
+import OMetaTranslator from ometa_tr
+
 
 //this files generates mm/calc.me, a parser for a simple calculator.
 
@@ -54,5 +59,3 @@ main: fun() {
     }
   }
 }
-
-.endcode

@@ -4,7 +4,9 @@ include $(shell git rev-parse --show-toplevel)/common.mk
 
 $(call GEN_MEC_RULE)
 
-CODE := io.me qt.me remote_repl.me memetest.me
+CODE := hello_world.me  Makefile  ometa_example.me  \
+	ometa_grammar_example.me  using_calc.me
+
 BYTECODE := $(patsubst %.me,%.mec,$(CODE))
 
 

@@ -1,8 +1,13 @@
-.preamble(io, ometa_base)
- io : meme:io;
- ometa_base: meme:ometa_base;
- [OMetaBase, OMetaStream, OMetaException] <= ometa_base;
-.code
+meme central:memescript/compiler
+
+requires io, ometa_base
+where
+  io = meme:io
+  ometa_base = meme:ometa_base
+import OMetaBase from ometa_base
+import OMetaStream from ometa_base
+import OMetaException from ometa_base
+
 
 ometa_basic_tutorial_1: fun() {
   //examples of basic rules available in ometa_base
@@ -206,5 +211,3 @@ main: fun() {
   ometa_basic_tutorial_1();
   ometa_basic_tutorial_2();
 }
-
-.endcode

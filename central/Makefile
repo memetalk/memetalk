@@ -1,4 +1,4 @@
-subdirs = memescript stdlib tests
+subdirs = stdlib ometa memescript tests
 
 all:
 	$(foreach el,$(subdirs),$(MAKE) -C $(el) all;)

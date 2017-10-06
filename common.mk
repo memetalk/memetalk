@@ -53,7 +53,7 @@ endef
 ##   everyone, here's the ideal place.
 ##
 define GEN_TRS_RULE
- %.me: %.g; $(call RUN_VM_CMD,$(MM_DIR)/memescript/gen_parser.me $$(CURDIR)/$$^)
+ %.me: %.g; $(call RUN_VM_CMD,$(MM_DIR)/ometa/gen_parser.me $$(CURDIR)/$$^)
 endef
 
 ## Macro TEST_RUNNER_CMD: Outputs the command to call the test runner

@@ -2,5 +2,6 @@
   {"central": "http://libraries.memetalk.org/"},
  "override_to_local": {
    "central:memescript": "/home/USER/src/memetalk/central/memescript",
-   "central:stdlib": "/home/USER/src/memetalk/central/stdlib"
+   "central:stdlib": "/home/USER/src/memetalk/central/stdlib",
+   "central:ometa": "/home/USER/src/memetalk/central/ometa"
 }}

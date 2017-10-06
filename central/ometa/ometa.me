@@ -1,7 +1,7 @@
 meme central:memescript/compiler
 requires ometa_base
 where
-  ometa_base = central:memescript/ometa_base
+  ometa_base = central:ometa/ometa_base
 import OMetaBase from ometa_base
 
 

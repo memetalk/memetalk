@@ -1,0 +1,13 @@
+meme central:memescript/compiler
+
+requires io, calc, ometa_base
+where
+  io = meme:io
+  ometa_base = meme: ometa_base
+  calc = meme: calc
+
+
+main: fun() {
+  var res = ometa_base.parse("1+3*3", calc.Calculator, :expr);
+  io.print(res.toSource); //*[null, 10]
+}
