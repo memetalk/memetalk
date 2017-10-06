@@ -446,7 +446,16 @@ oop MMObj::mm_dictionary_get(Process* p, oop dict, oop key, bool should_assert) 
       }
     }
   }
-  return MM_NULL;
+  //TODO: key to string
+  if (mm_is_symbol(key)) {
+    std::string s = mm_symbol_cstr(p, key, should_assert);
+    p->raise("KeyError", (s + ": key not in dictionary").c_str());
+  } else if (mm_is_string(key)) {
+    std::string s = mm_string_stl_str(p, key, should_assert);
+    p->raise("KeyError", (s + ": key not in dictionary").c_str());
+  } else {
+    p->raise("KeyError", "key not in dictionary");
+  }
 }
 
 
