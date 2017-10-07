@@ -170,6 +170,16 @@ oop MMObj::mm_compiled_module_classes(Process* p, oop cmod, bool should_assert) 
   return (oop) ((word*)cmod)[8];
 }
 
+void MMObj::mm_compiled_module_set_image_ptr_no_check(oop cmod, void* ptr) {
+  ((word**) cmod)[10] = (word*) ptr;
+}
+
+void* MMObj::mm_compiled_module_get_image_ptr(Process* p, oop cmod, bool should_assert) {
+  TYPE_CHECK(!( mm_object_vt(cmod) == _core_image->get_prime("CompiledModule")),
+             "TypeError","Expected CompiledModule")
+    return (void*) ((word*)cmod)[10];
+}
+
 oop MMObj::mm_boolean_new(number val) {
   return val ? MM_TRUE : MM_FALSE;
 }

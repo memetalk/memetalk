@@ -21,6 +21,9 @@ public:
   bool has_class(const char*);
   oop get_module_instance();
   boost::unordered_map<std::string,oop>& get_primes() { return _primes; }
+
+  std::string& filepath() { return _filepath; }
+
 private:
   void load_header();
   void load_prime_objects_table();

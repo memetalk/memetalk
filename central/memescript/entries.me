@@ -1290,7 +1290,7 @@ instance_method fill: fun(vmem) {
   var oop_classes = vmem.append_sym_dict_emiting_entries(@classes);
 
   vmem.append_int(mec.FRAME_TYPE_OBJECT, null);
-  vmem.append_int(10 * bits.WSIZE, null);
+  vmem.append_int(11 * bits.WSIZE, null);
 
   var oop = vmem.append_external_ref("CompiledModule", this.label); // vt: CompiledModule
   vmem.append_pointer_to(delegate, null);
@@ -1302,6 +1302,7 @@ instance_method fill: fun(vmem) {
   vmem.append_pointer_to(oop_functions, null);
   vmem.append_pointer_to(oop_classes, null);
   vmem.append_null(null);                        // parent_module
+  vmem.append_null(null);                        // image ptr
   return this.set_oop(oop);
 }
 end

@@ -1181,7 +1181,7 @@ class CompiledModule(Entry):
         oop_classes = vmem.append_sym_dict_emiting_entries(self.classes)
 
         vmem.append_int(FRAME_TYPE_OBJECT)
-        vmem.append_int(10 * bits.WSIZE)
+        vmem.append_int(11 * bits.WSIZE)
 
         oop = vmem.append_external_ref('CompiledModule', self.label()) # vt: CompiledModule
         vmem.append_pointer_to(delegate)
@@ -1193,6 +1193,7 @@ class CompiledModule(Entry):
         vmem.append_pointer_to(oop_functions)
         vmem.append_pointer_to(oop_classes)
         vmem.append_null()                        # parent_module
+        vmem.append_null()                        # image ptr
         self.oop = oop
         return oop
 

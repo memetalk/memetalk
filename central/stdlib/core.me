@@ -124,6 +124,9 @@ meme central:memescript/compiler
         return "core:" + @name;
       }
     }
+    instance_method path: fun() {
+      return @compiled_module.path() + "#" + @name;
+    }
   end
 
   class CompiledFunction
@@ -174,6 +177,15 @@ meme central:memescript/compiler
     instance_method owner: fun() {
       return @owner;
     }
+    instance_method path: fun() {
+      if (Mirror.vtFor(@owner) == CompiledModule) {
+        return @owner.path + "#" + @name;
+      } elif (Mirror.vtFor(@owner) == CompiledClass) {
+        return @owner.path + "/" + @name;
+      } else {
+        Exception.throw("CompiledFunction.owner should be either an instance of CompiledClass or CompiledModule");
+      }
+    }
     instance_method fullName: fun() {
       return @owner.fullName + "/" + @name;
     }
@@ -202,9 +214,12 @@ meme central:memescript/compiler
 
   class CompiledModule
    fields: name, license, params, default_params, aliases, functions, classes,
-           parent_module;
+           parent_module, mec_image;
   instance_method fullName: fun() {
     return @name;
+  }
+  instance_method path: fun() {
+    <primitive "compiled_module_path">
   }
   instance_method functions: fun() {
     return @functions;

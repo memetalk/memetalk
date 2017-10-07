@@ -3038,6 +3038,19 @@ static int prim_bench(Process* proc) {
   }
 }
 
+static int prim_compiled_module_path(Process* proc) {
+  oop self = proc->dp();
+  void* img = proc->mmobj()->mm_compiled_module_get_image_ptr(proc, self);
+  if (img == proc->vm()->core()) {
+    CoreImage* core_img = (CoreImage*) img;
+    proc->stack_push(proc->mmobj()->mm_string_new(core_img->filepath()));
+  } else {
+    MECImage* mec_img = (MECImage*) img;
+    proc->stack_push(proc->mmobj()->mm_string_new(mec_img->filepath()));
+  }
+  return 0;
+}
+
 void init_primitives(VM* vm) {
   vm->register_primitive("io_print", prim_io_print);
   vm->register_primitive("io_read_file", prim_io_read_file);
@@ -3251,6 +3264,8 @@ void init_primitives(VM* vm) {
   vm->register_primitive("exit", prim_exit);
   vm->register_primitive("basename", prim_basename);
   vm->register_primitive("bench", prim_bench);
+
+  vm->register_primitive("compiled_module_path", prim_compiled_module_path);
 
   qt_init_primitives(vm);
   re2_init_primitives(vm);

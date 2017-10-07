@@ -29,6 +29,7 @@
 ;;; Code:
 (require 'prog-mode)
 (require 'smie)
+(require 'json)
 
 ;; M-x toggle-debug-on-error
 
@@ -573,43 +574,55 @@
   (memetalk-remove-overlays memetalk-current-buffer)
   (setq memetalk-current-buffer nil))
 
-(defvar memetalk-path (or  (getenv "MEME_PATH") "/Users/thiago/src/memetalk/sugarfoot/"))
 
-(defun memetalk-get-module-file-path (file-name)
-  (let (res)
-    (dolist (prefix (parse-colon-path memetalk-path) res)
-      (let ((path (cond
-                   ((string-match ".*/\$" prefix) prefix)
-                   (t (concat prefix "/")))))
-        (let ((full-path (concat path file-name))
-              (test-path (concat path "../tests/" file-name)))
-          (unless res
-            (setq res (cond
-                       ((file-exists-p full-path) full-path)
-                       ((file-exists-p test-path) test-path)
-                       (t nil)))))))
-    (if (null res)
-        (error (format "can't open file %s" file-name))
-      res)))
+(defun memetalk-read-meme-config ()
+  (with-temp-buffer
+    (insert-file-contents (concat (getenv "HOME") "/.meme.config"))
+    (buffer-string)))
+
+(defun memetalk-core-source-path ()
+  ;; this is NOT general! we are assuming 'override_to_local' is specified
+  ;; with central:stdlib key.
+  (let ((json-object-type 'hash-table))
+    (let ((config (json-read-from-string (memetalk-read-meme-config))))
+      (concat (gethash "central:stdlib" (gethash "override_to_local" config)) "/core.me"))))
+
+(defun memetalk-get-module-source-file-path (path-part)
+  ;;path-part, either:
+  ;;   * file:///some/path/to/file.mec
+  ;;   * center:some/module
+  (cond
+   ((string-match "core.img" path-part)
+    (memetalk-core-source-path))
+   ((string-match "^/\\(.*\\)\\.mec" path-part)
+    (concat "/" (match-string-no-properties 1 path-part) ".me"))
+   ((string-match "^center:" path-part)
+    (message (format "TODO: get-module-source-file-path '%s'" path-part)))
+   (t (error (format "unknown path %s" file-part)))))
 
 (defvar commands (list))
 
-(defun memetalk-process-module-response (res file-part)
-  (string-match "\\([a-zA-Z0-9_]+\\)[:/]" file-part)
-  (let ((mod-name (concat (match-string-no-properties 1 file-part) ".me")))
-    ;(message (format "matched module '%s', path: %s" mod-name (memetalk-get-module-file-path mod-name)))
-    (let ((mod-path (memetalk-get-module-file-path mod-name)))
+(defun memetalk-process-module-response (res path-and-loc)
+  ;; file-part is either:
+  ;;   * file:///some/path/to/file.mec#fun@[line, col, line, col]
+  ;;   * file:///some/path/to/file.mec#class/fun@[line, col, line, col]
+  ;;   * center:some/module#...
+  (message (format "process-module-response %s" path-and-loc))
+  (string-match "\\([^#]+\\)" path-and-loc)
+  (let ((path-part (match-string-no-properties 1 path-and-loc)))
+    (let ((mod-path (memetalk-get-module-source-file-path path-part)))
+      (message (format "opening file '%s'" mod-path))
       (with-current-buffer (find-file mod-path)
-        ;(message (format "opened file '%s'" mod-path))
-        (widen) ;this shit keep being opened narrowed, god damn it!
+        (message (format "opened file '%s'" mod-path))
+        (widen) ;; this shit keep being opened narrowed, god damn it!
         (change-memetalk-current-buffer (current-buffer))))
     (string-match
      "@\\[\\([0-9]+\\), \\([0-9]+\\), \\([0-9]+\\), \\([0-9]+\\)\\]"
-     resp)
-    (let ((start-line (string-to-number (match-string-no-properties 1 resp)))
-          (start-col (string-to-number (match-string-no-properties 2 resp)))
-          (end-line (string-to-number (match-string-no-properties 3 resp)))
-          (end-col (string-to-number (match-string-no-properties 4 resp))))
+     path-and-loc)
+    (let ((start-line (string-to-number (match-string-no-properties 1 path-and-loc)))
+          (start-col (string-to-number (match-string-no-properties 2 path-and-loc)))
+          (end-line (string-to-number (match-string-no-properties 3 path-and-loc)))
+          (end-col (string-to-number (match-string-no-properties 4 path-and-loc))))
       (with-current-buffer memetalk-current-buffer
         (memetalk-remove-overlays memetalk-current-buffer)
         (progn (goto-char (point-min)) (forward-line start-line))
@@ -636,9 +649,9 @@
     (message (format "locals: %s" (base64-decode-string b64text)))))
 
 (defun memetalk-repl-dispatch-response (resp)
-  ;(message (format "received response {%s}" resp))
+  (message (format "received response {%s}" resp))
   (setq commands (cons resp commands))
-  (when (equal (string-match "module: \\(.*\\)@" resp) 0)
+  (when (equal (string-match "module: \\(.*\\)" resp) 0)
     (memetalk-process-module-response resp (match-string-no-properties 1 resp)))
   (when (equal (string-match "show: \\(.*\\)" resp) 0)
     (memetalk-process-show-response resp (match-string-no-properties 1 resp)))

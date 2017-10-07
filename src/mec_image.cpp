@@ -349,7 +349,7 @@ oop MECImage::load() {
   link_external_references();
   link_symbols(_data, _st_size, HEADER_SIZE + _ot_size + _names_size + _er_size, _proc->vm(), _core_image);
   _compiled_module = (oop) * (word*)(& _data[HEADER_SIZE]);
-
+  _proc->vm()->mmobj()->mm_compiled_module_set_image_ptr_no_check(_compiled_module, this);
   DBG(" ============ Done load module ===========" << endl);
   return _compiled_module;
 }

@@ -85,6 +85,8 @@ public:
   oop mm_compiled_module_imports(Process*, oop, bool should_assert = false);
   oop mm_compiled_module_classes(Process*, oop, bool should_assert = false);
   oop mm_compiled_module_functions(Process*, oop, bool should_assert = false);
+  void mm_compiled_module_set_image_ptr_no_check(oop, void*);
+  void* mm_compiled_module_get_image_ptr(Process*, oop, bool should_assert = false);
 
   oop mm_boolean_new(number val);
   bool mm_boolean_cbool(Process*, oop val, bool should_assert = false);

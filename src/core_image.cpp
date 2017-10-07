@@ -129,4 +129,7 @@ void CoreImage::load() {
   word index_size = _num_entries * 2 * WSIZE;
   relocate_addresses(_data, _data_size, HEADER_SIZE + _ot_size + _names_size + index_size +  _es_size);
   link_symbols(_data, _es_size, HEADER_SIZE + _ot_size + _names_size + index_size, _vm, this);
+
+  oop _core_cmod = _vm->mmobj()->mm_module_get_cmod(_core_imod);
+  _vm->mmobj()->mm_compiled_module_set_image_ptr_no_check(_core_cmod, this);
 }

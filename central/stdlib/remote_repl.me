@@ -31,7 +31,7 @@ instance_method send_location: fun(socket, frame) {
   var cf = frame.cp().compiledFunction();
   var loc = cf.source_location_for(frame);
   if (loc) {//primitives have loc == null
-    socket.write_line("module: " + cf.fullName() + "@" + loc.toString);
+    socket.write_line("module: " + cf.path() + "@" + loc.toString);
   }
 }
 

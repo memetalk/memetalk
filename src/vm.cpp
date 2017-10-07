@@ -191,7 +191,8 @@ void VM::register_primitive(std::string name, prim_function_t fun) {
 // }
 
 oop VM::instantiate_meme_module(Process* proc, const char* mod_path, oop module_args_list) {
-  DBG( "instantiating module " << mod_path << endl);
+
+  DBG( "instantiating repository module " << mod_path << endl);
   MECImage* mec;
   modules_map_t::iterator it = _modules.find(mod_path);
   if (it == _modules.end()) {
@@ -209,18 +210,22 @@ oop VM::instantiate_meme_module(Process* proc, const char* mod_path, oop module_
 }
 
 oop VM::instantiate_local_module(Process* proc, const char* mec_file_path, oop module_args_list) {
-  DBG( "instantiating module in file " << mec_file_path << endl);
+  std::string mec_file_url = boost::filesystem::absolute(mec_file_path).string();
+
+  DBG( "instantiating local file module " << mec_file_url << endl);
   MECImage* mec;
-  modules_map_t::iterator it = _modules.find(mec_file_path);
+
+  modules_map_t::iterator it = _modules.find(mec_file_url);
+
   if (it == _modules.end()) {
-    DBG("loading new module " << mec_file_path << endl);
+    DBG("loading new module at filepath " << mec_file_path << endl);
     int file_size;
     char* data = read_mec_file(mec_file_path, &file_size);
-    mec = new (GC) MECImage(proc, _core_image, mec_file_path, file_size, data);
-    _modules[mec_file_path] = mec;
+    mec = new (GC) MECImage(proc, _core_image, mec_file_url, file_size, data);
+    _modules[mec_file_url] = mec;
     mec->load();
   } else {
-    DBG("module already loaded " << mec_file_path << endl);
+    DBG("module already loaded " << mec_file_url << endl);
     mec = it->second;
   }
   return mec->instantiate_module(module_args_list);
