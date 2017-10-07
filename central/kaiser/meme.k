@@ -69,7 +69,6 @@ tokens {
   key T_WHERE = "where";
   key T_IMPORT = "import";
   key T_END = "end";
-  key T_FIELDS = "fields";
   key T_INIT = "init";
   key T_INSTANCE_METHOD = "instance_method";
   key T_CLASS_METHOD = "class_method";
@@ -113,6 +112,7 @@ tokens {
   T_MEME = "meme"; //this shouldn't be a reserved keyword.
   T_FROM = "from"; //this shouldn't be a reserved keyword.
   T_FUNCTIONS = "functions"; //this shouldn't be a reserved keyword.
+  T_FIELDS = "fields"; //core.me uses this as an id
   T_NUMBER = "[[:digit:]]+";
   T_HEXNUM = "0x[[:xdigit:]]+";
   T_OPEN_CURLY = "{";
@@ -218,21 +218,32 @@ top_level_decls = top_level_decl:x top_level_decls:xs => [x] + xs
 
 top_level_decl = obj_decl:x => x
                | class_decl:x => x
-               | T_FUN_ID:x T_COLON top_level_function(x):y => y
+               | top_level_function:x => x
                ;
 
-top_level_function :name = top_level_fun(name):x => x
+top_level_function = T_FUN_ID:x T_COLON top_level_fun_rest(x):y => y;
+
+top_level_fun_rest :name = top_level_fun(name):x => x
                          | top_level_fn(name):x => x
                          ;
 
 obj_decl = T_OBJECT T_ID:name object_slots:s obj_fun:f T_END => [:object, name, s, f];
 
-//TODO:
-obj_fun = T_FUNCTIONS //T_OPEN_CURLY obj_fun_block T_CLOSE_CURLY;
+
+obj_fun = T_FUNCTIONS T_OPEN_CURLY obj_fun_block:f T_CLOSE_CURLY => f
         | => []
         ;
 
-object_slots = object_slot:x object_slots_more:xs => [x] + xs
+obj_fun_block = constructor:x obj_fun_block_more:xs => [x] + xs
+              | top_level_function:x obj_fun_block_more:xs => [x] + xs
+              ;
+
+obj_fun_block_more = obj_fun_block:xs => xs
+                   | => []
+                   ;
+
+object_slots = ?T_FUNCTIONS => []
+             | object_slot:x object_slots_more:xs => [x] + xs
              ;
 
 object_slots_more = object_slots:x => x
@@ -325,7 +336,7 @@ end_function = # T_CLOSE_CURLY => #[:end-body];
 fparams = T_OPEN_PAREN fparam_list:x T_CLOSE_PAREN => x;
 
 fparam_list = T_ID:x fparam_list_rest:xs => [x] + xs
-            |  T_STAR => [:var-arg]
+            |  T_STAR T_ID:x => [:var-arg, x]
             | => []
             ;
 

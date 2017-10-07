@@ -61,7 +61,7 @@ end
 class MemeScriptParser < KaiserBase
 fields: has_fun_literal, line_offset;
 init new: fun(text) {
-  super.new(text, {:T_DOT: {:regexp: "\\.", :name: :T_DOT, :id: 74}, :T_NOT: {:regexp: "\\!", :name: :T_NOT, :id: 72}, :T_PLUS: {:regexp: "\\+", :name: :T_PLUS, :id: 68}, :T_OPEN_SBRACKET: {:regexp: "\\[", :name: :T_OPEN_SBRACKET, :id: 64}, :T_CLOSE_SBRACKET: {:regexp: "\\]", :name: :T_CLOSE_SBRACKET, :id: 65}, :T_DOUBLE_QUOTE: {:regexp: "\"", :name: :T_DOUBLE_QUOTE, :id: 59}, :T_GTE: {:regexp: ">=", :name: :T_GTE, :id: 54}, :T_CLOSE_BRACKET: {:regexp: "\\}", :name: :T_CLOSE_BRACKET, :id: 63}, :T_LTE: {:regexp: "<=", :name: :T_LTE, :id: 52}, :T_NEQ: {:regexp: "!=", :name: :T_NEQ, :id: 49}, :T_ASSIGN: {:regexp: "=", :name: :T_ASSIGN, :id: 47}, :T_BIT_NOT: {:regexp: "\\~", :name: :T_BIT_NOT, :id: 73}, :T_AMP: {:regexp: "&", :name: :T_AMP, :id: 57}, :T_AT: {:regexp: "@", :name: :T_AT, :id: 46}, :T_SEMICOLON: {:regexp: ";", :name: :T_SEMICOLON, :id: 45}, :T_COLON: {:regexp: ":", :name: :T_COLON, :id: 44}, :T_AT_ID: {:regexp: "@[a-zA-Z_][a-zA-Z0-9_]*", :name: :T_AT_ID, :id: 41}, :T_EQ: {:regexp: "==", :name: :T_EQ, :id: 48}, :T_GT: {:regexp: ">", :name: :T_GT, :id: 53}, :T_SR: {:regexp: ">>", :name: :T_SR, :id: 56}, :T_SYMBOL: {:regexp: ":[a-zA-Z_a-zA-Z_!&\\*\\-\\+\\|<=>/][a-zA-Z_a-zA-Z0-9_!&\\*\\-\\+\\|<=>/]*", :name: :T_SYMBOL, :id: 40}, :T_PIPE: {:regexp: "\\|", :name: :T_PIPE, :id: 58}, :T_OPEN_BRACKET: {:regexp: "\\{", :name: :T_OPEN_BRACKET, :id: 62}, :T_OPEN_CURLY: {:regexp: "{", :name: :T_OPEN_CURLY, :id: 38}, :T_NUMBER: {:regexp: "[[:digit:]]+", :name: :T_NUMBER, :id: 36}, :T_CARET: {:regexp: "\\^", :name: :T_CARET, :id: 67}, :T_HEXNUM: {:regexp: "0x[[:xdigit:]]+", :name: :T_HEXNUM, :id: 37}, :T_FROM: {:regexp: "from", :name: :T_FROM, :id: 34}, :T_PRIV_ID: {:regexp: "[a-zA-Z_][a-zA-Z0-9_]*", :name: :T_PRIV_ID, :id: 31}, :T_DECR: {:regexp: "\\-=", :name: :T_DECR, :id: 71}, :T_ID: {:regexp: "[a-zA-Z_][a-zA-Z0-9_]*", :name: :T_ID, :id: 30}, :T_AND: {:regexp: "and\\b", :name: :T_AND, :id: 28}, :T_OR: {:regexp: "or\\b", :name: :T_OR, :id: 27}, :T_CATCH: {:regexp: "catch\\b", :name: :T_CATCH, :id: 24}, :T_WHILE: {:regexp: "while\\b", :name: :T_WHILE, :id: 22}, :T_ELIF: {:regexp: "elif\\b", :name: :T_ELIF, :id: 20}, :T_IF: {:regexp: "if\\b", :name: :T_IF, :id: 19}, :T_FOR: {:regexp: "for\\b", :name: :T_FOR, :id: 25}, :T_MEME: {:regexp: "meme", :name: :T_MEME, :id: 33}, :T_SL: {:regexp: "<<", :name: :T_SL, :id: 55}, :T_EOF: {:regexp: "$", :name: :T_EOF, :id: 50}, :T_PRIMITIVE: {:regexp: "primitive\\b", :name: :T_PRIMITIVE, :id: 18}, :T_FALSE: {:regexp: "false\\b", :name: :T_FALSE, :id: 17}, :T_MINUS: {:regexp: "\\-", :name: :T_MINUS, :id: 69}, :T_TRUE: {:regexp: "true\\b", :name: :T_TRUE, :id: 16}, :T_LT: {:regexp: "<", :name: :T_LT, :id: 51}, :T_RETURN: {:regexp: "return\\b", :name: :T_RETURN, :id: 26}, :T_NULL: {:regexp: "null\\b", :name: :T_NULL, :id: 15}, :T_COMMA: {:regexp: ",", :name: :T_COMMA, :id: 42}, :T_CLASS_METHOD: {:regexp: "class_method\\b", :name: :T_CLASS_METHOD, :id: 10}, :T_THIS: {:regexp: "this\\b", :name: :T_THIS, :id: 14}, :T_INIT: {:regexp: "init\\b", :name: :T_INIT, :id: 8}, :T_FUNCTIONS: {:regexp: "functions", :name: :T_FUNCTIONS, :id: 35}, :T_SLASH: {:regexp: "/", :name: :T_SLASH, :id: 43}, :T_FIELDS: {:regexp: "fields\\b", :name: :T_FIELDS, :id: 7}, :T_FUN_ID: {:regexp: "[a-zA-Z_a-zA-Z_!&\\*\\-\\+\\|<=>/][a-zA-Z_a-zA-Z0-9_!&\\*\\-\\+\\|<=>/]*", :name: :T_FUN_ID, :id: 32}, :T_OBJECT: {:regexp: "object\\b", :name: :T_OBJECT, :id: 11}, :T_TRY: {:regexp: "try\\b", :name: :T_TRY, :id: 23}, :T_END: {:regexp: "end\\b", :name: :T_END, :id: 6}, :T_SUPER: {:regexp: "super\\b", :name: :T_SUPER, :id: 29}, :T_THIS_MODULE: {:regexp: "thisModule\\b", :name: :T_THIS_MODULE, :id: 12}, :T_INCR: {:regexp: "\\+=", :name: :T_INCR, :id: 70}, :T_IMPORT: {:regexp: "import\\b", :name: :T_IMPORT, :id: 5}, :T_STAR: {:regexp: "\\*", :name: :T_STAR, :id: 66}, :T_THIS_CONTEXT: {:regexp: "thisContext\\b", :name: :T_THIS_CONTEXT, :id: 13}, :T_WHERE: {:regexp: "where\\b", :name: :T_WHERE, :id: 4}, :T_ELSE: {:regexp: "else\\b", :name: :T_ELSE, :id: 21}, :T_OPEN_PAREN: {:regexp: "\\(", :name: :T_OPEN_PAREN, :id: 60}, :T_INSTANCE_METHOD: {:regexp: "instance_method\\b", :name: :T_INSTANCE_METHOD, :id: 9}, :T_CLASS: {:regexp: "class\\b", :name: :T_CLASS, :id: 2}, :T_CLOSE_PAREN: {:regexp: "\\)", :name: :T_CLOSE_PAREN, :id: 61}, :T_REQUIRES: {:regexp: "requires\\b", :name: :T_REQUIRES, :id: 3}, :T_CLOSE_CURLY: {:regexp: "}", :name: :T_CLOSE_CURLY, :id: 39}, :T_VAR: {:regexp: "var\\b", :name: :T_VAR, :id: 1}, :T_FUN: {:regexp: "fun\\b", :name: :T_FUN, :id: 0}}, 30,30);
+  super.new(text, {:T_BIT_NOT: {:regexp: "\\~", :name: :T_BIT_NOT, :id: 73}, :T_DOT: {:regexp: "\\.", :name: :T_DOT, :id: 74}, :T_CARET: {:regexp: "\\^", :name: :T_CARET, :id: 67}, :T_CLOSE_SBRACKET: {:regexp: "\\]", :name: :T_CLOSE_SBRACKET, :id: 65}, :T_OPEN_SBRACKET: {:regexp: "\\[", :name: :T_OPEN_SBRACKET, :id: 64}, :T_CLOSE_BRACKET: {:regexp: "\\}", :name: :T_CLOSE_BRACKET, :id: 63}, :T_OPEN_PAREN: {:regexp: "\\(", :name: :T_OPEN_PAREN, :id: 60}, :T_GTE: {:regexp: ">=", :name: :T_GTE, :id: 54}, :T_LTE: {:regexp: "<=", :name: :T_LTE, :id: 52}, :T_CLOSE_PAREN: {:regexp: "\\)", :name: :T_CLOSE_PAREN, :id: 61}, :T_LT: {:regexp: "<", :name: :T_LT, :id: 51}, :T_EQ: {:regexp: "==", :name: :T_EQ, :id: 48}, :T_INCR: {:regexp: "\\+=", :name: :T_INCR, :id: 70}, :T_SLASH: {:regexp: "/", :name: :T_SLASH, :id: 43}, :T_SR: {:regexp: ">>", :name: :T_SR, :id: 56}, :T_STAR: {:regexp: "\\*", :name: :T_STAR, :id: 66}, :T_COMMA: {:regexp: ",", :name: :T_COMMA, :id: 42}, :T_AT_ID: {:regexp: "@[a-zA-Z_][a-zA-Z0-9_]*", :name: :T_AT_ID, :id: 41}, :T_NEQ: {:regexp: "!=", :name: :T_NEQ, :id: 49}, :T_CLOSE_CURLY: {:regexp: "}", :name: :T_CLOSE_CURLY, :id: 39}, :T_ASSIGN: {:regexp: "=", :name: :T_ASSIGN, :id: 47}, :T_NUMBER: {:regexp: "[[:digit:]]+", :name: :T_NUMBER, :id: 36}, :T_COLON: {:regexp: ":", :name: :T_COLON, :id: 44}, :T_FUN_ID: {:regexp: "[a-zA-Z_a-zA-Z_!&\\*\\-\\+\\|<=>/][a-zA-Z_a-zA-Z0-9_!&\\*\\-\\+\\|<=>/]*", :name: :T_FUN_ID, :id: 31}, :T_AMP: {:regexp: "&", :name: :T_AMP, :id: 57}, :T_SUPER: {:regexp: "super\\b", :name: :T_SUPER, :id: 28}, :T_NOT: {:regexp: "\\!", :name: :T_NOT, :id: 72}, :T_RETURN: {:regexp: "return\\b", :name: :T_RETURN, :id: 25}, :T_FUNCTIONS: {:regexp: "functions", :name: :T_FUNCTIONS, :id: 34}, :T_FIELDS: {:regexp: "fields", :name: :T_FIELDS, :id: 35}, :T_PLUS: {:regexp: "\\+", :name: :T_PLUS, :id: 68}, :T_DOUBLE_QUOTE: {:regexp: "\"", :name: :T_DOUBLE_QUOTE, :id: 59}, :T_FOR: {:regexp: "for\\b", :name: :T_FOR, :id: 24}, :T_TRY: {:regexp: "try\\b", :name: :T_TRY, :id: 22}, :T_OPEN_BRACKET: {:regexp: "\\{", :name: :T_OPEN_BRACKET, :id: 62}, :T_ELSE: {:regexp: "else\\b", :name: :T_ELSE, :id: 20}, :T_SYMBOL: {:regexp: ":[a-zA-Z_a-zA-Z_!&\\*\\-\\+\\|<=>/][a-zA-Z_a-zA-Z0-9_!&\\*\\-\\+\\|<=>/]*", :name: :T_SYMBOL, :id: 40}, :T_OR: {:regexp: "or\\b", :name: :T_OR, :id: 26}, :T_TRUE: {:regexp: "true\\b", :name: :T_TRUE, :id: 15}, :T_ID: {:regexp: "[a-zA-Z_][a-zA-Z0-9_]*", :name: :T_ID, :id: 29}, :T_AND: {:regexp: "and\\b", :name: :T_AND, :id: 27}, :T_MEME: {:regexp: "meme", :name: :T_MEME, :id: 32}, :T_NULL: {:regexp: "null\\b", :name: :T_NULL, :id: 14}, :T_THIS_CONTEXT: {:regexp: "thisContext\\b", :name: :T_THIS_CONTEXT, :id: 12}, :T_PRIV_ID: {:regexp: "[a-zA-Z_][a-zA-Z0-9_]*", :name: :T_PRIV_ID, :id: 30}, :T_OPEN_CURLY: {:regexp: "{", :name: :T_OPEN_CURLY, :id: 38}, :T_THIS_MODULE: {:regexp: "thisModule\\b", :name: :T_THIS_MODULE, :id: 11}, :T_WHILE: {:regexp: "while\\b", :name: :T_WHILE, :id: 21}, :T_HEXNUM: {:regexp: "0x[[:xdigit:]]+", :name: :T_HEXNUM, :id: 37}, :T_OBJECT: {:regexp: "object\\b", :name: :T_OBJECT, :id: 10}, :T_SL: {:regexp: "<<", :name: :T_SL, :id: 55}, :T_MINUS: {:regexp: "\\-", :name: :T_MINUS, :id: 69}, :T_INSTANCE_METHOD: {:regexp: "instance_method\\b", :name: :T_INSTANCE_METHOD, :id: 8}, :T_INIT: {:regexp: "init\\b", :name: :T_INIT, :id: 7}, :T_GT: {:regexp: ">", :name: :T_GT, :id: 53}, :T_END: {:regexp: "end\\b", :name: :T_END, :id: 6}, :T_IMPORT: {:regexp: "import\\b", :name: :T_IMPORT, :id: 5}, :T_WHERE: {:regexp: "where\\b", :name: :T_WHERE, :id: 4}, :T_PIPE: {:regexp: "\\|", :name: :T_PIPE, :id: 58}, :T_IF: {:regexp: "if\\b", :name: :T_IF, :id: 18}, :T_EOF: {:regexp: "$", :name: :T_EOF, :id: 50}, :T_THIS: {:regexp: "this\\b", :name: :T_THIS, :id: 13}, :T_REQUIRES: {:regexp: "requires\\b", :name: :T_REQUIRES, :id: 3}, :T_CLASS_METHOD: {:regexp: "class_method\\b", :name: :T_CLASS_METHOD, :id: 9}, :T_FALSE: {:regexp: "false\\b", :name: :T_FALSE, :id: 16}, :T_CLASS: {:regexp: "class\\b", :name: :T_CLASS, :id: 2}, :T_AT: {:regexp: "@", :name: :T_AT, :id: 46}, :T_PRIMITIVE: {:regexp: "primitive\\b", :name: :T_PRIMITIVE, :id: 17}, :T_FROM: {:regexp: "from", :name: :T_FROM, :id: 33}, :T_ELIF: {:regexp: "elif\\b", :name: :T_ELIF, :id: 19}, :T_CATCH: {:regexp: "catch\\b", :name: :T_CATCH, :id: 23}, :T_DECR: {:regexp: "\\-=", :name: :T_DECR, :id: 71}, :T_VAR: {:regexp: "var\\b", :name: :T_VAR, :id: 1}, :T_SEMICOLON: {:regexp: ";", :name: :T_SEMICOLON, :id: 45}, :T_FUN: {:regexp: "fun\\b", :name: :T_FUN, :id: 0}}, 29,29);
   
 this.initialize();
 }
@@ -80,7 +80,7 @@ instance_method start: fun() {
 }
 instance_method compiler_line: fun() {
   var c = null;
-  this.match(33);
+  this.match(32);
   c = this.module_path();
   return c;
 }
@@ -88,7 +88,7 @@ instance_method module_path: fun() {
   var x = null;
   var c = null;
   var p = null;
-  x = this.match(30);
+  x = this.match(29);
   c = this.match(44);
   p = this.path();
   return x + c + p;
@@ -96,7 +96,7 @@ instance_method module_path: fun() {
 instance_method path: fun() {
   var x = null;
   var xs = null;
-  x = this.match(31);
+  x = this.match(30);
   xs = this.path_rest();
   return x + xs;
 }
@@ -164,7 +164,7 @@ instance_method requirements_rest: fun(params) {
 instance_method module_params: fun() {
   var x = null;
   var xs = null;
-  x = this.match(30);
+  x = this.match(29);
   xs = this.module_params_rest();
   return [x] + xs;
 }
@@ -173,7 +173,7 @@ instance_method module_params_rest: fun() {
   var xs = null;
   if(this.lookahead_any([42])) {
     this.match(42);
-    x = this.match(30);
+    x = this.match(29);
     xs = this.module_params_rest();
     return [x] + xs;
     return null;
@@ -187,8 +187,8 @@ instance_method module_defaults: fun() {
   var name = null;
   var p = null;
   var xs = null;
-  if(this.lookahead_any([30])) {
-    name = this.match(30);
+  if(this.lookahead_any([29])) {
+    name = this.match(29);
     this.match(47);
     p = this.module_path();
     xs = this.module_defaults();
@@ -198,7 +198,7 @@ instance_method module_defaults: fun() {
 
   return [];
 
-  this.unexpected([30]);
+  this.unexpected([29]);
 }
 instance_method module_imports: fun() {
   var x = null;
@@ -218,9 +218,9 @@ instance_method module_import: fun() {
   var name = null;
   var lib = null;
   this.match(5);
-  name = this.match(30);
-  this.match(34);
-  lib = this.match(30);
+  name = this.match(29);
+  this.match(33);
+  lib = this.match(29);
   return [name, lib];
 }
 instance_method code_section: fun() {
@@ -231,7 +231,7 @@ instance_method code_section: fun() {
 instance_method top_level_decls: fun() {
   var x = null;
   var xs = null;
-  if(this.lookahead_any([11, 2, 32])) {
+  if(this.lookahead_any([10, 2, 31])) {
     x = this.top_level_decl();
     xs = this.top_level_decls();
     return [x] + xs;
@@ -240,12 +240,11 @@ instance_method top_level_decls: fun() {
 
   return [];
 
-  this.unexpected([11, 2, 32]);
+  this.unexpected([10, 2, 31]);
 }
 instance_method top_level_decl: fun() {
   var x = null;
-  var y = null;
-  if(this.lookahead_any([11])) {
+  if(this.lookahead_any([10])) {
     x = this.obj_decl();
     return x;
     return null;
@@ -257,17 +256,23 @@ instance_method top_level_decl: fun() {
     return null;
   }
 
-  if(this.lookahead_any([32])) {
-    x = this.match(32);
-    this.match(44);
-    y = this.top_level_function(x);
-    return y;
+  if(this.lookahead_any([31])) {
+    x = this.top_level_function();
+    return x;
     return null;
   }
 
-  this.unexpected([11, 2, 32]);
+  this.unexpected([10, 2, 31]);
 }
-instance_method top_level_function: fun(name) {
+instance_method top_level_function: fun() {
+  var x = null;
+  var y = null;
+  x = this.match(31);
+  this.match(44);
+  y = this.top_level_fun_rest(x);
+  return y;
+}
+instance_method top_level_fun_rest: fun(name) {
   var x = null;
   if(this.lookahead_any([0])) {
     x = this.top_level_fun(name);
@@ -275,46 +280,92 @@ instance_method top_level_function: fun(name) {
     return null;
   }
 
-  if(this.lookahead_any([37, 36, 12, 13, 40, 14, 15, 16, 17, 59, 64, 38])) {
+  if(this.lookahead_any([37, 36, 11, 12, 40, 13, 14, 15, 16, 59, 64, 38])) {
     x = this.top_level_fn(name);
     return x;
     return null;
   }
 
-  this.unexpected([0, 37, 36, 12, 13, 40, 14, 15, 16, 17, 59, 64, 38]);
+  this.unexpected([0, 37, 36, 11, 12, 40, 13, 14, 15, 16, 59, 64, 38]);
 }
 instance_method obj_decl: fun() {
   var name = null;
   var s = null;
   var f = null;
-  this.match(11);
-  name = this.match(30);
+  this.match(10);
+  name = this.match(29);
   s = this.object_slots();
   f = this.obj_fun();
   this.match(6);
   return [:object, name, s, f];
 }
 instance_method obj_fun: fun() {
-  if(this.lookahead_any([35])) {
-    this.match(35);
-
+  var f = null;
+  if(this.lookahead_any([34])) {
+    this.match(34);
+    this.match(38);
+    f = this.obj_fun_block();
+    this.match(39);
+    return f;
     return null;
   }
 
   return [];
 
-  this.unexpected([35]);
+  this.unexpected([34]);
+}
+instance_method obj_fun_block: fun() {
+  var x = null;
+  var xs = null;
+  if(this.lookahead_any([7])) {
+    x = this.constructor();
+    xs = this.obj_fun_block_more();
+    return [x] + xs;
+    return null;
+  }
+
+  if(this.lookahead_any([31])) {
+    x = this.top_level_function();
+    xs = this.obj_fun_block_more();
+    return [x] + xs;
+    return null;
+  }
+
+  this.unexpected([7, 31]);
+}
+instance_method obj_fun_block_more: fun() {
+  var xs = null;
+  if(this.lookahead_any([7, 31])) {
+    xs = this.obj_fun_block();
+    return xs;
+    return null;
+  }
+
+  return [];
+
+  this.unexpected([7, 31]);
 }
 instance_method object_slots: fun() {
   var x = null;
   var xs = null;
-  x = this.object_slot();
-  xs = this.object_slots_more();
-  return [x] + xs;
+  if(this.lookahead_any([34])) {
+    
+    return [];
+    return null;
+  }
+
+  if(this.lookahead_any([29])) {
+    x = this.object_slot();
+    xs = this.object_slots_more();
+    return [x] + xs;
+    return null;
+  }
+
+  this.unexpected([34, 29]);
 }
 instance_method object_slots_more: fun() {
   var x = null;
-  if(this.lookahead_any([30])) {
+  if(this.lookahead_any([34, 29])) {
     x = this.object_slots();
     return x;
     return null;
@@ -322,12 +373,12 @@ instance_method object_slots_more: fun() {
 
   return [];
 
-  this.unexpected([30]);
+  this.unexpected([34, 29]);
 }
 instance_method object_slot: fun() {
   var name = null;
   var value = null;
-  name = this.match(30);
+  name = this.match(29);
   this.match(44);
   value = this.obj_slot_value();
   this.match(45);
@@ -335,19 +386,19 @@ instance_method object_slot: fun() {
 }
 instance_method obj_slot_value: fun() {
   var x = null;
-  if(this.lookahead_any([37, 36, 12, 13, 40, 14, 15, 16, 17, 59, 64, 38, 0])) {
+  if(this.lookahead_any([37, 36, 11, 12, 40, 13, 14, 15, 16, 59, 64, 38, 0])) {
     x = this.literal();
     return x;
     return null;
   }
 
-  if(this.lookahead_any([30])) {
-    x = this.match(30);
+  if(this.lookahead_any([29])) {
+    x = this.match(29);
     return x;
     return null;
   }
 
-  this.unexpected([37, 36, 12, 13, 40, 14, 15, 16, 17, 59, 64, 38, 0, 30]);
+  this.unexpected([37, 36, 11, 12, 40, 13, 14, 15, 16, 59, 64, 38, 0, 29]);
 }
 instance_method class_decl: fun() {
   var name = null;
@@ -357,7 +408,7 @@ instance_method class_decl: fun() {
   var im = null;
   var cm = null;
   this.match(2);
-  name = this.match(30);
+  name = this.match(29);
   parent = this.super_class();
   f = this.fields_();
   c = this.constructors();
@@ -370,7 +421,7 @@ instance_method super_class: fun() {
   var x = null;
   if(this.lookahead_any([51])) {
     this.match(51);
-    x = this.match(30);
+    x = this.match(29);
     return x;
     return null;
   }
@@ -381,8 +432,8 @@ instance_method super_class: fun() {
 }
 instance_method fields_: fun() {
   var xs = null;
-  if(this.lookahead_any([7])) {
-    this.match(7);
+  if(this.lookahead_any([35])) {
+    this.match(35);
     this.match(44);
     xs = this.idlist();
     this.match(45);
@@ -392,12 +443,12 @@ instance_method fields_: fun() {
 
   return [:fields, []];
 
-  this.unexpected([7]);
+  this.unexpected([35]);
 }
 instance_method idlist: fun() {
   var x = null;
   var xs = null;
-  x = this.match(30);
+  x = this.match(29);
   xs = this.idlist_more();
   return [x] + xs;
 }
@@ -417,7 +468,7 @@ instance_method idlist_more: fun() {
 instance_method constructors: fun() {
   var x = null;
   var xs = null;
-  if(this.lookahead_any([8])) {
+  if(this.lookahead_any([7])) {
     x = this.constructor();
     xs = this.constructors_more();
     return [:ctors, [x] + xs];
@@ -426,12 +477,12 @@ instance_method constructors: fun() {
 
   return [:ctors, []];
 
-  this.unexpected([8]);
+  this.unexpected([7]);
 }
 instance_method constructors_more: fun() {
   var x = null;
   var xs = null;
-  if(this.lookahead_any([8])) {
+  if(this.lookahead_any([7])) {
     x = this.constructor();
     xs = this.constructors_more();
     return [x] + xs;
@@ -440,7 +491,7 @@ instance_method constructors_more: fun() {
 
   return [];
 
-  this.unexpected([8]);
+  this.unexpected([7]);
 }
 instance_method constructor: fun() {
   var name = null;
@@ -448,8 +499,8 @@ instance_method constructor: fun() {
   var p = null;
   var body = null;
   var e = null;
-  this.match(8);
-  name = this.match(32);
+  this.match(7);
+  name = this.match(31);
   this.match(44);
   _pos = this.position_after_spaces();
   this.match(0);
@@ -464,7 +515,7 @@ instance_method constructor: fun() {
 instance_method instance_method_decls: fun() {
   var x = null;
   var xs = null;
-  if(this.lookahead_any([9])) {
+  if(this.lookahead_any([8])) {
     x = this.instance_method_decl();
     xs = this.instance_method_decls();
     return [x] + xs;
@@ -473,7 +524,7 @@ instance_method instance_method_decls: fun() {
 
   return [];
 
-  this.unexpected([9]);
+  this.unexpected([8]);
 }
 instance_method instance_method_decl: fun() {
   var name = null;
@@ -481,8 +532,8 @@ instance_method instance_method_decl: fun() {
   var p = null;
   var body = null;
   var e = null;
-  this.match(9);
-  name = this.match(32);
+  this.match(8);
+  name = this.match(31);
   this.match(44);
   _pos = this.position_after_spaces();
   this.match(0);
@@ -497,7 +548,7 @@ instance_method instance_method_decl: fun() {
 instance_method class_method_decls: fun() {
   var x = null;
   var xs = null;
-  if(this.lookahead_any([10])) {
+  if(this.lookahead_any([9])) {
     x = this.class_method_decl();
     xs = this.class_method_decls();
     return [x] + xs;
@@ -506,7 +557,7 @@ instance_method class_method_decls: fun() {
 
   return [];
 
-  this.unexpected([10]);
+  this.unexpected([9]);
 }
 instance_method class_method_decl: fun() {
   var name = null;
@@ -514,8 +565,8 @@ instance_method class_method_decl: fun() {
   var p = null;
   var body = null;
   var e = null;
-  this.match(10);
-  name = this.match(32);
+  this.match(9);
+  name = this.match(31);
   this.match(44);
   _pos = this.position_after_spaces();
   this.match(0);
@@ -566,8 +617,8 @@ instance_method fparams: fun() {
 instance_method fparam_list: fun() {
   var x = null;
   var xs = null;
-  if(this.lookahead_any([30])) {
-    x = this.match(30);
+  if(this.lookahead_any([29])) {
+    x = this.match(29);
     xs = this.fparam_list_rest();
     return [x] + xs;
     return null;
@@ -575,13 +626,14 @@ instance_method fparam_list: fun() {
 
   if(this.lookahead_any([66])) {
     this.match(66);
-    return [:var-arg];
+    x = this.match(29);
+    return [:var-arg, x];
     return null;
   }
 
   return [];
 
-  this.unexpected([30, 66]);
+  this.unexpected([29, 66]);
 }
 instance_method fparam_list_rest: fun() {
   var x = null;
@@ -605,18 +657,18 @@ instance_method top_fun_body: fun() {
     return null;
   }
 
-  if(this.lookahead_any([19, 22, 23, 25, 26, 67, 1, 68, 69, 72, 73, 29, 60, 37, 36, 12, 13, 40, 14, 15, 16, 17, 59, 64, 38, 0, 41, 30])) {
+  if(this.lookahead_any([18, 21, 22, 24, 25, 67, 1, 68, 69, 72, 73, 28, 60, 37, 36, 11, 12, 40, 13, 14, 15, 16, 59, 64, 38, 0, 41, 29])) {
     s = this.stmts();
     return s;
     return null;
   }
 
-  this.unexpected([51, 19, 22, 23, 25, 26, 67, 1, 68, 69, 72, 73, 29, 60, 37, 36, 12, 13, 40, 14, 15, 16, 17, 59, 64, 38, 0, 41, 30]);
+  this.unexpected([51, 18, 21, 22, 24, 25, 67, 1, 68, 69, 72, 73, 28, 60, 37, 36, 11, 12, 40, 13, 14, 15, 16, 59, 64, 38, 0, 41, 29]);
 }
 instance_method primitive_body: fun() {
   var s = null;
   this.match(51);
-  this.match(18);
+  this.match(17);
   s = this.lit_string();
   this.match(53);
   return [[:primitive, s]];
@@ -624,7 +676,7 @@ instance_method primitive_body: fun() {
 instance_method stmts: fun() {
   var x = null;
   var xs = null;
-  if(this.lookahead_any([19, 22, 23, 25, 26, 67, 1, 68, 69, 72, 73, 29, 60, 37, 36, 12, 13, 40, 14, 15, 16, 17, 59, 64, 38, 0, 41, 30])) {
+  if(this.lookahead_any([18, 21, 22, 24, 25, 67, 1, 68, 69, 72, 73, 28, 60, 37, 36, 11, 12, 40, 13, 14, 15, 16, 59, 64, 38, 0, 41, 29])) {
     x = this.stmt();
     xs = this.stmts();
     return [x] + xs;
@@ -633,52 +685,52 @@ instance_method stmts: fun() {
 
   return [];
 
-  this.unexpected([19, 22, 23, 25, 26, 67, 1, 68, 69, 72, 73, 29, 60, 37, 36, 12, 13, 40, 14, 15, 16, 17, 59, 64, 38, 0, 41, 30]);
+  this.unexpected([18, 21, 22, 24, 25, 67, 1, 68, 69, 72, 73, 28, 60, 37, 36, 11, 12, 40, 13, 14, 15, 16, 59, 64, 38, 0, 41, 29]);
 }
 instance_method stmt: fun() {
   var e = null;
-  if(this.lookahead_any([19, 22, 23, 25])) {
+  if(this.lookahead_any([18, 21, 22, 24])) {
     e = this.control_expr();
     return e;
     return null;
   }
 
-  if(this.lookahead_any([26, 67, 1, 68, 69, 72, 73, 29, 60, 37, 36, 12, 13, 40, 14, 15, 16, 17, 59, 64, 38, 0, 41, 30])) {
+  if(this.lookahead_any([25, 67, 1, 68, 69, 72, 73, 28, 60, 37, 36, 11, 12, 40, 13, 14, 15, 16, 59, 64, 38, 0, 41, 29])) {
     e = this.non_control_expr();
     this.match(45);
     return e;
     return null;
   }
 
-  this.unexpected([19, 22, 23, 25, 26, 67, 1, 68, 69, 72, 73, 29, 60, 37, 36, 12, 13, 40, 14, 15, 16, 17, 59, 64, 38, 0, 41, 30]);
+  this.unexpected([18, 21, 22, 24, 25, 67, 1, 68, 69, 72, 73, 28, 60, 37, 36, 11, 12, 40, 13, 14, 15, 16, 59, 64, 38, 0, 41, 29]);
 }
 instance_method control_expr: fun() {
   var x = null;
-  if(this.lookahead_any([19])) {
+  if(this.lookahead_any([18])) {
     x = this.expr_if();
     return x;
     return null;
   }
 
-  if(this.lookahead_any([22])) {
+  if(this.lookahead_any([21])) {
     x = this.expr_while();
     return x;
     return null;
   }
 
-  if(this.lookahead_any([23])) {
+  if(this.lookahead_any([22])) {
     x = this.expr_try();
     return x;
     return null;
   }
 
-  if(this.lookahead_any([25])) {
+  if(this.lookahead_any([24])) {
     x = this.expr_for();
     return x;
     return null;
   }
 
-  this.unexpected([19, 22, 23, 25]);
+  this.unexpected([18, 21, 22, 24]);
 }
 instance_method expr_if: fun() {
   var _pos = null;
@@ -687,7 +739,7 @@ instance_method expr_if: fun() {
   var elif_ = null;
   var else_ = null;
   _pos = this.position_after_spaces();
-  this.match(19);
+  this.match(18);
   this.match(60);
   e = this.expr();
   this.match(61);
@@ -701,7 +753,7 @@ instance_method expr_if: fun() {
 instance_method expr_elifs: fun() {
   var x = null;
   var xs = null;
-  if(this.lookahead_any([20])) {
+  if(this.lookahead_any([19])) {
     x = this.expr_elif();
     xs = this.expr_elifs();
     return [x] + xs;
@@ -710,14 +762,14 @@ instance_method expr_elifs: fun() {
 
   return [];
 
-  this.unexpected([20]);
+  this.unexpected([19]);
 }
 instance_method expr_elif: fun() {
   var _pos = null;
   var e = null;
   var body = null;
   _pos = this.position_after_spaces();
-  this.match(20);
+  this.match(19);
   this.match(60);
   e = this.expr();
   this.match(61);
@@ -728,8 +780,8 @@ instance_method expr_elif: fun() {
 }
 instance_method expr_else: fun() {
   var body = null;
-  if(this.lookahead_any([21])) {
-    this.match(21);
+  if(this.lookahead_any([20])) {
+    this.match(20);
     this.match(62);
     body = this.stmts();
     this.match(63);
@@ -739,14 +791,14 @@ instance_method expr_else: fun() {
 
   return null;
 
-  this.unexpected([21]);
+  this.unexpected([20]);
 }
 instance_method expr_while: fun() {
   var _pos = null;
   var e = null;
   var xs = null;
   _pos = this.position_after_spaces();
-  this.match(22);
+  this.match(21);
   this.match(60);
   e = this.expr();
   this.match(61);
@@ -761,7 +813,7 @@ instance_method expr_try: fun() {
   var c = null;
   var s_catch = null;
   _pos = this.position_after_spaces();
-  this.match(23);
+  this.match(22);
   this.match(62);
   s_try = this.stmts();
   this.match(63);
@@ -775,7 +827,7 @@ instance_method catch_part: fun() {
   var _pos = null;
   var x = null;
   _pos = this.position_after_spaces();
-  this.match(24);
+  this.match(23);
   this.match(60);
   x = this.catch_expr(_pos);
   this.match(61);
@@ -784,28 +836,28 @@ instance_method catch_part: fun() {
 instance_method catch_expr: fun(_pos) {
   var a = null;
   var b = null;
-  a = this.match(30);
+  a = this.match(29);
   b = this.catch_expr_rest(a, _pos);
   return b;
 }
 instance_method catch_expr_rest: fun(a, _pos) {
   var b = null;
-  if(this.lookahead_any([30])) {
-    b = this.match(30);
+  if(this.lookahead_any([29])) {
+    b = this.match(29);
     return [:catch, [:id, a], b].at(this, _pos);
     return null;
   }
 
   return [:catch, a].at(this, _pos);
 
-  this.unexpected([30]);
+  this.unexpected([29]);
 }
 instance_method expr_for: fun() {
   var v = null;
   var c = null;
   var n = null;
   var st = null;
-  this.match(25);
+  this.match(24);
   this.match(60);
   v = this.for_init();
   this.match(45);
@@ -826,13 +878,13 @@ instance_method for_init: fun() {
     return null;
   }
 
-  if(this.lookahead_any([68, 69, 72, 73, 29, 60, 37, 36, 12, 13, 40, 14, 15, 16, 17, 59, 64, 38, 0, 41, 30])) {
+  if(this.lookahead_any([68, 69, 72, 73, 28, 60, 37, 36, 11, 12, 40, 13, 14, 15, 16, 59, 64, 38, 0, 41, 29])) {
     x = this.for_expr_assign();
     return x;
     return null;
   }
 
-  this.unexpected([1, 68, 69, 72, 73, 29, 60, 37, 36, 12, 13, 40, 14, 15, 16, 17, 59, 64, 38, 0, 41, 30]);
+  this.unexpected([1, 68, 69, 72, 73, 28, 60, 37, 36, 11, 12, 40, 13, 14, 15, 16, 59, 64, 38, 0, 41, 29]);
 }
 instance_method expr_or_assignment: fun() {
   var _pos = null;
@@ -891,14 +943,14 @@ instance_method expr_decl: fun() {
   var e = null;
   _pos = this.position_after_spaces();
   this.match(1);
-  name = this.match(30);
+  name = this.match(29);
   this.match(47);
   e = this.expr();
   return [:var-def, name, e].at(this, _pos);
 }
 instance_method non_control_expr: fun() {
   var x = null;
-  if(this.lookahead_any([26])) {
+  if(this.lookahead_any([25])) {
     x = this.expr_ret();
     return x;
     return null;
@@ -916,19 +968,19 @@ instance_method non_control_expr: fun() {
     return null;
   }
 
-  if(this.lookahead_any([68, 69, 72, 73, 29, 60, 37, 36, 12, 13, 40, 14, 15, 16, 17, 59, 64, 38, 0, 41, 30])) {
+  if(this.lookahead_any([68, 69, 72, 73, 28, 60, 37, 36, 11, 12, 40, 13, 14, 15, 16, 59, 64, 38, 0, 41, 29])) {
     x = this.expr_or_assignment();
     return x;
     return null;
   }
 
-  this.unexpected([26, 67, 1, 68, 69, 72, 73, 29, 60, 37, 36, 12, 13, 40, 14, 15, 16, 17, 59, 64, 38, 0, 41, 30]);
+  this.unexpected([25, 67, 1, 68, 69, 72, 73, 28, 60, 37, 36, 11, 12, 40, 13, 14, 15, 16, 59, 64, 38, 0, 41, 29]);
 }
 instance_method expr_ret: fun() {
   var _pos = null;
   var e = null;
   _pos = this.position_after_spaces();
-  this.match(26);
+  this.match(25);
   e = this.expr();
   return [:return, e].at(this, _pos);
 }
@@ -957,8 +1009,8 @@ instance_method expr_or: fun() {
 instance_method expr_or_: fun(a, _pos) {
   var b = null;
   var c = null;
-  if(this.lookahead_any([27])) {
-    this.match(27);
+  if(this.lookahead_any([26])) {
+    this.match(26);
     b = this.expr_and();
     c = this.expr_or_([:or, a, b].at(this, _pos), _pos);
     return c;
@@ -967,7 +1019,7 @@ instance_method expr_or_: fun(a, _pos) {
 
   return a;
 
-  this.unexpected([27]);
+  this.unexpected([26]);
 }
 instance_method expr_and: fun() {
   var _pos = null;
@@ -981,8 +1033,8 @@ instance_method expr_and: fun() {
 instance_method expr_and_: fun(a, _pos) {
   var b = null;
   var c = null;
-  if(this.lookahead_any([28])) {
-    this.match(28);
+  if(this.lookahead_any([27])) {
+    this.match(27);
     b = this.expr_eq();
     c = this.expr_and_([:and, a, b].at(this, _pos), _pos);
     return c;
@@ -991,7 +1043,7 @@ instance_method expr_and_: fun(a, _pos) {
 
   return a;
 
-  this.unexpected([28]);
+  this.unexpected([27]);
 }
 instance_method expr_eq: fun() {
   var _pos = null;
@@ -1216,39 +1268,39 @@ _pos = this.position_after_spaces();
     return null;
   }
 
-  if(this.lookahead_any([29, 60, 37, 36, 12, 13, 40, 14, 15, 16, 17, 59, 64, 38, 0, 41, 30])) {
+  if(this.lookahead_any([28, 60, 37, 36, 11, 12, 40, 13, 14, 15, 16, 59, 64, 38, 0, 41, 29])) {
     a = this.super_expr();
     return a;
     return null;
   }
 
-  this.unexpected([68, 69, 72, 73, 29, 60, 37, 36, 12, 13, 40, 14, 15, 16, 17, 59, 64, 38, 0, 41, 30]);
+  this.unexpected([68, 69, 72, 73, 28, 60, 37, 36, 11, 12, 40, 13, 14, 15, 16, 59, 64, 38, 0, 41, 29]);
 }
 instance_method super_expr: fun() {
   var _pos = null;
   var x = null;
 _pos = this.position_after_spaces();
-  if(this.lookahead_any([29])) {
-    this.match(29);
+  if(this.lookahead_any([28])) {
+    this.match(28);
     x = this.super_call_rest(_pos);
     return x;
     return null;
   }
 
-  if(this.lookahead_any([60, 37, 36, 12, 13, 40, 14, 15, 16, 17, 59, 64, 38, 0, 41, 30])) {
+  if(this.lookahead_any([60, 37, 36, 11, 12, 40, 13, 14, 15, 16, 59, 64, 38, 0, 41, 29])) {
     x = this.suffix_expr();
     return x;
     return null;
   }
 
-  this.unexpected([29, 60, 37, 36, 12, 13, 40, 14, 15, 16, 17, 59, 64, 38, 0, 41, 30]);
+  this.unexpected([28, 60, 37, 36, 11, 12, 40, 13, 14, 15, 16, 59, 64, 38, 0, 41, 29]);
 }
 instance_method super_call_rest: fun(_pos) {
   var sel = null;
   var p = null;
   if(this.lookahead_any([74])) {
     this.match(74);
-    sel = this.match(30);
+    sel = this.match(29);
     p = this.args();
     return [:super-ctor-send, sel, [:args, p]].at(this, _pos);
     return null;
@@ -1310,7 +1362,7 @@ instance_method send_expr: fun(r, _pos) {
   var sel = null;
   var p = null;
   this.match(74);
-  sel = this.match(30);
+  sel = this.match(29);
   p = this.maybe_args();
   return [:send, r, sel, [:args, p]].at(this, _pos);
 }
@@ -1351,7 +1403,7 @@ instance_method prim_expr: fun() {
     return null;
   }
 
-  if(this.lookahead_any([37, 36, 12, 13, 40, 14, 15, 16, 17, 59, 64, 38, 0])) {
+  if(this.lookahead_any([37, 36, 11, 12, 40, 13, 14, 15, 16, 59, 64, 38, 0])) {
     x = this.literal();
     return x;
     return null;
@@ -1365,14 +1417,14 @@ _pos = this.position_after_spaces();
   }
 
 _pos = this.position_after_spaces();
-  if(this.lookahead_any([30])) {
-    x = this.match(30);
+  if(this.lookahead_any([29])) {
+    x = this.match(29);
     y = this.maybe_call(x, _pos);
     return y;
     return null;
   }
 
-  this.unexpected([60, 37, 36, 12, 13, 40, 14, 15, 16, 17, 59, 64, 38, 0, 41, 30]);
+  this.unexpected([60, 37, 36, 11, 12, 40, 13, 14, 15, 16, 59, 64, 38, 0, 41, 29]);
 }
 instance_method maybe_call: fun(r, _pos) {
   var p = null;
@@ -1394,7 +1446,7 @@ instance_method field_name: fun() {
 instance_method expr_list: fun() {
   var x = null;
   var xs = null;
-  if(this.lookahead_any([68, 69, 72, 73, 29, 60, 37, 36, 12, 13, 40, 14, 15, 16, 17, 59, 64, 38, 0, 41, 30])) {
+  if(this.lookahead_any([68, 69, 72, 73, 28, 60, 37, 36, 11, 12, 40, 13, 14, 15, 16, 59, 64, 38, 0, 41, 29])) {
     x = this.expr();
     xs = this.expr_list_rest();
     return [x] + xs;
@@ -1403,7 +1455,7 @@ instance_method expr_list: fun() {
 
   return [];
 
-  this.unexpected([68, 69, 72, 73, 29, 60, 37, 36, 12, 13, 40, 14, 15, 16, 17, 59, 64, 38, 0, 41, 30]);
+  this.unexpected([68, 69, 72, 73, 28, 60, 37, 36, 11, 12, 40, 13, 14, 15, 16, 59, 64, 38, 0, 41, 29]);
 }
 instance_method expr_list_rest: fun() {
   var x = null;
@@ -1421,7 +1473,7 @@ instance_method expr_list_rest: fun() {
 instance_method pair_list: fun() {
   var x = null;
   var xs = null;
-  if(this.lookahead_any([68, 69, 72, 73, 29, 60, 37, 36, 12, 13, 40, 14, 15, 16, 17, 59, 64, 38, 0, 41, 30])) {
+  if(this.lookahead_any([68, 69, 72, 73, 28, 60, 37, 36, 11, 12, 40, 13, 14, 15, 16, 59, 64, 38, 0, 41, 29])) {
     x = this.pair();
     xs = this.pair_list_rest();
     return [x] + xs;
@@ -1430,7 +1482,7 @@ instance_method pair_list: fun() {
 
   return [];
 
-  this.unexpected([68, 69, 72, 73, 29, 60, 37, 36, 12, 13, 40, 14, 15, 16, 17, 59, 64, 38, 0, 41, 30]);
+  this.unexpected([68, 69, 72, 73, 28, 60, 37, 36, 11, 12, 40, 13, 14, 15, 16, 59, 64, 38, 0, 41, 29]);
 }
 instance_method pair_list_rest: fun() {
   var x = null;
@@ -1466,15 +1518,15 @@ instance_method data_literal: fun() {
   }
 
 _pos = this.position_after_spaces();
-  if(this.lookahead_any([12])) {
-    this.match(12);
+  if(this.lookahead_any([11])) {
+    this.match(11);
     return [:literal, :module].at(this, _pos);
     return null;
   }
 
 _pos = this.position_after_spaces();
-  if(this.lookahead_any([13])) {
-    this.match(13);
+  if(this.lookahead_any([12])) {
+    this.match(12);
     return [:literal, :context].at(this, _pos);
     return null;
   }
@@ -1487,29 +1539,29 @@ _pos = this.position_after_spaces();
   }
 
 _pos = this.position_after_spaces();
+  if(this.lookahead_any([13])) {
+    this.match(13);
+    return [:literal, :this].at(this, _pos);
+    return null;
+  }
+
+_pos = this.position_after_spaces();
   if(this.lookahead_any([14])) {
     this.match(14);
-    return [:literal, :this].at(this, _pos);
+    return [:literal, :null].at(this, _pos);
     return null;
   }
 
 _pos = this.position_after_spaces();
   if(this.lookahead_any([15])) {
     this.match(15);
-    return [:literal, :null].at(this, _pos);
+    return [:literal, :true].at(this, _pos);
     return null;
   }
 
 _pos = this.position_after_spaces();
   if(this.lookahead_any([16])) {
     this.match(16);
-    return [:literal, :true].at(this, _pos);
-    return null;
-  }
-
-_pos = this.position_after_spaces();
-  if(this.lookahead_any([17])) {
-    this.match(17);
     return [:literal, :false].at(this, _pos);
     return null;
   }
@@ -1538,11 +1590,11 @@ _pos = this.position_after_spaces();
     return null;
   }
 
-  this.unexpected([37, 36, 12, 13, 40, 14, 15, 16, 17, 59, 64, 38]);
+  this.unexpected([37, 36, 11, 12, 40, 13, 14, 15, 16, 59, 64, 38]);
 }
 instance_method literal: fun() {
   var x = null;
-  if(this.lookahead_any([37, 36, 12, 13, 40, 14, 15, 16, 17, 59, 64, 38])) {
+  if(this.lookahead_any([37, 36, 11, 12, 40, 13, 14, 15, 16, 59, 64, 38])) {
     x = this.data_literal();
     return x;
     return null;
@@ -1555,7 +1607,7 @@ instance_method literal: fun() {
     return null;
   }
 
-  this.unexpected([37, 36, 12, 13, 40, 14, 15, 16, 17, 59, 64, 38, 0]);
+  this.unexpected([37, 36, 11, 12, 40, 13, 14, 15, 16, 59, 64, 38, 0]);
 }
 instance_method funliteral: fun() {
   var _pos = null;
@@ -1572,7 +1624,7 @@ instance_method funliteral: fun() {
 }
 instance_method maybe_expr: fun() {
   var x = null;
-  if(this.lookahead_any([68, 69, 72, 73, 29, 60, 37, 36, 12, 13, 40, 14, 15, 16, 17, 59, 64, 38, 0, 41, 30])) {
+  if(this.lookahead_any([68, 69, 72, 73, 28, 60, 37, 36, 11, 12, 40, 13, 14, 15, 16, 59, 64, 38, 0, 41, 29])) {
     x = this.expr();
     return x;
     return null;
@@ -1580,7 +1632,7 @@ instance_method maybe_expr: fun() {
 
   return null;
 
-  this.unexpected([68, 69, 72, 73, 29, 60, 37, 36, 12, 13, 40, 14, 15, 16, 17, 59, 64, 38, 0, 41, 30]);
+  this.unexpected([68, 69, 72, 73, 28, 60, 37, 36, 11, 12, 40, 13, 14, 15, 16, 59, 64, 38, 0, 41, 29]);
 }
 instance_method params: fun() {
   var xs = null;
@@ -1592,8 +1644,8 @@ instance_method params: fun() {
 instance_method idlist_opt: fun() {
   var x = null;
   var xs = null;
-  if(this.lookahead_any([30])) {
-    x = this.match(30);
+  if(this.lookahead_any([29])) {
+    x = this.match(29);
     xs = this.idlist_more();
     return [x] + xs;
     return null;
@@ -1601,14 +1653,14 @@ instance_method idlist_opt: fun() {
 
   return [];
 
-  this.unexpected([30]);
+  this.unexpected([29]);
 }
 instance_method idlist_more_opt: fun() {
   var x = null;
   var xs = null;
   if(this.lookahead_any([42])) {
     this.match(42);
-    x = this.match(30);
+    x = this.match(29);
     xs = this.idlist_more_opt();
     return [x] + xs;
     return null;
@@ -1629,14 +1681,14 @@ instance_method funliteral_body: fun() {
 instance_method funliteral_stmts: fun() {
   var x = null;
   var xs = null;
-  if(this.lookahead_any([19, 22, 23, 25])) {
+  if(this.lookahead_any([18, 21, 22, 24])) {
     x = this.control_expr();
     xs = this.funliteral_stmts();
     return [x] + xs;
     return null;
   }
 
-  if(this.lookahead_any([26, 67, 1, 68, 69, 72, 73, 29, 60, 37, 36, 12, 13, 40, 14, 15, 16, 17, 59, 64, 38, 0, 41, 30])) {
+  if(this.lookahead_any([25, 67, 1, 68, 69, 72, 73, 28, 60, 37, 36, 11, 12, 40, 13, 14, 15, 16, 59, 64, 38, 0, 41, 29])) {
     x = this.non_control_expr();
     xs = this.funliteral_stmt_sep_more();
     return [x] + xs;
@@ -1645,7 +1697,7 @@ instance_method funliteral_stmts: fun() {
 
   return [];
 
-  this.unexpected([19, 22, 23, 25, 26, 67, 1, 68, 69, 72, 73, 29, 60, 37, 36, 12, 13, 40, 14, 15, 16, 17, 59, 64, 38, 0, 41, 30]);
+  this.unexpected([18, 21, 22, 24, 25, 67, 1, 68, 69, 72, 73, 28, 60, 37, 36, 11, 12, 40, 13, 14, 15, 16, 59, 64, 38, 0, 41, 29]);
 }
 instance_method funliteral_stmt_sep_more: fun() {
   var x = null;

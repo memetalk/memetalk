@@ -87,15 +87,11 @@ class_method :klass = !{this.input.head()}:ast
 
 fparams :obj = [:params [fparam(obj)*:x]] => x;
 
-fparam :obj  = [:var-arg _:x !{obj.set_vararg(x)}] => x
-               | _
-               ;
+fparam :obj  = :var-arg _:x !{obj.set_vararg(x)} => x
+             | _
+             ;
 
-params = [:params [param*:x]] => x;
-
-param = [:var-arg _:x] => x
-        | _
-        ;
+params = [:params [_*:x]] => x;
 
 object_definition :modobj = [:object _:name !{modobj.new_object(name)}:obj
                             [obj_slot(obj)+] [obj_function(obj)*]];

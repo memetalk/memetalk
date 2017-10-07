@@ -5,6 +5,7 @@ where
   import OMetaBase from ometa_base
 end
 
+
 class MemeScriptTranslator < OMetaBase
 fields: proc;
 init new: fun(proc, input) {
@@ -280,10 +281,9 @@ instance_method fparam: fun() {
   var x = null;
   var obj = this._apply(:anything);
   return this._or([fun() {
-    this._form(fun() {
-      this._apply_with_args(:exactly, [:var-arg]);
-      x = this._apply(:anything);
-      obj.set_vararg(x);});
+    this._apply_with_args(:exactly, [:var-arg]);
+    x = this._apply(:anything);
+    obj.set_vararg(x);
     return x;
   }, fun() {
     this._apply(:anything);
@@ -295,19 +295,8 @@ instance_method params: fun() {
     this._apply_with_args(:exactly, [:params]);
     this._form(fun() {
       x = this._many(fun() {
-        this._apply(:param);}, null);});});
+        this._apply(:anything);}, null);});});
   return x;
-}
-instance_method param: fun() {
-  var x = null;
-  return this._or([fun() {
-    this._form(fun() {
-      this._apply_with_args(:exactly, [:var-arg]);
-      x = this._apply(:anything);});
-    return x;
-  }, fun() {
-    this._apply(:anything);
-  }]);
 }
 instance_method object_definition: fun() {
   var name = null;

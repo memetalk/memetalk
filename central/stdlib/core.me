@@ -465,7 +465,7 @@ meme central:memescript/compiler
   instance_method from: fun(idx) {
     <primitive "list_from">
   }
-  instance_method range: fun(begin, end) {
+  instance_method range: fun(begin, _end) {
     <primitive "list_range">
   }
   instance_method toString: fun() {
@@ -498,7 +498,7 @@ meme central:memescript/compiler
   instance_method any: fun(fn) {
     <primitive "list_any">
   }
-  instance_method replace: fun(begin, end, lst) {
+  instance_method replace: fun(begin, _end, lst) {
     <primitive "list_replace">
   }
   end
