@@ -9,7 +9,7 @@
 *** TODO Loader written in MemeScript (dump C++ loader)
     * Implement remote loader, caching of .mec files and respecting
       version information.
-*** TODO Improve compilation performance
+*** DONE Improve compilation performance
     * move object_table to be the first section in .mec and compute cells as
       they are appended to vmemory, so it doesn't require a base
       address. Measure the results.
@@ -25,6 +25,7 @@
      execute, and break in the same spot it was before. return
      prematurely from function with a specific value?
 ** Emacs mode [0/3]
+   * [ ] Use ~/.meme.config to find .me files
    * [ ] Fix Indentation
    * [ ] Update indentation & highlight to new preamble syntax
    * [ ] Some kind of inspector, where we can easily inspect and
@@ -60,7 +61,6 @@
   * Fix closure tests that need recompilation, to use memescript compiler.
   * Organize core.me -- move garbage & inessentials out.
   * Fix g++ warnings.
-  * core.me compiled by memescript compiler.
 ** Optimizations
   * Add VM internal bytecodes for all core/prims. Substitute SEND
     operations to the corresponding internal bytecode during execution
