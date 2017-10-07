@@ -1349,7 +1349,7 @@ instance_method create_getter: fun(name, idx, vmem) {
 }
 instance_method emit_dict: fun(vmem) {
   var d = @functions.copy;
-  var idx = 4;
+  var idx = 4;//defs.hpp:OO_MODULE_LEN
 
   @objects.each(fun(_, obj) {
     obj.fill(vmem);

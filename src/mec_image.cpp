@@ -72,11 +72,11 @@ oop MECImage::instantiate_class(oop class_name, oop cclass, oop cclass_dict, std
     super_class = instantiate_class(super_name, _mmobj->mm_dictionary_get(_proc, cclass_dict, _proc->vm()->new_symbol(super_name_str)), cclass_dict, mod_classes, imodule);
   } else if(_mmobj->mm_dictionary_has_key(_proc, cmod_imports_dict, _proc->vm()->new_symbol(super_name_str))) {
     //when loading the imports, have a _import_idx_map<oop[string], int> to indicate where it will be in the imod
-    super_class = _mmobj->mm_module_get_param(
+    super_class = _mmobj->mm_module_get_argument(
       imodule, _import_idx_map[_proc->vm()->new_symbol(super_name_str)]); //_mmobj->mm_dictionary_index_of(cmod_imports_dict, super_name) + num_params
     DBG("Super class is imported name: " << super_class << endl);
   } else  if (_mmobj->mm_list_index_of(_proc, cmod_params_list, super_name) != -1) {
-    super_class = _mmobj->mm_module_get_param(
+    super_class = _mmobj->mm_module_get_argument(
       imodule, _mmobj->mm_list_index_of(_proc, cmod_params_list, super_name));
     DBG("Super class is module parameter: " << super_class << endl);
   }
@@ -116,7 +116,7 @@ void MECImage::assign_module_arguments(oop imodule, oop mod_arguments_list) {
   for (int i = 0; i < _mmobj->mm_list_size(_proc, mod_arguments_list); i++) {
     oop entry = _mmobj->mm_list_entry(_proc, mod_arguments_list, i);
     DBG(i << " " << entry << endl);
-    _mmobj->mm_module_set_module_argument(imodule, entry,i);
+    _mmobj->mm_module_set_argument(imodule, entry,i);
   }
 }
 
@@ -144,7 +144,7 @@ void MECImage::load_default_dependencies_and_assign_module_arguments(oop imodule
       DBG("raising Import error on " << _mmobj->mm_symbol_cstr(_proc, lhs_name) << endl);
       _proc->raise("ImportError", "Could not bind unknown module parameter to default value");
     }
-    _mmobj->mm_module_set_module_argument(imodule, imd, midx);
+    _mmobj->mm_module_set_argument(imodule, imd, midx);
   }
 }
 
@@ -160,7 +160,7 @@ void MECImage::load_imports(oop imodule, oop imports_dict, number num_params) {
     oop import_name = it->first; //_mmobj->mm_dictionary_entry_key(imports_dict, i);
     oop module_param_name = it->second; //_mmobj->mm_dictionary_entry_value(imports_dict, i);
     number param_index = _mmobj->mm_list_index_of(_proc, cmod_params_list, module_param_name);
-    oop module_param_object = _mmobj->mm_module_get_param(imodule, param_index);
+    oop module_param_object = _mmobj->mm_module_get_argument(imodule, param_index);
 
     DBG("import name " << _mmobj->mm_symbol_cstr(_proc, import_name)
             << " module_param: " << _mmobj->mm_string_cstr(_proc, module_param_name)
@@ -173,7 +173,7 @@ void MECImage::load_imports(oop imodule, oop imports_dict, number num_params) {
     }
 
     DBG("entry: " << entry << " in imod idx: " << i + num_params << endl);
-    _mmobj->mm_module_set_module_argument(imodule, entry, i + num_params);
+    _mmobj->mm_module_set_argument(imodule, entry, i + num_params);
     _import_idx_map[import_name] = i + num_params;
   }
 }
@@ -191,7 +191,7 @@ void MECImage::create_import_getters(oop imodule, oop imod_dict,
     DBG("Creating getter for import " << str << " " << i << endl);
     oop getter = _mmobj->mm_new_slot_getter(_proc, imodule,
                                             _compiled_module, _mmobj->mm_symbol_to_string(_proc, name),
-                                            num_params + 4 + i); //imod: vt, delegate, dict, cmod
+                                            num_params + OO_MODULE_LEN + i); //imod: vt, delegate, dict, cmod
     _mmobj->mm_dictionary_set(_proc, imod_dict, _proc->vm()->new_symbol(str), getter);
     DBG("import dict has " << _mmobj->mm_dictionary_size(_proc, imod_dict) << endl);
   }
@@ -204,7 +204,7 @@ void MECImage::create_param_getters(oop imodule, oop imod_dict, oop params_list)
     oop name = _mmobj->mm_list_entry(_proc, params_list, i);
     char* str = _mmobj->mm_string_cstr(_proc, name);
     DBG("Creating getter for param " << str << " " << i << endl);
-    oop getter = _mmobj->mm_new_slot_getter(_proc, imodule, _compiled_module, name, i + 4); //imod: vt, delegate, dict, cmod
+    oop getter = _mmobj->mm_new_slot_getter(_proc, imodule, _compiled_module, name, i + OO_MODULE_LEN); //imod: vt, delegate, dict, cmod
     _mmobj->mm_dictionary_set(_proc, imod_dict, _proc->vm()->new_symbol(str), getter);
   }
 }
@@ -307,7 +307,7 @@ oop MECImage::instantiate_module(oop module_arguments_list) {
 
   std::map<std::string, oop> mod_classes; //store each Class created here, so we do parent look up more easily
 
-  int imod_idx = num_params + num_imports + 4; //imod: vt, delegate, dict, cmod
+  int imod_idx = num_params + num_imports + OO_MODULE_LEN; //imod: vt, delegate, dict, cmod
 
   it = _mmobj->mm_dictionary_begin(_proc, cclass_dict);
   end = _mmobj->mm_dictionary_end(_proc, cclass_dict);

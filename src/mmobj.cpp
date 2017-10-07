@@ -478,21 +478,22 @@ oop MMObj::mm_module_dictionary(oop imodule) {
   return ((oop*) imodule)[2];
 }
 
-void MMObj::mm_module_set_module_argument(oop imodule, oop arg, number idx) {
-  ((oop*)imodule)[idx+4] = arg; //4: vt, delegate, dict, cmod
-}
-
-oop MMObj::mm_module_get_param(oop imodule, number idx) {
-  return ((oop*)imodule)[idx+4]; //4: vt, delegate, dict, cmod
-}
-
-oop MMObj::mm_module_entry(oop imodule, number idx) {
-  return ((oop*)imodule)[idx+4]; //4: vt, delegate, dict, cmod
-}
-
 oop MMObj::mm_module_get_cmod(oop imodule) {
   return ((oop*)imodule)[3]; //3: vt, delegate, dict, cmod
 }
+
+void MMObj::mm_module_set_argument(oop imodule, oop arg, number idx) {
+  ((oop*)imodule)[idx+OO_MODULE_LEN] = arg; //4: vt, delegate, dict, cmod
+}
+
+oop MMObj::mm_module_get_argument(oop imodule, number idx) {
+  return ((oop*)imodule)[idx+OO_MODULE_LEN]; //4: vt, delegate, dict, cmod
+}
+
+// oop MMObj::mm_module_entry(oop imodule, number idx) {
+//   return ((oop*)imodule)[idx+4]; //4: vt, delegate, dict, cmod
+// }
+
 
 
 oop MMObj::mm_string_new(const char* str) {

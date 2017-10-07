@@ -119,11 +119,11 @@ public:
   oop_map::iterator mm_dictionary_end(Process*, oop, bool should_assert = false);
 
   void mm_module_set_dictionary(Process*, oop imodule, oop imod_dict, bool should_assert = false);
-  void mm_module_set_module_argument(oop imodule, oop arg, number idx);
-  oop mm_module_entry(oop imodule, number idx);
+  void mm_module_set_argument(oop imodule, oop arg, number idx);
+  oop mm_module_get_argument(oop imodule, number idx);
+  // oop mm_module_entry(oop imodule, number idx);
   oop mm_module_dictionary(oop imodule);
   oop mm_module_get_cmod(oop imodule);
-  oop mm_module_get_param(oop imodule, number idx);
 
   inline bool mm_is_string(oop obj) {
     if (is_small_int(obj) ||

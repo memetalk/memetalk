@@ -1,4 +1,5 @@
 from . import bits
+from . import defs
 from . import opcode
 from . import (OrderedDict,
                FRAME_TYPE_OBJECT,
@@ -1236,7 +1237,7 @@ class CoreModule(Entry):
     def emit_dict(self, vmem):
         d = dict(self.functions.items())
 
-        idx = 4 # start after vt, delegate, dict, compiled_module
+        idx = defs.OO_MODULE_LEN # start after vt, delegate, dict, compiled_module, core_img ptr
 
         for obj in self.objects:
             obj.fill(vmem)
@@ -1257,7 +1258,7 @@ class CoreModule(Entry):
         # class_oops = [c.fill(vmem) for c in self.classes]
 
         vmem.append_int(FRAME_TYPE_OBJECT)
-        vmem.append_int((4 + len(self.objects) + len(self.classes)) * bits.WSIZE)
+        vmem.append_int((defs.OO_MODULE_LEN + len(self.objects) + len(self.classes)) * bits.WSIZE)
 
         oop = vmem.append_label_ref(self.label(), self.label()) # vt
         vmem.append_null()                                      # delegate
