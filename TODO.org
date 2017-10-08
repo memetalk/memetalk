@@ -32,18 +32,55 @@
      introspect on values.
    * [ ] A way to visualize the current stack trace.
    * [ ] Enable inspecting field variables.
+   * [ ] Indentation: "{" after ";"
+   * [ ] Highlight: Multi-line Comments
+   * [ ] Highlight: logical operators: and & or
 ** Ecosystem
    * SDE: revamp the Qt based thing? Might depend on first solidify
      package / module import w/ vesion.  (which depends on the loader
      be written in Memescript)
-** Library
+** Core Library
   * Thoughtful implementation of Integers, Floats, Bignums, Strings,
     Dicts (with hashed keys), ....
   * Thoughtful design of mirroring / reflection api.
-  * "Standard Library": IO, socket, http, signals, threads, etc. might
-    depend on packaging / module w/ versioning being properly
-    implemented.
-** Other Miscelaneous
+** Standard Library
+*** Memetalk Bindgen [25/30]
+    * [X] Parse C function signatures
+    * [X] Build objects to store functions and its parameters
+    * [X] Generate C primitives of parsed info
+    * [X] Support pointers, =signedness= & =consts= in parameter types
+    * [X] Support pointers, =signedness= & =consts= in return type
+    * [X] Parse include definitions
+    * [X] Parse =struct= definitions
+    * [X] =Nullable= types
+    * [X] PR: function(void) signature
+    * [X] TR: function(void) signature
+    * [X] PR: void return type
+    * [X] TR: void return type
+    * [X] PR: void argument type
+    * [X] TR: void argument type
+    * [X] PR: unknown argument type
+    * [X] TR: unknown argument type
+    * [X] PR: unknown return type
+    * [X] TR: unknown return type
+    * [X] PR: Unnamed parameters
+    * [ ] TR: Unnamed parameters
+    * [X] PR: Variadic function arguments
+    * [ ] TR: Variadic function arguments
+    * [X] Numeric types
+    * [X] Create MemeTalk instance from parsed =structs=
+    * [ ] Access fields of a wrapped =struct= in MemeTalk
+    * [X] Create register() function
+    * [X] PR: Support =typedefs=
+    * [X] TR: Support =typedefs=
+    * [ ] PR: Function types
+    * [ ] TR: Function types
+*** IO
+*** threads
+*** signals
+*** Socket
+*** http
+** Miscelaneous
   * Decide on case style: camel/underline / for what. It's a mess.
   * Fix aliasing of module functions: "[print] <= module"; won;t work.
   * Review imod layout: self referencing vt sounds too fragile?
