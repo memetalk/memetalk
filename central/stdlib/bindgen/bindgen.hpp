@@ -31,24 +31,14 @@ static void set_instance(MMObj* mmobj, oop memeobj, void* obj) {
   set_field(bottom, obj);
 }
 
-static oop meme_instance(Process* proc,
-                         std::map<void*, oop>& mapping,
-                         const char *name,
-                         void* obj,
-                         int* exc) {
-  *exc = 0;
-  if (mapping.find(obj) == mapping.end()) {
-    oop imod = proc->mp();
-    oop klass =
-      proc->send_0(imod, proc->vm()->new_symbol(name), exc);
-    if (*exc != 0) {
-      return klass;
-    }
-    oop instance = proc->mmobj()->alloc_instance(proc, klass);
-    set_instance(proc->mmobj(), instance, obj);
-    mapping[obj] = instance;
-    return instance;
-  } else {
-    return mapping[obj];
-  }
+static oop get_meme_class(Process* proc, const char *name) {
+  int exc = 0;
+  return proc->send_0(proc->mp(), proc->vm()->new_symbol(name), &exc);
+}
+
+static oop meme_instance(Process* proc, const char *name, void* obj) {
+  oop klass = get_meme_class(proc, name);
+  oop instance = proc->mmobj()->alloc_instance(proc, klass);
+  set_instance(proc->mmobj(), instance, obj);
+  return instance;
 }

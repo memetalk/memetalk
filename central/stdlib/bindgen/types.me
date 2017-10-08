@@ -67,7 +67,7 @@ c_unwrap_long: fun(varn) {
 c_unwrap_string: fun(varn) {
   return "proc->mmobj()->mm_string_cstr(proc, " + varn + ")";
 }
-c_unwrap_object: fun(type, varn) {
+c_unwrap_struct: fun(type, varn) {
   return "(" + type + ") ((oop *) " + varn + ")[2]";
 }
 cc_unwrap_type: fun(prime, type, varn) {
@@ -75,7 +75,7 @@ cc_unwrap_type: fun(prime, type, varn) {
     "Integer": fun(_, x) { c_unwrap_int(x) },
     "LongNum": fun(_, x) { c_unwrap_long(x) },
     "String": fun(_, x) { c_unwrap_string(x) },
-    "Object": fun(t, x) { c_unwrap_object(t, x) }
+    "_Struct": fun(t, x) { c_unwrap_struct(t, x) }
   }[prime];
   if (!f) {
     Exception.throw("Unknown type `" + type + "'");
@@ -92,7 +92,7 @@ cc_find_primes: fun(param) {
     "int": ["Integer"],
     "long": ["LongNum", "Integer"],
     "char": ["String"],
-    "struct": ["Object"]
+    "struct": ["_Struct"]
   }[typeName];
   if (!primes) {
     Exception.throw("Unknown type `" + typeName + "'");
@@ -110,14 +110,14 @@ cc_wrap_type: fun(param, ogparam) {
     "int": "tag_small_int(output)",
     "long": "proc->mmobj()->mm_longnum_new(proc, output)",
     "char": "proc->mmobj()->mm_string_new(output)",
-    "struct": "meme_instance(proc, meme_mapping, \"" + className + "\", output, &exc)"
+    "struct": "meme_instance(proc, \"" + className + "\", output)"
   }[typeName];
   if (!wrap) {
     Exception.throw("Unknown type `" + typeName + "'");
   }
   return wrap;
 }
-cc_cast: fun(type, exp) {
+c_cast: fun(type, exp) {
   return "(" + type + ") " + exp;
 }
 
@@ -267,7 +267,6 @@ class Fun
       }
 
       return [
-        c_stm(2, c_declare("int", c_assign("exc", "0"))),
         c_stm(2, c_declare(rtype.genType(), c_assign("output", [this.getName(), params].join(" ")))),
         c_stm(2, c_declare("oop", c_assign("oop_output", cc_wrap_type(resolvedType, rtype)))),
         c_comment(2, "Push output to the stack"),
@@ -286,12 +285,26 @@ class Fun
 
     var r = [];
     r.append(c_stm(2, c_declare(param.genType(), prim_arg)));
-    r.append(primes.map(fun(p) {
-      c_if(2,
-           c_eq(c_obj_vt(oop_arg), c_vm_prime(p)),
-           c_stm(2, c_assign(
-             prim_arg, cc_cast(param.genType(), cc_unwrap_type(p, param.genType(), oop_arg)))))
-    }).join("  else"));
+    if (primes == ["_Struct"]) {
+      var typeName = param.getTypeName();
+      var struct_arg = "class_" + typeName;
+      r.append(c_stm(2, c_declare("oop", c_assign(struct_arg, "get_meme_class(proc, \"" + typeName + "\")"))));
+      r.append(c_if(2, c_eq(c_obj_vt(oop_arg), struct_arg),
+                    c_stm(2, c_assign(
+                            prim_arg,
+                            cc_unwrap_type("_Struct", param.genType(), oop_arg)))));
+    } else {
+      r.append(primes.map(fun(p) {
+        c_if(2,
+             c_eq(c_obj_vt(oop_arg), c_vm_prime(p)),
+             c_stm(2, c_assign(prim_arg,
+                               c_cast(param.genType(),
+                                       cc_unwrap_type(p,
+                                                      param.genType(),
+                                                      oop_arg)))))
+      }).join("  else"));
+    }
+
     if (param.getIsNullable) {
       r.append(c_elseif(2, c_eq(oop_arg, "MM_NULL"),
                         c_stm(2, c_assign(prim_arg, "NULL"))));

@@ -153,7 +153,6 @@ testGenFunCallInt: fun() {
   // Then the output code shouldn't assign the output of the function
   // called to any variable
   var expected = [
-    types.c_stm(2, types.c_declare("int", types.c_assign("exc", "0"))),
     types.c_stm(2, types.c_declare("int", types.c_assign("output", "foo ()"))),
     types.c_stm(2, types.c_declare("oop", types.c_assign("oop_output", "tag_small_int(output)"))),
     types.c_comment(2, "Push output to the stack"),
