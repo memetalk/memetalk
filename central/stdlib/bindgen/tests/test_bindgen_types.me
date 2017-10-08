@@ -82,7 +82,7 @@ testGenReadParam: fun() {
     types.c_stm(2, types.c_declare("char *", "prim_arg0")),
     types.c_if(2,
                types.c_eq(types.c_obj_vt("oop_arg0"), types.c_vm_prime("String")),
-               types.c_stm(2, types.c_assign("prim_arg0", types.c_unwrap_string("oop_arg0")))),
+               types.c_stm(2, types.c_assign("prim_arg0", types.c_cast("char *", types.c_unwrap_string("oop_arg0"))))),
     types.c_elseif(2,
                    types.c_eq("oop_arg0", "MM_NULL"),
                    types.c_stm(2, types.c_assign("prim_arg0", "NULL"))),
@@ -115,7 +115,7 @@ testGenChkArgTypedef: fun() {
   var expected = [
     types.c_stm(2, types.c_declare("foo", "prim_arg0")),
     types.c_if(2, types.c_eq(types.c_obj_vt("oop_arg0"), types.c_vm_prime("String")),
-               types.c_stm(2, types.c_assign("prim_arg0", types.c_unwrap_string("oop_arg0")))),
+               types.c_stm(2, types.c_assign("prim_arg0", types.c_cast("foo", types.c_unwrap_string("oop_arg0"))))),
     types.c_else(2, types.c_stm(2, types.c_type_error("Argument `arg0' expected String")))
   ].join("\n");
   test.assertEqual(output, expected, "genReadParam#3");

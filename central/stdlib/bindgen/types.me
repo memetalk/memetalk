@@ -108,6 +108,7 @@ cc_wrap_type: fun(param, ogparam) {
   var wrap = {
     "": "tag_small_int(output)", // e.g.: `unsigned foo`
     "int": "tag_small_int(output)",
+    "long": "proc->mmobj()->mm_longnum_new(proc, output)",
     "char": "proc->mmobj()->mm_string_new(output)",
     "struct": "meme_instance(proc, meme_mapping, \"" + className + "\", output, &exc)"
   }[typeName];
@@ -115,6 +116,9 @@ cc_wrap_type: fun(param, ogparam) {
     Exception.throw("Unknown type `" + typeName + "'");
   }
   return wrap;
+}
+cc_cast: fun(type, exp) {
+  return "(" + type + ") " + exp;
 }
 
 class Param
@@ -286,7 +290,7 @@ class Fun
       c_if(2,
            c_eq(c_obj_vt(oop_arg), c_vm_prime(p)),
            c_stm(2, c_assign(
-             prim_arg, cc_unwrap_type(p, param.genType(), oop_arg))))
+             prim_arg, cc_cast(param.genType(), cc_unwrap_type(p, param.genType(), oop_arg)))))
     }).join("  else"));
     if (param.getIsNullable) {
       r.append(c_elseif(2, c_eq(oop_arg, "MM_NULL"),
