@@ -42,10 +42,10 @@
 
 (defconst memetalk-keywords
   (regexp-opt
-   '("license" "endlicense" "preamble" "code" "endcode" "class" "object"
-     "fields" "init" "fun" "super" "instance_method" "class_method"
-     "if" "elif" "else" "try" "end" "catch" "var" "primitive"
-     "return" "while") 'words))
+   '("class" "object" "fields" "init" "fun" "super"
+     "instance_method" "class_method" "if" "elif" "else" "try" "end" "catch"
+     "var" "primitive" "return" "while" "for"
+     "meme" "requires" "where") 'words))
 
 (defconst memetalk-constants
   (regexp-opt '("true" "false" "null") 'words))
@@ -130,9 +130,10 @@
               (exp ("(" exp ")")
                    (exp "," exp))
 
+              (where ("where" "\n where-sep" insts "end" "\n end-where"))
               (class ("class" exp "\n cls-name-sep" insts "end" "\n end-cls"))
               (object ("object" exp "\n obj-name-sep" insts "end" "\n end-obj"))
-              (first-level (class) (object))
+              (first-level (where) (class) (object))
               (toplevels (".code" first-level ".end"))
 
               ;; Some of the precedence table deals with pre/postfixes, which
@@ -265,6 +266,7 @@
     (`(:before . "{")
      (cond
       ((smie-rule-parent-p "while") (smie-rule-parent))
+      ((smie-rule-parent-p "for") (smie-rule-parent))
       ((smie-rule-parent-p "{") (smie-rule-parent))
       ((smie-rule-parent-p "var") (smie-rule-parent))
       ((smie-rule-parent-p "fun") (smie-rule-parent))
@@ -283,6 +285,7 @@
       ((smie-rule-parent-p "if") (smie-rule-parent memetalk-indent-offset))
       ((smie-rule-parent-p "var") (smie-rule-parent memetalk-indent-offset))
       ((smie-rule-parent-p "while") (smie-rule-parent memetalk-indent-offset))
+      ((smie-rule-parent-p "for") (smie-rule-parent memetalk-indent-offset))
       ((smie-rule-parent-p "fun") (smie-rule-parent memetalk-indent-offset))
       ((smie-rule-parent-p "(")
        (smie-rule-parent (- memetalk-indent-offset)))
@@ -573,7 +576,6 @@
 (defun memetalk-clear-current-buffer ()
   (memetalk-remove-overlays memetalk-current-buffer)
   (setq memetalk-current-buffer nil))
-
 
 (defun memetalk-read-meme-config ()
   (with-temp-buffer
