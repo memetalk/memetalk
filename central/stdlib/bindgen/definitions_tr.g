@@ -4,12 +4,13 @@ requires ometa_base, types
 where
   types      = central:stdlib/bindgen/types
   ometa_base = central:memescript/ometa_base
-import OMetaBase from ometa_base
-import Fun from types
-import Param from types
-import Struct from types
-import Typedef from types
-import Module from types
+  import OMetaBase from ometa_base
+  import Fun from types
+  import Param from types
+  import Struct from types
+  import Typedef from types
+  import Module from types
+end
 
 class SyscallDefinitionsTranslator < OMetaBase
 

@@ -6,10 +6,12 @@ where
   definitions_tr = central:stdlib/bindgen/definitions_tr
   bindgen        = central:stdlib/bindgen/bindgen
   io             = central:stdlib/io
-import Fun from definitions_tr
-import Param from definitions_tr
-import Struct from definitions_tr
-import Module from definitions_tr
+
+  import Fun from definitions_tr
+  import Param from definitions_tr
+  import Struct from definitions_tr
+  import Module from definitions_tr
+end
 
 // Translate strings
 tr: fun(definition, rule1, rule2, arg) {

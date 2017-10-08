@@ -3,6 +3,7 @@ meme central:memescript/compiler
 requires io
 where
   io         = central:stdlib/io
+end
 
 c_comment: fun(i, c) {
   var sp = " ".times(i);
@@ -271,7 +272,6 @@ class Fun
     }
     return "";
   }
-
   instance_method genReadParam: fun(module, param) {
     var arg = param.getName();
     var type = module.resolveType(param);
@@ -353,11 +353,9 @@ class Module
     @funs.append(o);
     return o;
   }
-
   instance_method getIncludes: fun() {
     return @includes;
   }
-
   instance_method resolveType: fun(param) {
     if (param.getIsUnknown()) {
       var aliased = @typedefs[param.getTypeName()];
@@ -367,7 +365,6 @@ class Module
     }
     return param;
   }
-
   instance_method genMainFunction: fun(moduleName) {
     var output = ["void init_primitives_" + moduleName + " (VM *vm) {"];
     @funs.each(fun(_, d) {

@@ -2,9 +2,10 @@ meme central:memescript/compiler
 
 requires io, ometa_base
 where
-  io             = central:stdlib/io
-  ometa_base     = central:memescript/ometa_base
-import OMetaBase from ometa_base
+  io         = central:stdlib/io
+  ometa_base = central:memescript/ometa_base
+  import OMetaBase from ometa_base
+end
 
 class SyscallDefinitionsParser < OMetaBase
 

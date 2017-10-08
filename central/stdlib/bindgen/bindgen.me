@@ -6,8 +6,9 @@ where
   definitions_tr = central:stdlib/bindgen/definitions_tr
   io             = central:stdlib/io
   ometa_base     = central:memescript/ometa_base
-import SyscallDefinitionsParser from definitions_pr
-import SyscallDefinitionsTranslator from definitions_tr
+  import SyscallDefinitionsParser from definitions_pr
+  import SyscallDefinitionsTranslator from definitions_tr
+end
 
 // This program reads a file containing definitions of C functions and
 // generates code with the C calls wrapped with the MemeTalk API to

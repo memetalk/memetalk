@@ -77,6 +77,10 @@ define TEST_RUNNER_CMD
  $(call RUN_VM_CMD,$(MM_DIR)/stdlib/memetest.me $(1))
 endef
 
+define RUN_BINDGEN_CMD
+ $(call RUN_VM_CMD,$(MM_DIR)/stdlib/bindgen/bindgen.me $(1))
+endef
+
 ## Macro RUN_VM_CMD: Outputs the command to run the VM
 ##
 ##   We currently have to run the binary of the Virtual Machine from
