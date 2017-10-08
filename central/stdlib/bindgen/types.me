@@ -92,7 +92,9 @@ cc_find_primes: fun(param) {
     "int": ["Integer"],
     "long": ["LongNum", "Integer"],
     "char": ["String"],
-    "struct": ["_Struct"]
+    // These are resolved by genReadParam()
+    "struct": ["_Struct"],
+    "void": ["_Void"]
   }[typeName];
   if (!primes) {
     Exception.throw("Unknown type `" + typeName + "'");
@@ -293,6 +295,11 @@ class Fun
                     c_stm(2, c_assign(
                             prim_arg,
                             cc_unwrap_type("_Struct", param.genType(), oop_arg)))));
+    } elif (primes == ["_Void"]) {
+      r.append(c_if(2, "1",
+                    c_stm(2, c_assign(prim_arg,
+                                      c_cast("void *",
+                                             "meme_obj_c_void(proc, " + oop_arg + ")")))));
     } else {
       r.append(primes.map(fun(p) {
         c_if(2,

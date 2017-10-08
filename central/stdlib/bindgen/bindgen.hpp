@@ -42,3 +42,23 @@ static oop meme_instance(Process* proc, const char *name, void* obj) {
   set_instance(proc->mmobj(), instance, obj);
   return instance;
 }
+
+static void* meme_obj_c_void(Process* proc, oop o) {
+  void* value;
+
+  if (is_small_int(o)) {
+    volatile uintptr_t iptr = untag_small_int(o);
+    unsigned int *ptr = (unsigned int *)iptr;
+    return ptr;
+  } else if (proc->mmobj()->mm_object_vt(o) == proc->vm()->core()->get_prime("LongNum")) {
+    volatile uintptr_t iptr = proc->mmobj()->mm_longnum_get(proc, o);
+    unsigned long *ptr = (unsigned long *)iptr;
+    return ptr;
+  } else if (proc->mmobj()->mm_object_vt(o) == proc->vm()->core()->get_prime("String")) {
+    return proc->mmobj()->mm_string_cstr(proc, o);
+  } else {
+    proc->raise("TypeError", "Couldn't guess meme type");
+  }
+
+  return value;
+}
