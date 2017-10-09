@@ -1,8 +1,8 @@
 {"repositories":
   {"central": "http://libraries.memetalk.org/"},
  "override_to_local": {
-   "central:memescript": "/home/USER/src/memetalk/central/memescript",
-   "central:stdlib": "/home/USER/src/memetalk/central/stdlib",
-   "central:kaiser": "/home/USER/src/memetalk/central/kaiser",
-   "central:ometa": "/home/USER/src/memetalk/central/ometa"
+   "central:memescript": "/usr/local/lib/memetalk/central/memescript",
+   "central:stdlib": "/usr/local/lib/memetalk/central/stdlib",
+   "central:kaiser": "/usr/local/lib/memetalk/central/kaiser",
+   "central:ometa": "/usr/local/lib/memetalk/central/ometa"
 }}

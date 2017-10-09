@@ -8,12 +8,12 @@ $(call GEN_MEC_RULE)
 CODE := bits.me comp_vmemory.me core_vmemory.me meme.me mec.me opcode.me compiler.me	\
 	entries.me vmemory.me
 BYTECODE := $(patsubst %.me,%.mec,$(CODE))
-DIST_FILES = $(BYTECODE)
+DIST_FILES = $(CODE) $(BYTECODE)
 
 GRAMMARS := meme.g meme_tr.g
 GCODE := $(patsubst %.g,%.me,$(GRAMMARS))
 GBCODE := $(patsubst %.g,%.mec,$(GRAMMARS))
-DIST_FILES += $(GBCODE)
+DIST_FILES += $(GRAMMARS) $(GBCODE)
 
 build: $(BYTECODE) $(GCODE) $(GBCODE)
 clean:; -rm -f $(BYTECODE) $(GBCODE)

@@ -4,9 +4,9 @@ subdirs = py src central
 
 include common.mk
 
-CORE_IMG = $(ROOT_DIR)/core.img
-
 CORE_ME = $(MM_DIR)/stdlib/core.me
+CORE_IMG = $(ROOT_DIR)/core.img
+DIST_FILES = $(CORE_IMG) meme.config.sample install.sh
 
 VERSION = $(shell git describe --tags --always --dirty)
 
@@ -20,7 +20,7 @@ build: core
 dist: build
 	mkdir -p $(DIST_DIR)
 	$(MAKE) -C central dist
-	$(call INSTALL_DIST_FILES,$(CORE_IMG))
+	$(call INSTALL_DIST_FILES,$(DIST_FILES))
 	install -D -t $(DIST_DIR) meme
 	tar zcf $(DIST_DIR_NAME).tar.gz $(DIST_DIR_NAME)
 	rm -r $(DIST_DIR)
