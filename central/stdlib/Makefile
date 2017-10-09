@@ -7,12 +7,8 @@ $(call GEN_MEC_RULE)
 CODE := net.me re2.me io.me remote_repl.me memetest.me
 BYTECODE := $(patsubst %.me,%.mec,$(CODE))
 
-all: build; $(foreach el,$(subdirs),$(MAKE) -C $(el) all)
-
-test: build; $(foreach el,$(subdirs),$(MAKE) -C $(el) test)
-
-clean:; -rm -f $(BYTECODE); $(foreach el,$(subdirs),$(MAKE) -C $(el) clean)
+DIST_FILES = $(CODE) $(BYTECODE) core.me
 
 build: $(BYTECODE)
-
-.PHONY: test
+clean:; -rm -f $(BYTECODE)
+dist: $(DIST_FILES); $(call INSTALL_DIST_FILES,$^)

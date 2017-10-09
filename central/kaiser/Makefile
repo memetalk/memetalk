@@ -8,15 +8,19 @@ $(call GEN_MEC_RULE)
 
 CODE := kaiser_base.me gen_parser.me
 BYTECODE := $(patsubst %.me,%.mec,$(CODE))
+DIST_FILES = $(BYTECODE)
 
 OMETA_GRAMMARS := kaiser.g kaiser_tr.g
 KAISER_GRAMMARS := meme.k
 
 GCODE := $(patsubst %.g,%.me,$(OMETA_GRAMMARS))
 GBCODE := $(patsubst %.g,%.mec,$(OMETA_GRAMMARS))
+DIST_FILES += $(GBCODE)
 
 KCODE := $(patsubst %.k,%.me,$(KAISER_GRAMMARS))
 KBCODE := $(patsubst %.k,%.mec,$(KAISER_GRAMMARS))
+DIST_FILES += $(KBCODE)
 
 build: $(BYTECODE) $(GCODE) $(GBCODE) $(KCODE) $(KBCODE)
 clean:; -rm -f $(BYTECODE) $(GBCODE)
+dist: $(DIST_FILES); $(call INSTALL_DIST_FILES,$^)

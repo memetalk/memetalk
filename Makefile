@@ -8,8 +8,22 @@ CORE_IMG = $(ROOT_DIR)/core.img
 
 CORE_ME = $(MM_DIR)/stdlib/core.me
 
+VERSION = $(shell git describe --tags --always --dirty)
+
+export DIST_DIR_NAME=memetalk-$(VERSION)
+
+export DIST_DIR=$(ROOT_DIR)/$(DIST_DIR_NAME)
+
 build: core
 	$(foreach el,$(subdirs),$(MAKE) -C $(el) all;)
+
+dist: build
+	mkdir -p $(DIST_DIR)
+	$(MAKE) -C central dist
+	$(call INSTALL_DIST_FILES,$(CORE_IMG))
+	install -D -t $(DIST_DIR) meme
+	tar zcf $(DIST_DIR_NAME).tar.gz $(DIST_DIR_NAME)
+	rm -r $(DIST_DIR)
 
 clean:
 	$(MAKE) -C src clean

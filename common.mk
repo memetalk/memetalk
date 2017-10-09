@@ -95,3 +95,8 @@ endef
 define RUN_VM_CMD
  $(VM_CMD) $(1)
 endef
+
+## Macro INSTALL_DIST_FILES: Copy files into package directory
+define INSTALL_DIST_FILES
+ install -D -m 644 -t $(DIST_DIR)/$(subst $(ROOT_DIR),,$(CURDIR)) $(1)
+endef
