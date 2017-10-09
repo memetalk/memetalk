@@ -112,6 +112,11 @@ testParseTypedefDefinitions: fun() {
     bindgen.parseRule("typedef struct st* baz", :typedef),
     [:typedef, "baz", [:pointer, [:struct, "st"], 1]],
     "typedef");
+  // Function pointers
+  test.assertEqual(
+    bindgen.parseRule("typedef int (*foo)(int a)", :typedef),
+    [:typedef, "foo", [:func-pointer, [[[:builtin, "int"], "a"]], [:builtin, "int"]]],
+    "typedef");
 }
 // :params rule
 testParseParamsDefinitions: fun() {

@@ -344,22 +344,43 @@ class Typedef
     @name = name;
     @type = Param.new;
   }
+  instance_method getName: fun() { return @name; }
+  instance_method getType: fun() { return @type; }
+end
+
+class FuncPointer
+  fields: name, rtype, params;
+
+  init new: fun(name) {
+    @name = name;
+    @rtype = Param.new;
+    @params = [];
+  }
   instance_method getName: fun() {
     return @name;
   }
-  instance_method getType: fun() {
-    return @type;
+  instance_method getRType: fun() {
+    return @rtype;
+  }
+  instance_method getParams: fun() {
+    return @params;
+  }
+  instance_method newChild: fun() {
+    var param = Param.new();
+    @params.append(param);
+    return param;
   }
 end
 
 class Module
-  fields: name, includes, structs, typedefs, funs;
+  fields: name, includes, structs, typedefs, funcPointers, funs;
 
   init new: fun(name) {
     @name = name;
     @includes = [];
     @structs = [];
     @typedefs = {};
+    @funcPointers = {};
     @funs = [];
   }
   instance_method appendInclude: fun(include) {
@@ -371,6 +392,10 @@ class Module
   }
   instance_method appendTypedef: fun(o) {
     @typedefs[o.getName()] = o.getType();
+    return o;
+  }
+  instance_method appendFuncPointer: fun(o) {
+    @funcPointers[o.getName()] = o;
     return o;
   }
   instance_method appendFun: fun(o) {

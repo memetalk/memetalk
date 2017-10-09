@@ -29,7 +29,10 @@ include
       => [:include, "\"" + fname.join("") + "\""]
     ;
 
-typedef = ``typedef`` spaces type_only:t spaces id:id => [:typedef, id, t];
+typedef = ``typedef`` spaces rtype:r spaces "(" spaces "*" spaces id:id spaces ")" spaces params:p
+            => [:typedef, id, [:func-pointer, p, r]]
+        | ``typedef`` spaces type_only:t spaces id:id => [:typedef, id, t]
+        ;
 
 struct_def
     = struct:s spaces struct_body:b !{s.append(b)} => s

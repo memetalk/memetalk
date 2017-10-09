@@ -138,6 +138,12 @@ testTypedefDefinitions: fun() {
   var output1 = tr("typedef int foo", :typedef, :typedef, [m]);
   test.assertEqual(output1.getName(), "foo", "typedef.getName");
   test.assertEqual(output1.getType().getTypeName(), "int", "typedef.getType.getTypeName");
+
+  // Function pointer
+  var output2 = tr("typedef int (*foo)(long a)", :typedef, :typedef, [m]);
+  test.assertEqual(output2.getName(), "foo", "FuncPointer.getName");
+  test.assertEqual(output2.getRType().getTypeName(), "int", "FuncPointer.getRType.getTypeName");
+  test.assertEqual(output2.getParams()[0].getTypeName(), "long", "FuncPointer.getParams()[0].getTypeName");
 }
 // All tests rules
 main: fun() {

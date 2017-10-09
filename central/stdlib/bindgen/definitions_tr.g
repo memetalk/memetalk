@@ -9,6 +9,7 @@ where
   import Param from types
   import Struct from types
   import Typedef from types
+  import FuncPointer from types
   import Module from types
 end
 
@@ -26,8 +27,13 @@ definition :m = include(m) | struct_def(m) | func(m) | typedef(m);
 
 include :m = [:include string:name] => m.appendInclude(name);
 
-typedef :m = [:typedef string:n !{Typedef.new(n)}:td !{td.getType()}:t type(t)]
-                => m.appendTypedef(td);
+typedef :m = [:typedef string:n
+              !{FuncPointer.new(n)}:fp
+              [:func-pointer params(fp) !{fp.getRType()}:t type(t)]]
+                => m.appendFuncPointer(fp)
+           | [:typedef string:n !{Typedef.new(n)}:td !{td.getType()}:t type(t)]
+                => m.appendTypedef(td)
+           ;
 
 struct_def :m = [:struct string:n !{Struct.new(n)}:s params(s)] => m.appendStruct(s)
               | [:struct string:n !{Struct.new(n)}:s] => m.appendStruct(s)

@@ -44,7 +44,7 @@
     Dicts (with hashed keys), ....
   * Thoughtful design of mirroring / reflection api.
 ** Standard Library
-*** Memetalk Bindgen [25/30]
+*** Memetalk Bindgen [27/31]
     * [X] Parse C function signatures
     * [X] Build objects to store functions and its parameters
     * [X] Generate C primitives of parsed info
@@ -67,14 +67,15 @@
     * [ ] TR: Unnamed parameters
     * [X] PR: Variadic function arguments
     * [ ] TR: Variadic function arguments
+    * [X] PR: Support =typedefs=
+    * [X] TR: Support =typedefs=
+    * [X] PR: Function types on =typedefs=
+    * [X] TR: Function types on =typedefs=
     * [X] Numeric types
+    * [ ] Function types
     * [X] Create MemeTalk instance from parsed =structs=
     * [ ] Access fields of a wrapped =struct= in MemeTalk
     * [X] Create register() function
-    * [X] PR: Support =typedefs=
-    * [X] TR: Support =typedefs=
-    * [ ] PR: Function types
-    * [ ] TR: Function types
 *** IO
 *** threads
 *** signals
