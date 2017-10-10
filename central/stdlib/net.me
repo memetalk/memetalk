@@ -5,6 +5,9 @@ where
   io = central:stdlib/io
 end
 
+class NetworkError < Exception
+end
+
 // Socket types
 SOCK_STREAM: 1;         // stream (connection) socket
 SOCK_DGRAM: 2;          // datagram (conn.less) socket
@@ -96,6 +99,9 @@ readline: fun(sockfd) {
       buf += c;
     }
   }
+}
+writeline: fun(sockfd, line) {
+  send(sockfd, line + "\r\n", 0);
 }
 send: fun(sockfd, buf, flags) {
   <primitive "net_send">

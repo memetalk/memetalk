@@ -1435,8 +1435,39 @@ static int prim_list_detect(Process* proc) {
       return 0;
     }
   }
-  proc->stack_push(MM_NULL);
-  return 0;
+  proc->raise("Exception", "No value found");
+}
+
+static int prim_list_first_success(Process* proc) {
+    // this.detect(fun(x) {
+    //   try {
+    //     fn(x);
+    //     return true;
+    //   } catch(e) {
+    //     return false;
+    //   }
+    // });
+    oop self =  proc->dp();
+    oop exc_type = proc->get_arg(0);
+    oop fun = proc->get_arg(1);
+
+  number size = proc->mmobj()->mm_list_size(proc, self);
+  for (int i = 0; i < size; i++) {
+    oop next = proc->mmobj()->mm_list_entry(proc, self, i);
+    DBG("detect[" << i << "] = " << next << endl);
+    int exc;
+    oop val = proc->call_1(fun, next, &exc);
+    if (exc != 0 && !proc->mmobj()->delegates_or_is_subclass(proc, proc->mmobj()->mm_object_vt(val), exc_type)) {
+      DBG("raised" << endl);
+      proc->stack_push(val);
+      return PRIM_RAISED;
+    } else if (exc == 0) {
+      proc->stack_push(next);
+      return 0;
+    }
+    proc->clear_exception_state();
+  }
+  proc->raise("Exception", "No value found");
 }
 
 static int prim_list_reduce(Process* proc) {
@@ -3138,7 +3169,7 @@ void init_primitives(VM* vm) {
   vm->register_primitive("list_any", prim_list_any);
   vm->register_primitive("list_replace", prim_list_replace);
   vm->register_primitive("list_extend", prim_list_extend);
-
+  vm->register_primitive("list_first_success", prim_list_first_success);
 
   vm->register_primitive("dictionary_new", prim_dictionary_new);
   vm->register_primitive("dictionary_copy", prim_dictionary_copy);

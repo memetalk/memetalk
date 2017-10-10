@@ -112,6 +112,8 @@ public:
   std::pair<oop,oop> lookup(oop, oop, oop);
 
   void raise(const char*, const char*);
+  oop raise_local(const char* ex_type_name, const char* msg);
+  oop mm_local_exception(const char* ex_type_name, const char* msg);
   oop mm_exception(const char*, const char*);
 
   void maybe_debug_on_raise(oop);

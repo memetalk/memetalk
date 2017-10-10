@@ -516,6 +516,9 @@ meme central:memescript/compiler
   instance_method replace: fun(begin, _end, lst) {
     <primitive "list_replace">
   }
+  instance_method first_success: fun(exc, fn) {
+    <primitive "list_first_success">
+  }
   end
 
   class LongNum

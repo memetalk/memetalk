@@ -1604,6 +1604,27 @@ void Process::raise(const char* ex_type_name, const char* msg) {
   throw mm_exception_rewind(mm_exception(ex_type_name, msg));
 }
 
+oop Process::raise_local(const char* ex_type_name, const char* msg) {
+  WARNING() << ex_type_name << " -- " << msg << endl;
+  //TODO: this is used by mec_image. I think we should just return the
+  // exception and let that class deal with it.
+  throw mm_exception_rewind(mm_local_exception(ex_type_name, msg));
+}
+
+oop Process::mm_local_exception(const char* ex_type_name, const char* msg) {
+  DBG(ex_type_name << " -- " << msg << endl);
+  int exc;
+  oop ex_type = send_0(_mp, _vm->new_symbol(ex_type_name), &exc);
+  assert(exc == 0);
+
+  oop exobj = send_1(ex_type, _vm->new_symbol("new"), _mmobj->mm_string_new(msg), &exc);
+  //if this fails, can't call raise() because it calls mm_exception again
+  //recursively. So let's just bail.
+  assert(exc == 0);
+  DBG("returning ex: " << exobj << endl);
+  return exobj;
+}
+
 oop Process::mm_exception(const char* ex_type_name, const char* msg) {
   DBG(ex_type_name << " -- " << msg << endl);
   oop ex_type = _vm->get_prime(ex_type_name);

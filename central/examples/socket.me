@@ -9,43 +9,26 @@ end
 get_server_socket: fun() {
   var saddrs = net.getaddrinfo(null, "8000", {:ai_family: net.AF_UNSPEC,
                                               :ai_sockettype: net.SOCK_STREAM});
-  var fd = null;
-  saddrs.each(fun(_, x) {
-    fd = net.socket(x.ai_family, x.ai_socktype, x.ai_protocol);
-    if (fd == -1) {
-      io.print("addr could not socket(), skipping: " + x.toString);
-    } elif (net.setsockopt(fd, net.SOL_SOCKET, net.SO_REUSEADDR, net.SO_DEBUG) == -1) {
-      Exception.throw("Error on setsockopt");
-    } else {
-      if (net.bind(fd, x) == 0) {
-        if (net.listen(fd, 1) == -1) {
-          Exception.throw("listen failed");
-        }
-        ^ fd;
-      }
-    }
+  var fd = saddrs.first_success(net.NetworkError, fun(addr) {
+    var fd = net.socket(addr.ai_family, addr.ai_socktype, addr.ai_protocol);
+    net.setsockopt(fd, net.SOL_SOCKET, net.SO_REUSEADDR, net.SO_DEBUG);
+    net.bind(fd, addr);
+    net.listen(fd, 1);
+    ^ fd;
   });
-  Exception.throw("Could not bind socket to any address");
 }
+
 
 get_client_socket: fun() {
   var saddrs = net.getaddrinfo(null, "8000", {:ai_family: net.AF_UNSPEC,
                                               :ai_sockettype: net.SOCK_STREAM});
-  var fd = null;
-  saddrs.each(fun(_, x) {
-    fd = net.socket(x.ai_family, x.ai_socktype, x.ai_protocol);
-    if (fd == -1) {
-      io.print("addr could not socket(), skipping: " + x.toString);
-    } elif (net.setsockopt(fd, net.SOL_SOCKET, net.SO_REUSEADDR, net.SO_DEBUG) == -1) {
-      Exception.throw("Error on setsockopt");
-    } else {
-      if (net.connect(fd, x.ai_addr) == -1) {
-        Exception.throw("Error on connect()");
-      }
-      ^ fd;
-    }
+
+  var fd = saddrs.first_success(net.NetworkError, fun(addr) {
+    var fd = net.socket(addr.ai_family, addr.ai_socktype, addr.ai_protocol);
+    net.setsockopt(fd, net.SOL_SOCKET, net.SO_REUSEADDR, net.SO_DEBUG);
+    net.connect(fd, addr.ai_addr);
+    ^ fd;
   });
-  Exception.throw("Could not bind socket to any address");
 }
 
 server_session_loop: fun(client_fd) {
@@ -53,7 +36,6 @@ server_session_loop: fun(client_fd) {
     var line = net.readline(client_fd);
     io.print("server: read line: " + line.toSource);
     if (line == "exit") {
-      //io.print("got 'exit' from client, returning");
       net.send(client_fd, "bye mate!\r\n", 0);
       net.close(client_fd);
       return null;
@@ -70,7 +52,7 @@ server_main_loop: fun() {
   while (true) {
     io.print("waiting for a client to connect...");
     var cfd = net.accept(fd);
-    io.print("client connected!");
+    io.print("client connected! socket: " + cfd.toString);
     io.print(cfd);
     var client_fd = cfd[0];
     if (client_fd == -1) {
@@ -85,11 +67,9 @@ server_main_loop: fun() {
 client_main_loop: fun() {
   var fd = get_client_socket();
   var i = 0;
-  // io.print("main loop");
   var res = net.send(fd, "hello\r\n", 0);
-  // io.print("sent hello..");
   res = net.readline(fd);
-  // io.print("received from server: " + res);
+  io.print("received from server: " + res);
   net.close(fd);
   return null;
 }

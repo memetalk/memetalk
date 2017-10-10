@@ -35,7 +35,7 @@ static void free_addrinfo(GC_PTR addrinfo_oop, void* _proc) {
   Process* proc = (Process*) _proc;
   // std::cerr << " %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% free_addr_info " << addrinfo_oop << " " << proc << endl;
   struct addrinfo *addr = (struct addrinfo *) ((oop*)addrinfo_oop)[2];
-  free(addr);
+  freeaddrinfo(addr);
 }
 
 static oop addrinfo_new(Process* proc, addrinfo *addr, bool finalize, int *exc) {
@@ -71,9 +71,7 @@ static int prim_net_getaddrinfo(Process* proc) {
   oop output = proc->mmobj()->mm_list_new();
   struct addrinfo *result, *rp;
   if ((s = getaddrinfo(host, service, &hints, &result)) != 0) {
-    //TODO: use a .net exception type
-    oop ex = proc->mm_exception("Exception", gai_strerror(s));
-    proc->stack_push(ex);
+    proc->raise_local("NetworkError", gai_strerror(s));
     return PRIM_RAISED;
   } else {
     int i;
@@ -107,6 +105,10 @@ static int prim_net_socket(Process* proc) {
   TYPE_CHECK_ARG(2, "Integer");
   int protocol = untag_small_int(proc->get_arg(2));
   int ret = socket(domain, type, protocol);
+  if (ret == -1) {
+    proc->raise_local("NetworkError", strerror(errno));
+    return PRIM_RAISED;
+  }
   proc->stack_push(tag_small_int(ret));
   return 0;
 }
@@ -126,6 +128,10 @@ static int prim_net_setsockopt(Process* proc) {
   // that `optval` is an integer, it could accept instancess of the
   // class "LingerOptions".
   int result = setsockopt(sockfd, level, optname, &optval, sizeof(optval));
+  if (result == -1) {
+    proc->raise_local("NetworkError", strerror(errno));
+    return PRIM_RAISED;
+  }
   proc->stack_push(tag_small_int(result));
   return 0;
 }
@@ -137,6 +143,10 @@ static int prim_net_bind(Process* proc) {
   oop addrinfo_oop = proc->get_arg(1);
   struct addrinfo* addrinfo = (struct addrinfo *) ((oop *) addrinfo_oop)[2];
   int result = bind(sockfd, addrinfo->ai_addr, addrinfo->ai_addrlen);
+  if (result == -1) {
+    proc->raise_local("NetworkError", strerror(errno));
+    return PRIM_RAISED;
+  }
   proc->stack_push(tag_small_int(result));
   return 0;
 }
@@ -147,8 +157,13 @@ static int prim_net_listen(Process* proc) {
   TYPE_CHECK_ARG(1, "Integer");
   int backlog = untag_small_int(proc->get_arg(1));
   int result = listen(sockfd, backlog);
-  proc->stack_push(tag_small_int(result));
-  return 0;
+  if (result == -1) {
+    proc->raise_local("NetworkError", strerror(errno));
+    return PRIM_RAISED;
+  } else {
+    proc->stack_push(tag_small_int(result));
+    return 0;
+  }
 }
 
 static int prim_net_accept(Process* proc) {
@@ -159,6 +174,10 @@ static int prim_net_accept(Process* proc) {
   struct sockaddr_storage* addr = (struct sockaddr_storage*) GC_MALLOC(sizeof(struct sockaddr_storage));
   socklen_t addrlen = sizeof(struct sockaddr_storage);
   int fd = accept(sockfd, (struct sockaddr *) addr, &addrlen);
+  if (fd == -1) {
+    proc->raise_local("NetworkError", strerror(errno));
+    return PRIM_RAISED;
+  }
 
   int exc;
   oop sockaddr_oop = sockaddr_new(proc, (struct sockaddr*)addr, addrlen, &exc);
@@ -197,7 +216,13 @@ static int prim_net_addrinfo_ai_protocol(Process* proc) {
 static int prim_net_close(Process* proc) {
   TYPE_CHECK_ARG(0, "Integer");
   int fd = untag_small_int(proc->get_arg(0));
-  proc->stack_push(tag_small_int(close(fd)));
+
+  int ret = close(fd);
+  if (ret == -1) {
+    proc->raise_local("NetworkError", strerror(errno));
+    return PRIM_RAISED;
+  }
+  proc->stack_push(tag_small_int(ret));
   return 0;
 }
 
@@ -222,9 +247,7 @@ static int prim_net_recv(Process* proc) {
   char buf[len+1];
   ssize_t bytes_read = recv(sockfd, &buf, len, flags);
   if (bytes_read == -1) {
-    //TODO: use .net exception type
-    oop ex = proc->mm_exception("Exception", "recv() failed");
-    proc->stack_push(ex);
+    proc->raise_local("NetworkError", strerror(errno));
     return PRIM_RAISED;
   }
   buf[bytes_read] = '\0';
@@ -243,8 +266,11 @@ static int prim_net_send(Process* proc) {
   size_t len = proc->mmobj()->mm_string_size(proc, buf_oop);
   const char *buf = proc->mmobj()->mm_string_cstr(proc, buf_oop);
   ssize_t result = send(sockfd, (const void *) buf, len, flags);
+  if (result == -1) {
+    proc->raise_local("NetworkError", strerror(errno));
+    return PRIM_RAISED;
+  }
   proc->stack_push(tag_small_int(result));
-
   return 0;
 }
 
@@ -258,6 +284,10 @@ static int prim_net_connect(Process* proc) {
   socklen_t len = untag_small_int(((oop*)sockaddr_oop)[3]);
 
   int res = connect(sockfd, addr, len);
+  if (res == -1) {
+    proc->raise_local("NetworkError", strerror(errno));
+    return PRIM_RAISED;
+  }
   proc->stack_push(tag_small_int(res));
   return 0;
 }
