@@ -1,44 +1,52 @@
 meme central:memescript/compiler
-requires qt, io
+requires io, net
 where
-  qt = central:stdlib/qt
   io = central:stdlib/io
+  net = central:stdlib/net
 end
 
-class RemoteDebugger
-fields: process, current_frame_idx, started, server, socket, vars;
-init new: fun(proc) {
-  @current_frame_idx = 0;
-  @vars = {};
-  @process = proc;
-  @started = false;
-  @server = qt.QTcpServer.create_server();
-  @server.connect("newConnection", fun() {
-    @socket = @server.nextPendingConnection;
-    this.client_connected(@socket);
+create_server_socket: fun() {
+  var saddrs = net.getaddrinfo(null, "4200", {:ai_family: net.AF_UNSPEC,
+                                              :ai_sockettype: net.SOCK_STREAM});
+  var fd = saddrs.first_success(net.NetworkError, fun(addr) {
+    var fd = net.socket(addr.ai_family, addr.ai_socktype, addr.ai_protocol);
+    net.setsockopt(fd, net.SOL_SOCKET, net.SO_REUSEADDR, net.SO_DEBUG);
+    net.bind(fd, addr);
+    net.listen(fd, 1);
+    ^ fd;
   });
 }
 
-instance_method client_connected: fun(socket) {
-  io.print("Repl: received connection");
+class RemoteDebugger
+fields: process, started, current_frame_idx, server_fd, client_fd, vars;
+init new: fun(proc) {
+  @started = false;
+  @current_frame_idx = 0;
+  @vars = {};
+  @process = proc;
+  @server_fd = create_server_socket();
+}
+
+instance_method notify_pause_and_wait_cmd: fun(socket, send_top_value) {
   this.send_location(socket, this.get_frame(@current_frame_idx));
-  socket.connect("readyRead", fun() {
-     this.read_message(socket);
-  });
+  if (send_top_value) {
+    this.send_top_value(socket);
+  }
+  this.read_message(socket);
 }
 
 instance_method send_location: fun(socket, frame) {
   var cf = frame.cp().compiledFunction();
   var loc = cf.source_location_for(frame);
   if (loc) {//primitives have loc == null
-    socket.write_line("module: " + cf.path() + "@" + loc.toString);
+    net.writeline(socket, "module: " + cf.path() + "@" + loc.toString);
   }
 }
 
 instance_method send_top_value: fun(socket) {
   var retval = @process.lastReturnedValue;
   io.print("top value: " + retval.toString);
-  socket.write_line("top: " + retval.toString.b64encode);
+  net.writeline(socket, "top: " + retval.toString.b64encode);
 }
 
 instance_method send_locals: fun(socket, frame) {
@@ -49,7 +57,7 @@ instance_method send_locals: fun(socket, frame) {
      locals = locals + varname.toString + " : " + value.toSource + "\n";
   });
   io.print(locals);
-  socket.write_line("locals: " + locals.b64encode);
+  net.writeline(socket, "locals: " + locals.b64encode);
 }
 
 instance_method get_frame: fun(idx) {
@@ -57,16 +65,18 @@ instance_method get_frame: fun(idx) {
 }
 
 instance_method process_paused: fun(is_returning_value) { //this is called from the vm
-  @current_frame_idx = 0;
-  if (@started == false) {
+
+  if (!@started) {
     @started = true;
-    @server.listen(4200);
+    @client_fd = net.accept(@server_fd)[0];
+    this.notify_pause_and_wait_cmd(@client_fd, false);
   } else {
-    this.send_location(@socket, this.get_frame(@current_frame_idx));
-    if (is_returning_value) {
-      this.send_top_value(@socket);
-    }
-    io.print("process paused: nothing");
+    @current_frame_idx = 0;
+    this.notify_pause_and_wait_cmd(@client_fd, true);
+    // this.send_location(@client_fd, this.get_frame(@current_frame_idx));
+    // if (is_returning_value) {
+    //   this.send_top_value(@client_fd);
+    // }
   }
   return :wait;
 }
@@ -98,7 +108,7 @@ instance_method doIt: fun(socket, text) {
     ctx();
   } catch(ex) {
     io.print(ex.message());
-    socket.write_line("* ERR");
+    net.writeline(socket, "* ERR");
   }
 }
 
@@ -107,9 +117,9 @@ instance_method printIt: fun(socket, text) {
     var ctx = Context.withFrame(text, this.get_frame(@current_frame_idx), @process.mp);
     var res = ctx();
     io.print(res.toString);
-    socket.write_line("show: " + res.toString.b64encode);
+    net.writeline(socket, "show: " + res.toString.b64encode);
   } catch(ex) {
-    socket.write_line("* ERR");
+    net.writeline(socket, "* ERR");
   }
 }
 
@@ -120,7 +130,7 @@ instance_method return_value: fun(socket, text) {
     io.print(res.toString);
     return res;
   } catch(ex) {
-    socket.write_line("* ERR");
+    net.writeline(socket, "* ERR");
     return null;
   }
 }
@@ -286,7 +296,7 @@ instance_method dispatch: fun(socket, command) {
     return null;
   }
   io.print("Unknown command " + command);
-  socket.write_line("* ERR");
+  net.writeline(socket, "* ERR");
 }
 
 instance_method recompile: fun(frame, text) {
@@ -313,19 +323,12 @@ instance_method move_back_trace_down: fun() {
 }
 
 instance_method read_message: fun(socket) {
-  var command = socket.read_string();
+  var command = net.readline(socket);
   io.print("received: " + command);
   this.dispatch(socket, command);
 }
 end
 
 debug: fun(proc) {
-  var app = qt.QApplication.new(); //in case target process didn't started it
   return RemoteDebugger.new(proc);
-}
-
-main: fun() {
-  var app = qt.QApplication.new();
-  var repl = RemoteRepl.new(null);
-  return app.exec();
 }

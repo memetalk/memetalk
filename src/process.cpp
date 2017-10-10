@@ -9,7 +9,6 @@
 #include "mec_image.hpp"
 #include "mmobj.hpp"
 #include "utils.hpp"
-#include "ctrl.hpp"
 #include <sstream>
 #include <assert.h>
 
@@ -89,7 +88,6 @@ Process::Process(VM* vm, int debugger_id, bool online)
  _debugger_id(debugger_id),
  _vm(vm),
  _mmobj(vm->mmobj()),
- _control(new ProcessControl()),
  _dbg_handler(NULL, MM_NULL),
  _online(online) {
 
@@ -961,12 +959,9 @@ void Process::tick() {
 
     int exc;
     oop retval;
-    if (_breaking_on_return) {
+    if (has_debugger_attached()) {
       retval = _dbg_handler.first->send_1(_dbg_handler.second,
-                                          _vm->new_symbol("process_paused"), MM_TRUE, &exc);
-    } else {
-      retval = _dbg_handler.first->send_1(_dbg_handler.second,
-                                          _vm->new_symbol("process_paused"), MM_FALSE, &exc);
+                                          _vm->new_symbol("process_paused"), _breaking_on_return ? MM_TRUE : MM_FALSE, &exc);
     }
     _breaking_on_return = false;
     check_and_print_exception(_dbg_handler.first, exc, retval);
@@ -978,16 +973,15 @@ void Process::tick() {
       bail("debugger quit");
     }
 
-    if (has_debugger_attached()) { //maybe debugger dettached itself
-                                   //and already set a specific state
+    // if (has_debugger_attached()) { //maybe debugger dettached itself
+    //                                //and already set a specific state
 
-      if (retval == _vm->new_symbol("wait")) {
-        // DBG("tick:HALT " <<
-        //     << _mmobj->mm_string_cstr(_mmobj->mm_function_get_name(_cp))
-        //     << " next opcode" <<  decode_opcode(*_ip) << endl);
-        _control->pause();
-      }
-    }
+    //   if (retval == _vm->new_symbol("wait")) {
+    //     // DBG("tick:HALT " <<
+    //     //     << _mmobj->mm_string_cstr(_mmobj->mm_function_get_name(_cp))
+    //     //     << " next opcode" <<  decode_opcode(*_ip) << endl);
+    //   }
+    // }
 
 
     DBG("resuming! state == rewind? " << (_state == REWIND_STATE) << endl);
@@ -1008,7 +1002,6 @@ void Process::step_into() {
   }
   // ? _step_bp = *(oop*)_bp; //previous bp
   _state = STEP_INTO_STATE;
-  _control->resume();
 }
 
 void Process::step_over() {
@@ -1023,7 +1016,6 @@ void Process::step_over() {
   _step_bp = *(oop*)_bp; //previous bp
   DBG("step_over will br on: " << _step_bp << " " << std::endl);
   _state = STEP_OVER_STATE;
-  _control->resume();
 }
 
 void Process::step_over_line() {
@@ -1038,7 +1030,6 @@ void Process::step_over_line() {
   _step_bp = *(oop*)_bp; //previous frame
   DBG("ste_over_line will br on FP: " << _step_bp << " " << *((oop*)_bp - 6) << std::endl);
   _state = STEP_OVER_STATE;
-  _control->resume();
 }
 
 void Process::step_out() {
@@ -1046,13 +1037,11 @@ void Process::step_out() {
   _step_bp = *(oop*)_bp; //previous bp
   // DBG("ste_out will br on FP: " << _step_bp << " " << std::endl);
   _state = STEP_OUT_STATE;
-  _control->resume();
 }
 
 void Process::resume() {
   _state = RUN_STATE;
   //clear_exception_state(); make test && "continue" on tests/exception8 segfaults w/ this
-  _control->resume();
 }
 
 void Process::reload_frame() {
@@ -1660,7 +1649,6 @@ void Process::halt_and_debug() {
   //step_over();
     _state = HALT_STATE;
   // _state = STEP_OVER_STATE;
-  // _control->resume();
 }
 
 void Process::maybe_debug_on_raise(oop ex_oop) {
@@ -1774,13 +1762,11 @@ void Process::rewind_to_frame_and_continue(oop bp) {
   DBG("rewind to bp: " << bp << endl);
   _state = REWIND_STATE;
   _unwind_to_bp = bp;
-  _control->resume();
 }
 
 // oop Process::unwind_to_frame(oop frame) {
 //   _state = REWIND_STATE;
 //   _unwind_to_frame = frame;
-//   _control->resume();
 // }
 
 void Process::unwind_with_frame(oop bp) {

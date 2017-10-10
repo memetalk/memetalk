@@ -18,13 +18,6 @@ The Memetalk VM is currently developed in C++ and depends on:
 * Google's [re2 (v. 2017-08-01)](https://github.com/google/re2)
 * [Boehm GC (gc-7.6.0)](http://www.hboehm.info/gc/)
 
-Memetalk also has unfortunate dependencies at the moment, such as:
-
- * Qt 4
- * QScintila2
-
-These should be installed to be able to build the VM.
-
 ### Python
 
 While MemeScript compiler is written in itself, we are currently bootstrapping

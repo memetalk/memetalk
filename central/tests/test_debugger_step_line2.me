@@ -1,9 +1,9 @@
 meme central:memescript/compiler
-requires test, io, qt
+requires test, io
 where
  io = central:stdlib/io
- qt = central:stdlib/qt
 end
+
 
 
 f: fun(x) {
@@ -48,7 +48,6 @@ instance_method step3: fun() {
 end
 
 debug: fun(proc) {
-  var app = qt.QApplication.new(); //in case target process didn't started it
   test.set_debugger_tests(Tester.new(proc), 9);
   return test;
 }
