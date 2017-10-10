@@ -104,6 +104,7 @@ public:
 
   oop send_0(oop recv, oop selector, int* exc);
   oop send_1(oop recv, oop selector, oop arg, int* exc);
+  oop send_2(oop recv, oop selector, oop arg1, oop arg2, int* exc);
   oop send(oop recv, oop selector, oop args, int* exc);
   oop do_send(oop recv, oop selector, int num_args, int *exc);
 

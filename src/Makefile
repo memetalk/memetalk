@@ -15,9 +15,9 @@ CXXFLAGS = --std=c++11 -Wall $(QT_CXXFLAGS)
 LIBS = -lboost_system -lboost_iostreams -lboost_filesystem -lgc -lre2 $(QT_LIBS)
 
 CPP_FILES = log.cpp mec_image.cpp core_image.cpp vm.cpp utils.cpp	\
-	mmobj.cpp main.cpp process.cpp prims.cpp mec_fun.cpp
+	mmobj.cpp main.cpp process.cpp prims.cpp mec_fun.cpp net_prims.cpp
 HPP_FILES = mec_image.hpp core_image.hpp vm.hpp log.hpp utils.hpp	\
-	defs.hpp mmobj.hpp process.hpp prims.hpp mec_fun.hpp
+	defs.hpp mmobj.hpp process.hpp prims.hpp mec_fun.hpp net_prims.hpp
 
 CPP_FILES += qt_prims.cpp qsc.cpp ctrl.cpp
 HPP_FILES += qt_prims.hpp qsc.hpp ctrl.hpp

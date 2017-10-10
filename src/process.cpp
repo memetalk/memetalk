@@ -521,6 +521,12 @@ oop Process::send_1(oop recv, oop selector, oop arg, int* exc) {
   return do_send(recv, selector, 1, exc);
 }
 
+oop Process::send_2(oop recv, oop selector, oop arg1, oop arg2, int* exc) {
+  stack_push(arg1);
+  stack_push(arg2);
+  return do_send(recv, selector, 2, exc);
+}
+
 oop Process::send(oop recv, oop selector, oop args, int* exc) {
   number num_args = _mmobj->mm_list_size(this, args);
   for (int i = 0; i < num_args; i++) {

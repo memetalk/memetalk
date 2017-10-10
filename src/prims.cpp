@@ -5,6 +5,7 @@
 #include "utils.hpp"
 #include "mmobj.hpp"
 #include "mec_image.hpp"
+#include "net_prims.hpp"
 #include "qt_prims.hpp"
 #include "re2_prims.hpp"
 #include <string>
@@ -3269,4 +3270,5 @@ void init_primitives(VM* vm) {
 
   qt_init_primitives(vm);
   re2_init_primitives(vm);
+  net_init_primitives(vm);
 }
