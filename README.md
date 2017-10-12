@@ -18,11 +18,10 @@ The Memetalk VM is currently developed in C++ and depends on:
 * Google's [re2 (v. 2017-08-01)](https://github.com/google/re2)
 * [Boehm GC (gc-7.6.0)](http://www.hboehm.info/gc/)
 
-### Python
+### Memetalk
 
-While MemeScript compiler is written in itself, we are currently bootstrapping
-using a compiler written in python. Thus, to build, you will also need to have
-the following installed:
+MemeScript compiler is written in itself, so you need a previous version of it
+to perform the bootstraping.
 
  * Python (2.7.5)
  * clime (0.3.1)
