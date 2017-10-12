@@ -8,7 +8,7 @@ $(call GEN_MEC_RULE)
 
 CODE := kaiser_base.me gen_parser.me
 BYTECODE := $(patsubst %.me,%.mec,$(CODE))
-DIST_FILES = $(CODE) $(BYTECODE)
+DIST_FILES = $(CODE) kaiser.me kaiser_tr.me meme.me $(BYTECODE)
 
 OMETA_GRAMMARS := kaiser.g kaiser_tr.g
 KAISER_GRAMMARS := meme.k

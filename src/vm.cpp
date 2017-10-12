@@ -19,15 +19,14 @@
 #define ERROR() MMLog::error() << "[VM|" << __FUNCTION__ << "] " << _log.normal
 
 
-VM::VM(int argc, char** argv, bool online, bool profile, const std::string& core_img_filepath)
-  : _log(LOG_VM), _argc(argc), _argv(argv), _online(online), _profile(profile),
-    _core_image(new (GC) CoreImage(this, core_img_filepath)), _mmobj(new (GC) MMObj(_core_image)),
-    _debugger_module(MM_NULL) {
+VM::VM(int argc, char** argv, bool online, bool profile)
+: _log(LOG_VM), _argc(argc), _argv(argv), _online(online), _profile(profile), _debugger_module(MM_NULL) {
 
   load_config();
   maybe_create_cache_dir(_mec_cache_directory);
+  _core_image = new (GC) CoreImage(this, _core_img_filepath);
+  _mmobj = new (GC) MMObj(_core_image);
 }
-
 
 void VM::print_retval(Process* proc, oop retval) {
   int exc;
@@ -251,26 +250,35 @@ char* VM::get_argv(int i) {
 using boost::property_tree::ptree;
 
 void VM::load_config() {
-  //1: ~/.meme.config
+  //0: $MEME_CONFIG
+  //1: $PWD/meme.config
   //2: /etc/meme.config
   ptree pt;
-  std::string home = std::string(getenv("HOME"));
+  char* meme_config_env_path = getenv("MEME_CONFIG");
   char pwdc[PATH_MAX];
   getcwd(pwdc, PATH_MAX);
 
-  try {
-    boost::property_tree::read_json(home + "/.meme.config", pt);
-  } catch(...) {
-    DBG("Unable to read ~/.meme.config" << endl);
+  if (meme_config_env_path) {
+    DBG("Reading meme.config set in MEME_CONFIG env var: " << meme_config_env_path << endl);
+    boost::property_tree::read_json(meme_config_env_path, pt);
+  } else {
     try {
-      boost::property_tree::read_json("/etc/meme.config", pt);
+      DBG("Trying meme.config in current directory" << endl);
+      boost::property_tree::read_json(std::string(pwdc) + "/meme.config", pt);
     } catch(...) {
-      std::cerr << "fatal error:\n\tUnable to read configuration file\n";
-      std::cerr << "\tDirectories searched:\n";
-      // std::cerr << "\t* " << pwdc << "/meme.config\n";
-      std::cerr << "\t* " << home << "/.meme.config\n";
-      std::cerr << "\t* " << "/etc/meme.config\n";
-      bail();
+      DBG("Unable to read meme.config in current directory" << endl);
+      try {
+        DBG("Trying meme.config in /etc" << endl);
+        boost::property_tree::read_json("/etc/meme.config", pt);
+      } catch(...) {
+        std::cerr << "fatal error:\n\tUnable to read configuration file\n";
+        std::cerr << "\tTried:\n";
+        std::cerr << "\t* " << "$MEME_CONFIG\n";
+        std::cerr << "\t* " << pwdc << "/meme.config\n";
+        //std::cerr << "\t* " << home << "/.meme.config\n";
+        std::cerr << "\t* " << "/etc/meme.config\n";
+        bail();
+      }
     }
   }
 
@@ -288,7 +296,10 @@ void VM::load_config() {
     //   _repo_override[iter->first] = iter->second.data();
     // }
 
-    _mec_cache_directory = pt.get_child("cache_dir").data();
+    _mec_cache_directory = pt.get_child("cache_path").data();
+    DBG("config.cache_path: " << _mec_cache_directory << endl);
+    _core_img_filepath = pt.get_child("core_path").data();
+    DBG("config.core_path: " << _core_img_filepath << endl);
   } catch(...) {
     bail("Error reading config data");
   }
@@ -312,6 +323,13 @@ char* VM::fetch_module(Process* proc, const std::string& mod_path, int* file_siz
         DBG("local path: " << local_path << endl);
         boost::filesystem::create_directories(cached_path.parent_path());
         boost::filesystem::copy_file(local_path, cached_path, boost::filesystem::copy_option::overwrite_if_exists);
+        std::string local_mec_file = local_path.string() + "c";
+        std::string cached_mec_file = cached_path.string() + "c";
+          DBG("check if .mec also exists: " << local_mec_file << endl);
+        if (boost::filesystem::exists(local_mec_file)) {
+          DBG("also copying the .mec: " << local_mec_file << endl);
+          boost::filesystem::copy_file(local_mec_file, cached_mec_file, boost::filesystem::copy_option::overwrite_if_exists);
+        }
       }
       maybe_compile_local_source(proc, cached_path.string());
       return read_mec_file(cached_path.string() + "c", file_size);
@@ -339,17 +357,20 @@ void VM::maybe_compile_local_source(Process* proc, std::string filepath) {
   std::string line;
   std::fstream file;
 
+  DBG("maybe compile local: " << filepath << endl);
   if (!boost::filesystem::exists(filepath)) {
       bail(std::string("file not found: ") + filepath);
   }
+  DBG("checking file age: " << filepath << endl);
   if (is_mec_file_older_then_source(filepath)) {
+    DBG("perhaps recompile .mec file for " << filepath << endl);
     //avoid recursion
     if (_compile_map[filepath]) {
       //bail(std::string("trying to compile a module the compiler depends on: ") + filepath);
       return;
     }
     _compile_map[filepath] = true;
-    DBG("we need to compile '" << filepath << "'" << endl);
+    DBG("opening to recompile  '" << filepath << "'" << endl);
     file.open(filepath.c_str(), std::fstream::in | std::fstream::binary);
     if (!file.is_open()) {
       bail(std::string("file not found: ") + filepath);

@@ -6,7 +6,7 @@ include common.mk
 
 CORE_ME = $(MM_DIR)/stdlib/core.me
 CORE_IMG = $(ROOT_DIR)/core.img
-DIST_FILES = $(CORE_IMG) meme.config.sample install.sh
+DIST_FILES = $(CORE_IMG) etc.meme.config
 
 VERSION = $(shell git describe --tags --always --dirty)
 
@@ -22,6 +22,7 @@ dist: build
 	$(MAKE) -C central dist
 	$(call INSTALL_DIST_FILES,$(DIST_FILES))
 	install -D -t $(DIST_DIR) meme
+	install -D -t $(DIST_DIR) install.sh
 	tar zcf $(DIST_DIR_NAME).tar.gz $(DIST_DIR_NAME)
 	rm -r $(DIST_DIR)
 

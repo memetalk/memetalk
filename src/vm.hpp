@@ -38,7 +38,7 @@ typedef boost::unordered_map<std::string, MECImage*,
 class VM {
 
 public:
-  VM(int argc, char** argv, bool online, bool profile, const std::string& core_img_filepath);
+  VM(int argc, char** argv, bool online, bool profile);
 
   int& argc() { return _argc; };
   char** argv() { return _argv; };
@@ -114,6 +114,7 @@ private:
   modules_map_t _modules;
 
   //path configurations
+  std::string _core_img_filepath;
   std::string _mec_cache_directory;
   boost::unordered_map<std::string, std::string> _repo_locations;
   boost::unordered_map<std::string, bool> _compile_map;
