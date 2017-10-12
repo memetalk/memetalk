@@ -8,7 +8,7 @@ class VM;
 class Process;
 class CoreImage;
 
-void create_cache_dir(std::string&);
+void maybe_create_cache_dir(std::string&);
 
 char* read_file(char* filepath, int* file_size);
 char* read_file(std::fstream& file, int* file_size);

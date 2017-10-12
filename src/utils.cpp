@@ -16,7 +16,7 @@ using namespace std;
 
 static MMLog _log(LOG_UTILS);
 
-void create_cache_dir(std::string& path) {
+void maybe_create_cache_dir(std::string& path) {
   boost::filesystem::path dir(path);
   if (boost::filesystem::create_directories(dir)) {
     _log << "cache directory created: "<< path << std::endl;

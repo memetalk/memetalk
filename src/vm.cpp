@@ -26,37 +26,10 @@ VM::VM(int argc, char** argv, bool online, bool profile, const std::string& core
 
   _mec_cache_directory = getenv("HOME");
   _mec_cache_directory += "/.memetalk/cache/";
-  create_cache_dir(_mec_cache_directory);
+  maybe_create_cache_dir(_mec_cache_directory);
   maybe_load_config();
 }
 
-// MMObj* VM::mmobj() {
-//   return _mmobj;
-// }
-
-// void VM::dictionary_dump(oop dict) {
-//   number size = _mmobj->mm_dictionary_size(dict);
-
-//   DBG() << "  dict vt: " << _mmobj->mm_object_vt(dict) << endl;
-//   DBG() << "  dict size: " << size << endl;
-//   for (int i = 3; i < (3 + (size*2)); i++) {
-//     DBG() << "  [" << i << "]: & " << &((oop*)dict)[i];
-//     DBG() << endl;
-//     // DBG() << " vt:" << * ((oop**)dict)[i]  << endl;
-//   }
-// }
-
-// void VM::dump_prime_info() {
-//   std::map<std::string, oop> primes = _core_image->get_primes();
-//   std::map<std::string, oop>::iterator it;
-//   for (it = primes.begin(); it != primes.end(); it++) {
-//     if (it->first == "Behavior" || it->first == "Object_Behavior") continue;
-//     oop klass = it->second;
-//     DBG() << "PRIME " << klass << " name: " << _mmobj->mm_string_cstr(_mmobj->mm_class_name(klass)) << " vt: "
-//             << _mmobj->mm_object_vt(klass) << " dict:" << _mmobj->mm_class_dict(klass) << endl;
-//     dictionary_dump(_mmobj->mm_class_dict(klass));
-//   }
-// }
 
 void VM::print_retval(Process* proc, oop retval) {
   int exc;
@@ -231,107 +204,13 @@ oop VM::instantiate_local_module(Process* proc, const char* mec_file_path, oop m
   return mec->instantiate_module(module_args_list);
 }
 
-// oop VM::get_prime(const char* name) {
-//   return _core_image->get_prime(name);
-// }
-
-#include <iostream>
-#include <cstdio>
-#include <sstream>
-#include <boost/iostreams/stream.hpp>
-#include <boost/iostreams/device/file_descriptor.hpp>
-
-#include <sstream>
-#include <boost/property_tree/ptree.hpp>
-#include <boost/property_tree/json_parser.hpp>
-using boost::property_tree::ptree;
-using boost::property_tree::read_json;
-using boost::property_tree::write_json;
-
-static
-std::string get_compile_fun_json(const char* text, int line, std::list<std::string> vars) {
-  ptree pt;
-  ptree env;
-
-  for (std::list<std::string>::iterator it = vars.begin(); it != vars.end(); it++) {
-    env.push_back(std::make_pair("", ptree(*it)));
-  }
-
-  pt.put ("text", text);
-  pt.put("start_line", line);
-  pt.add_child("env_names",  env);
-  std::ostringstream buf;
-  write_json (buf, pt, false);
-  return buf.str();
-}
 
 oop VM::recompile_fun(Process* proc, oop cfun, int line, const char* text, int* exc) {
-  std::list<std::string> vars;
-  std::stringstream s;
-  DBG("recompiling line " << line << " code: " << text << endl);
-  std::string json = get_compile_fun_json(text, line, vars);
-
-  s << "python -m pycompiler.compiler recompile-fun '" << json << "'";
-  DBG("Executing python compiler: " << s.str() << endl);
-  *exc = 0;
-  if (FILE* p = popen(s.str().c_str(), "r")) {
-    boost::iostreams::file_descriptor_source d(fileno(p), boost::iostreams::close_handle);
-    boost::iostreams::stream_buffer<boost::iostreams::file_descriptor_source> pstream(d);
-    std::stringstream out;
-    out << &pstream;
-    std::string data = out.str();
-
-    char* c_data = (char*) GC_MALLOC(sizeof(char) * data.size());
-    data.copy(c_data, data.size());
-
-    DBG("Done executing python compiler" << endl);
-    if (pclose(p) == 0) {
-      MECFunction* mecf = new (GC) MECFunction(this, _core_image, c_data, data.size());
-      oop new_cfun = mecf->load(proc);
-      _mmobj->mm_overwrite_compiled_function(proc, cfun, new_cfun);
-      return cfun;
-    } else {
-      *exc = 1;
-      return proc->mm_exception("CompileError", c_data);
-    }
-  }
-  *exc = 1;
-  ERROR() << "Could not call python compiler :(" << endl;
-  return proc->mm_exception("CompileError", "pipe error: Unable to call compiler");
+  assert(0); //TODO
 }
 
 oop VM::compile_fun(Process* proc, const char* text, std::list<std::string> vars, oop cmod, int* exc) {
-  std::stringstream s;
-  std::string json = get_compile_fun_json(text, 0, vars);
-
-  s << "python -m pycompiler.compiler compile-lambda '" << json << "'";
-  DBG("Executing python compiler: " << s.str() << endl);
-
-  *exc = 0;
-  if (FILE* p = popen(s.str().c_str(), "r")) {
-    boost::iostreams::file_descriptor_source d(fileno(p), boost::iostreams::close_handle);
-    boost::iostreams::stream_buffer<boost::iostreams::file_descriptor_source> pstream(d);
-    std::stringstream out;
-    out << &pstream;
-    std::string data = out.str();
-
-    char* c_data = (char*) GC_MALLOC(sizeof(char) * data.size()+1);
-    data.copy(c_data, data.size());
-    if (pclose(p) == 0) {
-      MECFunction* mecf = new (GC) MECFunction(this, _core_image, c_data, data.size());
-      oop cfun = mecf->load(proc);
-      //FIXME: this might be necessary?
-      assert(0);
-      //_mmobj->mm_compiled_function_set_cmod(proc, cfun, cmod);
-      return cfun;
-    } else {
-      *exc = 1;
-      return proc->mm_exception("CompileError", c_data);
-    }
-  }
-  *exc = 1;
-  ERROR() << "Could not call python compiler :(" << endl;
-  return proc->mm_exception("CompileError", "pipe error: Unable to call compiler");
+  assert(0); //TODO
 }
 
 void VM::bail(const std::string& msg) {
@@ -347,7 +226,7 @@ oop VM::get_compiled_module(Process* proc, std::string name) {
   modules_map_t::iterator it = _modules.begin();
   name = std::string("/") + name;
   for ( ; it != _modules.end(); it++) {
-    if (it->first.find(name) != std::string::npos) {
+    if (it->first.find(name) != std::string::npos) { //FIXME
       return it->second->compiled_module();
     }
   }
