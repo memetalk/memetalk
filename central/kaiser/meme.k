@@ -173,11 +173,13 @@ path_rest = T_SLASH:x path:y => x + y
           | => ""
           ;
 
-meta_section = meta_variable meta_section
-             | => [:meta, []]
+meta_section = meta_variables:x => [:meta, x];
+
+meta_variables = meta_variable:x meta_variables:xs => [x] + xs
+             | => []
              ;
 
-meta_variable = T_AT_ID T_COLON {this.match_until(T_SEMICOLON)}
+meta_variable = T_AT_ID:name T_COLON {this.scanner.match_regexp("[^;]+")}:val T_SEMICOLON => [name.from(1), val]
               ;
 
 
@@ -665,4 +667,5 @@ instance_method set_line_offset: fun(line_offset) {
 }
 instance_method line_offset: fun() {
   return @line_offset;
-}end
+}
+end

@@ -115,20 +115,32 @@ instance_method path_rest: fun() {
   this.unexpected([43]);
 }
 instance_method meta_section: fun() {
+  var x = null;
+  x = this.meta_variables();
+  return [:meta, x];
+}
+instance_method meta_variables: fun() {
+  var x = null;
+  var xs = null;
   if(this.lookahead_any([41])) {
-    this.meta_variable();
-    this.meta_section();
+    x = this.meta_variable();
+    xs = this.meta_variables();
+    return [x] + xs;
     return null;
   }
 
-  return [:meta, []];
+  return [];
 
   this.unexpected([41]);
 }
 instance_method meta_variable: fun() {
-  this.match(41);
+  var name = null;
+  var val = null;
+  name = this.match(41);
   this.match(44);
-  this.match_until(T_SEMICOLON);
+  val = this.scanner.match_regexp("[^;]+");
+  this.match(45);
+  return [name.from(1), val];
 }
 instance_method requirements_section: fun() {
   var params = null;
@@ -1783,4 +1795,5 @@ instance_method set_line_offset: fun(line_offset) {
 }
 instance_method line_offset: fun() {
   return @line_offset;
-}end
+}
+end
