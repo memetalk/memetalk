@@ -20,12 +20,11 @@ The Memetalk VM is currently developed in C++ and depends on:
 
 ### Memetalk
 
-MemeScript compiler is written in itself, so you need a previous version of it
-to perform the bootstraping.
+MemeScript compiler is written in itself, so you need to install a previously
+built binary version of it to perform the bootstraping:
 
- * Python (2.7.5)
- * clime (0.3.1)
- * pymeta (from https://github.com/thiago-silva/pymeta.git)
+* [memetalk v0.1.0](https://github.com/thiago-silva/memetalk/releases/download/v0.1.0/memetalk-v0.1.0.tar.gz)
+
 
 ## Building
 
