@@ -346,8 +346,10 @@ fparam_list_rest = T_COMMA fparam_list:x => x
                  | => []
                  ;
 
+//third rule is because we don't have FOLLOW table for stmts
 top_fun_body = primitive_body:p => p
              | stmts:s => s
+             | => []
              ;
 
 primitive_body =  T_LT T_PRIMITIVE lit_string:s T_GT => [[:primitive, s]];
