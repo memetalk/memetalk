@@ -1,6 +1,6 @@
 all: build
 
-subdirs = py src central
+subdirs = src central
 
 include common.mk
 
@@ -43,7 +43,6 @@ cleanall:
 	rm -f core.img
 
 $(CORE_IMG): $(MM_DIR)/stdlib/core.me
-	$(MAKE) -C py parsers
-	PYTHONPATH=$(PY_PATH) python -m pycore.compiler $(CORE_ME) $(ROOT_DIR)
+	MEME_CONFIG=$(COMPILER_CONFIG) $(COMPILER_CMD) $(CORE_ME)
 
 .PHONY: $(subdirs) clean

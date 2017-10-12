@@ -18,13 +18,8 @@ MM_PATH := $(MM_DIR)
 ## Path to the VM command
 VM_CMD := $(MEME)
 
-## Module path to invoke the Python interpreter that executes the
-## compiler
-PY_PATH := $(ROOT_DIR)/py
-
-# Python command used to compile .me into .mec
-PY_COMPILER_CMD := python -m pycompiler.compiler
-
+COMPILER_CONFIG := /etc/meme.config
+COMPILER_CMD := meme -m central:memescript/compiler
 ## Macro GEN_MEC_RULE: Creates Make rule to compile .me files
 ##
 ##   This macro comes in handy for directories full of .me source
@@ -42,7 +37,7 @@ PY_COMPILER_CMD := python -m pycompiler.compiler
 ##     clean:; -rm $(BYTECODE)
 ##
 define GEN_MEC_RULE
- %.mec: %.me; PYTHONPATH=$(PY_PATH) $(PY_COMPILER_CMD) $$^
+ %.mec: %.me; MEME_CONFIG=$(COMPILER_CONFIG) $(COMPILER_CMD) $$^
 endef
 
 ## Create implicit rules for building .g and .k into .me
