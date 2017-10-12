@@ -24,10 +24,8 @@ VM::VM(int argc, char** argv, bool online, bool profile, const std::string& core
     _core_image(new (GC) CoreImage(this, core_img_filepath)), _mmobj(new (GC) MMObj(_core_image)),
     _debugger_module(MM_NULL) {
 
-  _mec_cache_directory = getenv("HOME");
-  _mec_cache_directory += "/.memetalk/cache/";
+  load_config();
   maybe_create_cache_dir(_mec_cache_directory);
-  maybe_load_config();
 }
 
 
@@ -80,7 +78,8 @@ int VM::start() {
     }
   } else {
     //meme <filepath.me> We might need to compile it
-    imod = maybe_compile_local_source(proc, _argv[1]);
+    maybe_compile_local_source(proc, _argv[1]);
+    imod = instantiate_local_module(proc, _argv[1], _mmobj->mm_list_new());
     _first_argv = 1; //first memetalk-land argv
   }
 
@@ -171,7 +170,7 @@ oop VM::instantiate_meme_module(Process* proc, const char* mod_path, oop module_
   if (it == _modules.end()) {
     DBG("loading new module " << mod_path << endl);
     int file_size;
-    char* data = fetch_module(mod_path, &file_size);
+    char* data = fetch_module(proc, mod_path, &file_size);
     mec = new (GC) MECImage(proc, _core_image, mod_path, file_size, data);
     _modules[mod_path] = mec;
     mec->load();
@@ -182,7 +181,8 @@ oop VM::instantiate_meme_module(Process* proc, const char* mod_path, oop module_
   return mec->instantiate_module(module_args_list);
 }
 
-oop VM::instantiate_local_module(Process* proc, const char* mec_file_path, oop module_args_list) {
+oop VM::instantiate_local_module(Process* proc, std::string me_file_path, oop module_args_list) {
+  std::string mec_file_path = me_file_path + "c";
   std::string mec_file_url = boost::filesystem::absolute(mec_file_path).string();
 
   DBG( "instantiating local file module " << mec_file_url << endl);
@@ -244,7 +244,13 @@ char* VM::get_argv(int i) {
   return NULL;
 }
 
-void VM::maybe_load_config() {
+
+#include <sstream>
+#include <boost/property_tree/ptree.hpp>
+#include <boost/property_tree/json_parser.hpp>
+using boost::property_tree::ptree;
+
+void VM::load_config() {
   //1: ~/.meme.config
   //2: /etc/meme.config
   ptree pt;
@@ -276,32 +282,39 @@ void VM::maybe_load_config() {
       _repo_locations[iter->first] = iter->second.data();
     }
 
-    node = pt.get_child("override_to_local");
-    for(iter = node.begin(); iter != node.end(); iter++) {
-      DBG("override_to_local: " << iter->first << " -> " << iter->second.data() << std::endl);
-      _repo_override[iter->first] = iter->second.data();
-    }
+    // node = pt.get_child("override_to_local");
+    // for(iter = node.begin(); iter != node.end(); iter++) {
+    //   DBG("override_to_local: " << iter->first << " -> " << iter->second.data() << std::endl);
+    //   _repo_override[iter->first] = iter->second.data();
+    // }
+
+    _mec_cache_directory = pt.get_child("cache_dir").data();
   } catch(...) {
-    DBG("Could not read data in meme.config");
+    bail("Error reading config data");
   }
 }
 
-char* VM::fetch_module(const std::string& mod_path, int* file_size) {
+char* VM::fetch_module(Process* proc, const std::string& mod_path, int* file_size) {
   DBG("fetch module '" << mod_path << "'" << std::endl);
-  //1-check for overriding rules
   boost::unordered_map<std::string, std::string>::iterator it;
-  for (it = _repo_override.begin(); it != _repo_override.end(); it++) {
-    DBG("looking for overriding rules: '" << it->first << "'" << endl);
-    if (mod_path.find(it->first) == 0) {
-      std::string local_path =it->second + mod_path.substr(it->first.length());
-      DBG("translating " << mod_path << " to local path " << local_path << std::endl);
-      return read_mec_file(local_path + ".mec", file_size);
-    }
-  }
   for (it = _repo_locations.begin(); it != _repo_locations.end(); it++) {
     if (mod_path.find(it->first) == 0) {
-      std::cerr << "TODO: fetching " << mod_path << " on " << it->first << " = " << it->second << std::endl;
-      bail();
+      //1: compute cache directory for repository
+      //2: check if .me exists in cache
+      //3:  if not, fetch it / copy it to cache
+      //4: read and return file contents
+      boost::filesystem::path cached_path = _mec_cache_directory;
+      cached_path /= mod_path.substr(it->first.length() + 1) + ".me";
+      DBG("cached path: " << cached_path << endl);
+      if (!boost::filesystem::exists(cached_path)) {
+        boost::filesystem::path local_path = it->second;
+        local_path /= mod_path.substr(it->first.length() + 1) + ".me";
+        DBG("local path: " << local_path << endl);
+        boost::filesystem::create_directories(cached_path.parent_path());
+        boost::filesystem::copy_file(local_path, cached_path, boost::filesystem::copy_option::overwrite_if_exists);
+      }
+      maybe_compile_local_source(proc, cached_path.string());
+      return read_mec_file(cached_path.string() + "c", file_size);
     }
   }
   bail(std::string("fatal error:\n\tmodule not found: ") + mod_path);
@@ -322,11 +335,21 @@ bool VM::is_mec_file_older_then_source(std::string src_file_path) {
   }
 }
 
-oop VM::maybe_compile_local_source(Process* proc, std::string filepath) {
+void VM::maybe_compile_local_source(Process* proc, std::string filepath) {
   std::string line;
   std::fstream file;
+
+  if (!boost::filesystem::exists(filepath)) {
+      bail(std::string("file not found: ") + filepath);
+  }
   if (is_mec_file_older_then_source(filepath)) {
-    DBG("we need to compile " << filepath << endl);
+    //avoid recursion
+    if (_compile_map[filepath]) {
+      //bail(std::string("trying to compile a module the compiler depends on: ") + filepath);
+      return;
+    }
+    _compile_map[filepath] = true;
+    DBG("we need to compile '" << filepath << "'" << endl);
     file.open(filepath.c_str(), std::fstream::in | std::fstream::binary);
     if (!file.is_open()) {
       bail(std::string("file not found: ") + filepath);
@@ -346,6 +369,7 @@ oop VM::maybe_compile_local_source(Process* proc, std::string filepath) {
       print_error(proc, e.mm_exception);
       bail();
     }
+    _compile_map[filepath] = false;
     DBG("compiling source with compiler: " << compiler_module_path << endl);
     int exc;
     oop res = proc->send_1(imod, new_symbol("compile"), _mmobj->mm_string_new(filepath), &exc);
@@ -356,5 +380,4 @@ oop VM::maybe_compile_local_source(Process* proc, std::string filepath) {
       bail();
     }
   }
-  return instantiate_local_module(proc, (filepath + "c").c_str(), _mmobj->mm_list_new());
 }

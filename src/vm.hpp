@@ -59,7 +59,7 @@ public:
   }
 
   oop instantiate_meme_module(Process*, const char* name, oop module_args_list);
-  oop instantiate_local_module(Process*, const char* path, oop module_args_list);
+  oop instantiate_local_module(Process*, std::string path, oop module_args_list);
 
 //  oop get_prime(const char* name);
   inline oop get_prime(const char* name) {
@@ -86,14 +86,14 @@ public:
 
   char* get_argv(int);
 
-  char* fetch_module(const std::string& filepath, int* file_size);
+  char* fetch_module(Process* proc, const std::string& filepath, int* file_size);
 private:
   // void dump_prime_info();
   // void dictionary_dump(oop dict);
   // void parse_repository_path();
-  oop maybe_compile_local_source(Process* proc, std::string filepath);
+  void maybe_compile_local_source(Process* proc, std::string filepath);
   bool is_mec_file_older_then_source(std::string src_file_path);
-  void maybe_load_config();
+  void load_config();
   void print_retval(Process*, oop retval);
   Process* init();
 
@@ -112,11 +112,11 @@ private:
 
   prim_map_t _primitives;
   modules_map_t _modules;
-  std::string _mec_cache_directory;
 
   //path configurations
+  std::string _mec_cache_directory;
   boost::unordered_map<std::string, std::string> _repo_locations;
-  boost::unordered_map<std::string, std::string> _repo_override;
+  boost::unordered_map<std::string, bool> _compile_map;
 };
 
 #endif

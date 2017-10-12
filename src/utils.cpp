@@ -11,14 +11,17 @@
 #include <stdlib.h>
 #include <string.h>
 #include <boost/filesystem.hpp>
+#include <boost/algorithm/string.hpp>
+
+namespace fs = ::boost::filesystem;
 
 using namespace std;
 
 static MMLog _log(LOG_UTILS);
 
 void maybe_create_cache_dir(std::string& path) {
-  boost::filesystem::path dir(path);
-  if (boost::filesystem::create_directories(dir)) {
+  fs::path dir(path);
+  if (fs::create_directories(dir)) {
     _log << "cache directory created: "<< path << std::endl;
   }
 }
@@ -41,11 +44,6 @@ char* read_file(fstream& file, int* file_size) {
   return (char*) memcpy(ret, str, (sizeof(char) * *file_size)+1);
 }
 
-#include <boost/algorithm/string.hpp>
-#include <boost/filesystem.hpp>
-using namespace std;
-using namespace boost;
-namespace fs = ::boost::filesystem;
 
 // void open_file_in_meme_path(const std::string& filename, fstream & file) {
 //   typedef split_iterator<string::iterator> string_split_iterator;
