@@ -6,7 +6,7 @@ RUN apt-get -qy update && apt-get -qy --fix-missing install \
     build-essential git pkg-config xvfb libgc-dev libatomic-ops-dev \
     libqt4-dev libqtwebkit-dev libqscintilla2-dev libre2-dev \
     libboost-system-dev libboost-filesystem-dev libboost-iostreams-dev \
-    python-pip gdb libre2-dev
+    python-pip gdb libre2-dev wget
 
 RUN mkdir /build
 
@@ -17,14 +17,11 @@ RUN /bin/bash -c "pip install \
 
 WORKDIR /build
 
-RUN echo '{"repositories":                             \
-  {"central": "http://libraries.memetalk.org/"},       \
- "override_to_local": {                                \
-   "central:memescript": "/build/central/memescript",  \
-   "central:ometa": "/build/central/ometa",            \
-   "central:stdlib": "/build/central/stdlib",          \
-   "central:kaiser": "/build/central/kaiser"           \
-}}' >> /root/.meme.config
+RUN wget https://github.com/thiago-silva/memetalk/releases/download/v0.1.0/memetalk-v0.1.0.tar.gz
+
+RUN tar xvfz memetalk-v0.1.0.tar.gz
+
+RUN cd memetalk-v0.1.0; ./install.sh
 
 # Runs tests under xvfb to allow Qt to connect to a display
-CMD xvfb-run --server-args="-screen 0 1024x768x24" make test
+CMD make test
