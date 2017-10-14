@@ -4,7 +4,7 @@ subdirs = src central
 
 include common.mk
 
-CORE_ME = $(MM_DIR)/stdlib/core.me
+CORE_ME = $(MM_DIR)/std/core.me
 CORE_IMG = $(ROOT_DIR)/core.img
 DIST_FILES = $(CORE_IMG) etc.meme.config
 
@@ -42,7 +42,7 @@ cleanall:
 	$(foreach el,$(subdirs),$(MAKE) -C $(el) clean;)
 	rm -f core.img
 
-$(CORE_IMG): $(MM_DIR)/stdlib/core.me
+$(CORE_IMG): $(MM_DIR)/std/core.me
 	MEME_CONFIG=$(COMPILER_CONFIG) $(COMPILER_CMD) $(CORE_ME)
 
 .PHONY: $(subdirs) clean

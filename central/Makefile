@@ -1,4 +1,4 @@
-subdirs = stdlib kaiser ometa memescript tests
+subdirs = std linux kaiser ometa memescript tests
 
 all:
 	$(foreach el,$(subdirs),$(MAKE) -C $(el) all;)

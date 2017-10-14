@@ -1,9 +1,9 @@
-meme central:memescript/compiler
+meme central:memescript/0.1/compiler
 
 requires kaiser_base, io
 where
-  kaiser_base = central:kaiser/kaiser_base
-  io         = central:stdlib/io
+  kaiser_base = central:kaiser/0.1/kaiser_base
+  io         = central:linux/0.1/io
   import KaiserBase from kaiser_base
   import ParseError from kaiser_base
 end
