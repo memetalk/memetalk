@@ -1,13 +1,13 @@
 meme central:memescript/compiler
 
-requires ometa_base, io
+requires kaiser_base, io
 where
-  ometa_base = central:ometa/ometa_base
+  kaiser_base = central:kaiser/kaiser_base
   io         = central:stdlib/io
-  import OMetaBase from ometa_base
+  import KaiserBase from kaiser_base
+  import ParseError from kaiser_base
 end
 
-//extending List for AST node information
 class List < List
 fields: start_line, end_line, start_col, end_col, text;
 instance_method start_line: fun() {
@@ -30,13 +30,15 @@ instance_method toSource: fun() {
   var pos = "@<" + @start_line.toString + ":" + @start_col.toString + ":" + @end_line.toString + ":" + @end_col.toString + ">";
   return ret + pos;
 }
-instance_method at: fun(parser, begin_pos) {
-  var end_pos = parser.input.idx;
-  var full_input = parser.input.data; //assert type == String?
+instance_method at: fun(parser, begin_pos_pair) {
+  var end_pos = parser.current_position[0];
+  var full_input = parser.input; //assert type == String?
+  // io.print(begin_pos_pair);
+  var begin_pos = begin_pos_pair[0];
   @text = full_input.substr(begin_pos, end_pos - begin_pos);
-  @start_line = full_input.substr(0, begin_pos).count("\n") + parser.line_offset;
 
-  @start_col = begin_pos - full_input.substr(0, begin_pos).rindex("\n") - 1;
+  @start_line = (begin_pos_pair[1] - 1);
+  @start_col = begin_pos - full_input.rindex_from("\n", begin_pos) - 1;
   @end_line = @start_line + @text.count("\n");
   var inside_nl = @text.rindex("\n");
   if (inside_nl == -1) {
@@ -56,10 +58,1720 @@ instance_method extends: fun(other) {
 }
 end
 
-class MemeScriptParser < OMetaBase
+class MemeScriptParser < KaiserBase
 fields: has_fun_literal, line_offset;
-init new: fun(input) {
-  super.new(input);
+init new: fun(text) {
+  super.new(text, {:T_BIT_NOT: {:regexp: "\\~", :name: :T_BIT_NOT, :id: 73}, :T_DOT: {:regexp: "\\.", :name: :T_DOT, :id: 74}, :T_CARET: {:regexp: "\\^", :name: :T_CARET, :id: 67}, :T_CLOSE_SBRACKET: {:regexp: "\\]", :name: :T_CLOSE_SBRACKET, :id: 65}, :T_OPEN_SBRACKET: {:regexp: "\\[", :name: :T_OPEN_SBRACKET, :id: 64}, :T_CLOSE_BRACKET: {:regexp: "\\}", :name: :T_CLOSE_BRACKET, :id: 63}, :T_OPEN_PAREN: {:regexp: "\\(", :name: :T_OPEN_PAREN, :id: 60}, :T_GTE: {:regexp: ">=", :name: :T_GTE, :id: 54}, :T_LTE: {:regexp: "<=", :name: :T_LTE, :id: 52}, :T_CLOSE_PAREN: {:regexp: "\\)", :name: :T_CLOSE_PAREN, :id: 61}, :T_LT: {:regexp: "<", :name: :T_LT, :id: 51}, :T_EQ: {:regexp: "==", :name: :T_EQ, :id: 48}, :T_INCR: {:regexp: "\\+=", :name: :T_INCR, :id: 70}, :T_SLASH: {:regexp: "/", :name: :T_SLASH, :id: 43}, :T_SR: {:regexp: ">>", :name: :T_SR, :id: 56}, :T_STAR: {:regexp: "\\*", :name: :T_STAR, :id: 66}, :T_COMMA: {:regexp: ",", :name: :T_COMMA, :id: 42}, :T_AT_ID: {:regexp: "@[a-zA-Z_][a-zA-Z0-9_]*", :name: :T_AT_ID, :id: 41}, :T_NEQ: {:regexp: "!=", :name: :T_NEQ, :id: 49}, :T_CLOSE_CURLY: {:regexp: "}", :name: :T_CLOSE_CURLY, :id: 39}, :T_ASSIGN: {:regexp: "=", :name: :T_ASSIGN, :id: 47}, :T_NUMBER: {:regexp: "[[:digit:]]+", :name: :T_NUMBER, :id: 36}, :T_COLON: {:regexp: ":", :name: :T_COLON, :id: 44}, :T_FUN_ID: {:regexp: "[a-zA-Z_a-zA-Z_!&\\*\\-\\+\\|<=>/][a-zA-Z_a-zA-Z0-9_!&\\*\\-\\+\\|<=>/]*", :name: :T_FUN_ID, :id: 31}, :T_AMP: {:regexp: "&", :name: :T_AMP, :id: 57}, :T_SUPER: {:regexp: "super\\b", :name: :T_SUPER, :id: 28}, :T_NOT: {:regexp: "\\!", :name: :T_NOT, :id: 72}, :T_RETURN: {:regexp: "return\\b", :name: :T_RETURN, :id: 25}, :T_FUNCTIONS: {:regexp: "functions", :name: :T_FUNCTIONS, :id: 34}, :T_FIELDS: {:regexp: "fields", :name: :T_FIELDS, :id: 35}, :T_PLUS: {:regexp: "\\+", :name: :T_PLUS, :id: 68}, :T_DOUBLE_QUOTE: {:regexp: "\"", :name: :T_DOUBLE_QUOTE, :id: 59}, :T_FOR: {:regexp: "for\\b", :name: :T_FOR, :id: 24}, :T_TRY: {:regexp: "try\\b", :name: :T_TRY, :id: 22}, :T_OPEN_BRACKET: {:regexp: "\\{", :name: :T_OPEN_BRACKET, :id: 62}, :T_ELSE: {:regexp: "else\\b", :name: :T_ELSE, :id: 20}, :T_SYMBOL: {:regexp: ":[a-zA-Z_a-zA-Z_!&\\*\\-\\+\\|<=>/][a-zA-Z_a-zA-Z0-9_!&\\*\\-\\+\\|<=>/]*", :name: :T_SYMBOL, :id: 40}, :T_OR: {:regexp: "or\\b", :name: :T_OR, :id: 26}, :T_TRUE: {:regexp: "true\\b", :name: :T_TRUE, :id: 15}, :T_ID: {:regexp: "[a-zA-Z_][a-zA-Z0-9_]*", :name: :T_ID, :id: 29}, :T_AND: {:regexp: "and\\b", :name: :T_AND, :id: 27}, :T_MEME: {:regexp: "meme", :name: :T_MEME, :id: 32}, :T_NULL: {:regexp: "null\\b", :name: :T_NULL, :id: 14}, :T_THIS_CONTEXT: {:regexp: "thisContext\\b", :name: :T_THIS_CONTEXT, :id: 12}, :T_PRIV_ID: {:regexp: "[a-zA-Z_][a-zA-Z0-9_]*", :name: :T_PRIV_ID, :id: 30}, :T_OPEN_CURLY: {:regexp: "{", :name: :T_OPEN_CURLY, :id: 38}, :T_THIS_MODULE: {:regexp: "thisModule\\b", :name: :T_THIS_MODULE, :id: 11}, :T_WHILE: {:regexp: "while\\b", :name: :T_WHILE, :id: 21}, :T_HEXNUM: {:regexp: "0x[[:xdigit:]]+", :name: :T_HEXNUM, :id: 37}, :T_OBJECT: {:regexp: "object\\b", :name: :T_OBJECT, :id: 10}, :T_SL: {:regexp: "<<", :name: :T_SL, :id: 55}, :T_MINUS: {:regexp: "\\-", :name: :T_MINUS, :id: 69}, :T_INSTANCE_METHOD: {:regexp: "instance_method\\b", :name: :T_INSTANCE_METHOD, :id: 8}, :T_INIT: {:regexp: "init\\b", :name: :T_INIT, :id: 7}, :T_GT: {:regexp: ">", :name: :T_GT, :id: 53}, :T_END: {:regexp: "end\\b", :name: :T_END, :id: 6}, :T_IMPORT: {:regexp: "import\\b", :name: :T_IMPORT, :id: 5}, :T_WHERE: {:regexp: "where\\b", :name: :T_WHERE, :id: 4}, :T_PIPE: {:regexp: "\\|", :name: :T_PIPE, :id: 58}, :T_IF: {:regexp: "if\\b", :name: :T_IF, :id: 18}, :T_EOF: {:regexp: "$", :name: :T_EOF, :id: 50}, :T_THIS: {:regexp: "this\\b", :name: :T_THIS, :id: 13}, :T_REQUIRES: {:regexp: "requires\\b", :name: :T_REQUIRES, :id: 3}, :T_CLASS_METHOD: {:regexp: "class_method\\b", :name: :T_CLASS_METHOD, :id: 9}, :T_FALSE: {:regexp: "false\\b", :name: :T_FALSE, :id: 16}, :T_CLASS: {:regexp: "class\\b", :name: :T_CLASS, :id: 2}, :T_AT: {:regexp: "@", :name: :T_AT, :id: 46}, :T_PRIMITIVE: {:regexp: "primitive\\b", :name: :T_PRIMITIVE, :id: 17}, :T_FROM: {:regexp: "from", :name: :T_FROM, :id: 33}, :T_ELIF: {:regexp: "elif\\b", :name: :T_ELIF, :id: 19}, :T_CATCH: {:regexp: "catch\\b", :name: :T_CATCH, :id: 23}, :T_DECR: {:regexp: "\\-=", :name: :T_DECR, :id: 71}, :T_VAR: {:regexp: "var\\b", :name: :T_VAR, :id: 1}, :T_SEMICOLON: {:regexp: ";", :name: :T_SEMICOLON, :id: 45}, :T_FUN: {:regexp: "fun\\b", :name: :T_FUN, :id: 0}}, 29,29);
+  
+this.initialize();
+}
+
+instance_method start: fun() {
+  var c = null;
+  var meta = null;
+  var req = null;
+  var code = null;
+  c = this.compiler_line();
+  meta = this.meta_section();
+  req = this.requirements_section();
+  code = this.code_section();
+  this.match(50);
+  return [:module, c, meta, req, code];
+}
+instance_method compiler_line: fun() {
+  var c = null;
+  this.match(32);
+  c = this.module_path();
+  return c;
+}
+instance_method module_path: fun() {
+  var repo = null;
+  var c = null;
+  var p = null;
+  repo = this.match(29);
+  c = this.match(44);
+  p = this.consume_rest_of_line;
+  return repo + c + p;
+}
+instance_method meta_section: fun() {
+  var x = null;
+  x = this.meta_variables();
+  return [:meta, x];
+}
+instance_method meta_variables: fun() {
+  var x = null;
+  var xs = null;
+  if(this.lookahead_any([41])) {
+    x = this.meta_variable();
+    xs = this.meta_variables();
+    return [x] + xs;
+    return null;
+  }
+
+  return [];
+
+  this.unexpected([41]);
+}
+instance_method meta_variable: fun() {
+  var name = null;
+  var val = null;
+  name = this.match(41);
+  this.match(44);
+  val = this.scanner.match_regexp("[^;]+");
+  this.match(45);
+  return [name.from(1), val];
+}
+instance_method requirements_section: fun() {
+  var params = null;
+  var x = null;
+  if(this.lookahead_any([3])) {
+    this.match(3);
+    params = this.module_params();
+    x = this.requirements_rest(params);
+    return x;
+    return null;
+  }
+
+  return [:requirements, [], [:default-locations, []], [:imports, []]];
+
+  this.unexpected([3]);
+}
+instance_method requirements_rest: fun(params) {
+  var specs = null;
+  var imp = null;
+  if(this.lookahead_any([4])) {
+    this.match(4);
+    specs = this.module_defaults();
+    imp = this.module_imports();
+    this.match(6);
+    return [:requirements, params, [:default-locations, specs], [:imports, imp]];
+    return null;
+  }
+
+  return [:requirements, params, [:default-locations, []], [:imports, []]];
+
+  this.unexpected([4]);
+}
+instance_method module_params: fun() {
+  var x = null;
+  var xs = null;
+  x = this.match(29);
+  xs = this.module_params_rest();
+  return [x] + xs;
+}
+instance_method module_params_rest: fun() {
+  var x = null;
+  var xs = null;
+  if(this.lookahead_any([42])) {
+    this.match(42);
+    x = this.match(29);
+    xs = this.module_params_rest();
+    return [x] + xs;
+    return null;
+  }
+
+  return [];
+
+  this.unexpected([42]);
+}
+instance_method module_defaults: fun() {
+  var name = null;
+  var p = null;
+  var xs = null;
+  if(this.lookahead_any([29])) {
+    name = this.match(29);
+    this.match(47);
+    p = this.module_path();
+    xs = this.module_defaults();
+    return [[name, p]] + xs;
+    return null;
+  }
+
+  return [];
+
+  this.unexpected([29]);
+}
+instance_method module_imports: fun() {
+  var x = null;
+  var xs = null;
+  if(this.lookahead_any([5])) {
+    x = this.module_import();
+    xs = this.module_imports();
+    return [x] + xs;
+    return null;
+  }
+
+  return [];
+
+  this.unexpected([5]);
+}
+instance_method module_import: fun() {
+  var name = null;
+  var lib = null;
+  this.match(5);
+  name = this.match(29);
+  this.match(33);
+  lib = this.match(29);
+  return [name, lib];
+}
+instance_method code_section: fun() {
+  var x = null;
+  x = this.top_level_decls();
+  return [:code, x];
+}
+instance_method top_level_decls: fun() {
+  var x = null;
+  var xs = null;
+  if(this.lookahead_any([10, 2, 31])) {
+    x = this.top_level_decl();
+    xs = this.top_level_decls();
+    return [x] + xs;
+    return null;
+  }
+
+  return [];
+
+  this.unexpected([10, 2, 31]);
+}
+instance_method top_level_decl: fun() {
+  var x = null;
+  if(this.lookahead_any([10])) {
+    x = this.obj_decl();
+    return x;
+    return null;
+  }
+
+  if(this.lookahead_any([2])) {
+    x = this.class_decl();
+    return x;
+    return null;
+  }
+
+  if(this.lookahead_any([31])) {
+    x = this.top_level_function();
+    return x;
+    return null;
+  }
+
+  this.unexpected([10, 2, 31]);
+}
+instance_method top_level_function: fun() {
+  var x = null;
+  var y = null;
+  x = this.match(31);
+  this.match(44);
+  y = this.top_level_fun_rest(x);
+  return y;
+}
+instance_method top_level_fun_rest: fun(name) {
+  var x = null;
+  if(this.lookahead_any([0])) {
+    x = this.top_level_fun(name);
+    return x;
+    return null;
+  }
+
+  if(this.lookahead_any([37, 36, 11, 12, 40, 13, 14, 15, 16, 59, 64, 38])) {
+    x = this.top_level_fn(name);
+    return x;
+    return null;
+  }
+
+  this.unexpected([0, 37, 36, 11, 12, 40, 13, 14, 15, 16, 59, 64, 38]);
+}
+instance_method obj_decl: fun() {
+  var name = null;
+  var s = null;
+  var f = null;
+  this.match(10);
+  name = this.match(29);
+  s = this.object_slots();
+  f = this.obj_fun();
+  this.match(6);
+  return [:object, name, s, f];
+}
+instance_method obj_fun: fun() {
+  var f = null;
+  if(this.lookahead_any([34])) {
+    this.match(34);
+    this.match(38);
+    f = this.obj_fun_block();
+    this.match(39);
+    return f;
+    return null;
+  }
+
+  return [];
+
+  this.unexpected([34]);
+}
+instance_method obj_fun_block: fun() {
+  var x = null;
+  var xs = null;
+  if(this.lookahead_any([7])) {
+    x = this.constructor();
+    xs = this.obj_fun_block_more();
+    return [x] + xs;
+    return null;
+  }
+
+  if(this.lookahead_any([31])) {
+    x = this.top_level_function();
+    xs = this.obj_fun_block_more();
+    return [x] + xs;
+    return null;
+  }
+
+  this.unexpected([7, 31]);
+}
+instance_method obj_fun_block_more: fun() {
+  var xs = null;
+  if(this.lookahead_any([7, 31])) {
+    xs = this.obj_fun_block();
+    return xs;
+    return null;
+  }
+
+  return [];
+
+  this.unexpected([7, 31]);
+}
+instance_method object_slots: fun() {
+  var x = null;
+  var xs = null;
+  if(this.lookahead_any([34])) {
+    
+    return [];
+    return null;
+  }
+
+  if(this.lookahead_any([29])) {
+    x = this.object_slot();
+    xs = this.object_slots_more();
+    return [x] + xs;
+    return null;
+  }
+
+  this.unexpected([34, 29]);
+}
+instance_method object_slots_more: fun() {
+  var x = null;
+  if(this.lookahead_any([34, 29])) {
+    x = this.object_slots();
+    return x;
+    return null;
+  }
+
+  return [];
+
+  this.unexpected([34, 29]);
+}
+instance_method object_slot: fun() {
+  var name = null;
+  var value = null;
+  name = this.match(29);
+  this.match(44);
+  value = this.obj_slot_value();
+  this.match(45);
+  return [:slot, name, value];
+}
+instance_method obj_slot_value: fun() {
+  var x = null;
+  if(this.lookahead_any([37, 36, 11, 12, 40, 13, 14, 15, 16, 59, 64, 38, 0])) {
+    x = this.literal();
+    return x;
+    return null;
+  }
+
+  if(this.lookahead_any([29])) {
+    x = this.match(29);
+    return x;
+    return null;
+  }
+
+  this.unexpected([37, 36, 11, 12, 40, 13, 14, 15, 16, 59, 64, 38, 0, 29]);
+}
+instance_method class_decl: fun() {
+  var name = null;
+  var parent = null;
+  var f = null;
+  var c = null;
+  var im = null;
+  var cm = null;
+  this.match(2);
+  name = this.match(29);
+  parent = this.super_class();
+  f = this.fields_();
+  c = this.constructors();
+  im = this.instance_method_decls();
+  cm = this.class_method_decls();
+  this.match(6);
+  return [:class, [name, parent], f, c, im, cm];
+}
+instance_method super_class: fun() {
+  var x = null;
+  if(this.lookahead_any([51])) {
+    this.match(51);
+    x = this.match(29);
+    return x;
+    return null;
+  }
+
+  return "Object";
+
+  this.unexpected([51]);
+}
+instance_method fields_: fun() {
+  var xs = null;
+  if(this.lookahead_any([35])) {
+    this.match(35);
+    this.match(44);
+    xs = this.idlist();
+    this.match(45);
+    return [:fields, xs];
+    return null;
+  }
+
+  return [:fields, []];
+
+  this.unexpected([35]);
+}
+instance_method idlist: fun() {
+  var x = null;
+  var xs = null;
+  x = this.match(29);
+  xs = this.idlist_more();
+  return [x] + xs;
+}
+instance_method idlist_more: fun() {
+  var xs = null;
+  if(this.lookahead_any([42])) {
+    this.match(42);
+    xs = this.idlist();
+    return xs;
+    return null;
+  }
+
+  return [];
+
+  this.unexpected([42]);
+}
+instance_method constructors: fun() {
+  var x = null;
+  var xs = null;
+  if(this.lookahead_any([7])) {
+    x = this.constructor();
+    xs = this.constructors_more();
+    return [:ctors, [x] + xs];
+    return null;
+  }
+
+  return [:ctors, []];
+
+  this.unexpected([7]);
+}
+instance_method constructors_more: fun() {
+  var x = null;
+  var xs = null;
+  if(this.lookahead_any([7])) {
+    x = this.constructor();
+    xs = this.constructors_more();
+    return [x] + xs;
+    return null;
+  }
+
+  return [];
+
+  this.unexpected([7]);
+}
+instance_method constructor: fun() {
+  var name = null;
+  var _pos = null;
+  var p = null;
+  var body = null;
+  var e = null;
+  this.match(7);
+  name = this.match(31);
+  this.match(44);
+  _pos = this.position_after_spaces();
+  this.match(0);
+  p = this.fparams();
+  this.match(38);
+  @has_fun_literal = false;
+  body = this.top_fun_body();
+  e = this.end_function();
+  return [:ctor, name, [:params, p],
+                  @has_fun_literal, [:body,  body + [e]]].at(this, _pos);
+}
+instance_method instance_method_decls: fun() {
+  var x = null;
+  var xs = null;
+  if(this.lookahead_any([8])) {
+    x = this.instance_method_decl();
+    xs = this.instance_method_decls();
+    return [x] + xs;
+    return null;
+  }
+
+  return [];
+
+  this.unexpected([8]);
+}
+instance_method instance_method_decl: fun() {
+  var name = null;
+  var _pos = null;
+  var p = null;
+  var body = null;
+  var e = null;
+  this.match(8);
+  name = this.match(31);
+  this.match(44);
+  _pos = this.position_after_spaces();
+  this.match(0);
+  p = this.fparams();
+  this.match(38);
+  @has_fun_literal = false;
+  body = this.top_fun_body();
+  e = this.end_function();
+  return [:fun, name, [:params, p], @has_fun_literal,
+                       [:body, body + [e]]].at(this, _pos);
+}
+instance_method class_method_decls: fun() {
+  var x = null;
+  var xs = null;
+  if(this.lookahead_any([9])) {
+    x = this.class_method_decl();
+    xs = this.class_method_decls();
+    return [x] + xs;
+    return null;
+  }
+
+  return [];
+
+  this.unexpected([9]);
+}
+instance_method class_method_decl: fun() {
+  var name = null;
+  var _pos = null;
+  var p = null;
+  var body = null;
+  var e = null;
+  this.match(9);
+  name = this.match(31);
+  this.match(44);
+  _pos = this.position_after_spaces();
+  this.match(0);
+  p = this.fparams();
+  this.match(38);
+  @has_fun_literal = false;
+  body = this.top_fun_body();
+  e = this.end_function();
+  return [:fun, name, [:params, p], @has_fun_literal,
+                       [:body, body + [e]]].at(this, _pos);
+}
+instance_method top_level_fn: fun(name) {
+  var _pos = null;
+  var e = null;
+  _pos = this.position_after_spaces();
+  e = this.data_literal();
+  this.match(45);
+  return [:fun, name, [:params, []], false, [:body, [[:return, e]].at(this, _pos)].at(this, _pos)].at(this, _pos);
+}
+instance_method top_level_fun: fun(name) {
+  var _pos = null;
+  var p = null;
+  var body = null;
+  var e = null;
+  _pos = this.position_after_spaces();
+  this.match(0);
+  p = this.fparams();
+  this.match(38);
+  @has_fun_literal = false;
+  body = this.top_fun_body();
+  e = this.end_function();
+  return [:fun, name, [:params, p], @has_fun_literal,
+                           [:body, body + [e]]].at(this, _pos);
+}
+instance_method end_function: fun() {
+  var _pos = null;
+  _pos = this.position_after_spaces();
+  this.match(39);
+  return [:end-body].at(this, _pos);
+}
+instance_method fparams: fun() {
+  var x = null;
+  this.match(60);
+  x = this.fparam_list();
+  this.match(61);
+  return x;
+}
+instance_method fparam_list: fun() {
+  var x = null;
+  var xs = null;
+  if(this.lookahead_any([29])) {
+    x = this.match(29);
+    xs = this.fparam_list_rest();
+    return [x] + xs;
+    return null;
+  }
+
+  if(this.lookahead_any([66])) {
+    this.match(66);
+    x = this.match(29);
+    return [:var-arg, x];
+    return null;
+  }
+
+  return [];
+
+  this.unexpected([29, 66]);
+}
+instance_method fparam_list_rest: fun() {
+  var x = null;
+  if(this.lookahead_any([42])) {
+    this.match(42);
+    x = this.fparam_list();
+    return x;
+    return null;
+  }
+
+  return [];
+
+  this.unexpected([42]);
+}
+instance_method top_fun_body: fun() {
+  var p = null;
+  var s = null;
+  if(this.lookahead_any([51])) {
+    p = this.primitive_body();
+    return p;
+    return null;
+  }
+
+  if(this.lookahead_any([18, 21, 22, 24, 25, 67, 1, 68, 69, 72, 73, 28, 60, 37, 36, 11, 12, 40, 13, 14, 15, 16, 59, 64, 38, 0, 41, 29])) {
+    s = this.stmts();
+    return s;
+    return null;
+  }
+
+  return [];
+
+  this.unexpected([51, 18, 21, 22, 24, 25, 67, 1, 68, 69, 72, 73, 28, 60, 37, 36, 11, 12, 40, 13, 14, 15, 16, 59, 64, 38, 0, 41, 29]);
+}
+instance_method primitive_body: fun() {
+  var s = null;
+  this.match(51);
+  this.match(17);
+  s = this.lit_string();
+  this.match(53);
+  return [[:primitive, s]];
+}
+instance_method stmts: fun() {
+  var x = null;
+  var xs = null;
+  if(this.lookahead_any([18, 21, 22, 24, 25, 67, 1, 68, 69, 72, 73, 28, 60, 37, 36, 11, 12, 40, 13, 14, 15, 16, 59, 64, 38, 0, 41, 29])) {
+    x = this.stmt();
+    xs = this.stmts();
+    return [x] + xs;
+    return null;
+  }
+
+  return [];
+
+  this.unexpected([18, 21, 22, 24, 25, 67, 1, 68, 69, 72, 73, 28, 60, 37, 36, 11, 12, 40, 13, 14, 15, 16, 59, 64, 38, 0, 41, 29]);
+}
+instance_method stmt: fun() {
+  var e = null;
+  if(this.lookahead_any([18, 21, 22, 24])) {
+    e = this.control_expr();
+    return e;
+    return null;
+  }
+
+  if(this.lookahead_any([25, 67, 1, 68, 69, 72, 73, 28, 60, 37, 36, 11, 12, 40, 13, 14, 15, 16, 59, 64, 38, 0, 41, 29])) {
+    e = this.non_control_expr();
+    this.match(45);
+    return e;
+    return null;
+  }
+
+  this.unexpected([18, 21, 22, 24, 25, 67, 1, 68, 69, 72, 73, 28, 60, 37, 36, 11, 12, 40, 13, 14, 15, 16, 59, 64, 38, 0, 41, 29]);
+}
+instance_method control_expr: fun() {
+  var x = null;
+  if(this.lookahead_any([18])) {
+    x = this.expr_if();
+    return x;
+    return null;
+  }
+
+  if(this.lookahead_any([21])) {
+    x = this.expr_while();
+    return x;
+    return null;
+  }
+
+  if(this.lookahead_any([22])) {
+    x = this.expr_try();
+    return x;
+    return null;
+  }
+
+  if(this.lookahead_any([24])) {
+    x = this.expr_for();
+    return x;
+    return null;
+  }
+
+  this.unexpected([18, 21, 22, 24]);
+}
+instance_method expr_if: fun() {
+  var _pos = null;
+  var e = null;
+  var body = null;
+  var elif_ = null;
+  var else_ = null;
+  _pos = this.position_after_spaces();
+  this.match(18);
+  this.match(60);
+  e = this.expr();
+  this.match(61);
+  this.match(62);
+  body = this.stmts();
+  this.match(63);
+  elif_ = this.expr_elifs();
+  else_ = this.expr_else();
+  return [:if, e, body, elif_, else_ or []].at(this, _pos);
+}
+instance_method expr_elifs: fun() {
+  var x = null;
+  var xs = null;
+  if(this.lookahead_any([19])) {
+    x = this.expr_elif();
+    xs = this.expr_elifs();
+    return [x] + xs;
+    return null;
+  }
+
+  return [];
+
+  this.unexpected([19]);
+}
+instance_method expr_elif: fun() {
+  var _pos = null;
+  var e = null;
+  var body = null;
+  _pos = this.position_after_spaces();
+  this.match(19);
+  this.match(60);
+  e = this.expr();
+  this.match(61);
+  this.match(62);
+  body = this.stmts();
+  this.match(63);
+  return [:elif, e, body].at(this, _pos);
+}
+instance_method expr_else: fun() {
+  var body = null;
+  if(this.lookahead_any([20])) {
+    this.match(20);
+    this.match(62);
+    body = this.stmts();
+    this.match(63);
+    return body;
+    return null;
+  }
+
+  return null;
+
+  this.unexpected([20]);
+}
+instance_method expr_while: fun() {
+  var _pos = null;
+  var e = null;
+  var xs = null;
+  _pos = this.position_after_spaces();
+  this.match(21);
+  this.match(60);
+  e = this.expr();
+  this.match(61);
+  this.match(62);
+  xs = this.stmts();
+  this.match(63);
+  return [:while, e, xs].at(this, _pos);
+}
+instance_method expr_try: fun() {
+  var _pos = null;
+  var s_try = null;
+  var c = null;
+  var s_catch = null;
+  _pos = this.position_after_spaces();
+  this.match(22);
+  this.match(62);
+  s_try = this.stmts();
+  this.match(63);
+  c = this.catch_part();
+  this.match(62);
+  s_catch = this.stmts();
+  this.match(63);
+  return [:try, s_try, c, s_catch].at(this, _pos);
+}
+instance_method catch_part: fun() {
+  var _pos = null;
+  var x = null;
+  _pos = this.position_after_spaces();
+  this.match(23);
+  this.match(60);
+  x = this.catch_expr(_pos);
+  this.match(61);
+  return x;
+}
+instance_method catch_expr: fun(_pos) {
+  var a = null;
+  var b = null;
+  a = this.match(29);
+  b = this.catch_expr_rest(a, _pos);
+  return b;
+}
+instance_method catch_expr_rest: fun(a, _pos) {
+  var b = null;
+  if(this.lookahead_any([29])) {
+    b = this.match(29);
+    return [:catch, [:id, a], b].at(this, _pos);
+    return null;
+  }
+
+  return [:catch, a].at(this, _pos);
+
+  this.unexpected([29]);
+}
+instance_method expr_for: fun() {
+  var v = null;
+  var c = null;
+  var n = null;
+  var st = null;
+  this.match(24);
+  this.match(60);
+  v = this.for_init();
+  this.match(45);
+  c = this.expr();
+  this.match(45);
+  n = this.expr_or_assignment();
+  this.match(61);
+  this.match(62);
+  st = this.stmts();
+  this.match(63);
+  return [:for, v, c, st, n];
+}
+instance_method for_init: fun() {
+  var x = null;
+  if(this.lookahead_any([1])) {
+    x = this.expr_decl();
+    return x;
+    return null;
+  }
+
+  if(this.lookahead_any([68, 69, 72, 73, 28, 60, 37, 36, 11, 12, 40, 13, 14, 15, 16, 59, 64, 38, 0, 41, 29])) {
+    x = this.for_expr_assign();
+    return x;
+    return null;
+  }
+
+  this.unexpected([1, 68, 69, 72, 73, 28, 60, 37, 36, 11, 12, 40, 13, 14, 15, 16, 59, 64, 38, 0, 41, 29]);
+}
+instance_method expr_or_assignment: fun() {
+  var _pos = null;
+  var a = null;
+  var b = null;
+  _pos = this.position_after_spaces();
+  a = this.expr();
+  b = this.maybe_assignment(a, _pos);
+  return b;
+}
+instance_method maybe_assignment: fun(a, _pos) {
+  var b = null;
+  if(this.lookahead_any([47])) {
+    this.match(47);
+    b = this.expr();
+    return [:=, a, b].at(this, _pos);
+    return null;
+  }
+
+  if(this.lookahead_any([70])) {
+    this.match(70);
+    b = this.expr();
+    return [:=, a, [:+, a, b]].at(this, _pos);
+    return null;
+  }
+
+  if(this.lookahead_any([71])) {
+    this.match(71);
+    b = this.expr();
+    return [:=, a, [:-, a, b]].at(this, _pos);
+    return null;
+  }
+
+  return [:expression, a];
+
+  this.unexpected([47, 70, 71]);
+}
+instance_method for_expr_assign: fun() {
+  var _pos = null;
+  var a = null;
+  var b = null;
+  _pos = this.position_after_spaces();
+  a = this.expr();
+  b = this.for_expr_assign_rest(a, _pos);
+  return b;
+}
+instance_method for_expr_assign_rest: fun(a, _pos) {
+  var b = null;
+  this.match(47);
+  b = this.expr();
+  return [:=, a, b].at(this, _pos);
+}
+instance_method expr_decl: fun() {
+  var _pos = null;
+  var name = null;
+  var e = null;
+  _pos = this.position_after_spaces();
+  this.match(1);
+  name = this.match(29);
+  this.match(47);
+  e = this.expr();
+  return [:var-def, name, e].at(this, _pos);
+}
+instance_method non_control_expr: fun() {
+  var x = null;
+  if(this.lookahead_any([25])) {
+    x = this.expr_ret();
+    return x;
+    return null;
+  }
+
+  if(this.lookahead_any([67])) {
+    x = this.expr_non_local_ret();
+    return x;
+    return null;
+  }
+
+  if(this.lookahead_any([1])) {
+    x = this.expr_decl();
+    return x;
+    return null;
+  }
+
+  if(this.lookahead_any([68, 69, 72, 73, 28, 60, 37, 36, 11, 12, 40, 13, 14, 15, 16, 59, 64, 38, 0, 41, 29])) {
+    x = this.expr_or_assignment();
+    return x;
+    return null;
+  }
+
+  this.unexpected([25, 67, 1, 68, 69, 72, 73, 28, 60, 37, 36, 11, 12, 40, 13, 14, 15, 16, 59, 64, 38, 0, 41, 29]);
+}
+instance_method expr_ret: fun() {
+  var _pos = null;
+  var e = null;
+  _pos = this.position_after_spaces();
+  this.match(25);
+  e = this.expr();
+  return [:return, e].at(this, _pos);
+}
+instance_method expr_non_local_ret: fun() {
+  var _pos = null;
+  var e = null;
+  _pos = this.position_after_spaces();
+  this.match(67);
+  e = this.expr();
+  return [:non-local-return, e].at(this, _pos);
+}
+instance_method expr: fun() {
+  var e = null;
+  e = this.expr_or();
+  return e;
+}
+instance_method expr_or: fun() {
+  var _pos = null;
+  var a = null;
+  var b = null;
+  _pos = this.position_after_spaces();
+  a = this.expr_and();
+  b = this.expr_or_(a, _pos);
+  return b;
+}
+instance_method expr_or_: fun(a, _pos) {
+  var b = null;
+  var c = null;
+  if(this.lookahead_any([26])) {
+    this.match(26);
+    b = this.expr_and();
+    c = this.expr_or_([:or, a, b].at(this, _pos), _pos);
+    return c;
+    return null;
+  }
+
+  return a;
+
+  this.unexpected([26]);
+}
+instance_method expr_and: fun() {
+  var _pos = null;
+  var a = null;
+  var b = null;
+  _pos = this.position_after_spaces();
+  a = this.expr_eq();
+  b = this.expr_and_(a, _pos);
+  return b;
+}
+instance_method expr_and_: fun(a, _pos) {
+  var b = null;
+  var c = null;
+  if(this.lookahead_any([27])) {
+    this.match(27);
+    b = this.expr_eq();
+    c = this.expr_and_([:and, a, b].at(this, _pos), _pos);
+    return c;
+    return null;
+  }
+
+  return a;
+
+  this.unexpected([27]);
+}
+instance_method expr_eq: fun() {
+  var _pos = null;
+  var a = null;
+  var b = null;
+  _pos = this.position_after_spaces();
+  a = this.expr_rel();
+  b = this.expr_eq_(a, _pos);
+  return b;
+}
+instance_method expr_eq_: fun(a, _pos) {
+  var b = null;
+  var c = null;
+  if(this.lookahead_any([48])) {
+    this.match(48);
+    b = this.expr_rel();
+    c = this.expr_eq_([:==, a, b].at(this, _pos), _pos);
+    return c;
+    return null;
+  }
+
+  if(this.lookahead_any([49])) {
+    this.match(49);
+    b = this.expr_rel();
+    c = this.expr_eq_([:!=, a, b].at(this, _pos), _pos);
+    return c;
+    return null;
+  }
+
+  return a;
+
+  this.unexpected([48, 49]);
+}
+instance_method expr_rel: fun() {
+  var _pos = null;
+  var a = null;
+  var b = null;
+  _pos = this.position_after_spaces();
+  a = this.expr_add();
+  b = this.expr_rel_(a, _pos);
+  return b;
+}
+instance_method expr_rel_: fun(a, _pos) {
+  var b = null;
+  var c = null;
+  if(this.lookahead_any([52])) {
+    this.match(52);
+    b = this.expr_add();
+    c = this.expr_rel_([:<=, a, b].at(this, _pos), _pos);
+    return c;
+    return null;
+  }
+
+  if(this.lookahead_any([54])) {
+    this.match(54);
+    b = this.expr_add();
+    c = this.expr_rel_([:>=, a, b].at(this, _pos), _pos);
+    return c;
+    return null;
+  }
+
+  if(this.lookahead_any([51])) {
+    this.match(51);
+    b = this.expr_add();
+    c = this.expr_rel_([:<, a, b].at(this, _pos), _pos);
+    return c;
+    return null;
+  }
+
+  if(this.lookahead_any([53])) {
+    this.match(53);
+    b = this.expr_add();
+    c = this.expr_rel_([:>, a, b].at(this, _pos), _pos);
+    return c;
+    return null;
+  }
+
+  return a;
+
+  this.unexpected([52, 54, 51, 53]);
+}
+instance_method expr_add: fun() {
+  var _pos = null;
+  var a = null;
+  var b = null;
+  _pos = this.position_after_spaces();
+  a = this.expr_mul();
+  b = this.expr_add_(a, _pos);
+  return b;
+}
+instance_method expr_add_: fun(a, _pos) {
+  var b = null;
+  var c = null;
+  if(this.lookahead_any([70])) {
+    
+    return a;
+    return null;
+  }
+
+  if(this.lookahead_any([71])) {
+    
+    return a;
+    return null;
+  }
+
+  if(this.lookahead_any([68])) {
+    this.match(68);
+    b = this.expr_mul();
+    c = this.expr_add_([:+, a, b].at(this, _pos), _pos);
+    return c;
+    return null;
+  }
+
+  if(this.lookahead_any([69])) {
+    this.match(69);
+    b = this.expr_mul();
+    c = this.expr_add_([:-, a, b].at(this, _pos), _pos);
+    return c;
+    return null;
+  }
+
+  if(this.lookahead_any([57])) {
+    this.match(57);
+    b = this.expr_mul();
+    c = this.expr_add_([:&, a, b].at(this, _pos), _pos);
+    return c;
+    return null;
+  }
+
+  if(this.lookahead_any([58])) {
+    this.match(58);
+    b = this.expr_mul();
+    c = this.expr_add_([:|, a, b].at(this, _pos), _pos);
+    return c;
+    return null;
+  }
+
+  if(this.lookahead_any([55])) {
+    this.match(55);
+    b = this.expr_mul();
+    c = this.expr_add_([:<<, a, b].at(this, _pos), _pos);
+    return c;
+    return null;
+  }
+
+  if(this.lookahead_any([56])) {
+    this.match(56);
+    b = this.expr_mul();
+    c = this.expr_add_([:>>, a, b].at(this, _pos), _pos);
+    return c;
+    return null;
+  }
+
+  return a;
+
+  this.unexpected([70, 71, 68, 69, 57, 58, 55, 56]);
+}
+instance_method expr_mul: fun() {
+  var _pos = null;
+  var a = null;
+  var b = null;
+  _pos = this.position_after_spaces();
+  a = this.expr_unary();
+  b = this.expr_mul_(a, _pos);
+  return b;
+}
+instance_method expr_mul_: fun(a, _pos) {
+  var b = null;
+  var c = null;
+  if(this.lookahead_any([66])) {
+    this.match(66);
+    b = this.expr_unary();
+    c = this.expr_mul_([:*, a, b].at(this, _pos), _pos);
+    return c;
+    return null;
+  }
+
+  if(this.lookahead_any([43])) {
+    this.match(43);
+    b = this.expr_unary();
+    c = this.expr_mul_([:/, a, b].at(this, _pos), _pos);
+    return c;
+    return null;
+  }
+
+  return a;
+
+  this.unexpected([66, 43]);
+}
+instance_method expr_unary: fun() {
+  var _pos = null;
+  var a = null;
+_pos = this.position_after_spaces();
+  if(this.lookahead_any([68])) {
+    this.match(68);
+    a = this.suffix_expr();
+    return [:positive, a].at(this, _pos);
+    return null;
+  }
+
+_pos = this.position_after_spaces();
+  if(this.lookahead_any([69])) {
+    this.match(69);
+    a = this.suffix_expr();
+    return [:negative, a].at(this, _pos);
+    return null;
+  }
+
+_pos = this.position_after_spaces();
+  if(this.lookahead_any([72])) {
+    this.match(72);
+    a = this.suffix_expr();
+    return [:not, a].at(this, _pos);
+    return null;
+  }
+
+_pos = this.position_after_spaces();
+  if(this.lookahead_any([73])) {
+    this.match(73);
+    a = this.suffix_expr();
+    return [:bit-neg, a].at(this, _pos);
+    return null;
+  }
+
+  if(this.lookahead_any([28, 60, 37, 36, 11, 12, 40, 13, 14, 15, 16, 59, 64, 38, 0, 41, 29])) {
+    a = this.super_expr();
+    return a;
+    return null;
+  }
+
+  this.unexpected([68, 69, 72, 73, 28, 60, 37, 36, 11, 12, 40, 13, 14, 15, 16, 59, 64, 38, 0, 41, 29]);
+}
+instance_method super_expr: fun() {
+  var _pos = null;
+  var x = null;
+_pos = this.position_after_spaces();
+  if(this.lookahead_any([28])) {
+    this.match(28);
+    x = this.super_call_rest(_pos);
+    return x;
+    return null;
+  }
+
+  if(this.lookahead_any([60, 37, 36, 11, 12, 40, 13, 14, 15, 16, 59, 64, 38, 0, 41, 29])) {
+    x = this.suffix_expr();
+    return x;
+    return null;
+  }
+
+  this.unexpected([28, 60, 37, 36, 11, 12, 40, 13, 14, 15, 16, 59, 64, 38, 0, 41, 29]);
+}
+instance_method super_call_rest: fun(_pos) {
+  var sel = null;
+  var p = null;
+  if(this.lookahead_any([74])) {
+    this.match(74);
+    sel = this.match(29);
+    p = this.args();
+    return [:super-ctor-send, sel, [:args, p]].at(this, _pos);
+    return null;
+  }
+
+  if(this.lookahead_any([60])) {
+    p = this.args();
+    return [:super-send, [:args, p]].at(this, _pos);
+    return null;
+  }
+
+  this.unexpected([74, 60]);
+}
+instance_method suffix_expr: fun() {
+  var _pos = null;
+  var r = null;
+  var e = null;
+  _pos = this.position_after_spaces();
+  r = this.prim_expr();
+  e = this.suffix_expr_(r, _pos);
+  return e;
+}
+instance_method suffix_expr_: fun(r, _pos) {
+  var x = null;
+  var y = null;
+  if(this.lookahead_any([74])) {
+    x = this.send_expr(r, _pos);
+    y = this.suffix_expr_(x, _pos);
+    return y;
+    return null;
+  }
+
+  if(this.lookahead_any([64])) {
+    x = this.index_expr(r, _pos);
+    y = this.suffix_expr_(x, _pos);
+    return y;
+    return null;
+  }
+
+  if(this.lookahead_any([60])) {
+    x = this.call_expr(r, _pos);
+    y = this.suffix_expr_(x, _pos);
+    return y;
+    return null;
+  }
+
+  return r;
+
+  this.unexpected([74, 64, 60]);
+}
+instance_method index_expr: fun(r, _pos) {
+  var i = null;
+  this.match(64);
+  i = this.expr();
+  this.match(65);
+  return [:index, r, i].at(this, _pos);
+}
+instance_method send_expr: fun(r, _pos) {
+  var sel = null;
+  var p = null;
+  this.match(74);
+  sel = this.match(29);
+  p = this.maybe_args();
+  return [:send, r, sel, [:args, p]].at(this, _pos);
+}
+instance_method call_expr: fun(r, _pos) {
+  var p = null;
+  p = this.args();
+  return [:call, r, [:args, p]].at(this, _pos);
+}
+instance_method maybe_args: fun() {
+  var x = null;
+  if(this.lookahead_any([60])) {
+    x = this.args();
+    return x;
+    return null;
+  }
+
+  return [];
+
+  this.unexpected([60]);
+}
+instance_method args: fun() {
+  var p = null;
+  this.match(60);
+  p = this.expr_list();
+  this.match(61);
+  return p;
+}
+instance_method prim_expr: fun() {
+  var e = null;
+  var x = null;
+  var _pos = null;
+  var y = null;
+  if(this.lookahead_any([60])) {
+    this.match(60);
+    e = this.expr();
+    this.match(61);
+    return e;
+    return null;
+  }
+
+  if(this.lookahead_any([37, 36, 11, 12, 40, 13, 14, 15, 16, 59, 64, 38, 0])) {
+    x = this.literal();
+    return x;
+    return null;
+  }
+
+_pos = this.position_after_spaces();
+  if(this.lookahead_any([41])) {
+    x = this.field_name();
+    return [:field, x.from(1)].at(this, _pos);
+    return null;
+  }
+
+_pos = this.position_after_spaces();
+  if(this.lookahead_any([29])) {
+    x = this.match(29);
+    y = this.maybe_call(x, _pos);
+    return y;
+    return null;
+  }
+
+  this.unexpected([60, 37, 36, 11, 12, 40, 13, 14, 15, 16, 59, 64, 38, 0, 41, 29]);
+}
+instance_method maybe_call: fun(r, _pos) {
+  var p = null;
+  if(this.lookahead_any([60])) {
+    p = this.args();
+    return [:send-or-local-call, r, [:args, p]].at(this, _pos);
+    return null;
+  }
+
+  return [:id, r].at(this, _pos);
+
+  this.unexpected([60]);
+}
+instance_method field_name: fun() {
+  var i = null;
+  i = this.match(41);
+  return i;
+}
+instance_method expr_list: fun() {
+  var x = null;
+  var xs = null;
+  if(this.lookahead_any([68, 69, 72, 73, 28, 60, 37, 36, 11, 12, 40, 13, 14, 15, 16, 59, 64, 38, 0, 41, 29])) {
+    x = this.expr();
+    xs = this.expr_list_rest();
+    return [x] + xs;
+    return null;
+  }
+
+  return [];
+
+  this.unexpected([68, 69, 72, 73, 28, 60, 37, 36, 11, 12, 40, 13, 14, 15, 16, 59, 64, 38, 0, 41, 29]);
+}
+instance_method expr_list_rest: fun() {
+  var x = null;
+  if(this.lookahead_any([42])) {
+    this.match(42);
+    x = this.expr_list();
+    return x;
+    return null;
+  }
+
+  return [];
+
+  this.unexpected([42]);
+}
+instance_method pair_list: fun() {
+  var x = null;
+  var xs = null;
+  if(this.lookahead_any([68, 69, 72, 73, 28, 60, 37, 36, 11, 12, 40, 13, 14, 15, 16, 59, 64, 38, 0, 41, 29])) {
+    x = this.pair();
+    xs = this.pair_list_rest();
+    return [x] + xs;
+    return null;
+  }
+
+  return [];
+
+  this.unexpected([68, 69, 72, 73, 28, 60, 37, 36, 11, 12, 40, 13, 14, 15, 16, 59, 64, 38, 0, 41, 29]);
+}
+instance_method pair_list_rest: fun() {
+  var x = null;
+  if(this.lookahead_any([42])) {
+    this.match(42);
+    x = this.pair_list();
+    return x;
+    return null;
+  }
+
+  return [];
+
+  this.unexpected([42]);
+}
+instance_method pair: fun() {
+  var _pos = null;
+  var key = null;
+  var val = null;
+  _pos = this.position_after_spaces();
+  key = this.expr();
+  this.match(44);
+  val = this.expr();
+  return [:pair, key, val].at(this, _pos);
+}
+instance_method data_literal: fun() {
+  var x = null;
+  var _pos = null;
+  var e = null;
+  if(this.lookahead_any([37, 36])) {
+    x = this.lit_number();
+    return x;
+    return null;
+  }
+
+_pos = this.position_after_spaces();
+  if(this.lookahead_any([11])) {
+    this.match(11);
+    return [:literal, :module].at(this, _pos);
+    return null;
+  }
+
+_pos = this.position_after_spaces();
+  if(this.lookahead_any([12])) {
+    this.match(12);
+    return [:literal, :context].at(this, _pos);
+    return null;
+  }
+
+_pos = this.position_after_spaces();
+  if(this.lookahead_any([40])) {
+    x = this.match(40);
+    return [:literal-symbol, x.from(1)].at(this, _pos);
+    return null;
+  }
+
+_pos = this.position_after_spaces();
+  if(this.lookahead_any([13])) {
+    this.match(13);
+    return [:literal, :this].at(this, _pos);
+    return null;
+  }
+
+_pos = this.position_after_spaces();
+  if(this.lookahead_any([14])) {
+    this.match(14);
+    return [:literal, :null].at(this, _pos);
+    return null;
+  }
+
+_pos = this.position_after_spaces();
+  if(this.lookahead_any([15])) {
+    this.match(15);
+    return [:literal, :true].at(this, _pos);
+    return null;
+  }
+
+_pos = this.position_after_spaces();
+  if(this.lookahead_any([16])) {
+    this.match(16);
+    return [:literal, :false].at(this, _pos);
+    return null;
+  }
+
+  if(this.lookahead_any([59])) {
+    x = this.lit_string();
+    return x;
+    return null;
+  }
+
+_pos = this.position_after_spaces();
+  if(this.lookahead_any([64])) {
+    this.match(64);
+    e = this.expr_list();
+    this.match(65);
+    return ([:literal-array].extends([e])).at(this, _pos);
+    return null;
+  }
+
+_pos = this.position_after_spaces();
+  if(this.lookahead_any([38])) {
+    this.match(38);
+    e = this.pair_list();
+    this.match(39);
+    return ([:literal-dict]).at(this, _pos).extends(e);
+    return null;
+  }
+
+  this.unexpected([37, 36, 11, 12, 40, 13, 14, 15, 16, 59, 64, 38]);
+}
+instance_method literal: fun() {
+  var x = null;
+  if(this.lookahead_any([37, 36, 11, 12, 40, 13, 14, 15, 16, 59, 64, 38])) {
+    x = this.data_literal();
+    return x;
+    return null;
+  }
+
+  if(this.lookahead_any([0])) {
+    x = this.funliteral();
+    @has_fun_literal = true;
+    return x;
+    return null;
+  }
+
+  this.unexpected([37, 36, 11, 12, 40, 13, 14, 15, 16, 59, 64, 38, 0]);
+}
+instance_method funliteral: fun() {
+  var _pos = null;
+  var p = null;
+  var body = null;
+  var e = null;
+  _pos = this.position_after_spaces();
+  this.match(0);
+  p = this.params();
+  this.match(38);
+  body = this.funliteral_body();
+  e = this.end_function();
+  return [:fun-literal, [:params, p], [:body, body + [e]]].at(this, _pos);
+}
+instance_method maybe_expr: fun() {
+  var x = null;
+  if(this.lookahead_any([68, 69, 72, 73, 28, 60, 37, 36, 11, 12, 40, 13, 14, 15, 16, 59, 64, 38, 0, 41, 29])) {
+    x = this.expr();
+    return x;
+    return null;
+  }
+
+  return null;
+
+  this.unexpected([68, 69, 72, 73, 28, 60, 37, 36, 11, 12, 40, 13, 14, 15, 16, 59, 64, 38, 0, 41, 29]);
+}
+instance_method params: fun() {
+  var xs = null;
+  this.match(60);
+  xs = this.idlist_opt();
+  this.match(61);
+  return xs;
+}
+instance_method idlist_opt: fun() {
+  var x = null;
+  var xs = null;
+  if(this.lookahead_any([29])) {
+    x = this.match(29);
+    xs = this.idlist_more();
+    return [x] + xs;
+    return null;
+  }
+
+  return [];
+
+  this.unexpected([29]);
+}
+instance_method idlist_more_opt: fun() {
+  var x = null;
+  var xs = null;
+  if(this.lookahead_any([42])) {
+    this.match(42);
+    x = this.match(29);
+    xs = this.idlist_more_opt();
+    return [x] + xs;
+    return null;
+  }
+
+  return [];
+
+  this.unexpected([42]);
+}
+instance_method funliteral_body: fun() {
+  var body = null;
+  var last = null;
+  body = this.funliteral_stmts();
+  last = this.last_or_empty(body);
+  this.rewrite_last_stmt(last);
+  return body;
+}
+instance_method funliteral_stmts: fun() {
+  var x = null;
+  var xs = null;
+  if(this.lookahead_any([18, 21, 22, 24])) {
+    x = this.control_expr();
+    xs = this.funliteral_stmts();
+    return [x] + xs;
+    return null;
+  }
+
+  if(this.lookahead_any([25, 67, 1, 68, 69, 72, 73, 28, 60, 37, 36, 11, 12, 40, 13, 14, 15, 16, 59, 64, 38, 0, 41, 29])) {
+    x = this.non_control_expr();
+    xs = this.funliteral_stmt_sep_more();
+    return [x] + xs;
+    return null;
+  }
+
+  return [];
+
+  this.unexpected([18, 21, 22, 24, 25, 67, 1, 68, 69, 72, 73, 28, 60, 37, 36, 11, 12, 40, 13, 14, 15, 16, 59, 64, 38, 0, 41, 29]);
+}
+instance_method funliteral_stmt_sep_more: fun() {
+  var x = null;
+  if(this.lookahead_any([45])) {
+    this.match(45);
+    x = this.funliteral_stmts();
+    return x;
+    return null;
+  }
+
+  return [];
+
+  this.unexpected([45]);
+}
+instance_method lit_string: fun() {
+  var _pos = null;
+  var x = null;
+  _pos = this.position_after_spaces();
+  this.match(59);
+  x = this.consume_rest_lit_string();
+  return [:literal-string, x].at(this, _pos);
+}
+instance_method lit_number: fun() {
+  var _pos = null;
+  var x = null;
+_pos = this.position_after_spaces();
+  if(this.lookahead_any([37])) {
+    x = this.match(37);
+    return [:literal-number, x.asHex].at(this, _pos);
+    return null;
+  }
+
+_pos = this.position_after_spaces();
+  if(this.lookahead_any([36])) {
+    x = this.match(36);
+    return [:literal-number, x.toInteger].at(this, _pos);
+    return null;
+  }
+
+  this.unexpected([37, 36]);
+}
+instance_method consume_rest_of_line: fun() {
+  this.scanner.consume_whitespace();
+  return this.scanner.match_regexp("[^\\n]+");
+}
+instance_method consume_rest_lit_string: fun() {
+  var res = "";
+  while (true) {
+    var x = this.scanner.match_regexp("[[:graph:]]|[ \t]");
+    if (x == "\"") {
+      return res.unescape;
+    } elif (x == "\\") {
+      var y = this.scanner.match_regexp("[[:graph:]]|[\t ]");
+      res = res + x + y;
+    } elif (x == null) {
+      ParseError.throw(this.current_line, "string literals can't contain newline character");
+    } elif (x == "\n") {
+      ParseError.throw(this.current_line, "string literals can't contain newline character");
+    } else {
+      res = res + x;
+    }
+  }
+}
+instance_method last_or_empty: fun(lst) {
+  if (lst.size > 0) {
+    return lst.last;
+  } else {
+    return [];
+  }
+}
+instance_method rewrite_last_stmt: fun(last) {
+  if (last) {
+    if(last.size > 0) {
+      if (last[0] == :expression) {
+        return last.set(0, :return);
+      }
+    }
+  }
+  return last;
+}
+instance_method initialize: fun() {
   @has_fun_literal = false;
   @line_offset = 0;
 }
@@ -69,1301 +1781,4 @@ instance_method set_line_offset: fun(line_offset) {
 instance_method line_offset: fun() {
   return @line_offset;
 }
-instance_method last_or_empty: fun(lst) {
-  if (lst.size > 0) {
-    return lst.last;
-  } else {
-    return [];
-  }
-}
-instance_method maybe_append_semicol_expr: fun(body, no_semicol_expr) {
-  if(no_semicol_expr) {
-    body.append([:expression, no_semicol_expr]);
-  }
-}
-
-
-instance_method alpha: fun() {
-  return this._or([fun() {
-    this._apply_with_args(:seq, ["+"]);
-  }, fun() {
-    this._apply_with_args(:seq, ["*"]);
-  }, fun() {
-    this._apply_with_args(:seq, ["-"]);
-  }, fun() {
-    this._apply_with_args(:seq, ["/"]);
-  }, fun() {
-    this._apply_with_args(:seq, ["="]);
-  }, fun() {
-    this._apply_with_args(:seq, ["<"]);
-  }, fun() {
-    this._apply_with_args(:seq, [">"]);
-  }, fun() {
-    this._apply_with_args(:seq, ["?"]);
-  }, fun() {
-    this._apply_with_args(:seq, ["!"]);
-  }, fun() {
-    this._apply_with_args(:seq, ["&"]);
-  }, fun() {
-    this._apply_with_args(:seq, ["|"]);
-  }]);
-}
-instance_method meme_keyword: fun() {
-  return this._or([fun() {
-    this._apply_with_args(:keyword,["fun"]);
-  }, fun() {
-    this._apply_with_args(:keyword,["var"]);
-  }, fun() {
-    this._apply_with_args(:keyword,["class"]);
-  }]);
-}
-instance_method id: fun() {
-  var i = null;
-  this._apply(:spaces);
-  this._not(fun() {
-    this._apply(:meme_keyword);});
-  i = this._apply(:identifier);
-  return i;
-}
-instance_method alpha_name: fun() {
-  var x = null;
-  var xs = null;
-  this._apply(:spaces);
-  this._not(fun() {
-    this._apply(:meme_keyword);});
-  x = this._or([fun() {
-    this._apply(:alpha);
-  }, fun() {
-    this._apply(:letter);
-  }, fun() {
-    this._apply_with_args(:seq, ["_"]);
-  }]);
-  xs = this._many(fun() {
-    this._or([fun() {
-      this._apply(:identifier_rest);
-    }, fun() {
-      this._apply(:alpha);
-    }]);}, null);
-  return ([x] + xs).join("");
-}
-instance_method symbol_name: fun() {
-  var x = null;
-  var xs = null;
-  this._apply(:spaces);
-  x = this._or([fun() {
-    this._apply(:alpha);
-  }, fun() {
-    this._apply(:letter);
-  }, fun() {
-    this._apply_with_args(:seq, ["_"]);
-  }]);
-  xs = this._many(fun() {
-    this._or([fun() {
-      this._apply(:identifier_rest);
-    }, fun() {
-      this._apply_with_args(:seq, ["_"]);
-    }, fun() {
-      this._apply(:alpha);
-    }]);}, null);
-  xs.prepend(x);
-  return xs.join("");
-}
-instance_method space: fun() {
-  var c = null;
-  return this._or([fun() {
-    c = this._apply(:anything);
-    this._pred(c.onlySpaces);
-    return c;
-  }, fun() {
-    this._apply(:comment);
-  }]);
-}
-instance_method comment: fun() {
-  return this._or([fun() {
-    this._apply_with_args(:seq, ["/*"]);
-    this._many(fun() {
-      this._or([fun() {
-        this._not(fun() {
-          this._apply_with_args(:seq, ["*/"]);});
-        this._apply(:anything);
-      }]);}, null);
-    this._apply_with_args(:seq, ["*/"]);
-  }, fun() {
-    this._apply_with_args(:seq, ["//"]);
-    this._many(fun() {
-      this._or([fun() {
-        this._not(fun() {
-          this._apply_with_args(:seq, ["\n"]);});
-        this._apply(:anything);
-      }]);}, null);
-    this._apply_with_args(:seq, ["\n"]);
-  }]);
-}
-instance_method start: fun() {
-  var c = null;
-  var meta = null;
-  var req = null;
-  var code = null;
-  this._apply_with_args(:seq, ["m"]);
-  this._apply_with_args(:seq, ["e"]);
-  this._apply_with_args(:seq, ["m"]);
-  this._apply_with_args(:seq, ["e"]);
-  this._apply(:space);
-  c = this._apply(:compiler_line);
-  meta = this._apply(:meta_section);
-  req = this._apply(:requirements_section);
-  code = this._apply(:code_section);
-  this._apply(:spaces);
-  this._apply(:end);
-  return [:module, c, meta, req, code];
-}
-instance_method compiler_line: fun() {
-  var xs = null;
-  xs = this._many1(fun() {
-    this._or([fun() {
-      this._not(fun() {
-        this._apply_with_args(:seq, ["\n"]);});
-      this._apply(:anything);
-    }]);});
-  return xs.join("");
-}
-instance_method meta_section: fun() {
-  var xs = null;
-  xs = this._many(fun() {
-    this._apply(:meta_variable);}, null);
-  return [:meta, xs];
-}
-instance_method meta_variable: fun() {
-  var key = null;
-  var xs = null;
-  this._apply(:spaces);
-  this._apply_with_args(:seq, ["@"]);
-  this._apply(:spaces);
-  key = this._apply(:id);
-  this._apply_with_args(:token, [":"]);
-  xs = this._many1(fun() {
-    this._or([fun() {
-      this._not(fun() {
-        this._apply_with_args(:seq, ["\n"]);});
-      this._apply(:anything);
-    }]);});
-  return [key, xs.join("")];
-}
-instance_method requirements_section: fun() {
-  var params = null;
-  var x = null;
-  return this._or([fun() {
-    this._apply_with_args(:keyword,["requires"]);
-    params = this._apply(:module_params);
-    x = this._apply_with_args(:requirements_rest, [params]);
-    return x;
-  }, fun() {
-    return [:requirements, [], [:default-locations, []], [:imports, []]];
-  }]);
-}
-instance_method requirements_rest: fun() {
-  var specs = null;
-  var imp = null;
-  var params = this._apply(:anything);
-  return this._or([fun() {
-    this._apply_with_args(:keyword,["where"]);
-    specs = this._many(fun() {
-      this._apply(:module_default);}, null);
-    imp = this._many(fun() {
-      this._apply(:module_import);}, null);
-    this._apply_with_args(:keyword,["end"]);
-    return [:requirements, params, [:default-locations, specs], [:imports, imp]];
-  }, fun() {
-    return [:requirements, params, [:default-locations, []], [:imports, []]];
-  }]);
-}
-instance_method module_params: fun() {
-  var x = null;
-  var xs = null;
-  x = this._apply(:id);
-  xs = this._many(fun() {
-    this._or([fun() {
-      this._apply_with_args(:token, [","]);
-      this._apply(:id);
-    }]);}, null);
-  return [x] + xs;
-}
-instance_method module_default: fun() {
-  var name = null;
-  var loc = null;
-  name = this._apply(:id);
-  this._apply_with_args(:token, ["="]);
-  this._apply(:spaces);
-  loc = this._apply(:module_location);
-  return [name, loc];
-}
-instance_method module_location: fun() {
-  var xs = null;
-  xs = this._many1(fun() {
-    this._or([fun() {
-      this._not(fun() {
-        this._apply_with_args(:seq, ["\n"]);});
-      this._apply(:anything);
-    }]);});
-  return xs.join("");
-}
-instance_method module_import: fun() {
-  var name = null;
-  var lib = null;
-  this._apply_with_args(:keyword,["import"]);
-  name = this._apply(:id);
-  this._apply_with_args(:keyword,["from"]);
-  lib = this._apply(:id);
-  return [name, lib];
-}
-instance_method code_section: fun() {
-  var d = null;
-  d = this._many(fun() {
-    this._apply(:top_level_decl);}, null);
-  return [:code, d];
-}
-instance_method top_level_decl: fun() {
-  return this._or([fun() {
-    this._apply(:obj_decl);
-  }, fun() {
-    this._apply(:class_decl);
-  }, fun() {
-    this._apply(:top_level_fun);
-  }, fun() {
-    this._apply(:top_level_fn);
-  }]);
-}
-instance_method obj_decl: fun() {
-  var name = null;
-  var s = null;
-  var f = null;
-  this._apply_with_args(:keyword,["object"]);
-  name = this._apply(:id);
-  s = this._many1(fun() {
-    this._apply(:object_slot);});
-  f = this._apply(:obj_fun);
-  this._apply_with_args(:keyword,["end"]);
-  return [:object, name, s, f];
-}
-instance_method obj_fun: fun() {
-  var f = null;
-  return this._or([fun() {
-    this._apply_with_args(:keyword,["functions"]);
-    this._apply_with_args(:token, ["{"]);
-    f = this._many1(fun() {
-      this._or([fun() {
-        this._apply(:constructor);
-      }, fun() {
-        this._apply(:top_level_fun);
-      }]);});
-    this._apply_with_args(:token, ["}"]);
-    return f;
-  }, fun() {
-    return [];
-  }]);
-}
-instance_method object_slot: fun() {
-  var name = null;
-  var value = null;
-  name = this._apply(:id);
-  this._apply_with_args(:token, [":"]);
-  value = this._or([fun() {
-    this._apply(:literal);
-  }, fun() {
-    this._apply(:id);
-  }]);
-  this._apply_with_args(:token, [";"]);
-  return [:slot, name, value];
-}
-instance_method class_decl: fun() {
-  var name = null;
-  var parent = null;
-  var f = null;
-  var c = null;
-  var im = null;
-  var cm = null;
-  this._apply_with_args(:keyword,["class"]);
-  name = this._apply(:id);
-  parent = this._or([fun() {
-    this._apply_with_args(:token, ["<"]);
-    this._apply(:id);
-  }, fun() {
-    this._apply_with_args(:token, ["<"]);
-    this._apply_with_args(:token, ["null"]);
-  }, fun() {
-    return "Object";
-  }]);
-  f = this._apply(:fields_);
-  c = this._apply(:constructors);
-  im = this._many(fun() {
-    this._apply(:instance_method_decl);}, null);
-  cm = this._many(fun() {
-    this._apply(:class_method_decl);}, null);
-  this._apply_with_args(:keyword,["end"]);
-  return [:class, [name, parent], f, c, im, cm];
-}
-instance_method fields_: fun() {
-  var xs = null;
-  return this._or([fun() {
-    this._apply_with_args(:keyword,["fields"]);
-    this._apply_with_args(:token, [":"]);
-    xs = this._apply(:idlist);
-    this._apply_with_args(:token, [";"]);
-    return [:fields, xs];
-  }, fun() {
-    return [:fields, []];
-  }]);
-}
-instance_method constructors: fun() {
-  var c = null;
-  c = this._many(fun() {
-    this._apply(:constructor);}, null);
-  return [:ctors, c];
-}
-instance_method constructor: fun() {
-  var name = null;
-  var p = null;
-  var body = null;
-  var e = null;
-  @has_fun_literal = false;
-  this._apply_with_args(:keyword,["init"]);
-  name = this._apply(:alpha_name);
-  this._apply_with_args(:token, [":"]);
-  this._apply(:spaces);
-  var _pos = this.input.idx();
-  this._apply_with_args(:keyword,["fun"]);
-  p = this._apply(:fparams);
-  this._apply_with_args(:token, ["{"]);
-  body = this._apply(:top_fun_body);
-  e = this._apply(:end_body);
-  return [:ctor, name, [:params, p],
-                  @has_fun_literal, [:body,  body + [e]]].at(this, _pos);
-}
-instance_method top_level_fn: fun() {
-  var name = null;
-  var e = null;
-  name = this._apply(:alpha_name);
-  this._apply_with_args(:token, [":"]);
-  this._apply(:spaces);
-  var _pos = this.input.idx();
-  e = this._apply(:expr);
-  this._apply_with_args(:token, [";"]);
-  return [:fun, name, [:params, []], false, [:body, [[:return, e]].at(this, _pos)].at(this, _pos)].at(this, _pos);
-}
-instance_method top_level_fun: fun() {
-  var name = null;
-  var r = null;
-  this._apply(:spaces);
-  @has_fun_literal = false;
-  name = this._apply(:alpha_name);
-  this._apply_with_args(:token, [":"]);
-  this._apply(:spaces);
-  r = this._apply_with_args(:fun_rest, [name]);
-  return r;
-}
-instance_method fun_rest: fun() {
-  var p = null;
-  var body = null;
-  var e = null;
-  var name = this._apply(:anything);
-  this._apply(:spaces);
-  var _pos = this.input.idx();
-  this._apply_with_args(:keyword,["fun"]);
-  p = this._apply(:fparams);
-  this._apply_with_args(:token, ["{"]);
-  body = this._apply(:top_fun_body);
-  e = this._apply(:end_body);
-  return [:fun, name, [:params, p],
-                       @has_fun_literal, [:body,  body + [e]]].at(this, _pos);
-}
-instance_method end_body: fun() {
-  this._apply(:spaces);
-  var _pos = this.input.idx();
-  this._apply_with_args(:token, ["}"]);
-  return [:end-body].at(this, _pos);
-}
-instance_method instance_method_decl: fun() {
-  var name = null;
-  var r = null;
-  @has_fun_literal = false;
-  this._apply_with_args(:keyword,["instance_method"]);
-  name = this._apply(:alpha_name);
-  this._apply_with_args(:token, [":"]);
-  this._apply(:spaces);
-  r = this._apply_with_args(:fun_rest, [name]);
-  return r;
-}
-instance_method class_method_decl: fun() {
-  var name = null;
-  var r = null;
-  @has_fun_literal = false;
-  this._apply_with_args(:keyword,["class_method"]);
-  name = this._apply(:alpha_name);
-  this._apply_with_args(:token, [":"]);
-  this._apply(:spaces);
-  r = this._apply_with_args(:fun_rest, [name]);
-  return r;
-}
-instance_method params: fun() {
-  var xs = null;
-  this._apply_with_args(:token, ["("]);
-  xs = this._apply(:idlist);
-  this._apply_with_args(:token, [")"]);
-  return xs;
-}
-instance_method fparams: fun() {
-  var x = null;
-  var xs = null;
-  var y = null;
-  return this._or([fun() {
-    this._apply_with_args(:token, ["("]);
-    this._apply_with_args(:token, [")"]);
-    return [];
-  }, fun() {
-    this._apply_with_args(:token, ["("]);
-    this._apply_with_args(:token, ["*"]);
-    x = this._apply(:id);
-    this._apply_with_args(:token, [")"]);
-    return [[:var-arg, x]];
-  }, fun() {
-    this._apply_with_args(:token, ["("]);
-    x = this._apply(:id);
-    xs = this._many(fun() {
-      this._or([fun() {
-        this._apply_with_args(:token, [","]);
-        this._apply(:id);
-      }]);}, null);
-    this._apply_with_args(:token, [")"]);
-    return [x] + xs;
-  }, fun() {
-    this._apply_with_args(:token, ["("]);
-    x = this._apply(:id);
-    xs = this._many(fun() {
-      this._or([fun() {
-        this._apply_with_args(:token, [","]);
-        this._apply(:id);
-      }]);}, null);
-    y = this._apply(:pvar);
-    this._apply_with_args(:token, [")"]);
-    return [x] + xs + [y];
-  }]);
-}
-instance_method pvar: fun() {
-  var x = null;
-  this._apply_with_args(:token, [","]);
-  this._apply_with_args(:token, ["*"]);
-  x = this._apply(:id);
-  return [:var-arg, x];
-}
-instance_method idlist: fun() {
-  var x = null;
-  var xs = null;
-  return this._or([fun() {
-    x = this._apply(:id);
-    xs = this._many(fun() {
-      this._or([fun() {
-        this._apply_with_args(:token, [","]);
-        this._apply(:id);
-      }]);}, null);
-    return [x] + xs;
-  }, fun() {
-    return [];
-  }]);
-}
-instance_method top_fun_body: fun() {
-  return this._or([fun() {
-    this._apply(:primitive);
-  }, fun() {
-    this._apply(:stmts);
-  }]);
-}
-instance_method primitive: fun() {
-  var s = null;
-  this._apply_with_args(:token, ["<primitive"]);
-  this._apply(:spaces);
-  s = this._apply(:lit_string);
-  this._apply_with_args(:token, [">"]);
-  return [[:primitive, s]];
-}
-instance_method stmts: fun() {
-  var s = null;
-  s = this._many(fun() {
-    this._apply(:stmt);}, null);
-  return s;
-}
-instance_method stmt: fun() {
-  var e = null;
-  return this._or([fun() {
-    this._apply(:control_expr);
-  }, fun() {
-    e = this._apply(:non_control_expr);
-    this._apply_with_args(:token, [";"]);
-    return e;
-  }]);
-}
-instance_method non_control_expr: fun() {
-  var e = null;
-  return this._or([fun() {
-    this._apply(:expr_ret);
-  }, fun() {
-    this._apply(:expr_non_local_ret);
-  }, fun() {
-    this._apply(:expr_assign);
-  }, fun() {
-    e = this._apply(:expr);
-    return [:expression, e];
-  }, fun() {
-    this._apply(:expr_decl);
-  }]);
-}
-instance_method expr_ret: fun() {
-  var e = null;
-  this._apply(:spaces);
-  var _pos = this.input.idx();
-  this._apply_with_args(:keyword,["return"]);
-  e = this._apply(:expr);
-  return [:return, e].at(this, _pos);
-}
-instance_method expr_non_local_ret: fun() {
-  var e = null;
-  this._apply(:spaces);
-  var _pos = this.input.idx();
-  this._apply_with_args(:token, ["^"]);
-  e = this._apply(:expr);
-  return [:non-local-return, e].at(this, _pos);
-}
-instance_method expr_decl: fun() {
-  var name = null;
-  var e = null;
-  this._apply(:spaces);
-  var _pos = this.input.idx();
-  this._apply_with_args(:keyword,["var"]);
-  name = this._apply(:id);
-  this._apply_with_args(:token, ["="]);
-  e = this._apply(:expr);
-  return [:var-def, name, e].at(this, _pos);
-}
-instance_method expr_assign: fun() {
-  var a = null;
-  var b = null;
-  return this._or([fun() {
-    this._apply(:spaces);
-    var _pos = this.input.idx();
-    a = this._apply(:lhs);
-    this._apply_with_args(:token, ["="]);
-    b = this._apply(:expr);
-    return [:=, a, b].at(this, _pos);
-  }, fun() {
-    this._apply(:spaces);
-    var _pos = this.input.idx();
-    a = this._apply(:lhs);
-    this._apply_with_args(:token, ["+="]);
-    b = this._apply(:expr);
-    return [:=, a, [:+, a, b]].at(this, _pos);
-  }, fun() {
-    this._apply(:spaces);
-    var _pos = this.input.idx();
-    a = this._apply(:lhs);
-    this._apply_with_args(:token, ["-="]);
-    b = this._apply(:expr);
-    return [:=, a, [:-, a, b]].at(this, _pos);
-  }]);
-}
-instance_method lhs: fun() {
-  var r = null;
-  var x = null;
-  return this._or([fun() {
-    r = this._apply(:expr);
-    this._pred(r.size > 0 and r[0] == :index);
-    return r;
-  }, fun() {
-    this._apply(:spaces);
-    var _pos = this.input.idx();
-    x = this._apply(:alpha_name);
-    return [:id, x].at(this, _pos);
-  }, fun() {
-    this._apply(:spaces);
-    var _pos = this.input.idx();
-    x = this._apply(:field_name);
-    return [:field, x].at(this, _pos);
-  }]);
-}
-instance_method control_expr: fun() {
-  return this._or([fun() {
-    this._apply(:expr_if);
-  }, fun() {
-    this._apply(:expr_while);
-  }, fun() {
-    this._apply(:expr_try);
-  }, fun() {
-    this._apply(:expr_for);
-  }]);
-}
-instance_method expr_for: fun() {
-  var v = null;
-  var c = null;
-  var n = null;
-  var st = null;
-  this._apply_with_args(:keyword,["for"]);
-  this._apply_with_args(:token, ["("]);
-  v = this._or([fun() {
-    this._apply(:expr_decl);
-  }, fun() {
-    this._apply(:expr_assign);
-  }]);
-  this._apply_with_args(:token, [";"]);
-  c = this._apply(:expr);
-  this._apply_with_args(:token, [";"]);
-  n = this._apply(:expr_assign);
-  this._apply_with_args(:token, [")"]);
-  this._apply_with_args(:token, ["{"]);
-  st = this._apply(:stmts);
-  this._apply_with_args(:token, ["}"]);
-  return [:for, v, c, st, n];
-}
-instance_method expr_if: fun() {
-  var e = null;
-  var body = null;
-  var elif_ = null;
-  var else_ = null;
-  this._apply(:spaces);
-  var _pos = this.input.idx();
-  this._apply_with_args(:keyword,["if"]);
-  this._apply_with_args(:token, ["("]);
-  e = this._apply(:expr);
-  this._apply_with_args(:token, [")"]);
-  this._apply_with_args(:token, ["{"]);
-  body = this._apply(:stmts);
-  this._apply_with_args(:token, ["}"]);
-  elif_ = this._many(fun() {
-    this._apply(:expr_elif);}, null);
-  else_ = this._opt(fun() {
-    this._apply(:expr_else);});
-  return [:if, e, body, elif_, else_ or []].at(this, _pos);
-}
-instance_method expr_elif: fun() {
-  var e = null;
-  var body = null;
-  this._apply(:spaces);
-  var _pos = this.input.idx();
-  this._apply_with_args(:keyword,["elif"]);
-  this._apply_with_args(:token, ["("]);
-  e = this._apply(:expr);
-  this._apply_with_args(:token, [")"]);
-  this._apply_with_args(:token, ["{"]);
-  body = this._apply(:stmts);
-  this._apply_with_args(:token, ["}"]);
-  return [:elif, e, body].at(this, _pos);
-}
-instance_method expr_else: fun() {
-  var body = null;
-  this._apply_with_args(:keyword,["else"]);
-  this._apply_with_args(:token, ["{"]);
-  body = this._apply(:stmts);
-  this._apply_with_args(:token, ["}"]);
-  return body;
-}
-instance_method expr_while: fun() {
-  var e = null;
-  var xs = null;
-  this._apply(:spaces);
-  var _pos = this.input.idx();
-  this._apply_with_args(:keyword,["while"]);
-  this._apply_with_args(:token, ["("]);
-  e = this._apply(:expr);
-  this._apply_with_args(:token, [")"]);
-  this._apply_with_args(:token, ["{"]);
-  xs = this._apply(:stmts);
-  this._apply_with_args(:token, ["}"]);
-  return [:while, e, xs].at(this, _pos);
-}
-instance_method expr_try: fun() {
-  var s_try = null;
-  var c = null;
-  var s_catch = null;
-  this._apply(:spaces);
-  var _pos = this.input.idx();
-  this._apply_with_args(:keyword,["try"]);
-  this._apply_with_args(:token, ["{"]);
-  s_try = this._apply(:stmts);
-  this._apply_with_args(:token, ["}"]);
-  c = this._apply(:catch_part);
-  this._apply_with_args(:token, ["{"]);
-  s_catch = this._apply(:stmts);
-  this._apply_with_args(:token, ["}"]);
-  return [:try, s_try, c, s_catch].at(this, _pos);
-}
-instance_method catch_part: fun() {
-  var id = null;
-  var t = null;
-  return this._or([fun() {
-    this._apply(:spaces);
-    var _pos = this.input.idx();
-    this._apply_with_args(:keyword,["catch"]);
-    this._apply_with_args(:token, ["("]);
-    id = this._apply(:alpha_name);
-    this._apply_with_args(:token, [")"]);
-    return [:catch, id].at(this, _pos);
-  }, fun() {
-    this._apply(:spaces);
-    var _pos = this.input.idx();
-    this._apply_with_args(:keyword,["catch"]);
-    this._apply_with_args(:token, ["("]);
-    t = this._apply(:catch_type);
-    id = this._apply(:alpha_name);
-    this._apply_with_args(:token, [")"]);
-    return [:catch, t, id].at(this, _pos);
-  }]);
-}
-instance_method catch_type: fun() {
-  var type = null;
-  type = this._apply(:alpha_name);
-  return [:id, type];
-}
-instance_method expr: fun() {
-  var e = null;
-  this._apply(:spaces);
-  e = this._apply(:expr_or);
-  return e;
-}
-instance_method expr_or: fun() {
-  var a = null;
-  var b = null;
-  return this._or([fun() {
-        var _pos = this.input.idx();
-    a = this._apply(:expr_or);
-    this._apply_with_args(:token, ["or"]);
-    this._apply(:spaces);
-    b = this._apply(:expr_and);
-    return [:or, a, b].at(this, _pos);
-  }, fun() {
-    this._apply(:expr_and);
-  }]);
-}
-instance_method expr_and: fun() {
-  var a = null;
-  var b = null;
-  return this._or([fun() {
-        var _pos = this.input.idx();
-    a = this._apply(:expr_and);
-    this._apply_with_args(:token, ["and"]);
-    this._apply(:spaces);
-    b = this._apply(:expr_eq);
-    return [:and, a, b].at(this, _pos);
-  }, fun() {
-    this._apply(:expr_eq);
-  }]);
-}
-instance_method expr_eq: fun() {
-  var a = null;
-  var b = null;
-  return this._or([fun() {
-        var _pos = this.input.idx();
-    a = this._apply(:expr_eq);
-    this._apply_with_args(:token, ["=="]);
-    this._apply(:spaces);
-    b = this._apply(:expr_rel);
-    return [:==, a, b].at(this, _pos);
-  }, fun() {
-        var _pos = this.input.idx();
-    a = this._apply(:expr_eq);
-    this._apply_with_args(:token, ["!="]);
-    this._apply(:spaces);
-    b = this._apply(:expr_rel);
-    return [:!=, a, b].at(this, _pos);
-  }, fun() {
-    this._apply(:expr_rel);
-  }]);
-}
-instance_method expr_rel: fun() {
-  var a = null;
-  var b = null;
-  return this._or([fun() {
-        var _pos = this.input.idx();
-    a = this._apply(:expr_rel);
-    this._apply_with_args(:token, [">="]);
-    this._apply(:spaces);
-    b = this._apply(:expr_add);
-    return [:>=, a, b].at(this, _pos);
-  }, fun() {
-        var _pos = this.input.idx();
-    a = this._apply(:expr_rel);
-    this._apply_with_args(:token, [">"]);
-    this._not(fun() {
-      this._apply_with_args(:seq, [">"]);});
-    this._apply(:spaces);
-    b = this._apply(:expr_add);
-    return [:>, a, b].at(this, _pos);
-  }, fun() {
-        var _pos = this.input.idx();
-    a = this._apply(:expr_rel);
-    this._apply_with_args(:token, ["<="]);
-    this._apply(:spaces);
-    b = this._apply(:expr_add);
-    return [:<=, a, b].at(this, _pos);
-  }, fun() {
-        var _pos = this.input.idx();
-    a = this._apply(:expr_rel);
-    this._apply_with_args(:token, ["<"]);
-    this._not(fun() {
-      this._apply_with_args(:seq, ["<"]);});
-    this._apply(:spaces);
-    b = this._apply(:expr_add);
-    return [:<, a, b].at(this, _pos);
-  }, fun() {
-    this._apply(:expr_add);
-  }]);
-}
-instance_method expr_add: fun() {
-  var a = null;
-  var b = null;
-  return this._or([fun() {
-        var _pos = this.input.idx();
-    a = this._apply(:expr_add);
-    this._apply_with_args(:token, ["++"]);
-    this._apply(:spaces);
-    b = this._apply(:expr_mul);
-    return [:++, a, b].at(this, _pos);
-  }, fun() {
-        var _pos = this.input.idx();
-    a = this._apply(:expr_add);
-    this._apply_with_args(:token, ["+"]);
-    this._apply(:spaces);
-    b = this._apply(:expr_mul);
-    return [:+, a, b].at(this, _pos);
-  }, fun() {
-        var _pos = this.input.idx();
-    a = this._apply(:expr_add);
-    this._apply_with_args(:token, ["-"]);
-    this._apply(:spaces);
-    b = this._apply(:expr_mul);
-    return [:-, a, b].at(this, _pos);
-  }, fun() {
-        var _pos = this.input.idx();
-    a = this._apply(:expr_add);
-    this._apply_with_args(:token, ["<<"]);
-    this._apply(:spaces);
-    b = this._apply(:expr_mul);
-    return [:<<, a, b].at(this, _pos);
-  }, fun() {
-        var _pos = this.input.idx();
-    a = this._apply(:expr_add);
-    this._apply_with_args(:token, [">>"]);
-    this._apply(:spaces);
-    b = this._apply(:expr_mul);
-    return [:>>, a, b].at(this, _pos);
-  }, fun() {
-        var _pos = this.input.idx();
-    a = this._apply(:expr_add);
-    this._apply_with_args(:token, ["&"]);
-    this._apply(:spaces);
-    b = this._apply(:expr_mul);
-    return [:&, a, b].at(this, _pos);
-  }, fun() {
-        var _pos = this.input.idx();
-    a = this._apply(:expr_add);
-    this._apply_with_args(:token, ["|"]);
-    this._apply(:spaces);
-    b = this._apply(:expr_mul);
-    return [:|, a, b].at(this, _pos);
-  }, fun() {
-    this._apply(:expr_mul);
-  }]);
-}
-instance_method expr_mul: fun() {
-  var a = null;
-  var b = null;
-  return this._or([fun() {
-        var _pos = this.input.idx();
-    a = this._apply(:expr_mul);
-    this._apply_with_args(:token, ["*"]);
-    this._apply(:spaces);
-    b = this._apply(:expr_unary);
-    return [:*, a, b].at(this, _pos);
-  }, fun() {
-        var _pos = this.input.idx();
-    a = this._apply(:expr_mul);
-    this._apply_with_args(:token, ["/"]);
-    this._apply(:spaces);
-    b = this._apply(:expr_unary);
-    return [:/, a, b].at(this, _pos);
-  }, fun() {
-    this._apply(:expr_unary);
-  }]);
-}
-instance_method expr_unary: fun() {
-  var a = null;
-  return this._or([fun() {
-    this._apply(:spaces);
-    var _pos = this.input.idx();
-    this._apply_with_args(:token, ["+"]);
-    this._apply(:spaces);
-    this._apply(:spaces);
-    a = this._apply(:prim_expr);
-    return [:positive, a].at(this, _pos);
-  }, fun() {
-    this._apply(:spaces);
-    var _pos = this.input.idx();
-    this._apply_with_args(:token, ["-"]);
-    this._apply(:spaces);
-    this._apply(:spaces);
-    a = this._apply(:prim_expr);
-    return [:negative, a].at(this, _pos);
-  }, fun() {
-    this._apply(:spaces);
-    var _pos = this.input.idx();
-    this._apply_with_args(:token, ["!"]);
-    this._apply(:spaces);
-    this._apply(:spaces);
-    a = this._apply(:expr_unary);
-    return [:not, a].at(this, _pos);
-  }, fun() {
-    this._apply(:spaces);
-    var _pos = this.input.idx();
-    this._apply_with_args(:token, ["~"]);
-    this._apply(:spaces);
-    this._apply(:spaces);
-    a = this._apply(:expr_unary);
-    return [:bit-neg, a].at(this, _pos);
-  }, fun() {
-    this._apply(:suffix_expr);
-  }]);
-}
-instance_method suffix_expr: fun() {
-  var sel = null;
-  var p = null;
-  var r = null;
-  var i = null;
-  return this._or([fun() {
-    this._apply(:spaces);
-    var _pos = this.input.idx();
-    this._apply_with_args(:keyword,["super"]);
-    this._apply_with_args(:token, ["."]);
-    sel = this._apply(:alpha_name);
-    p = this._apply(:args);
-    return [:super-ctor-send, sel, [:args, p]].at(this, _pos);
-  }, fun() {
-    this._apply(:spaces);
-    var _pos = this.input.idx();
-    r = this._apply(:suffix_expr);
-    this._apply_with_args(:token, ["."]);
-    sel = this._apply(:alpha_name);
-    p = this._apply(:args);
-    return [:send, r, sel, [:args, p]].at(this, _pos);
-  }, fun() {
-    this._apply(:spaces);
-    var _pos = this.input.idx();
-    r = this._apply(:suffix_expr);
-    this._apply_with_args(:token, ["."]);
-    sel = this._apply(:alpha_name);
-    return [:send, r, sel, [:args, []]].at(this, _pos);
-  }, fun() {
-    this._apply(:spaces);
-    var _pos = this.input.idx();
-    r = this._apply(:suffix_expr);
-    this._apply_with_args(:token, ["["]);
-    i = this._apply(:expr);
-    this._apply_with_args(:token, ["]"]);
-    return [:index, r, i].at(this, _pos);
-  }, fun() {
-    this._apply(:call_expr);
-  }]);
-}
-instance_method call_expr: fun() {
-  var r = null;
-  var p = null;
-  return this._or([fun() {
-    this._apply(:spaces);
-    var _pos = this.input.idx();
-    r = this._apply(:call_expr);
-    p = this._apply(:args);
-    return [:call, r, [:args, p]].at(this, _pos);
-  }, fun() {
-    this._apply(:spaces);
-    var _pos = this.input.idx();
-    this._apply_with_args(:keyword,["super"]);
-    p = this._apply(:args);
-    return [:super-send, [:args, p]].at(this, _pos);
-  }, fun() {
-    this._apply(:spaces);
-    var _pos = this.input.idx();
-    r = this._apply(:id);
-    p = this._apply(:args);
-    return [:send-or-local-call, r, [:args, p]].at(this, _pos);
-  }, fun() {
-    this._apply(:prim_expr);
-  }]);
-}
-instance_method prim_expr: fun() {
-  var e = null;
-  var x = null;
-  return this._or([fun() {
-    this._apply_with_args(:token, ["("]);
-    e = this._apply(:expr);
-    this._apply_with_args(:token, [")"]);
-    return e;
-  }, fun() {
-    this._apply(:literal);
-  }, fun() {
-    this._apply(:spaces);
-    var _pos = this.input.idx();
-    x = this._apply(:field_name);
-    return [:field, x].at(this, _pos);
-  }, fun() {
-    this._apply(:spaces);
-    var _pos = this.input.idx();
-    x = this._apply(:alpha_name);
-    return [:id, x].at(this, _pos);
-  }]);
-}
-instance_method pair_list: fun() {
-  var x = null;
-  var xs = null;
-  return this._or([fun() {
-    x = this._apply(:pair);
-    xs = this._many(fun() {
-      this._or([fun() {
-        this._apply_with_args(:token, [","]);
-        this._apply(:pair);
-      }]);}, null);
-    return [x] + xs;
-  }, fun() {
-    return [];
-  }]);
-}
-instance_method pair: fun() {
-  var key = null;
-  var val = null;
-  this._apply(:spaces);
-  var _pos = this.input.idx();
-  key = this._apply(:expr);
-  this._apply_with_args(:token, [":"]);
-  val = this._apply(:expr);
-  return [:pair, key, val].at(this, _pos);
-}
-instance_method args: fun() {
-  var p = null;
-  this._apply_with_args(:token, ["("]);
-  p = this._apply(:expr_list);
-  this._apply_with_args(:token, [")"]);
-  return p;
-}
-instance_method expr_list: fun() {
-  var x = null;
-  var xs = null;
-  return this._or([fun() {
-    x = this._apply(:expr);
-    xs = this._many(fun() {
-      this._or([fun() {
-        this._apply_with_args(:token, [","]);
-        this._apply(:expr);
-      }]);}, null);
-    return [x] + xs;
-  }, fun() {
-    return [];
-  }]);
-}
-instance_method literal: fun() {
-  var e = null;
-  var x = null;
-  return this._or([fun() {
-    this._apply(:lit_number);
-  }, fun() {
-    this._apply(:lit_string);
-  }, fun() {
-    this._apply(:lit_symbol);
-  }, fun() {
-    this._apply(:spaces);
-    var _pos = this.input.idx();
-    this._apply_with_args(:token, ["["]);
-    e = this._apply(:expr_list);
-    this._apply_with_args(:token, ["]"]);
-    return ([:literal-array].extends([e])).at(this, _pos);
-  }, fun() {
-    this._apply(:spaces);
-    var _pos = this.input.idx();
-    this._apply_with_args(:token, ["{"]);
-    e = this._apply(:pair_list);
-    this._apply_with_args(:token, ["}"]);
-    return ([:literal-dict]).at(this, _pos).extends(e);
-  }, fun() {
-    this._apply(:spaces);
-    var _pos = this.input.idx();
-    this._apply_with_args(:keyword,["thisModule"]);
-    return [:literal, :module].at(this, _pos);
-  }, fun() {
-    this._apply(:spaces);
-    var _pos = this.input.idx();
-    this._apply_with_args(:keyword,["thisContext"]);
-    return [:literal, :context].at(this, _pos);
-  }, fun() {
-    this._apply(:spaces);
-    var _pos = this.input.idx();
-    this._apply_with_args(:keyword,["this"]);
-    return [:literal, :this].at(this, _pos);
-  }, fun() {
-    this._apply(:spaces);
-    var _pos = this.input.idx();
-    this._apply_with_args(:keyword,["null"]);
-    return [:literal, :null].at(this, _pos);
-  }, fun() {
-    this._apply(:spaces);
-    var _pos = this.input.idx();
-    this._apply_with_args(:keyword,["true"]);
-    return [:literal, :true].at(this, _pos);
-  }, fun() {
-    this._apply(:spaces);
-    var _pos = this.input.idx();
-    this._apply_with_args(:keyword,["false"]);
-    return [:literal, :false].at(this, _pos);
-  }, fun() {
-    x = this._apply(:funliteral);
-    @has_fun_literal = true;
-    return x;
-  }]);
-}
-instance_method funliteral: fun() {
-  var p = null;
-  var body = null;
-  var e = null;
-  this._apply(:spaces);
-  var _pos = this.input.idx();
-  this._apply_with_args(:keyword,["fun"]);
-  p = this._apply(:params);
-  this._apply_with_args(:token, ["{"]);
-  body = this._apply(:funliteral_body);
-  e = this._apply(:end_body);
-  return [:fun-literal, [:params, p], [:body, body + [e]]].at(this, _pos);
-}
-instance_method funliteral_body: fun() {
-  var body = null;
-  var no_semicol_expr = null;
-  var last = null;
-  body = this._apply(:stmts);
-  no_semicol_expr = this._opt(fun() {
-    this._apply(:expr);});
-  this.maybe_append_semicol_expr(body, no_semicol_expr);
-  last = this.last_or_empty(body);
-  this._apply_with_args(:rewrite_last_stmt, [last]);
-  return body;
-}
-instance_method rewrite_last_stmt: fun() {
-  var c = null;
-  return this._or([fun() {
-    c = this._form(fun() {
-      this._apply_with_args(:exactly, [:expression]);
-      this._apply(:anything);});
-    return c.set(0, :return);
-  }, fun() {
-    this._apply(:anything);
-  }]);
-}
-instance_method cfunliteral_body: fun() {
-  var x = null;
-  x = this._apply(:funliteral_body);
-  this._apply(:spaces);
-  var _pos = this.input.idx();
-  this._apply(:spaces);
-  this._not(fun() {
-    this._apply(:anything);});
-  return x + [[:end-body].at(this, _pos)].at(this, _pos);
-}
-instance_method lit_symbol: fun() {
-  var xs = null;
-  this._apply(:spaces);
-  var _pos = this.input.idx();
-  this._apply_with_args(:token, [":"]);
-  xs = this._apply(:symbol_name);
-  return [:literal-symbol, xs].at(this, _pos);
-}
-instance_method lit_number: fun() {
-  var x = null;
-  this._apply(:spaces);
-  var _pos = this.input.idx();
-  x = this._or([fun() {
-    this._apply(:base_10);
-  }, fun() {
-    this._apply(:base_16);
-  }]);
-  return [:literal-number, x].at(this, _pos);
-}
-instance_method base_10: fun() {
-  var ds = null;
-  ds = this._many1(fun() {
-    this._apply(:digit);});
-  this._not(fun() {
-    this._apply(:letter);});
-  return ds.join("").toInteger;
-}
-instance_method base_16: fun() {
-  var xs = null;
-  this._apply_with_args(:seq, ["0"]);
-  this._apply_with_args(:seq, ["x"]);
-  xs = this._many1(fun() {
-    this._or([fun() {
-      this._apply(:digit);
-    }, fun() {
-      this._apply_with_args(:seq, ["A"]);
-    }, fun() {
-      this._apply_with_args(:seq, ["B"]);
-    }, fun() {
-      this._apply_with_args(:seq, ["C"]);
-    }, fun() {
-      this._apply_with_args(:seq, ["D"]);
-    }, fun() {
-      this._apply_with_args(:seq, ["E"]);
-    }, fun() {
-      this._apply_with_args(:seq, ["F"]);
-    }]);});
-  this._not(fun() {
-    this._apply(:letter);});
-  return xs.join("").asHex;
-}
-instance_method lit_string: fun() {
-  var xs = null;
-  this._apply(:spaces);
-  var _pos = this.input.idx();
-  this._apply_with_args(:seq, ["\""]);
-  xs = this._many(fun() {
-    this._or([fun() {
-      this._apply(:lit_escaped);
-    }, fun() {
-      this._not(fun() {
-        this._apply_with_args(:seq, ["\""]);});
-      this._apply(:anything);
-    }]);}, null);
-  this._apply_with_args(:seq, ["\""]);
-  return [:literal-string, xs.join("").unescape].at(this, _pos);
-}
-instance_method lit_escaped: fun() {
-  var x = null;
-  this._not(fun() {
-    this._apply_with_args(:seq, ["\""]);});
-  this._apply_with_args(:seq, ["\\"]);
-  x = this._apply(:anything);
-  return "\\" + x;
-}
-instance_method field_name: fun() {
-  var i = null;
-  this._apply_with_args(:token, ["@"]);
-  i = this._apply(:id);
-  return i;
-}
-instance_method single_top_level_fun: fun() {
-  var p = null;
-  var body = null;
-  var e = null;
-  var name = this._apply(:anything);
-  this._apply(:spaces);
-  var _pos = this.input.idx();
-  this._apply_with_args(:keyword,["fun"]);
-  p = this._apply(:fparams);
-  this._apply_with_args(:token, ["{"]);
-  body = this._apply(:top_fun_body);
-  e = this._apply(:end_body);
-  return [:fun, name, [:params, p], false,
-                              [:body, body + [e]]].at(this, _pos);
-}
-
-
 end
