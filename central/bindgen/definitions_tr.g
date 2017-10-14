@@ -1,9 +1,9 @@
-meme central:memescript/compiler
+meme central:memescript/0.1/compiler
 
 requires ometa_base, types
 where
-  types      = central:stdlib/bindgen/types
-  ometa_base = central:memescript/ometa_base
+  types      = central:bindgen/0.1/types
+  ometa_base = central:memescript/0.1/ometa_base
   import OMetaBase from ometa_base
   import Fun from types
   import Param from types

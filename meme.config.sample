@@ -1,5 +1,7 @@
-{"cache_path": "/home/USER/src/memetalk/central",
+{"cache_path": "/home/USER/.memetalk/cache",
  "core_path": "/home/USER/src/memetalk/core.img",
  "repositories":
-    {"central": "/home/USER/src/memetalk/central"}
+    {"central": "http://modules.memetalk.org/central"},
+ "override_to_local":
+    {"central:bindgen/0.1": "/home/USER/src/memetalk/central/bindgen"}
 }

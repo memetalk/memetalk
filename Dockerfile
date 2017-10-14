@@ -17,11 +17,5 @@ RUN /bin/bash -c "pip install \
 
 WORKDIR /build
 
-RUN wget https://github.com/thiago-silva/memetalk/releases/download/v0.1.0/memetalk-v0.1.0.tar.gz
-
-RUN tar xvfz memetalk-v0.1.0.tar.gz
-
-RUN cd memetalk-v0.1.0; ./install.sh
-
 # Runs tests under xvfb to allow Qt to connect to a display
 CMD make test

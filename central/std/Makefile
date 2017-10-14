@@ -1,7 +1,5 @@
 all: build
 
-subdirs = bindgen
-
 include $(shell git rev-parse --show-toplevel)/common.mk
 
 $(call GEN_MEC_RULE)

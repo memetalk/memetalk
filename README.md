@@ -18,19 +18,12 @@ The Memetalk VM is currently developed in C++ and depends on:
 * Google's [re2 (v. 2017-08-01)](https://github.com/google/re2)
 * [Boehm GC (gc-7.6.0)](http://www.hboehm.info/gc/)
 
-### Memetalk
-
-MemeScript compiler is written in itself, so you need to install a previously
-built binary version of it to perform the bootstraping:
-
-* [memetalk (linux x86_64 tarballs)](https://github.com/thiago-silva/memetalk/releases)
-
-
 ## Building
 
 Run inside the repository directory:
 
 ```
+$ make get_core
 $ make
 ```
 
@@ -44,9 +37,8 @@ $ make test
 
 ## Running
 
-Copy meme.config.sample to ~/.meme.config. Edit the paths within
-"override_to_local" key so they point to the correct directories. Then, from
-the repository directory, just run:
+Copy meme.config.sample to ~/.meme.config. Edit the paths for cache directory
+appropriately. Then, just run:
 
 ```
 $ ./meme central/examples/hello_world.me

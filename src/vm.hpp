@@ -92,6 +92,7 @@ private:
   // void dictionary_dump(oop dict);
   // void parse_repository_path();
   void maybe_compile_local_source(Process* proc, std::string filepath);
+  void compile(Process* proc, std::string filepath);
   bool is_mec_file_older_then_source(std::string src_file_path);
   void load_config();
   void print_retval(Process*, oop retval);
@@ -117,7 +118,9 @@ private:
   std::string _core_img_filepath;
   std::string _mec_cache_directory;
   boost::unordered_map<std::string, std::string> _repo_locations;
+  boost::unordered_map<std::string, std::string> _repo_override;
   boost::unordered_map<std::string, bool> _compile_map;
+
 };
 
 #endif

@@ -1,11 +1,11 @@
-meme central:memescript/compiler
+meme central:memescript/0.1/compiler
 
 requires io, ometa_base, definitions_pr, definitions_tr
 where
-  definitions_pr = central:stdlib/bindgen/definitions_pr
-  definitions_tr = central:stdlib/bindgen/definitions_tr
-  io             = central:stdlib/io
-  ometa_base     = central:memescript/ometa_base
+  definitions_pr = central:bindgen/0.1/definitions_pr
+  definitions_tr = central:bindgen/0.1/definitions_tr
+  io             = central:linux/0.1/io
+  ometa_base     = central:memescript/0.1/ometa_base
   import SyscallDefinitionsParser from definitions_pr
   import SyscallDefinitionsTranslator from definitions_tr
 end

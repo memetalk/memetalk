@@ -15,11 +15,12 @@ MM_DIR := $(ROOT_DIR)/central
 ## All paths with relevant MemeTalk code
 MM_PATH := $(MM_DIR)
 
-## Path to the VM command
-VM_CMD := $(MEME)
+LOCAL_CONFIG := $(ROOT_DIR)/meme.config
 
-COMPILER_CONFIG := /etc/meme.config
-COMPILER_CMD := meme -m central:memescript/compiler
+## Path to the VM command
+VM_CMD := MEME_CONFIG=$(LOCAL_CONFIG) $(MEME)
+
+COMPILER_CMD := $(VM_CMD) -c
 ## Macro GEN_MEC_RULE: Creates Make rule to compile .me files
 ##
 ##   This macro comes in handy for directories full of .me source
@@ -37,7 +38,7 @@ COMPILER_CMD := meme -m central:memescript/compiler
 ##     clean:; -rm $(BYTECODE)
 ##
 define GEN_MEC_RULE
- %.mec: %.me; MEME_CONFIG=$(COMPILER_CONFIG) $(COMPILER_CMD) $$^
+ %.mec: %.me; $(COMPILER_CMD) $$^
 endef
 
 ## Create implicit rules for building .g and .k into .me
@@ -69,11 +70,11 @@ endef
 ##     test: build; $(call TEST_RUNNER_CMD,$(PWD))
 ##
 define TEST_RUNNER_CMD
- $(call RUN_VM_CMD,$(MM_DIR)/stdlib/memetest.me $(1))
+ $(call RUN_VM_CMD,$(MM_DIR)/std/memetest.me $(1))
 endef
 
 define RUN_BINDGEN_CMD
- $(call RUN_VM_CMD,$(MM_DIR)/stdlib/bindgen/bindgen.me $(1))
+ $(call RUN_VM_CMD,$(MM_DIR)/std/bindgen/bindgen.me $(1))
 endef
 
 ## Macro RUN_VM_CMD: Outputs the command to run the VM

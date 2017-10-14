@@ -14,8 +14,11 @@ export DIST_DIR_NAME=memetalk-$(VERSION)
 
 export DIST_DIR=$(ROOT_DIR)/$(DIST_DIR_NAME)
 
-build: core
+build:
 	$(foreach el,$(subdirs),$(MAKE) -C $(el) all;)
+
+get_core:
+	wget -O core.img http://modules.memetalk.org/central/std/0.1/core.img
 
 dist: build
 	mkdir -p $(DIST_DIR)
@@ -43,6 +46,6 @@ cleanall:
 	rm -f core.img
 
 $(CORE_IMG): $(MM_DIR)/std/core.me
-	MEME_CONFIG=$(COMPILER_CONFIG) $(COMPILER_CMD) $(CORE_ME)
+	$(COMPILER_CMD) $(CORE_ME)
 
 .PHONY: $(subdirs) clean

@@ -1,9 +1,9 @@
-meme central:memescript/compiler
+meme central:memescript/0.1/compiler
 
 requires io, ometa_base
 where
-  io         = central:stdlib/io
-  ometa_base = central:memescript/ometa_base
+  io         = central:linux/0.1/io
+  ometa_base = central:memescript/0.1/ometa_base
   import OMetaBase from ometa_base
 end
 

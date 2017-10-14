@@ -75,6 +75,10 @@ int VM::start() {
       print_error(proc, e.mm_exception);
       return 1;//* (int*) (void*) &(e.mm_exception);
     }
+  } else if (strcmp(_argv[1], "-c") == 0) {
+    //meme -c <filepath.me>
+    compile(proc, _argv[2]);
+    return 0;
   } else {
     //meme <filepath.me> We might need to compile it
     maybe_compile_local_source(proc, _argv[1]);
@@ -290,11 +294,11 @@ void VM::load_config() {
       _repo_locations[iter->first] = iter->second.data();
     }
 
-    // node = pt.get_child("override_to_local");
-    // for(iter = node.begin(); iter != node.end(); iter++) {
-    //   DBG("override_to_local: " << iter->first << " -> " << iter->second.data() << std::endl);
-    //   _repo_override[iter->first] = iter->second.data();
-    // }
+    node = pt.get_child("override_to_local");
+    for(iter = node.begin(); iter != node.end(); iter++) {
+      DBG("override_to_local: " << iter->first << " -> " << iter->second.data() << std::endl);
+      _repo_override[iter->first] = iter->second.data();
+    }
 
     _mec_cache_directory = pt.get_child("cache_path").data();
     DBG("config.cache_path: " << _mec_cache_directory << endl);
@@ -307,7 +311,19 @@ void VM::load_config() {
 
 char* VM::fetch_module(Process* proc, const std::string& mod_path, int* file_size) {
   DBG("fetch module '" << mod_path << "'" << std::endl);
-  boost::unordered_map<std::string, std::string>::iterator it;
+
+  //1-check for overriding rules
+   boost::unordered_map<std::string, std::string>::iterator it;
+  for (it = _repo_override.begin(); it != _repo_override.end(); it++) {
+    DBG("looking for overriding rules: '" << it->first << "'" << endl);
+    if (mod_path.find(it->first) == 0) {
+      std::string local_path = it->second + mod_path.substr(it->first.length());
+      DBG("translating " << mod_path << " to local path " << local_path << std::endl);
+      return read_mec_file(local_path + ".mec", file_size);
+    }
+  }
+
+
   for (it = _repo_locations.begin(); it != _repo_locations.end(); it++) {
     if (mod_path.find(it->first) == 0) { //found a repository key
 
@@ -376,9 +392,6 @@ bool VM::is_mec_file_older_then_source(std::string src_file_path) {
 }
 
 void VM::maybe_compile_local_source(Process* proc, std::string filepath) {
-  std::string line;
-  std::fstream file;
-
   DBG("maybe compile local: " << filepath << endl);
   if (!boost::filesystem::exists(filepath)) {
       bail(std::string("file not found: ") + filepath);
@@ -392,36 +405,43 @@ void VM::maybe_compile_local_source(Process* proc, std::string filepath) {
       return;
     }
     _compile_map[filepath] = true;
-    DBG("opening to recompile  '" << filepath << "'" << endl);
-    file.open(filepath.c_str(), std::fstream::in | std::fstream::binary);
-    if (!file.is_open()) {
-      bail(std::string("file not found: ") + filepath);
-    }
-
-    std::getline(file, line);
-    if (line.find("meme") != 0) {
-      bail(std::string("file is not a memetalk source: ") + filepath);
-    }
-    std::string compiler_module_path = line.substr(5);
-    oop imod;
-    try {
-      DBG("instantiating compiler module : " << compiler_module_path << endl);
-      imod = instantiate_meme_module(proc, compiler_module_path.c_str(), _mmobj->mm_list_new());
-    } catch(mm_exception_rewind e) {
-      DBG("uops\n");
-      print_error(proc, e.mm_exception);
-      bail();
-    }
+    compile(proc, filepath);
     _compile_map[filepath] = false;
-    DBG("compiling source with compiler: " << compiler_module_path << endl);
-    int exc;
-    oop res = proc->send_1(imod, new_symbol("compile"), _mmobj->mm_string_new(filepath), &exc);
-    DBG("finished source with compiler: " << compiler_module_path << endl);
-    if (exc) {
-      DBG("compiler failed: " << compiler_module_path << endl);
-      proc->fail(res);
-      bail();
-    }
   }
   DBG("END of maybe_compile_local_source for " << filepath << endl);
+}
+
+
+void VM::compile(Process* proc, std::string filepath) {
+  std::string line;
+  std::fstream file;
+  DBG("opening to recompile  '" << filepath << "'" << endl);
+  file.open(filepath.c_str(), std::fstream::in | std::fstream::binary);
+  if (!file.is_open()) {
+    bail(std::string("file not found: ") + filepath);
+  }
+
+  std::getline(file, line);
+  if (line.find("meme") != 0) {
+    bail(std::string("file is not a memetalk source: ") + filepath);
+  }
+  std::string compiler_module_path = line.substr(5);
+  oop imod;
+  try {
+    DBG("instantiating compiler module : " << compiler_module_path << endl);
+    imod = instantiate_meme_module(proc, compiler_module_path.c_str(), _mmobj->mm_list_new());
+  } catch(mm_exception_rewind e) {
+    DBG("uops\n");
+    print_error(proc, e.mm_exception);
+    bail();
+  }
+  DBG("compiling source with compiler: " << compiler_module_path << endl);
+  int exc;
+  oop res = proc->send_1(imod, new_symbol("compile"), _mmobj->mm_string_new(filepath), &exc);
+  DBG("finished source with compiler: " << compiler_module_path << endl);
+  if (exc) {
+    DBG("compiler failed: " << compiler_module_path << endl);
+    proc->fail(res);
+    bail();
+  }
 }
