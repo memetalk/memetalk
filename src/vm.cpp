@@ -309,30 +309,52 @@ char* VM::fetch_module(Process* proc, const std::string& mod_path, int* file_siz
   DBG("fetch module '" << mod_path << "'" << std::endl);
   boost::unordered_map<std::string, std::string>::iterator it;
   for (it = _repo_locations.begin(); it != _repo_locations.end(); it++) {
-    if (mod_path.find(it->first) == 0) {
+    if (mod_path.find(it->first) == 0) { //found a repository key
+
       //1: compute cache directory for repository
-      //2: check if .me exists in cache
+      //2: check if module exists in cache
       //3:  if not, fetch it / copy it to cache
       //4: read and return file contents
-      boost::filesystem::path cached_path = _mec_cache_directory;
-      cached_path /= mod_path.substr(it->first.length() + 1) + ".me";
-      DBG("cached path: " << cached_path << endl);
-      if (!boost::filesystem::exists(cached_path)) {
-        boost::filesystem::path local_path = it->second;
-        local_path /= mod_path.substr(it->first.length() + 1) + ".me";
-        DBG("local path: " << local_path << endl);
-        boost::filesystem::create_directories(cached_path.parent_path());
-        boost::filesystem::copy_file(local_path, cached_path, boost::filesystem::copy_option::overwrite_if_exists);
-        std::string local_mec_file = local_path.string() + "c";
-        std::string cached_mec_file = cached_path.string() + "c";
-          DBG("check if .mec also exists: " << local_mec_file << endl);
-        if (boost::filesystem::exists(local_mec_file)) {
-          DBG("also copying the .mec: " << local_mec_file << endl);
-          boost::filesystem::copy_file(local_mec_file, cached_mec_file, boost::filesystem::copy_option::overwrite_if_exists);
+
+      boost::filesystem::path cached_me_path = _mec_cache_directory;
+      cached_me_path /= mod_path.substr(it->first.length() + 1) + ".me";
+      boost::filesystem::path cached_mec_path = cached_me_path.string() + "c";
+
+      DBG("cached filepath: " << cached_me_path << endl);
+      if (!boost::filesystem::exists(cached_me_path)) {
+        boost::filesystem::path repo_path = it->second;
+        repo_path /= mod_path.substr(it->first.length() + 1) + ".me";
+        DBG("repo path: " << repo_path << endl);
+        std::stringstream cmd;
+        cmd << "wget -nv -O " << "/tmp/wget_meme_file.me " << repo_path.string();
+        DBG("executing " << cmd.str() << endl);
+        int res = system(cmd.str().c_str());
+        if (res != 0) {
+          bail(std::string("Could not fetch source module ") + repo_path.string());
         }
+        cmd.str("");
+        cmd << "wget -nv -O " << "/tmp/wget_meme_file.mec " << repo_path.string() + "c";
+        DBG("executing " << cmd.str() << endl);
+        res = system(cmd.str().c_str());
+        if (res != 0) {
+          bail(std::string("Could not fetch compiled module ") + repo_path.string());
+        }
+        DBG("creating directory" << cached_me_path.parent_path() << endl);
+        boost::filesystem::create_directories(cached_me_path.parent_path());
+        boost::filesystem::copy_file("/tmp/wget_meme_file.me", cached_me_path, boost::filesystem::copy_option::overwrite_if_exists);
+        boost::filesystem::copy_file("/tmp/wget_meme_file.mec", cached_mec_path, boost::filesystem::copy_option::overwrite_if_exists);
+        //boost::filesystem::create_directories(cached_path.parent_path());
+        //boost::filesystem::copy_file(repo_path, cached_path, boost::filesystem::copy_option::overwrite_if_exists);
+        // std::string repo_mec_file = repo_path.string() + "c";
+        // std::string cached_mec_file = cached_path.string() + "c";
+        // DBG("check if .mec also exists: " << local_mec_file << endl);
+        // if (boost::filesystem::exists(local_mec_file)) {
+        //   DBG("also copying the .mec: " << local_mec_file << endl);
+        //   boost::filesystem::copy_file(local_mec_file, cached_mec_file, boost::filesystem::copy_option::overwrite_if_exists);
+        // }
       }
-      maybe_compile_local_source(proc, cached_path.string());
-      return read_mec_file(cached_path.string() + "c", file_size);
+      maybe_compile_local_source(proc, cached_me_path.string());
+      return read_mec_file(cached_mec_path.string(), file_size);
     }
   }
   bail(std::string("fatal error:\n\tmodule not found: ") + mod_path);
@@ -401,4 +423,5 @@ void VM::maybe_compile_local_source(Process* proc, std::string filepath) {
       bail();
     }
   }
+  DBG("END of maybe_compile_local_source for " << filepath << endl);
 }
