@@ -23,7 +23,7 @@ The Memetalk VM is currently developed in C++ and depends on:
 MemeScript compiler is written in itself, so you need to install a previously
 built binary version of it to perform the bootstraping:
 
-* [memetalk v0.1.0](https://github.com/thiago-silva/memetalk/releases/download/v0.1.0/memetalk-v0.1.0.tar.gz)
+* [memetalk (linux x86_64 tarballs)](https://github.com/thiago-silva/memetalk/releases)
 
 
 ## Building
