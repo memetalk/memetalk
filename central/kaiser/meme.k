@@ -164,14 +164,7 @@ start = compiler_line:c
 compiler_line = T_MEME module_path:c => c
                ;
 
-module_path = T_ID:x T_COLON:c path:p => x + c + p;
-
-path = T_PRIV_ID:x path_rest:xs => x + xs
-     ;
-
-path_rest = T_SLASH:x path:y => x + y
-          | => ""
-          ;
+module_path = T_ID:repo T_COLON:c {this.consume_rest_of_line}:p => repo + c + p;
 
 meta_section = meta_variables:x => [:meta, x];
 
@@ -625,6 +618,10 @@ lit_number = # T_HEXNUM:x => #[:literal-number, x.asHex]
            ;
 
 </kaiser>
+instance_method consume_rest_of_line: fun() {
+  this.scanner.consume_whitespace();
+  return this.scanner.match_regexp("[^\\n]+");
+}
 instance_method consume_rest_lit_string: fun() {
   var res = "";
   while (true) {

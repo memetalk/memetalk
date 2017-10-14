@@ -85,34 +85,13 @@ instance_method compiler_line: fun() {
   return c;
 }
 instance_method module_path: fun() {
-  var x = null;
+  var repo = null;
   var c = null;
   var p = null;
-  x = this.match(29);
+  repo = this.match(29);
   c = this.match(44);
-  p = this.path();
-  return x + c + p;
-}
-instance_method path: fun() {
-  var x = null;
-  var xs = null;
-  x = this.match(30);
-  xs = this.path_rest();
-  return x + xs;
-}
-instance_method path_rest: fun() {
-  var x = null;
-  var y = null;
-  if(this.lookahead_any([43])) {
-    x = this.match(43);
-    y = this.path();
-    return x + y;
-    return null;
-  }
-
-  return "";
-
-  this.unexpected([43]);
+  p = this.consume_rest_of_line;
+  return repo + c + p;
 }
 instance_method meta_section: fun() {
   var x = null;
@@ -1752,6 +1731,10 @@ _pos = this.position_after_spaces();
   }
 
   this.unexpected([37, 36]);
+}
+instance_method consume_rest_of_line: fun() {
+  this.scanner.consume_whitespace();
+  return this.scanner.match_regexp("[^\\n]+");
 }
 instance_method consume_rest_lit_string: fun() {
   var res = "";
