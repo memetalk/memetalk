@@ -1,0 +1,3 @@
+[submodule "central"]
+	path = central
+	url = git@github.com:memetalk/central.git

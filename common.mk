@@ -1,7 +1,9 @@
 # Important paths
 
-## Root Directory of the entire project
-ROOT_DIR := $(shell git rev-parse --show-toplevel)
+## Root Directory of the entire projec
+mkfile_path := $(abspath $(lastword $(MAKEFILE_LIST)))
+ROOT_DIR := $(strip $(patsubst %/, %, $(dir $(mkfile_path))))
+
 
 ## Them MEME!!!
 MEME = $(ROOT_DIR)/meme

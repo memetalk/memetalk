@@ -1,6 +1,6 @@
 all: build
 
-subdirs = src central
+subdirs = src central tests
 
 include common.mk
 
@@ -35,7 +35,7 @@ clean:
 debug:
 	$(MAKE) -C src debug
 
-test: build; $(MAKE) -C $(MM_DIR)/tests $@
+test: build; $(MAKE) -C tests $@
 
 src: core
 
