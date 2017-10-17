@@ -1,4 +1,4 @@
-# Memetalk [![Build Status](https://secure.travis-ci.org/thiago-silva/memetalk.png?branch=master)](https://travis-ci.org/thiago-silva/memetalk)
+# Memetalk [![Build Status](https://secure.travis-ci.org/memetalk/memetalk.png?branch=master)](https://travis-ci.org/memetalk/memetalk)
 
 This is a repository for the Memetalk programming system.
 
