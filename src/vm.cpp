@@ -9,6 +9,7 @@
 #include "mec_fun.hpp"
 #include <cstdlib>
 #include <boost/filesystem.hpp>
+#include <boost/algorithm/string.hpp>
 
 #include <gc_cpp.h>
 #include "gc/gc_allocator.h"
@@ -300,8 +301,10 @@ void VM::load_config() {
       _repo_override[iter->first] = iter->second.data();
     }
 
-    _mec_cache_directory = pt.get_child("cache_path").data();
-    DBG("config.cache_path: " << _mec_cache_directory << endl);
+    _system_path = pt.get_child("system_path").data();
+    DBG("config.system_path: " << _system_path << endl);
+    _mec_cache_directory = _system_path + "/cache";
+    DBG("cache_path: " << _mec_cache_directory << endl);
     _core_img_filepath = pt.get_child("core_path").data();
     DBG("config.core_path: " << _core_img_filepath << endl);
   } catch(...) {
@@ -312,62 +315,75 @@ void VM::load_config() {
 char* VM::fetch_module(Process* proc, const std::string& mod_path, int* file_size) {
   DBG("fetch module '" << mod_path << "'" << std::endl);
 
+  std::vector<std::string> strs;
+  boost::split(strs, mod_path, boost::is_any_of(":"));
+  std::string repo_name = strs[0]; //e.g. central
+  std::string repo_path = strs[1]; //e.g. foo/0.0.1/bar
+
+  boost::split(strs, repo_path, boost::is_any_of("/"));
+  // boost::filesystem::path::iterator mrepo_path_it = boost::filesystem::path(repo_path).begin();
+  std::string package_name = strs[0];  //e.g. foo
+  std::string package_id = strs[0] + "-" + strs[1]; //e.g. foo-0.0.1
+
+  DBG("repo name: '" << repo_name
+      << "' repo_path: '" << repo_path
+      << "' package: '" << package_name
+      << "' package_id: '" << package_id << "'" << endl);
+
   //1-check for overriding rules
-   boost::unordered_map<std::string, std::string>::iterator it;
+  boost::unordered_map<std::string, std::string>::iterator it;
   for (it = _repo_override.begin(); it != _repo_override.end(); it++) {
     DBG("looking for overriding rules: '" << it->first << "'" << endl);
-    if (mod_path.find(it->first) == 0) {
+    if (repo_name == it->first) {
       std::string local_path = it->second + mod_path.substr(it->first.length());
       DBG("translating " << mod_path << " to local path " << local_path << std::endl);
       return read_mec_file(local_path + ".mec", file_size);
     }
   }
 
-
   for (it = _repo_locations.begin(); it != _repo_locations.end(); it++) {
-    if (mod_path.find(it->first) == 0) { //found a repository key
+    if (repo_name == it->first) { //found a repository key
 
       //1: compute cache directory for repository
       //2: check if module exists in cache
-      //3:  if not, fetch it / copy it to cache
-      //4: read and return file contents
+      //3:  if not, fetch package / unpack to cache
+      //4: read and return .mec contents
 
-      boost::filesystem::path cached_me_path = _mec_cache_directory;
-      cached_me_path /= mod_path.substr(it->first.length() + 1) + ".me";
-      boost::filesystem::path cached_mec_path = cached_me_path.string() + "c";
+      boost::filesystem::path cached_path = _mec_cache_directory;                 //e.g. ~/.memetalk/cache
+      boost::filesystem::path cached_me_path = cached_path / (repo_path + ".me"); //e.g. ~/.memetalk/cache/foo/0.0.1/bar.me
+      boost::filesystem::path cached_mec_path = cached_me_path.string() + "c";    //e.g. ~/.memetalk/cache/foo/0.0.1/bar.mec
 
-      DBG("cached filepath: " << cached_me_path << endl);
+      DBG("cached .me filepath: " << cached_me_path << endl);
       if (!boost::filesystem::exists(cached_me_path)) {
-        boost::filesystem::path repo_path = it->second;
-        repo_path /= mod_path.substr(it->first.length() + 1) + ".me";
-        DBG("repo path: " << repo_path << endl);
+        DBG("cached .me does not exist. Fetching..." << endl);
+        boost::filesystem::path repo_url = it->second;        //e.g. http://modules.memetalk.org/central
+        repo_url /= package_name;
+        repo_url /= package_id + ".tar.gz";                 //e.g. http://modules.memetalk.org/central/foo/foo-0.0.1.tar.gz
+        DBG("repo url: " << repo_url << endl);
         std::stringstream cmd;
-        cmd << "wget -nv -O " << "/tmp/wget_meme_file.me " << repo_path.string();
+
+        //download package
+        std::stringstream tmp;
+        tmp << "/tmp/wget_meme_file_" << getpid() << ".tar.gz";
+        cmd << "wget -nv -O " << tmp.str() << " " << repo_url.string();
         DBG("executing " << cmd.str() << endl);
         int res = system(cmd.str().c_str());
         if (res != 0) {
-          bail(std::string("Could not fetch source module ") + repo_path.string());
+          bail(std::string("Could not fetch package ") + repo_url.string());
         }
+
+        DBG("creating memetalk cache directory if doens't exist: " << cached_path << endl);
+        boost::filesystem::create_directories(cached_path);
+
         cmd.str("");
-        cmd << "wget -nv -O " << "/tmp/wget_meme_file.mec " << repo_path.string() + "c";
-        DBG("executing " << cmd.str() << endl);
+        cmd << "tar xvfz " << tmp.str() << " -C " << _system_path;
+        DBG("unpacking: " << cmd.str() << endl);
         res = system(cmd.str().c_str());
         if (res != 0) {
-          bail(std::string("Could not fetch compiled module ") + repo_path.string());
+          bail(std::string("Could not unpack ") + tmp.str());
         }
-        DBG("creating directory" << cached_me_path.parent_path() << endl);
-        boost::filesystem::create_directories(cached_me_path.parent_path());
-        boost::filesystem::copy_file("/tmp/wget_meme_file.me", cached_me_path, boost::filesystem::copy_option::overwrite_if_exists);
-        boost::filesystem::copy_file("/tmp/wget_meme_file.mec", cached_mec_path, boost::filesystem::copy_option::overwrite_if_exists);
-        //boost::filesystem::create_directories(cached_path.parent_path());
-        //boost::filesystem::copy_file(repo_path, cached_path, boost::filesystem::copy_option::overwrite_if_exists);
-        // std::string repo_mec_file = repo_path.string() + "c";
-        // std::string cached_mec_file = cached_path.string() + "c";
-        // DBG("check if .mec also exists: " << local_mec_file << endl);
-        // if (boost::filesystem::exists(local_mec_file)) {
-        //   DBG("also copying the .mec: " << local_mec_file << endl);
-        //   boost::filesystem::copy_file(local_mec_file, cached_mec_file, boost::filesystem::copy_option::overwrite_if_exists);
-        // }
+      } else {
+        DBG("cached .me exists" << endl);
       }
       maybe_compile_local_source(proc, cached_me_path.string());
       return read_mec_file(cached_mec_path.string(), file_size);

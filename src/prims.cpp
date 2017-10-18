@@ -6,7 +6,6 @@
 #include "mmobj.hpp"
 #include "mec_image.hpp"
 #include "net_prims.hpp"
-#include "re2_prims.hpp"
 #include <string>
 #include <iostream>
 #include <fstream>
@@ -3298,6 +3297,5 @@ void init_primitives(VM* vm) {
 
   vm->register_primitive("compiled_module_path", prim_compiled_module_path);
 
-  re2_init_primitives(vm);
   net_init_primitives(vm);
 }

@@ -6,6 +6,7 @@
 #include "vm.hpp"
 #include "process.hpp"
 #include <sstream>
+#include <dlfcn.h>
 
 using namespace std;
 
@@ -341,6 +342,31 @@ oop MECImage::instantiate_module(oop module_arguments_list) {
   return imodule;
 }
 
+void MECImage::link_native_bindings(oop cmod) {
+  oop meta_vars = _mmobj->mm_compiled_module_meta_vars(_proc, cmod);
+  oop_map::iterator it = _mmobj->mm_dictionary_begin(_proc, meta_vars);
+  oop_map::iterator end = _mmobj->mm_dictionary_end(_proc, meta_vars);
+  for ( ; it != end; it++) {
+    if (it->first == _proc->vm()->new_symbol("dynlib")) { //module has native library
+      std::string libname = _mmobj->mm_string_cstr(_proc, it->second);
+      std::string lib_filepath = _proc->vm()->system_path() + "/lib/meme_" + libname + ".so"; //FIXME: perhaps this hardcoded path should be in vm?
+
+      void *handle  = dlopen(lib_filepath.c_str(), RTLD_NOW);
+      if (!handle) {
+        _proc->bail(dlerror());
+      }
+
+      void (*init)(VM*);
+
+      *(void **) (&init) = dlsym(handle, "init");
+      if (!init) {
+        _proc->bail(dlerror());
+      }
+      (*init)(_proc->vm()); //install primitives
+      return;
+    }
+  }
+}
 
 oop MECImage::load() {
   DBG(" ============ Load module ===========" << endl);
@@ -349,6 +375,7 @@ oop MECImage::load() {
   link_external_references();
   link_symbols(_data, _st_size, HEADER_SIZE + _ot_size + _names_size + _er_size, _proc->vm(), _core_image);
   _compiled_module = (oop) * (word*)(& _data[HEADER_SIZE]);
+  link_native_bindings(_compiled_module);
   _proc->vm()->mmobj()->mm_compiled_module_set_image_ptr_no_check(_compiled_module, this);
   DBG(" ============ Done load module ===========" << endl);
   return _compiled_module;

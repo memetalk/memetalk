@@ -6,15 +6,12 @@ BIN = $(MEME)
 INC_DIRS = /usr/include /usr/local/include
 
 CXXFLAGS = --std=c++11 -Wall
-LIBS = -lboost_system -lboost_iostreams -lboost_filesystem -lgc -lre2
+LIBS = -ldl -lboost_system -lboost_iostreams -lboost_filesystem -lgc
 
 CPP_FILES = log.cpp mec_image.cpp core_image.cpp vm.cpp utils.cpp	\
 	mmobj.cpp main.cpp process.cpp prims.cpp mec_fun.cpp net_prims.cpp
 HPP_FILES = mec_image.hpp core_image.hpp vm.hpp log.hpp utils.hpp	\
 	defs.hpp mmobj.hpp process.hpp prims.hpp mec_fun.hpp net_prims.hpp
-
-CPP_FILES += re2_prims.cpp
-HPP_FILES += re2_prims.hpp
 
 
 OBJS = $(CPP_FILES:%.cpp=%.o)
@@ -33,4 +30,4 @@ release: build
 
 # Output binary
 %.o: %.cpp; g++ $(CXXFLAGS) -c -o $@ $^
-$(BIN): $(OBJS); g++ $(OBJS) $(LIBS) -o $@
+$(BIN): $(OBJS); g++ -Wl,--export-dynamic $(OBJS) $(LIBS) -o $@

@@ -87,6 +87,8 @@ public:
   char* get_argv(int);
 
   char* fetch_module(Process* proc, const std::string& filepath, int* file_size);
+
+  std::string system_path() { return _system_path; }
 private:
   // void dump_prime_info();
   // void dictionary_dump(oop dict);
@@ -116,6 +118,7 @@ private:
 
   //path configurations
   std::string _core_img_filepath;
+  std::string _system_path;
   std::string _mec_cache_directory;
   boost::unordered_map<std::string, std::string> _repo_locations;
   boost::unordered_map<std::string, std::string> _repo_override;

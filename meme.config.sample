@@ -1,4 +1,4 @@
-{"cache_path": "/home/USER/.memetalk/cache",
+{"system_path": "/home/USER/.memetalk",
  "core_path": "/home/USER/src/memetalk/core.img",
  "repositories":
     {"central": "http://modules.memetalk.org/central"},
