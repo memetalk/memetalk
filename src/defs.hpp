@@ -1,3 +1,9 @@
+/*
+ * Copyright 2012-2017 Thiago Silva <thiago@memetalk.org>
+ *
+ * Licensed under the BSD-2 license. See LICENSE file in the project root for
+ * full license information.
+ */
 #define  WSIZE 8
 
 #if WSIZE == 4
