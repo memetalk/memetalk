@@ -77,6 +77,7 @@ int VM::start() {
     module_path = _argv[2];
     _first_argv = 2; //first memetalk-land argv
     try {
+      //OO! List.new
       imod = instantiate_meme_module(proc, module_path, _mmobj->mm_list_new());
     } catch(mm_exception_rewind e) {
       print_error(proc, e.mm_exception);
@@ -84,11 +85,13 @@ int VM::start() {
     }
   } else if (strcmp(_argv[1], "-c") == 0) {
     //meme -c <filepath.me>
+    //_first_argv = 2; //FIXME: should this be uncommented?
     compile(proc, _argv[2]);
     return 0;
   } else {
     //meme <filepath.me> We might need to compile it
     maybe_compile_local_source(proc, _argv[1]);
+    //OO! List.new
     imod = instantiate_local_module(proc, _argv[1], _mmobj->mm_list_new());
     _first_argv = 1; //first memetalk-land argv
   }
@@ -119,7 +122,8 @@ std::pair<Process*, oop> VM::start_debugger(Process* target) {
     imod = _debugger_module;
   } else {
     try {
-      imod = instantiate_meme_module(dbg_proc, "central:stdlib/remote_repl", _mmobj->mm_list_new());
+      //OO! List.new
+      imod = instantiate_meme_module(dbg_proc, _dbg_module_path.c_str(), _mmobj->mm_list_new());
     } catch(mm_exception_rewind e) {
       ERROR() << "uncaught exception while instantiating debugger module :(" << endl;
       dbg_proc->fail(e.mm_exception);
@@ -128,6 +132,7 @@ std::pair<Process*, oop> VM::start_debugger(Process* target) {
     }
   }
 
+  //OO! Process.new
   oop oop_target_proc = _mmobj->mm_process_new(target, target);
   int exc;
   oop handler = dbg_proc->send_1(imod, new_symbol("debug"), oop_target_proc, &exc);
@@ -141,6 +146,7 @@ oop VM::new_symbol(const char* cstr) {
   std::string s = cstr;
   symbol_map_t::iterator it = _symbols.find(s);
   if (it == _symbols.end()) {
+    //OO! Symbol.new
     oop sym = _mmobj->mm_symbol_new(cstr);
     _symbols[s] = sym;
     return sym;
@@ -152,8 +158,10 @@ oop VM::new_symbol(const char* cstr) {
 oop VM::new_symbol(Process* p, oop str) {
   if (!(_mmobj->mm_object_vt(str) == _core_image->get_prime("String"))) {
     WARNING() << " expected String object, got:" << str << endl;
+    //OOC! TypeError
     p->raise("TypeError", "Expecting String");
   }
+  //OO! List.cstr
   return new_symbol(_mmobj->mm_string_cstr(p, str));
 }
 
@@ -161,17 +169,8 @@ void VM::register_primitive(std::string name, prim_function_t fun) {
   _primitives[new_symbol(name.c_str())] = fun;
 }
 
-// prim_function_t VM::get_primitive(Process* proc, oop name) {
-//   // DBG("VM::get_primitive " << name << endl)
-//   // boost::unordered_map<std::string, prim_function_t>::iterator it = _primitives.find(name);
-//   // if (it == _primitives.end()) {
-//   //   ERROR() << "did not find primitive with name:" << name << endl;
-//   //   proc->raise("InternalError", (std::string("primitive not found: ") + name).c_str());
-//   // }
-//   // return it->second;;
-//   return _primitives.at(name);
-// }
 
+//ootype VM::start => ? instantiate_meme_module(_, _, List)
 oop VM::instantiate_meme_module(Process* proc, const char* mod_path, oop module_args_list) {
 
   DBG( "instantiating repository module " << mod_path << endl);
@@ -191,6 +190,7 @@ oop VM::instantiate_meme_module(Process* proc, const char* mod_path, oop module_
   return mec->instantiate_module(module_args_list);
 }
 
+//ootype VM::start => Module instantiate_local_module(_, _, List)
 oop VM::instantiate_local_module(Process* proc, std::string me_file_path, oop module_args_list) {
   std::string mec_file_path = me_file_path + "c";
   std::string mec_file_url = boost::filesystem::absolute(mec_file_path).string();
@@ -241,6 +241,7 @@ oop VM::get_compiled_module(Process* proc, std::string name) {
     }
   }
   if (_modules.find(name) == _modules.end()) {
+    //OOC! KeyError
     proc->raise("KeyError", (std::string("module not found: ") + name).c_str());
   }
   return _modules[name]->compiled_module();
@@ -307,6 +308,7 @@ void VM::load_config() {
       _repo_override[iter->first] = iter->second.data();
     }
 
+    _dbg_module_path = pt.get_child("dbg_module").data();
     _system_path = pt.get_child("system_path").data();
     DBG("config.system_path: " << _system_path << endl);
     _mec_cache_directory = _system_path + "/cache";
@@ -421,7 +423,7 @@ void VM::maybe_compile_local_source(Process* proc, std::string filepath) {
   DBG("checking file age: " << filepath << endl);
   if (is_mec_file_older_then_source(filepath)) {
     DBG("perhaps recompile .mec file for " << filepath << endl);
-    //avoid recursion
+    //avoid infinite recursion
     if (_compile_map[filepath]) {
       //bail(std::string("trying to compile a module the compiler depends on: ") + filepath);
       return;
@@ -451,6 +453,7 @@ void VM::compile(Process* proc, std::string filepath) {
   oop imod;
   try {
     DBG("instantiating compiler module : " << compiler_module_path << endl);
+    //OO! List.new
     imod = instantiate_meme_module(proc, compiler_module_path.c_str(), _mmobj->mm_list_new());
   } catch(mm_exception_rewind e) {
     DBG("uops\n");
@@ -459,6 +462,7 @@ void VM::compile(Process* proc, std::string filepath) {
   }
   DBG("compiling source with compiler: " << compiler_module_path << endl);
   int exc;
+  //OO! String.new
   oop res = proc->send_1(imod, new_symbol("compile"), _mmobj->mm_string_new(filepath), &exc);
   DBG("finished source with compiler: " << compiler_module_path << endl);
   if (exc) {

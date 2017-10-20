@@ -56,6 +56,7 @@ void MMObj::init() {
 }
 
 oop MMObj::mm_process_new(Process* p, Process* proc) {
+  //OOC! Process
   oop obj = alloc_instance(p, _core_image->get_prime("Process"));
   ((oop*)obj)[2] = (oop) proc;
   return obj;
@@ -611,6 +612,8 @@ oop MMObj::mm_function_from_cfunction(Process* p, oop cfun, oop imod, bool shoul
 
   oop fun = (oop) GC_MALLOC(sizeof(word) * OO_FUN_LEN);
 
+  //OO! Object.new
+  //OOC! Function
   * (oop*) fun = _core_image->get_prime("Function");
   * (oop*) &fun[1] = mm_object_new();
   * (oop*) &fun[2] = cfun;
@@ -1091,11 +1094,12 @@ number MMObj::mm_compiled_class_num_fields(Process* p, oop cclass, bool should_a
   return mm_list_size(p, fields_list, should_assert);
 }
 
+//called from MECImage
 oop MMObj::mm_cfuns_to_funs_dict(Process* p, oop cfuns_dict, oop imod, bool should_assert) {
   TYPE_CHECK(!( *(oop*) cfuns_dict == _core_image->get_prime("Dictionary")),
              "TypeError","Expected Dictionary")
 
-  // number size = mm_dictionary_size(cfuns_dict);
+  //OO! Dictionary.new
   oop funs_dict = mm_dictionary_new();
 
   oop_map::iterator it = mm_dictionary_begin(p, cfuns_dict, should_assert);
@@ -1103,6 +1107,7 @@ oop MMObj::mm_cfuns_to_funs_dict(Process* p, oop cfuns_dict, oop imod, bool shou
     oop sym_name = it->first;
     oop cfun = it->second;
     oop fun = mm_function_from_cfunction(p, cfun, imod, should_assert);
+    //OO! Dictionary.set
     mm_dictionary_set(p, funs_dict, sym_name, fun, should_assert);
   }
   return funs_dict;
@@ -1153,7 +1158,7 @@ oop MMObj::mm_class_get_compiled_class(Process* p, oop klass, bool should_assert
   return ((oop*)klass)[4];
 }
 
-
+//called from mec_image
 oop MMObj::mm_new_slot_getter(Process* p, oop imodule, oop owner, oop name, int idx, bool should_assert) {
 //    if (!( *(oop*) cclass == _core_image->get_prime("CompiledClass"))) {
 //     p->raise("TypeError", "Expected CompiledClass");
@@ -1163,6 +1168,9 @@ oop MMObj::mm_new_slot_getter(Process* p, oop imodule, oop owner, oop name, int 
 
   oop cfun_getter = (oop) GC_MALLOC(sizeof(word) * OO_CFUN_LEN);
 
+  //OOC! CompiledFunction
+  //OO! Object.new
+  //OO! List.new
   * (oop*) cfun_getter = _core_image->get_prime("CompiledFunction");
   * (oop*) &cfun_getter[1] = mm_object_new();
   * (long*) &cfun_getter[2] = 0x10L; //top-level flag

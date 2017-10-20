@@ -49,40 +49,40 @@ static inline number extract_number(Process* proc, oop o) {
   return 0; // unreachable
 }
 
-static int prim_remote_repl_compile_module(Process* proc) {
-  oop module_name = proc->get_arg(0);
-  char* mmpath = getenv("MEME_PATH");
-  std::stringstream s;
-  s << "python -m pycompiler.compiler  "<< mmpath << proc->mmobj()->mm_string_stl_str(proc, module_name) << ".me";
-  DBG("Executing ... " << s.str() << std::endl);
-  if (system(s.str().c_str()) == 0) {
-    proc->stack_push(MM_TRUE);
-  } else {
-    proc->stack_push(MM_FALSE);
-  }
-  return 0;
-}
+// static int prim_remote_repl_compile_module(Process* proc) {
+//   oop module_name = proc->get_arg(0);
+//   char* mmpath = getenv("MEME_PATH");
+//   std::stringstream s;
+//   s << "python -m pycompiler.compiler  "<< mmpath << proc->mmobj()->mm_string_stl_str(proc, module_name) << ".me";
+//   DBG("Executing ... " << s.str() << std::endl);
+//   if (system(s.str().c_str()) == 0) {
+//     proc->stack_push(MM_TRUE);
+//   } else {
+//     proc->stack_push(MM_FALSE);
+//   }
+//   return 0;
+// }
 
-static int prim_remote_repl_instantiate_module(Process* proc) {
-  oop oop_module_name = proc->get_arg(0);
-  char* module_name = proc->mmobj()->mm_string_cstr(proc, oop_module_name);
-  try {
-    DBG("instantiating module" << module_name << endl);
+// static int prim_remote_repl_instantiate_module(Process* proc) {
+//   oop oop_module_name = proc->get_arg(0);
+//   char* module_name = proc->mmobj()->mm_string_cstr(proc, oop_module_name);
+//   try {
+//     DBG("instantiating module" << module_name << endl);
 
-    oop imod = proc->vm()->instantiate_meme_module(proc, module_name,
-                                              proc->mmobj()->mm_list_new());
-    proc->stack_push(imod);
-    return 0;
-  } catch(std::invalid_argument e) {
-    DBG("instantiating module failed: " << e.what() << endl);
-    oop ex = proc->mm_exception(
-      "ImportError",
-      (std::string("could not import module ") + e.what()).c_str());
-    DBG("returning mm_exception : " << ex << endl);
-    proc->stack_push(ex);
-    return PRIM_RAISED;
-  }
-}
+//     oop imod = proc->vm()->instantiate_meme_module(proc, module_name,
+//                                               proc->mmobj()->mm_list_new());
+//     proc->stack_push(imod);
+//     return 0;
+//   } catch(std::invalid_argument e) {
+//     DBG("instantiating module failed: " << e.what() << endl);
+//     oop ex = proc->mm_exception(
+//       "ImportError",
+//       (std::string("could not import module ") + e.what()).c_str());
+//     DBG("returning mm_exception : " << ex << endl);
+//     proc->stack_push(ex);
+//     return PRIM_RAISED;
+//   }
+// }
 
 
 static int prim_io_print(Process* proc) {
@@ -139,6 +139,7 @@ static int prim_io_open_file(Process* proc) {
     proc->stack_push((oop)file);
     return 0;
   } else {
+    //OOC! Exception
     proc->raise("Exception", "TODO rest of io_open_file");
   }
   return 0; // unreachable
@@ -331,6 +332,7 @@ static int prim_string_index(Process* proc) {
   oop self =  proc->dp();
   oop arg = proc->get_arg(0);
   if (!is_numeric(proc, arg)) {
+    //OOC! IndexError
     proc->raise("IndexError", "string index should be a number");
   }
 
@@ -344,6 +346,7 @@ static int prim_string_index(Process* proc) {
     proc->stack_push(proc->mmobj()->mm_string_new(res));
     return 0;
   } else {
+    //OOC! IndexError
     proc->raise("IndexError", "out of bounds");
   }
 }
@@ -816,6 +819,7 @@ static int prim_numeric_sum(Process* proc) {
   number n_res;
 
   if (__builtin_add_overflow(n_self, n_other, &n_res)) {
+    //OOC! Overflow
     proc->raise("Overflow", "result of + overflows");
   } else {
     proc->stack_push(proc->mmobj()->mm_integer_or_longnum_new(proc, n_res));
@@ -833,6 +837,7 @@ static int prim_numeric_sub(Process* proc) {
   number n_res;
 
   if (__builtin_sub_overflow(n_self, n_other, &n_res)) {
+    //OOC! Overflow
     proc->raise("Overflow", "result of - overflows");
   } else {
     proc->stack_push(proc->mmobj()->mm_integer_or_longnum_new(proc, n_res));
@@ -850,6 +855,7 @@ static int prim_numeric_mul(Process* proc) {
   number n_res;
 
   if (__builtin_mul_overflow(n_self, n_other, &n_res)) {
+    //OOC! Overflow
     proc->raise("Overflow", "result of * overflows");
   } else {
     proc->stack_push(proc->mmobj()->mm_integer_or_longnum_new(proc, n_res));
@@ -1010,6 +1016,7 @@ static int prim_numeric_as_char(Process* proc) {
     proc->stack_push(oop_str);
     return 0;
   } else {
+    //OOC! Exception
     proc->raise("Exception", "unsupported value for asChar  ");
   }
   return 0; // unreachable
@@ -1439,6 +1446,7 @@ static int prim_list_detect(Process* proc) {
       return 0;
     }
   }
+    //OOC! Exception
   proc->raise("Exception", "No value found");
 }
 
@@ -1471,6 +1479,7 @@ static int prim_list_first_success(Process* proc) {
     }
     proc->clear_exception_state();
   }
+    //OOC! Exception
   proc->raise("Exception", "No value found");
 }
 
@@ -1691,6 +1700,7 @@ static int prim_list_last(Process* proc) {
     oop entry = proc->mmobj()->mm_list_entry(proc, self, size-1);
     proc->stack_push(entry);
   } else {
+    //OOC! IndexError
     proc->raise("IndexError", "List overflow");
     assert(0); //unreachable
   }
@@ -2028,7 +2038,7 @@ static int prim_dictionary_equals(Process* proc) {
   return 0;
 }
 
-static int prim_mirror_entries(Process* proc) {
+static int prim_mirror_mirror_entries(Process* proc) {
   oop self =  proc->dp();
   oop mirrored = ((oop*)self)[2];
 
@@ -2075,7 +2085,7 @@ static int prim_mirror_entries(Process* proc) {
   }
 }
 
-static int prim_mirror_value_for(Process* proc) {
+static int prim_mirror_mirror_value_for(Process* proc) {
   oop self =  proc->dp();
   oop entry = proc->get_arg(0);
 
@@ -2107,7 +2117,7 @@ static int prim_mirror_value_for(Process* proc) {
   }
 }
 
-static int prim_mirror_set_value_for(Process* proc) {
+static int prim_mirror_mirror_set_value_for(Process* proc) {
   oop self =  proc->dp();
   oop entry = proc->get_arg(0);
   oop value = proc->get_arg(1);
@@ -2142,14 +2152,14 @@ static int prim_mirror_set_value_for(Process* proc) {
   }
 }
 
-static int prim_mirror_vt_for(Process* proc) {
+static int prim_mirror_mirror_vt_for(Process* proc) {
   oop obj = proc->get_arg(0);
   DBG("vt for " << obj << " = " << proc->mmobj()->mm_object_vt(obj) << endl);
   proc->stack_push(proc->mmobj()->mm_object_vt(obj));
   return 0;
 }
 
-static int prim_mirror_is_subclass(Process* proc) {
+static int prim_mirror_mirror_is_subclass(Process* proc) {
   oop sub = proc->get_arg(0);
   oop sup = proc->get_arg(1);
 
@@ -2650,7 +2660,7 @@ static int prim_test_catch_exception(Process* proc) {
   return 0;
 }
 
-static int prim_test_debug(Process* proc) {
+static int prim_memetest_debug(Process* proc) {
   return PRIM_HALTED;
 }
 //   // DBG("prim_test_debug" << endl);
@@ -2999,17 +3009,17 @@ static int prim_frame_get_local_value(Process* proc) {
 }
 
 
-static int prim_modules_path(Process* proc) {
-  const char* mmpath = getenv("MEME_PATH");
-  if (mmpath) {
-    proc->stack_push(proc->mmobj()->mm_string_new(mmpath));
-  } else {
-    proc->stack_push(proc->mmobj()->mm_string_new("./mm"));
-  }
-  return 0;
-}
+// static int prim_modules_path(Process* proc) {
+//   const char* mmpath = getenv("MEME_PATH");
+//   if (mmpath) {
+//     proc->stack_push(proc->mmobj()->mm_string_new(mmpath));
+//   } else {
+//     proc->stack_push(proc->mmobj()->mm_string_new("./mm"));
+//   }
+//   return 0;
+// }
 
-static int prim_set_debugger_module(Process* proc) {
+static int prim_memetest_set_debugger_module(Process* proc) {
   oop oop_imod = proc->get_arg(0);
   proc->vm()->set_debugger_module(oop_imod);
   proc->stack_push(proc->rp());
@@ -3096,8 +3106,8 @@ void init_primitives(VM* vm) {
   vm->register_primitive("io_write", prim_io_write);
   vm->register_primitive("io_close", prim_io_close);
 
-  vm->register_primitive("remote_repl_compile_module", prim_remote_repl_compile_module);
-  vm->register_primitive("remote_repl_instantiate_module", prim_remote_repl_instantiate_module);
+  // vm->register_primitive("remote_repl_compile_module", prim_remote_repl_compile_module);
+  // vm->register_primitive("remote_repl_instantiate_module", prim_remote_repl_instantiate_module);
 
   vm->register_primitive("behavior_to_string", prim_behavior_to_string);
   vm->register_primitive("behavior_to_source", prim_behavior_to_source);
@@ -3222,11 +3232,11 @@ void init_primitives(VM* vm) {
   vm->register_primitive("string_lt", prim_string_lt);
 
 
-  vm->register_primitive("mirror_entries", prim_mirror_entries);
-  vm->register_primitive("mirror_value_for", prim_mirror_value_for);
-  vm->register_primitive("mirror_set_value_for", prim_mirror_set_value_for);
-  vm->register_primitive("mirror_vt_for", prim_mirror_vt_for);
-  vm->register_primitive("mirror_is_subclass", prim_mirror_is_subclass);
+  vm->register_primitive("mirror_mirror_entries", prim_mirror_mirror_entries);
+  vm->register_primitive("mirror_mirror_value_for", prim_mirror_mirror_value_for);
+  vm->register_primitive("mirror_mirror_set_value_for", prim_mirror_mirror_set_value_for);
+  vm->register_primitive("mirror_mirror_vt_for", prim_mirror_mirror_vt_for);
+  vm->register_primitive("mirror_mirror_is_subclass", prim_mirror_mirror_is_subclass);
 
 
   vm->register_primitive("compiled_function_new_context", prim_compiled_function_new_context);
@@ -3252,7 +3262,7 @@ void init_primitives(VM* vm) {
   vm->register_primitive("test_files", prim_test_files);
 
   vm->register_primitive("test_catch_exception", prim_test_catch_exception);
-  vm->register_primitive("test_debug", prim_test_debug);
+  vm->register_primitive("memetest_debug", prim_memetest_debug);
 
   vm->register_primitive("process_step_into", prim_process_step_into);
   vm->register_primitive("process_step_over", prim_process_step_over);
@@ -3293,8 +3303,8 @@ void init_primitives(VM* vm) {
   vm->register_primitive("get_compiled_module", prim_get_compiled_module);
   vm->register_primitive("get_compiled_module_by_name", prim_get_compiled_module_by_name);
 
-  vm->register_primitive("modules_path", prim_modules_path);
-  vm->register_primitive("set_debugger_module", prim_set_debugger_module);
+  // vm->register_primitive("modules_path", prim_modules_path);
+  vm->register_primitive("memetest_set_debugger_module", prim_memetest_set_debugger_module);
 
   vm->register_primitive("get_argv", prim_get_argv);
   vm->register_primitive("exit", prim_exit);

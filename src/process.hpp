@@ -115,7 +115,7 @@ public:
   oop do_send(oop recv, oop selector, int num_args, int *exc);
 
   oop super_send(oop recv, oop selector, oop args, int* exc);
-  std::pair<oop,oop> lookup(oop, oop, oop);
+  // std::pair<oop,oop> lookup(oop, oop, oop);
 
   void raise(const char*, const char*);
   oop raise_local(const char* ex_type_name, const char* msg);

@@ -1,4 +1,4 @@
-meme central:memescript/0.0.1/compiler
+meme central:memescript/0.0.3/compiler
 requires test, io
 where
   io = central:linux/0.0.1/io
@@ -11,8 +11,8 @@ f: fun() {
 }
 
 main: fun() {
-  set_debugger_module(thisModule);
-  dbg();
+  test.set_debugger_module(thisModule);
+  test.dbg();
   var a = 1 + 2;
   return f();
 }

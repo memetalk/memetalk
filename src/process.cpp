@@ -65,11 +65,13 @@
 //#include <boost/unordered_map.hpp>
 //typedef boost::unordered_map<unsigned long, entry_t> cache_t;
 
+//OO! Behavior.get_dict
+//OO! Dictionary.fast_get
 #define inline_lookup(drecv, vt, selector)                              \
   while (true) {                                                        \
     if (vt == NULL) {                                                   \
       drecv = MM_NULL;                                                  \
-      fun = MM_NULL;                                                     \
+      fun = MM_NULL;                                                    \
       break;                                                            \
     }                                                                   \
     oop dict = _mmobj->mm_behavior_get_dict(vt);                        \
@@ -210,6 +212,7 @@ std::string Process::dump_stack_top(bool enabled) {
 }
 
 
+//ootype VM::start => oop run(Module, Symbol, _)
 oop Process::run(oop recv, oop selector_sym, int* exc) {
   //atm, we don't need to check exc
   //since ::unwind_with_exception will terminate the vm
@@ -319,6 +322,7 @@ void Process::pop_frame() {
   _sp = _sp - (storage_size + 2); //2: rp, dp
 
   if (_cp) {// first frame has _cp = null
+    //OO! Function.get_module
     _mp = _mmobj->mm_function_get_module(this, _cp, true);
   } else {
     DBG("MP unloaded is null! we should be in the first stack frame!" << endl);
@@ -348,8 +352,10 @@ oop Process::ctor_rdp_for(oop rp, oop cp) {
     _vm->bail("no rdp for ctor!");
   }
   oop vt = _mmobj->mm_object_vt(rp);
+  //OO! Class.get_compiled_class
   oop cclass = _mmobj->mm_class_get_compiled_class(this, vt, true);
 
+  //OO! Function.get_owner
   oop other_cclass = _mmobj->mm_function_get_owner(this, cp, true);
 
   DBG("cclass: " << cclass << ", other cclass: " << other_cclass << endl);
@@ -400,16 +406,21 @@ void Process::restore_fp(oop fp, number params, number env_offset) {
   _fp = fp;
 }
 
+//ootype: Process::protected_fetch_cycle => load_fun(Module, _, Function|Context, _, _) {
 bool Process::load_fun(oop recv, oop drecv, oop fun, bool should_allocate, number arity) {
   if (!(_mmobj->mm_is_function(fun) || _mmobj->mm_is_context(fun))) {
     WARNING() << "Will raise TypeError: Expecting function or context" << endl;
+    //OOC! TypeError
     raise("TypeError", "Expecting function or context");
   }
 
   DBG(fun << endl);
+  //OO! Function/Context.get_header
   long header = _mmobj->mm_function_get_header(this, fun, true);
 
+  //OO! Function/Context.is_getter
   if (_mmobj->mm_function_is_getter(this, fun, true)) {
+    //OO! Function.access_field
     number idx = _mmobj->mm_function_access_field(this, fun, true);
     DBG("GETTER: idx " << idx << " on " << recv << endl);
     oop val = ((oop*)drecv)[idx];
@@ -446,7 +457,9 @@ bool Process::load_fun(oop recv, oop drecv, oop fun, bool should_allocate, numbe
   //   DBG(endl);
   // }
 
+  //OO! Function/Context.is_context
   if (_mmobj->mm_is_context(fun)) {
+    //OO! Context.get_env
     restore_fp(_mmobj->mm_context_get_env(this, fun, true), num_params, CFUN_ENV_OFFSET(header));
   } else {
     if (CFUN_HAS_ENV(header)) {
@@ -455,6 +468,7 @@ bool Process::load_fun(oop recv, oop drecv, oop fun, bool should_allocate, numbe
   }
 
   _cp = fun;
+  //OO! Function/Context.get_module
   _mp = _mmobj->mm_function_get_module(this, _cp, true);
   DBG("MP for fun load: " << _mp << endl);
   DBG("_cp is " << _cp << endl);
@@ -465,6 +479,7 @@ bool Process::load_fun(oop recv, oop drecv, oop fun, bool should_allocate, numbe
   }
 
   if (CFUN_IS_PRIM(header)) {
+    //OO! Function.get_prim_name
     oop prim_name = _mmobj->mm_function_get_prim_name(this, fun, true);
     //std::string str_prim_name = _mmobj->mm_string_cstr(this, prim_name, true);
     int ret = execute_primitive(prim_name);
@@ -509,13 +524,16 @@ bool Process::load_fun(oop recv, oop drecv, oop fun, bool should_allocate, numbe
 
   // DBG("load_fun: module for fun " << fun << " is " << _mp << endl);
   // DBG("load_fun: is ctor? " << _mmobj->mm_function_is_ctor(fun) << " alloc? " << should_allocate << endl);
+  //OO! Function/Context.get_code
   _ip = _mmobj->mm_function_get_code(this, fun, true);
   // DBG("first instruction " << decode_opcode(*_ip) << endl);
+  //OO! Function/Context.get_code_size
   _code_size = _mmobj->mm_function_get_code_size(this, fun, true);
   maybe_break_on_call();
   return true;
 }
 
+//ootype Process::run => oop send_0(Module, Symbol, _)
 oop Process::send_0(oop recv, oop selector, int* exc) {
   return do_send(recv, selector, 0, exc);
 }
@@ -532,16 +550,20 @@ oop Process::send_2(oop recv, oop selector, oop arg1, oop arg2, int* exc) {
 }
 
 oop Process::send(oop recv, oop selector, oop args, int* exc) {
+  //OO! List.size
   number num_args = _mmobj->mm_list_size(this, args);
   for (int i = 0; i < num_args; i++) {
+    //OO! List.get
     stack_push(_mmobj->mm_list_entry(this, args, i));
   }
   return do_send(recv, selector, num_args, exc);
 }
 
 oop Process::super_send(oop recv, oop selector, oop args, int* exc) {
+  //OO! List.size
   number num_args = _mmobj->mm_list_size(this, args);
   for (int i = 0; i < num_args; i++) {
+    //OO! List.get
     stack_push(_mmobj->mm_list_entry(this, args, i));
   }
   DBG("-- begin super_send, recv: " << recv
@@ -558,6 +580,7 @@ oop Process::super_send(oop recv, oop selector, oop args, int* exc) {
     s << _mmobj->mm_symbol_cstr(this, selector, true) << " not found in object " << recv;
     DBG(s.str() << endl);
     *exc = 1;
+    //OOC! DoesNotUnderstand
     oop ex = mm_exception("DoesNotUnderstand", s.str().c_str());
     WARNING() << "raising DoesNotUnderstand: " << s.str() << endl;
     DBG("-- end do_send returning exception object " << ex << endl);
@@ -571,6 +594,7 @@ oop Process::super_send(oop recv, oop selector, oop args, int* exc) {
     DBG(s.str() << endl);
     *exc = 1;
     WARNING() << "wrong arity: " << s.str() << endl;
+    //OOC! ArityError
     oop ex = mm_exception("ArityError", s.str().c_str());
     DBG("-- end do_send returning exception object " << ex << endl);
     return ex;
@@ -579,27 +603,31 @@ oop Process::super_send(oop recv, oop selector, oop args, int* exc) {
   return protected_fetch_cycle(recv, drecv, fun, exc, true);
 }
 
+//ootype Process::send_0 => oop do_send(Module, Symbol, _, _)
 oop Process::do_send(oop recv, oop selector, int num_args, int *exc) {
   DBG("-- begin do_send, recv: " << recv
       << ", selector: " << _mmobj->mm_symbol_cstr(this, selector, true) << " #args: " << num_args << endl);
 
   *exc = 0;
-  oop fun;
-  oop vt = _mmobj->mm_object_vt(recv);
+  oop fun;                             //ootype: Function | Context | MM_NULL
+  oop vt = _mmobj->mm_object_vt(recv); //ootype: Module
   oop drecv = recv;
   inline_lookup(drecv, vt, selector);
 
   if (!fun) {
     std::stringstream s;
+    //OO! Symbol.cstr
     s << _mmobj->mm_symbol_cstr(this, selector, true) << " not found in object " << recv;
     DBG(s.str() << endl);
     *exc = 1;
+    //OOC! DoesNotUnderstand
     oop ex = mm_exception("DoesNotUnderstand", s.str().c_str());
     WARNING() << "raising DoesNotUnderstand: " << s.str() << endl;
     DBG("-- end do_send returning exception object " << ex << endl);
     return ex;
   }
 
+  //OO! Function.get_header
   number arity = CFUN_NUM_PARAMS(_mmobj->mm_function_get_header(this, fun, true));
   if (num_args != arity) {
     std::stringstream s;
@@ -607,6 +635,7 @@ oop Process::do_send(oop recv, oop selector, int num_args, int *exc) {
     DBG(s.str() << endl);
     *exc = 1;
     WARNING() << "wrong arity: " << s.str() << endl;
+    //OOC! ArityError
     oop ex = mm_exception("ArityError", s.str().c_str());
     DBG("-- end do_send returning exception object " << ex << endl);
     return ex;
@@ -615,6 +644,7 @@ oop Process::do_send(oop recv, oop selector, int num_args, int *exc) {
   return protected_fetch_cycle(recv, drecv, fun, exc, true);
 }
 
+//ootype Process::do_send => oop protected_fetch_cycle(Module, _, Function|Context, _, _, _)
 oop Process::protected_fetch_cycle(oop recv, oop drecv, oop fun, int* exc, bool should_allocate, number arity) {
   try {
     try {
@@ -656,8 +686,10 @@ oop Process::protected_fetch_cycle(oop recv, oop drecv, oop fun, int* exc, bool 
 // }
 
 oop Process::do_call(oop fun, int* exc) {
+  //OO! Function/Context.is_context
   if (!(_mmobj->mm_is_context(fun))) { //since we pass NULL to load_fun
     WARNING() << "Will raise TypeError: Expecting Context" << endl;
+    //OOC! TypeError
     raise("TypeError", "Expecting Context");
   }
 
@@ -670,14 +702,19 @@ oop Process::do_call(oop fun, int* exc) {
 oop Process::call(oop fun, oop args, int* exc) {
   if (!(_mmobj->mm_is_context(fun))) { //since we pass NULL to load_fun
     WARNING() << "Will raise TypeError: Expecting Context" << endl;
+    //OOC! TypeError
     raise("TypeError", "expecting Context");
   }
+  //OO! List.size
   number num_args = _mmobj->mm_list_size(this, args);
+  //OO! Function/Context.get_header
   number arity = CFUN_NUM_PARAMS(_mmobj->mm_function_get_header(this, fun, true));
   if (num_args != arity) {
     std::stringstream s;
+    //OO! Function/Context.get_name
     s << _mmobj->mm_string_cstr(this, _mmobj->mm_function_get_name(this, fun, true)) << ": expects " <<  arity << " but got " << num_args;
     DBG(s.str() << endl);
+    //OOC! ArityError
     oop ex = mm_exception("ArityError", s.str().c_str());
     WARNING() << "returning ArityError exception object " << ex << endl;
     *exc = 1;
@@ -691,16 +728,21 @@ oop Process::call(oop fun, oop args, int* exc) {
 }
 
 oop Process::call_1(oop fun, oop arg, int* exc) {
+  //OO! Function/Context.is_context
   if (!(_mmobj->mm_is_context(fun))) { //since we pass NULL to load_fun
     WARNING() << "Will raise TypeError: Expecting Context" << endl;
+    //OOC! Typeerror
     raise("TypeError", "expecting Context");
   }
   number num_args = 1;
+  //OO! Function/Context.get_header
   number arity = CFUN_NUM_PARAMS(_mmobj->mm_function_get_header(this, fun, true));
   if (num_args != arity) {
     std::stringstream s;
+    //OO! Function.get_name
     s << _mmobj->mm_string_cstr(this, _mmobj->mm_function_get_name(this, fun, true)) << ": expects " <<  arity << " but got " << num_args;
     DBG(s.str() << endl);
+    //OOC! TypeError
     oop ex = mm_exception("ArityError", s.str().c_str());
     WARNING() << "returning ArityError exception object " << ex << endl;
     *exc = 1;
@@ -714,14 +756,18 @@ oop Process::call_1(oop fun, oop arg, int* exc) {
 oop Process::call_2(oop fun, oop arg0, oop arg1, int* exc) {
   if (!(_mmobj->mm_is_context(fun))) { //since we pass NULL to load_fun
     WARNING() << "Will raise TypeError: Expecting Context" << endl;
+    //OOC! TypeError
     raise("TypeError", "expecting Context");
   }
   number num_args = 2;
+  //OO! Function/Context.get_header
   number arity = CFUN_NUM_PARAMS(_mmobj->mm_function_get_header(this, fun, true));
   if (num_args != arity) {
     std::stringstream s;
+    //OO! Function/Context.get_name
     s << _mmobj->mm_string_cstr(this, _mmobj->mm_function_get_name(this, fun, true)) << ": expects " <<  arity << " but got " << num_args;
     DBG(s.str() << endl);
+    //OOC! ArityError
     oop ex = mm_exception("ArityError", s.str().c_str());
     WARNING() << "returning ArityError exception object " << ex << endl;
     *exc = 1;
@@ -780,6 +826,7 @@ void Process::fetch_cycle(void* stop_at_bp) {
       case PUSH_LITERAL:
         // _PUSH_LITERAL++;
         DBG("PUSH_LITERAL " << arg << " " << _mmobj->mm_function_get_literal_by_index(this, _cp, arg, true) << endl);
+        //OO! Function/Context.literal_by_index
         stack_push(_mmobj->mm_function_get_literal_by_index(this, _cp, arg, true));
         break;
       case PUSH_MODULE:
@@ -893,6 +940,7 @@ void Process::fetch_cycle(void* stop_at_bp) {
 void Process::maybe_break_on_return() {
   if (_state == STEP_INTO_STATE &&
       (_break_only_on_this_module == MM_NULL || _break_only_on_this_module == _mp)) {
+    //OO! Function/Context.get_code_size
     bytecode* last = _ip + _mmobj->mm_function_get_code_size(this, _cp, true);
     _volatile_breakpoints.push_back(bytecode_range_t(_ip,last));
     _breaking_on_return = true;
@@ -903,6 +951,7 @@ void Process::maybe_break_on_return() {
 void Process::maybe_break_on_call() {
   if (_state == STEP_INTO_STATE &&
       (_break_only_on_this_module == MM_NULL || _break_only_on_this_module == _mp)) {
+    //OO! Function/Context.get_code_size
     bytecode* last = _ip + _mmobj->mm_function_get_code_size(this, _cp, true);
     _volatile_breakpoints.push_back(bytecode_range_t(_ip, last));
   }
@@ -998,11 +1047,13 @@ void Process::tick() {
 }
 
 void Process::step_into() {
+  //OO! Function/Context.next_expr
   bytecode* next = _mmobj->mm_function_next_expr(this, _cp, _ip, true);
   DBG("step into next instruction: " << next << endl);
   if (next) {
     // DBG("step_into: BP on next op: " << next << " "
     //           << decode_opcode(*next) << endl);
+  //OO! Function/Context.get_code_size
     bytecode* last = _ip + _mmobj->mm_function_get_code_size(this, _cp, true);
     _volatile_breakpoints.push_back(bytecode_range_t(next, last));
   }
@@ -1011,11 +1062,13 @@ void Process::step_into() {
 }
 
 void Process::step_over() {
+  //OO! Function/Context.next_expr
   bytecode* next = _mmobj->mm_function_next_expr(this, _cp, _ip, true);
   DBG("step over next instruction: " << next << endl);
   if (next) {
     DBG("step_over: BP on next op: " << next << " "
         << decode_opcode(*next) << endl);
+    //OO! Function/Context.get_code_size
     bytecode* last = _ip + _mmobj->mm_function_get_code_size(this, _cp, true);
     _volatile_breakpoints.push_back(bytecode_range_t(next, last));
   }
@@ -1025,11 +1078,13 @@ void Process::step_over() {
 }
 
 void Process::step_over_line() {
+  //OO! Function/Context.next_line_expr
   bytecode* next = _mmobj->mm_function_next_line_expr(this, _cp, _ip, true);
   DBG("step over line next instruction: " << next << endl);
   if (next) {
     DBG("step_over_line: BP on next op: " << next << " "
               << decode_opcode(*next) << endl);
+    //OO! Function/Context.get_code_size
     bytecode* last = _ip + _mmobj->mm_function_get_code_size(this, _cp, true);
     _volatile_breakpoints.push_back(bytecode_range_t(next, last));
   }
@@ -1052,6 +1107,7 @@ void Process::resume() {
 
 void Process::reload_frame() {
   _sp = _bp; //restore sp, ignoring frame data. push_frame/pop_frame are always in sync.
+  //OO! Function/Context.get_code
   _ip = _mmobj->mm_function_get_code(this, _cp, true);
 
   DBG(" reloading frame back to " << _bp << ", IP: " << _ip << endl);
@@ -1059,6 +1115,7 @@ void Process::reload_frame() {
 
 void Process::handle_super_send(number num_args) {
   oop recv = rp();
+  //OO! Function.get_name
   oop selector = _vm->new_symbol(this, _mmobj->mm_function_get_name(this, _cp, true));
 
 
@@ -1074,6 +1131,7 @@ void Process::handle_super_send(number num_args) {
     s << _mmobj->mm_symbol_cstr(this, selector) << " not found in object " << drecv;
     //we rely on compiler generating a pop instruction to bind ex_oop to the catch var
     WARNING() << "will raise DoesNotUnderstand: " << s.str() << endl;
+    //OOC! DoesNotUnderstand
     oop oo_ex = mm_exception("DoesNotUnderstand", s.str().c_str());
     DBG("created exception object " << oo_ex << " on bp: " << _bp << endl);
     maybe_debug_on_raise(oo_ex);
@@ -1087,8 +1145,10 @@ void Process::handle_super_send(number num_args) {
   number arity = CFUN_NUM_PARAMS(_mmobj->mm_function_get_header(this, fun, true));
   if (num_args != arity) {
     std::stringstream s;
+    //OO! Function.get_name
     s << _mmobj->mm_string_cstr(this, _mmobj->mm_function_get_name(this, fun, true)) << ": expects " <<  arity << " but got " << num_args;
     DBG(s.str() << endl);
+    //OOC! ArityError
     oop ex = mm_exception("ArityError", s.str().c_str());
     WARNING() << "will raise ArityError: " << s.str() << endl;
     maybe_debug_on_raise(ex);
@@ -1120,6 +1180,7 @@ void Process::handle_send(number num_args) {
     s << _mmobj->mm_symbol_cstr(this, selector) << " not found in object " << recv;
     //we rely on compiler generating a pop instruction to bind ex_oop to the catch var
     WARNING() << "will raise DoesNotUnderstand: " << s.str() << endl;
+    //OOC! DoesNotUnderstand
     oop oo_ex = mm_exception("DoesNotUnderstand", s.str().c_str());
     DBG("created exception object " << oo_ex << " on bp: " << _bp << endl);
     maybe_debug_on_raise(oo_ex);
@@ -1130,13 +1191,16 @@ void Process::handle_send(number num_args) {
     return;
   }
 
+  //OO! Function.get_header
   long header = _mmobj->mm_function_get_header(this, fun, true);
   bool vararg = CFUN_HAS_VAR_ARG(header);
   number arity = CFUN_NUM_PARAMS(header);
   if (!vararg && num_args != arity) {
     std::stringstream s;
+    //OO! Function.get_name
     s << _mmobj->mm_string_cstr(this, _mmobj->mm_function_get_name(this, fun, true)) << ": expects " <<  arity << " but got " << num_args;
     DBG(s.str() << endl);
+    //OOC! ArityError
     oop ex = mm_exception("ArityError", s.str().c_str());
     WARNING() << "will raise ArityError: " << s.str() << endl;
     maybe_debug_on_raise(ex);
@@ -1166,6 +1230,7 @@ void Process::handle_super_ctor_send(number num_args) {
     s << _mmobj->mm_symbol_cstr(this, selector) << " not found in child object " << instance;
     DBG(s.str() << endl);
     //we rely on compiler generating a pop instruction to bind ex_oop to the catch var
+    //OOC! DoesNotUnderstand
     oop oo_ex = mm_exception("DoesNotUnderstand", s.str().c_str());
     WARNING() << "will raise DoesNotUnderstand: " << s.str() << endl;
     maybe_debug_on_raise(oo_ex);
@@ -1179,11 +1244,13 @@ void Process::handle_super_ctor_send(number num_args) {
   DBG("Lookup FOUND " << fun << endl);
 
 
+  //OO! Function.get_header
   number arity = CFUN_NUM_PARAMS(_mmobj->mm_function_get_header(this, fun, true));
   if (num_args != arity) {
     std::stringstream s;
     s << "arity and num_args differ: " << num_args << " != " << arity;
     DBG(s.str() << endl);
+    //OOC! ArityError
     oop oo_ex = mm_exception("ArityError", s.str().c_str());
     WARNING() << "will raise ArityError: " << s.str() << endl;
     maybe_debug_on_raise(oo_ex);
@@ -1201,12 +1268,14 @@ void Process::handle_call(number num_args) {
   // DBG("handle_call" << endl);
   oop fun = stack_pop();
   // DBG("handle_call: fn " << fun << endl);
+  //OO! Function/Context.get_header
   number arity = CFUN_NUM_PARAMS(_mmobj->mm_function_get_header(this, fun, true));
   // DBG("handle_call: arity " << arity << endl);
   if (num_args != arity) {
     std::stringstream s;
     s << _mmobj->mm_string_cstr(this, _mmobj->mm_function_get_name(this, fun, true)) << ": expects " <<  arity << " but got " << num_args;
     DBG(s.str() << endl);
+    //OOC! ArityError
     oop oo_ex = mm_exception("ArityError", s.str().c_str());
     WARNING() << "will raise ArityError: " << s.str() << endl;
     maybe_debug_on_raise(oo_ex);
@@ -1325,31 +1394,31 @@ void Process::handle_return(oop val) {
 //     }
 // }
 
-std::pair<oop, oop> Process::lookup(oop drecv, oop vt, oop selector) {
-  // assert( *(oop*) selector == _core_image->get_prime("Symbol"));
-  if (vt == NULL) {
-    return std::pair<oop, oop>(MM_NULL, MM_NULL);
-  }
+// std::pair<oop, oop> Process::lookup(oop drecv, oop vt, oop selector) {
+//   // assert( *(oop*) selector == _core_image->get_prime("Symbol"));
+//   if (vt == NULL) {
+//     return std::pair<oop, oop>(MM_NULL, MM_NULL);
+//   }
 
-  // DBG("lookup selector on vt: " << vt << " whose vt is " << _mmobj->mm_object_vt(*(oop*)vt) << endl);
+//   // DBG("lookup selector on vt: " << vt << " whose vt is " << _mmobj->mm_object_vt(*(oop*)vt) << endl);
 
-  oop dict = _mmobj->mm_behavior_get_dict(vt);
-  DBG("dict: " << dict
-      << " selector: " << _mmobj->mm_symbol_cstr(this, selector, true) << endl);
+//   oop dict = _mmobj->mm_behavior_get_dict(vt);
+//   DBG("dict: " << dict
+//       << " selector: " << _mmobj->mm_symbol_cstr(this, selector, true) << endl);
 
-  if (_mmobj->mm_dictionary_has_key(this, dict, selector, true)) {
-    oop fun = _mmobj->mm_dictionary_get(this, dict, selector, true);
-    DBG("Lookup of " << selector << " found in " << vt
-        << " fun: " << fun << " drecv: " << drecv << endl);
-    std::pair<oop,oop> res = std::pair<oop,oop>(drecv, fun);
-    return res;
-  } else {
-    DBG("Lookup of " << selector << " NOT found in " << vt << ", recursively looking up..." << endl);
-    oop pklass = _mmobj->mm_object_delegate(vt);
-    oop delegate = _mmobj->mm_object_delegate(drecv);
-    return lookup(delegate, pklass, selector);
-  }
-}
+//   if (_mmobj->mm_dictionary_has_key(this, dict, selector, true)) {
+//     oop fun = _mmobj->mm_dictionary_get(this, dict, selector, true);
+//     DBG("Lookup of " << selector << " found in " << vt
+//         << " fun: " << fun << " drecv: " << drecv << endl);
+//     std::pair<oop,oop> res = std::pair<oop,oop>(drecv, fun);
+//     return res;
+//   } else {
+//     DBG("Lookup of " << selector << " NOT found in " << vt << ", recursively looking up..." << endl);
+//     oop pklass = _mmobj->mm_object_delegate(vt);
+//     oop delegate = _mmobj->mm_object_delegate(drecv);
+//     return lookup(delegate, pklass, selector);
+//   }
+// }
 
 oop Process::stack_pop() {
   oop val = * (oop*)_sp;
@@ -1399,8 +1468,10 @@ bool Process::exception_has_handler(oop e, oop cp, bytecode* ip, oop next_bp) {
     return false;
   }
 
+  //OO! Function/Context.get_name
   DBG("exception_has_handler: " << _mmobj->mm_string_cstr(this, _mmobj->mm_function_get_name(this, cp, true), true) << endl);
 
+  //OO! Function/Context.get_header
   long header = _mmobj->mm_function_get_header(this, cp, true);
 
   if (CFUN_IS_PRIM(header)) {
@@ -1409,8 +1480,10 @@ bool Process::exception_has_handler(oop e, oop cp, bytecode* ip, oop next_bp) {
     return exception_has_handler(e, cp, ip, *(oop*)next_bp);
   }
 
+  //OO! Function/Context.get_code
   bytecode* code = _mmobj->mm_function_get_code(this, cp, true);
 
+  //OO! Function/Context.exception_frames_count
   number exception_frames_count = _mmobj->mm_function_exception_frames_count(this, cp, true);
   DBG("exception frames: " << exception_frames_count << endl);
   if (exception_frames_count == 0) { //cp is unable to handle
@@ -1421,6 +1494,7 @@ bool Process::exception_has_handler(oop e, oop cp, bytecode* ip, oop next_bp) {
 
   //exception frames are lexically ordered,
   //so iterating normally we always reach the innermost frame first
+  //OO! Function/Context.exception_frames
   oop exception_frames = _mmobj->mm_function_exception_frames(this, cp, true);
   for(int i = 0; i < exception_frames_count; i++) {
     oop frame_begin = exception_frames + (EXCEPTION_FRAME_SIZE * i);
@@ -1436,11 +1510,14 @@ bool Process::exception_has_handler(oop e, oop cp, bytecode* ip, oop next_bp) {
       type_oop  = MM_NULL;
     } else {
       DBG("fetching exception type for name: " << str_type_oop << endl);
+      //OO! Function/Context.get_module
       oop mp = _mmobj->mm_function_get_module(this, cp, true);
       int exc;
+      //FIXME: we should link the table entries when loading the module file
       type_oop = send_0(mp, _vm->new_symbol(this, str_type_oop), &exc);
       if (!(exc == 0)) {
         ERROR() << "raising InternalError: Unable to get exception type from module" << endl;
+        //OOC! InternalError
         raise("InternalError", "Unable to get exception type from module");
       }
       DBG("fetching exception type got " << type_oop << endl);;
@@ -1520,13 +1597,16 @@ oop Process::unwind_with_exception(oop e) {
 
   DBG("unwind_with_exception: " << CTXNAME(_cp) << endl);
 
+  //OO! Function/Context.get_header
   if (CFUN_IS_PRIM(_mmobj->mm_function_get_header(this, _cp, true))) {
     DBG("->> unwind reached primitive " << _mmobj->mm_string_cstr(this, _mmobj->mm_function_get_prim_name(this, _cp, true), true) << endl);
     throw mm_exception_rewind(e);
   }
 
+  //OO! Function/Context.get_code
   bytecode* code = _mmobj->mm_function_get_code(this, _cp, true);
 
+  //OO! Function/Context.get_exception_frames_count
   number exception_frames_count = _mmobj->mm_function_exception_frames_count(this, _cp, true);
   DBG("exception frames: " << exception_frames_count << endl);
   if (exception_frames_count == 0) { //_cp is unable to handle
@@ -1542,6 +1622,7 @@ oop Process::unwind_with_exception(oop e) {
 
   //exception frames are lexically ordered,
   //so iterating normally we always reach the innermost frame first
+  //OO! Function/Context.get_exception_frames
   oop exception_frames = _mmobj->mm_function_exception_frames(this, _cp, true);
   for(int i = 0; i < exception_frames_count; i++) {
     oop frame_begin = exception_frames + (EXCEPTION_FRAME_SIZE * i);
@@ -1556,10 +1637,12 @@ oop Process::unwind_with_exception(oop e) {
     } else {
       DBG("fetching exception type for name: " << str_type_oop << endl);
       int exc;
+      //OO! Function/Context.get_module
       oop mp = _mmobj->mm_function_get_module(this, _cp, true);
       type_oop = send_0(mp, _vm->new_symbol(this, str_type_oop), &exc);
       if (!(exc == 0)) {
         ERROR() << "Will raise InternalError: Unable to get exception type from module" << endl;
+        //OOC! InternalError
         raise("InternalError", "Unable to get exception type from module");
       }
       DBG("fetching exception type got " << type_oop << endl);;
@@ -1612,6 +1695,7 @@ oop Process::mm_local_exception(const char* ex_type_name, const char* msg) {
   oop ex_type = send_0(_mp, _vm->new_symbol(ex_type_name), &exc);
   assert(exc == 0);
 
+  //OO! String.new
   oop exobj = send_1(ex_type, _vm->new_symbol("new"), _mmobj->mm_string_new(msg), &exc);
   //if this fails, can't call raise() because it calls mm_exception again
   //recursively. So let's just bail.
@@ -1625,6 +1709,7 @@ oop Process::mm_exception(const char* ex_type_name, const char* msg) {
   oop ex_type = _vm->get_prime(ex_type_name);
 
   int exc;
+  //OO! String.new
   oop exobj = send_1(ex_type, _vm->new_symbol("new"), _mmobj->mm_string_new(msg), &exc);
   //if this fails, can't call raise() because it calls mm_exception again
   //recursively. So let's just bail.
@@ -1728,14 +1813,17 @@ const char* Process::meme_curr_fname() {
 
 void Process::break_at_addr(bytecode* addr) {
   DBG("break_at_addr: " << addr << endl);
+  //OO! Function/Context.get_code_size
   bytecode* last = _ip + _mmobj->mm_function_get_code_size(this, _cp, true);
   _volatile_breakpoints.push_back(bytecode_range_t(addr, last));
 }
 
 void Process::run_until(oop cfun, number lineno) {
   DBG("run_until: " << cfun << " " << lineno);
+  //OO! Function/Context.get_instruction_for_line
   bytecode* b = _mmobj->mm_compiled_function_get_instruction_for_line(this, cfun, lineno);
   if (b) {
+    //OO! Function/Context.get_code_size
     number size = _mmobj->mm_compiled_function_get_code_size(this, cfun);
     _volatile_breakpoints.push_back(bytecode_range_t(b, b+size));
     resume();
@@ -1746,6 +1834,7 @@ void Process::run_until(oop cfun, number lineno) {
 
 void Process::add_breakpoint(oop cfun, number lineno) {
   DBG("add breakpoint: " << cfun << " " << lineno);
+    //OO! Function/Context.get_instruction_for_line
   bytecode* b = _mmobj->mm_compiled_function_get_instruction_for_line(this, cfun, lineno);
   if (b) {
     _breakpoints.push_back(b);
@@ -1782,6 +1871,7 @@ void Process::unwind_with_frame(oop bp) {
     DBG("found bp. stop unwinding" << endl);
     reload_frame();
     return;
+  //OO! Function/Context.get_header
   } else if (CFUN_IS_PRIM(_mmobj->mm_function_get_header(this, _cp, true))) {
     DBG("prim, lets throw" << endl);
       throw mm_frame_rewind(bp);

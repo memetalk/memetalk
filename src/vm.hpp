@@ -126,6 +126,7 @@ private:
   std::string _core_img_filepath;
   std::string _system_path;
   std::string _mec_cache_directory;
+  std::string _dbg_module_path;
   boost::unordered_map<std::string, std::string> _repo_locations;
   boost::unordered_map<std::string, std::string> _repo_override;
   boost::unordered_map<std::string, bool> _compile_map;

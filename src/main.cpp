@@ -16,6 +16,7 @@
 
 int main(int argc, char** argv) {
   GC_INIT();
+  //GC_enable_incremental();
   char* online = getenv("ONLINE");
   char* profile = getenv("PROFILE");
   try {

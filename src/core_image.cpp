@@ -20,19 +20,19 @@ word CoreImage::HEADER_SIZE = 4 * WSIZE;
 
 
 const char* CoreImage::PRIMES_NAMES[] = {"Behavior",
-                                        "Object_Behavior",
-                                        "Object",
-                                        "CompiledClass",
-                                        "CompiledModule",
-                                        "String",
-                                        "Symbol",
-                                        "Dictionary",
-                                        "List",
-                                        "Integer",
+                                         "Object_Behavior",
+                                         "Object",
+                                         "CompiledClass",
+                                         "CompiledModule",
+                                         "String",
+                                         "Symbol",
+                                         "Dictionary",
+                                         "List",
+                                         "Integer",
                                          "LongNum",
                                          "Float",
-                                        "CompiledFunction",
-                                        "Function",
+                                         "CompiledFunction",
+                                         "Function",
                                          "Context",
                                          "Boolean",
                                          "Exception",
@@ -44,13 +44,11 @@ const char* CoreImage::PRIMES_NAMES[] = {"Behavior",
                                          "DoesNotUnderstand",
                                          "ArityError",
                                          "KeyError",
-                                         "CompileError",
-                                         "Process",
-                                         "Frame",
                                          "Null",
-                                         "Mirror",
-                                         "NonLocalReturn"};
-int CoreImage::TOTAL_PRIMES = 31;
+                                         "NonLocalReturn",
+                                         "Process",
+                                         "Frame"};
+int CoreImage::TOTAL_PRIMES = 29;
 
 
 CoreImage::CoreImage(VM* vm, const std::string& filepath)
@@ -136,6 +134,8 @@ void CoreImage::load() {
   relocate_addresses(_data, _data_size, HEADER_SIZE + _ot_size + _names_size + index_size +  _es_size);
   link_symbols(_data, _es_size, HEADER_SIZE + _ot_size + _names_size + index_size, _vm, this);
 
+  //OO! Module.get_cmod
   oop _core_cmod = _vm->mmobj()->mm_module_get_cmod(_core_imod);
+  //OO! CompiledModule.mec_image
   _vm->mmobj()->mm_compiled_module_set_image_ptr_no_check(_core_cmod, this);
 }

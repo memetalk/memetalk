@@ -58,13 +58,18 @@ void MECImage::link_external_references() {
 }
 
 oop MECImage::instantiate_class(oop class_name, oop cclass, oop cclass_dict, std::map<std::string, oop>& mod_classes, oop imodule) {
+  //OO! String.cstr
   char* cname = _mmobj->mm_string_cstr(_proc, class_name);
   DBG("Instantiating class " << cname << endl);
+  //OO! CompiledClass.super_name
   oop super_name = _mmobj->mm_compiled_class_super_name(_proc, cclass);
+  //OO! String.cstr
   char* super_name_str = _mmobj->mm_string_cstr(_proc, super_name);
   DBG("Super " << super_name_str << endl);
 
+  //OO! CompiledModule.params
   oop cmod_params_list =   _mmobj->mm_compiled_module_params(_proc, _compiled_module);
+  //OO! CompiledModule.imports
   oop cmod_imports_dict = _mmobj->mm_compiled_module_imports(_proc, _compiled_module);
   // number num_params = _mmobj->mm_list_size(
   //   _mmobj->mm_compiled_module_params(_compiled_module));
@@ -73,16 +78,23 @@ oop MECImage::instantiate_class(oop class_name, oop cclass, oop cclass_dict, std
   if (mod_classes.find(super_name_str) != mod_classes.end()) {
     DBG("Super class already instantiated" << endl);
     super_class = mod_classes.at(super_name_str);
+  //OO! Dictionary.has
   } else if (_mmobj->mm_dictionary_has_key(_proc, cclass_dict, _proc->vm()->new_symbol(super_name_str)) &&
              strcmp(cname, super_name_str) != 0) { //avoid loop when Foo < Foo
     DBG("Super class not instantiated. recursively instantiate it" << endl);
+    //OO! Dictionary.get
     super_class = instantiate_class(super_name, _mmobj->mm_dictionary_get(_proc, cclass_dict, _proc->vm()->new_symbol(super_name_str)), cclass_dict, mod_classes, imodule);
+  //OO! Dictionary.has
   } else if(_mmobj->mm_dictionary_has_key(_proc, cmod_imports_dict, _proc->vm()->new_symbol(super_name_str))) {
     //when loading the imports, have a _import_idx_map<oop[string], int> to indicate where it will be in the imod
+    //OO! Module.get_argument
     super_class = _mmobj->mm_module_get_argument(
       imodule, _import_idx_map[_proc->vm()->new_symbol(super_name_str)]); //_mmobj->mm_dictionary_index_of(cmod_imports_dict, super_name) + num_params
     DBG("Super class is imported name: " << super_class << endl);
+    //OO! List.pos
   } else  if (_mmobj->mm_list_index_of(_proc, cmod_params_list, super_name) != -1) {
+    //OO! Module.get_argument
+    //OO! List.pos
     super_class = _mmobj->mm_module_get_argument(
       imodule, _mmobj->mm_list_index_of(_proc, cmod_params_list, super_name));
     DBG("Super class is module parameter: " << super_class << endl);
@@ -93,14 +105,20 @@ oop MECImage::instantiate_class(oop class_name, oop cclass, oop cclass_dict, std
   } else {
     std::stringstream s;
     s << "Super class not found: " << super_name_str;
+    //OOC! ImportError
     _proc->raise("ImportError", s.str().c_str());
   }
 
+  //OO! CompiledClass.own_methods
   oop class_funs_dict = _mmobj->mm_cfuns_to_funs_dict(_proc, _mmobj->mm_compiled_class_own_methods(_proc, cclass), imodule);
+  //OO! ClassBehavior.new
   oop class_behavior = _mmobj->mm_class_behavior_new(_proc, super_class, class_funs_dict);
 
+  //OO! CompiledClass.methods
   oop funs_dict = _mmobj->mm_cfuns_to_funs_dict(_proc, _mmobj->mm_compiled_class_methods(_proc, cclass), imodule);
+  //OO! CompiledClass.num_fields
   number num_fields = _mmobj->mm_compiled_class_num_fields(_proc, cclass);
+  //OO! Class.new
   oop klass = _mmobj->mm_class_new(_proc, class_behavior, super_class, funs_dict, cclass, num_fields);
   mod_classes[cname] = klass;
   DBG("User class " << cname << " = "
@@ -115,14 +133,20 @@ oop MECImage::instantiate_class(oop class_name, oop cclass, oop cclass_dict, std
 
 
 void MECImage::assign_module_arguments(oop imodule, oop mod_arguments_list) {
+  //OO! CompiledModule.params
   oop cmod_params_list =   _mmobj->mm_compiled_module_params(_proc, _compiled_module);
 
+  //OO! List.size
   if (!(_mmobj->mm_list_size(_proc, cmod_params_list) >= _mmobj->mm_list_size(_proc, mod_arguments_list))) {
-      _proc->raise("ImportError", "could not assign module arguments");
+    //OOC! ImportError
+    _proc->raise("ImportError", "could not assign module arguments");
   }
+  //OO! List.size
   for (int i = 0; i < _mmobj->mm_list_size(_proc, mod_arguments_list); i++) {
+    //OO! List.get
     oop entry = _mmobj->mm_list_entry(_proc, mod_arguments_list, i);
     DBG(i << " " << entry << endl);
+    //OO! Module.set_argument
     _mmobj->mm_module_set_argument(imodule, entry,i);
   }
 }
@@ -132,7 +156,9 @@ void MECImage::load_default_dependencies_and_assign_module_arguments(oop imodule
   //   imod = load it
   //   idx = index(p.name, cmod->params)
   //   imod[idx] = imod
+  //OO! CompiledModule.params
   oop params_list = _mmobj->mm_compiled_module_params(_proc, _compiled_module);
+  //OO! CompiledModule.default_locations
   oop default_locations_dict = _mmobj->mm_compiled_module_default_locations(_proc, _compiled_module);
   // number dict_size = _mmobj->mm_dictionary_size(default_locations_dict);
   // for (int i = 0; i < dict_size; i++) {
@@ -141,23 +167,30 @@ void MECImage::load_default_dependencies_and_assign_module_arguments(oop imodule
   for ( ; it != end; it++) {
     oop lhs_name = it->first; //_mmobj->mm_dictionary_entry_key(default_params_dict, i);
     oop mod_name = it->second; //_mmobj->mm_dictionary_entry_value(default_params_dict, i);
+    //OO! String.cstr
     char* str_mod_name = _mmobj->mm_string_cstr(_proc, mod_name);
     DBG(">>> instantiating default module: " << str_mod_name << endl);
+    //OO! List.new
     oop imd = _proc->vm()->instantiate_meme_module(_proc, str_mod_name,
                                       _mmobj->mm_list_new());
     DBG("<<<< DONE instantiating default module: " << str_mod_name << endl);
+    //OO! List.pos
+    //OO! Symbol.toString
     number midx = _mmobj->mm_list_index_of(_proc, params_list, _mmobj->mm_symbol_to_string(_proc, lhs_name));
     if (midx == -1) {
       DBG("raising Import error on " << _mmobj->mm_symbol_cstr(_proc, lhs_name) << endl);
+      //OOC! ImportError
       _proc->raise("ImportError", "Could not bind unknown module parameter to default value");
     }
+    //OO! Module.set_argument
     _mmobj->mm_module_set_argument(imodule, imd, midx);
   }
 }
 
 void MECImage::load_imports(oop imodule, oop imports_dict, number num_params) {
-  // [print] <= test;
+  //OO! Dictionary.size
   number num_imports = _mmobj->mm_dictionary_size(_proc, imports_dict);
+  //OO! CompiledModule.params
   oop cmod_params_list =   _mmobj->mm_compiled_module_params(_proc, _compiled_module);
   DBG(num_imports << endl);
 
@@ -166,7 +199,9 @@ void MECImage::load_imports(oop imodule, oop imports_dict, number num_params) {
   for (int i = 0 ; it != end; it++, i++) {
     oop import_name = it->first; //_mmobj->mm_dictionary_entry_key(imports_dict, i);
     oop module_param_name = it->second; //_mmobj->mm_dictionary_entry_value(imports_dict, i);
+    //OO! List.pos
     number param_index = _mmobj->mm_list_index_of(_proc, cmod_params_list, module_param_name);
+    //OO! Module.get_argument
     oop module_param_object = _mmobj->mm_module_get_argument(imodule, param_index);
 
     DBG("import name " << _mmobj->mm_symbol_cstr(_proc, import_name)
@@ -176,10 +211,12 @@ void MECImage::load_imports(oop imodule, oop imports_dict, number num_params) {
     int exc;
     oop entry = _proc->send_0(module_param_object, import_name, &exc);
     if (exc != 0) {
+      //OOC! ImportError
       _proc->raise("ImportError", "could not load imports");
     }
 
     DBG("entry: " << entry << " in imod idx: " << i + num_params << endl);
+    //OO! Module.set_argument
     _mmobj->mm_module_set_argument(imodule, entry, i + num_params);
     _import_idx_map[import_name] = i + num_params;
   }
@@ -187,6 +224,7 @@ void MECImage::load_imports(oop imodule, oop imports_dict, number num_params) {
 
 void MECImage::create_import_getters(oop imodule, oop imod_dict,
                                     oop imports_dict, number num_params) {
+  //OO! Dictionary.size
   DBG("Creating imports: " << _mmobj->mm_dictionary_size(_proc, imports_dict) << endl);
 
   boost::unordered_map<oop, oop>::iterator it = _mmobj->mm_dictionary_begin(_proc, imports_dict);
@@ -194,49 +232,64 @@ void MECImage::create_import_getters(oop imodule, oop imod_dict,
   for (int i = 0 ; it != end; it++, i++) {
     oop name = it->first; //_mmobj->mm_dictionary_entry_key(imports_dict, i);
     // oop module_param_name = _mmobj->mm_dictionary_entry_value(imports_dict, i);
+    //OO! String.cstr
     char* str = _mmobj->mm_symbol_cstr(_proc, name);
     DBG("Creating getter for import " << str << " " << i << endl);
+    //OO! Symbol.toString
     oop getter = _mmobj->mm_new_slot_getter(_proc, imodule,
                                             _compiled_module, _mmobj->mm_symbol_to_string(_proc, name),
                                             num_params + OO_MODULE_LEN + i); //imod: vt, delegate, dict, cmod
+    //OO! Dictionary.set
     _mmobj->mm_dictionary_set(_proc, imod_dict, _proc->vm()->new_symbol(str), getter);
     DBG("import dict has " << _mmobj->mm_dictionary_size(_proc, imod_dict) << endl);
   }
 }
 
 void MECImage::create_param_getters(oop imodule, oop imod_dict, oop params_list) {
+  //OO! List.size
   number num_params = _mmobj->mm_list_size(_proc, params_list);
 
   for (int i = 0; i < num_params; i++) {
+    //OO! List.get
     oop name = _mmobj->mm_list_entry(_proc, params_list, i);
+    //OO! List.cstr
     char* str = _mmobj->mm_string_cstr(_proc, name);
     DBG("Creating getter for param " << str << " " << i << endl);
     oop getter = _mmobj->mm_new_slot_getter(_proc, imodule, _compiled_module, name, i + OO_MODULE_LEN); //imod: vt, delegate, dict, cmod
+    //OO! Dictionary.set
     _mmobj->mm_dictionary_set(_proc, imod_dict, _proc->vm()->new_symbol(str), getter);
   }
 }
 
 
 void MECImage::check_module_arity(oop module_arguments_list) {
+  //OO! CompiledModule.params
   oop params = _mmobj->mm_compiled_module_params(_proc, _compiled_module);
+  //OO! List.size
   number num_params = _mmobj->mm_list_size(_proc, params);
 
   DBG("Compiled module arity: " << num_params << endl);
 
+  //OO! List.size
   number num_args = _mmobj->mm_list_size(_proc, module_arguments_list);
   DBG("received args: " << num_args << endl);
 
+  //OO! CompiledModule.default_locations
   oop default_params_dict = _mmobj->mm_compiled_module_default_locations(_proc, _compiled_module);
+  //OO! Dictionary.size
   number dict_size = _mmobj->mm_dictionary_size(_proc, default_params_dict);
   DBG("default params: " << dict_size << endl);
   if (num_params != (dict_size + num_args)) {
     DBG("module arity differ: "
             << num_params << " != " <<
         _mmobj->mm_list_size(_proc, module_arguments_list) << endl);
+    //OOC! ImportError
     _proc->raise("ImportError", "module arity differ");
   }
 }
 
+//ootype VM::instantiate_meme_module => Module instantiate_module(List)
+//ootype VM::VM::instantiate_local_module => Module instantiate_module(List)
 oop MECImage::instantiate_module(oop module_arguments_list) {
   DBG(" ============ instantiate module ===========" << endl);
 
@@ -244,11 +297,13 @@ oop MECImage::instantiate_module(oop module_arguments_list) {
   // DBG("CompiledModule: " << cmod << endl);
   // DBG("CompiledModule vt: " << (word*) *cmod << endl);
 
+  //OO! CompiledModule.classes
   oop cclass_dict = _mmobj->mm_compiled_module_classes(_proc, _compiled_module);
 
   DBG("CompiledModule class_dict: " << cclass_dict << endl);
   // DBG("CompiledModule class_dict vt: " << (word*) *((word*)cclass_dict) << endl);
 
+  //OO! Dictionary.size
   number num_classes = _mmobj->mm_dictionary_size(_proc, cclass_dict);
   DBG("CompiledModule num_classes: " << num_classes << endl);
 
@@ -256,29 +311,38 @@ oop MECImage::instantiate_module(oop module_arguments_list) {
 
   check_module_arity(module_arguments_list);
 
+  //OO! List.size
   number num_params = _mmobj->mm_list_size(_proc, params);
 
+  //OO! CompiledModule.imports
   oop imports_dict = _mmobj->mm_compiled_module_imports(_proc, _compiled_module);
+  //OO! Dictionary.size
   number num_imports =  _mmobj->mm_dictionary_size(_proc, imports_dict);
 
+  //OO! Module.new
   oop imodule = _mmobj->mm_module_new(num_params + num_imports + num_classes,
                                       _compiled_module,
                                       _core_image->get_module_instance());
 
+  //OO! CompiledModule.name
   oop name = _mmobj->mm_compiled_module_name(_proc, _compiled_module);
   DBG("imodule " << imodule << " name:" << _mmobj->mm_string_cstr(_proc, name) << " params:" << num_params
           << " imports " << num_imports
       << " classes:" << num_classes << " (size: " << (num_params + num_classes + num_imports) << ")" << endl);
 
+  //OO! CompiledModule.functions
   oop fun_dict = _mmobj->mm_compiled_module_functions(_proc, _compiled_module);
 
   // number num_funs = _mmobj->mm_dictionary_size(fun_dict);
 
   // DBG("CompiledModule num_functions: " << num_funs << endl);
 
+  //OO! Dictionary.new
   oop imod_dict = _mmobj->mm_dictionary_new();
+  //OO! Dictionary.set
   _mmobj->mm_module_set_dictionary(_proc, imodule, imod_dict);
 
+  //OO! List.size
   if (_mmobj->mm_list_size(_proc, module_arguments_list) > 0) {
     assign_module_arguments(imodule, module_arguments_list);
   }
@@ -303,9 +367,11 @@ oop MECImage::instantiate_module(oop module_arguments_list) {
   boost::unordered_map<oop, oop>::iterator end = _mmobj->mm_dictionary_end(_proc, fun_dict);
   for ( ; it != end; it++) {
     oop sym_name = it->first; //_mmobj->mm_dictionary_entry_key(fun_dict, i);
+    //OO! Symbol.cstr
     char* str = _mmobj->mm_symbol_cstr(_proc, sym_name);
     oop cfun = it->second; //_mmobj->mm_dictionary_entry_value(fun_dict, i);
     oop fun = _mmobj->mm_function_from_cfunction(_proc, cfun, imodule);
+    //OO! Dictionary.set
     _mmobj->mm_dictionary_set(_proc, imod_dict, _proc->vm()->new_symbol(str), fun);
     imod_dict_idx++;
   }
@@ -320,7 +386,9 @@ oop MECImage::instantiate_module(oop module_arguments_list) {
   end = _mmobj->mm_dictionary_end(_proc, cclass_dict);
   for ( ; it != end; it++) {
     oop sym_name = it->first; //_mmobj->mm_dictionary_entry_key(cclass_dict, i);
+    //OO! Symbol.toString
     oop str_name = _mmobj->mm_symbol_to_string(_proc, sym_name);
+    //OO! Symbol.cstr
     char* cname = _mmobj->mm_symbol_cstr(_proc, sym_name);
 
     DBG("Found class " << cname << endl);
@@ -341,6 +409,7 @@ oop MECImage::instantiate_module(oop module_arguments_list) {
 
     imod_idx++;
 
+    //OO! Dictionary.set
     _mmobj->mm_dictionary_set(_proc, imod_dict, _proc->vm()->new_symbol(cname), klass_getter);
     imod_dict_idx++;
   }
@@ -354,6 +423,7 @@ void MECImage::link_native_bindings(oop cmod) {
   oop_map::iterator end = _mmobj->mm_dictionary_end(_proc, meta_vars);
   for ( ; it != end; it++) {
     if (it->first == _proc->vm()->new_symbol("dynlib")) { //module has native library
+      //OO! String.cstr
       std::string libname = _mmobj->mm_string_cstr(_proc, it->second);
       std::string lib_filepath = _proc->vm()->system_path() + "/lib/meme_" + libname + ".so"; //FIXME: perhaps this hardcoded path should be in vm?
 
@@ -374,6 +444,7 @@ void MECImage::link_native_bindings(oop cmod) {
   }
 }
 
+//ootype = CompiledModule load()
 oop MECImage::load() {
   DBG(" ============ Load module ===========" << endl);
   load_header();
@@ -382,6 +453,7 @@ oop MECImage::load() {
   link_symbols(_data, _st_size, HEADER_SIZE + _ot_size + _names_size + _er_size, _proc->vm(), _core_image);
   _compiled_module = (oop) * (word*)(& _data[HEADER_SIZE]);
   link_native_bindings(_compiled_module);
+  //OO! CompiledModule.mec_image
   _proc->vm()->mmobj()->mm_compiled_module_set_image_ptr_no_check(_compiled_module, this);
   DBG(" ============ Done load module ===========" << endl);
   return _compiled_module;

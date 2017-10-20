@@ -18,7 +18,7 @@ buildall:
 	$(foreach el,$(subdirs),$(MAKE) -C $(el) all;)
 
 get_core:
-	wget -O core.img http://modules.memetalk.org/central/std/core-0.0.2.img
+	wget -O core.img http://modules.memetalk.org/central/std/core-0.0.3.img
 
 dist: buildall
 	mkdir -p $(DIST_DIR)
