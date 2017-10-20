@@ -45,7 +45,4 @@ cleanall:
 	$(foreach el,$(subdirs),$(MAKE) -C $(el) clean;)
 	rm -f core.img
 
-$(CORE_IMG): $(MM_DIR)/std/core.me
-	$(COMPILER_CMD) $(CORE_ME)
-
 .PHONY: $(subdirs) clean
