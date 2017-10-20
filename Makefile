@@ -1,4 +1,4 @@
-all: build
+all: buildall
 
 subdirs = src central tests
 
@@ -14,13 +14,13 @@ export DIST_DIR_NAME=memetalk-$(VERSION)
 
 export DIST_DIR=$(ROOT_DIR)/$(DIST_DIR_NAME)
 
-build:
+buildall:
 	$(foreach el,$(subdirs),$(MAKE) -C $(el) all;)
 
 get_core:
-	wget -O core.img http://modules.memetalk.org/central/std/0.0.1/core.img
+	wget -O core.img http://modules.memetalk.org/central/std/core-0.0.1.img
 
-dist: build
+dist: buildall
 	mkdir -p $(DIST_DIR)
 	$(MAKE) -C central dist
 	$(call INSTALL_DIST_FILES,$(DIST_FILES))
@@ -35,7 +35,7 @@ clean:
 debug:
 	$(MAKE) -C src debug
 
-test: build; $(MAKE) -C tests $@
+test: buildall; $(MAKE) -C tests $@
 
 src: core
 
