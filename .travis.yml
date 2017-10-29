@@ -9,12 +9,4 @@ install:
   - docker build . -t memetalk
 
 script:
-  - docker run -p8000:8000 -v $(pwd):/build -it memetalk
-
-# Handle git submodules yourself
-git:
-    submodules: false
-# Use sed to replace the SSH URL with the public URL, then initialize submodules
-before_install:
-    - sed -i 's/git@github.com:/https:\/\/github.com\//' .gitmodules
-    - git submodule update --init --recursive
+  - ./run-docker.sh
