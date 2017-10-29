@@ -1,4 +1,4 @@
-meme central:memescript/0.0.1/compiler
+meme central:memescript/0.0.3/compiler
 
 @author: Lincoln Clarete <lincoln@clarete.li>;
 @license: MIT;
@@ -6,7 +6,7 @@ meme central:memescript/0.0.1/compiler
 requires io, ometa_base
 where
   io         = central:linux/0.0.1/io
-  ometa_base = central:memescript/0.0.1/ometa_base
+  ometa_base = central:ometa/0.0.2/ometa_base
   import OMetaBase from ometa_base
 end
 

@@ -1,10 +1,10 @@
-meme central:memescript/0.0.1/compiler
+meme central:memescript/0.0.3/compiler
 
 requires test, io, bindgen, types
 where
+  io = central:linux/0.0.1/io
   bindgen = central:bindgen/0.0.1/bindgen
-  types   = central:bindgen/0.0.1/types
-  io      = central:linux/0.0.1/io
+  types = central:bindgen/0.0.1/types
 
   import Param from types
   import Fun from types
@@ -63,14 +63,14 @@ testGenReadParam: fun() {
   var expected = [
     types.c_stm(2, types.c_declare("char", "prim_arg0")),
     types.c_if(2, types.c_eq(types.c_obj_vt("oop_arg0"), types.c_vm_prime("String")),
-               types.c_stm(2, types.c_assign("prim_arg0", types.c_unwrap_string("oop_arg0")))),
+               types.c_stm(2, types.c_assign("prim_arg0", types.c_cast("char", types.c_unwrap_string("oop_arg0"))))),
     types.c_else(2, types.c_stm(2, types.c_type_error("Argument `arg0' expected String")))
   ].join("\n");
 
   test.assertEqual(f.genReadParam(Module.new("m"), p), expected, "genReadParam#1");
 }
 // Read nullable parameter
-testGenReadParam: fun() {
+testGenReadParam2: fun() {
   var f = Fun.new("f");
   var p = Param.new;
   p.setName("arg0");
@@ -166,6 +166,7 @@ main: fun() {
   testParamGenType();
   testGenFunSignature();
   testGenReadParam();
+  testGenReadParam2();
   testGenChkArgTypedef();
   testGenFunCallVoid();
   testGenFunCallInt();
