@@ -1,6 +1,6 @@
 all: build
 
-include $(shell git rev-parse --show-toplevel)/../common.mk
+include $(shell git rev-parse --show-toplevel)/common.mk
 
 $(call GEN_OMETA_TR_RULE)
 $(call GEN_MEC_RULE)
