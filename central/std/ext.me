@@ -1,0 +1,21 @@
+meme central:memescript/0.0.3/compiler
+
+@author: Thiago Silva <thiago@memetalk.org>;
+@license: MIT;
+
+
+argv: fun() {
+  <primitive "get_argv">
+}
+
+exit: fun(x) {
+  <primitive "exit">
+}
+
+basename: fun(filepath) {
+  <primitive "basename">
+}
+
+bench: fun(name, fn) {
+  <primitive "bench">
+}

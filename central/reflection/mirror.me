@@ -1,0 +1,41 @@
+meme central:memescript/0.0.3/compiler
+
+@author: Thiago Silva <thiago@memetalk.org>;
+@license: MIT;
+
+class Mirror
+fields: mirrored;
+init new: fun(mirrored) {
+  @mirrored = mirrored;
+}
+//instance_method fields: fun() { //strings only
+//  <primitive "mirror_fields">
+//}
+instance_method entries: fun() { //can be a list of anything
+  <primitive "mirror_mirror_entries">
+}
+instance_method valueFor: fun(entry) { //requirement: entry \in self.entries()
+  <primitive "mirror_mirror_value_for">
+}
+instance_method setValueFor: fun(entry, value) { //requirement: entry \in self.entries()
+  <primitive "mirror_mirror_set_value_for">
+}
+class_method vtFor: fun(obj) {
+  <primitive "mirror_mirror_vt_for">
+}
+class_method isSubclass: fun(sub, sup) {
+  <primitive "mirror_mirror_is_subclass">
+}
+end
+
+get_compiled_module: fun(module) {
+  <primitive "mirror_get_compiled_module">
+}
+
+get_compiled_module_by_name: fun(name) {
+  <primitive "mirror_get_compiled_module_by_name">
+}
+
+get_module: fun(name) {
+  <primitive "get_module">
+}

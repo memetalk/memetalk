@@ -1,0 +1,202 @@
+meme central:memescript/0.0.1/compiler
+
+@author: Lincoln Clarete <lincoln@clarete.li>;
+@license: MIT;
+
+requires ometa_base, types
+where
+  types      = central:bindgen/0.0.1/types
+  ometa_base = central:memescript/0.0.1/ometa_base
+  import OMetaBase from ometa_base
+  import Fun from types
+  import Param from types
+  import Struct from types
+  import Typedef from types
+  import FuncPointer from types
+  import Module from types
+end
+
+class SyscallDefinitionsTranslator < OMetaBase
+
+
+instance_method start: fun() {
+  this._apply(:definitions);
+}
+instance_method module: fun() {
+  var m = null;
+  var n = this._apply(:anything);
+  m = Module.new(n);
+  this._apply_with_args(:definitions, [m]);
+  return m.toString;
+}
+instance_method definitions: fun() {
+  var xs = null;
+  var m = this._apply(:anything);
+  this._form(fun() {
+    xs = this._many1(fun() {
+      this._apply_with_args(:definition, [m]);});});
+  return xs;
+}
+instance_method definition: fun() {
+  var m = this._apply(:anything);
+  return this._or([fun() {
+    this._apply_with_args(:include, [m]);
+  }, fun() {
+    this._apply_with_args(:struct_def, [m]);
+  }, fun() {
+    this._apply_with_args(:func, [m]);
+  }, fun() {
+    this._apply_with_args(:typedef, [m]);
+  }]);
+}
+instance_method include: fun() {
+  var name = null;
+  var m = this._apply(:anything);
+  this._form(fun() {
+    this._apply_with_args(:exactly, [:include]);
+    name = this._apply(:string);});
+  return m.appendInclude(name);
+}
+instance_method typedef: fun() {
+  var n = null;
+  var fp = null;
+  var t = null;
+  var td = null;
+  var m = this._apply(:anything);
+  return this._or([fun() {
+    this._form(fun() {
+      this._apply_with_args(:exactly, [:typedef]);
+      n = this._apply(:string);
+      fp = FuncPointer.new(n);
+      this._form(fun() {
+        this._apply_with_args(:exactly, [:func-pointer]);
+        this._apply_with_args(:params, [fp]);
+        t = fp.getRType();
+        this._apply_with_args(:type, [t]);});});
+    return m.appendFuncPointer(fp);
+  }, fun() {
+    this._form(fun() {
+      this._apply_with_args(:exactly, [:typedef]);
+      n = this._apply(:string);
+      td = Typedef.new(n);
+      t = td.getType();
+      this._apply_with_args(:type, [t]);});
+    return m.appendTypedef(td);
+  }]);
+}
+instance_method struct_def: fun() {
+  var n = null;
+  var s = null;
+  var m = this._apply(:anything);
+  return this._or([fun() {
+    this._form(fun() {
+      this._apply_with_args(:exactly, [:struct]);
+      n = this._apply(:string);
+      s = Struct.new(n);
+      this._apply_with_args(:params, [s]);});
+    return m.appendStruct(s);
+  }, fun() {
+    this._form(fun() {
+      this._apply_with_args(:exactly, [:struct]);
+      n = this._apply(:string);
+      s = Struct.new(n);});
+    return m.appendStruct(s);
+  }]);
+}
+instance_method func: fun() {
+  var n = null;
+  var f = null;
+  var r = null;
+  var rt = null;
+  var m = this._apply(:anything);
+  this._form(fun() {
+    this._apply_with_args(:exactly, [:func]);
+    n = this._apply(:string);
+    f = Fun.new(n);
+    this._apply_with_args(:params, [f]);
+    r = f.newReturnType();
+    rt = this._apply_with_args(:type, [r]);});
+  return m.appendFun(f);
+}
+instance_method params: fun() {
+  var x = null;
+  var obj = this._apply(:anything);
+  this._form(fun() {
+    x = this._many(fun() {
+      this._apply_with_args(:typed, [obj]);}, null);});
+}
+instance_method typed: fun() {
+  var p = null;
+  var n = null;
+  var obj = this._apply(:anything);
+  this._form(fun() {
+    p = obj.newChild();
+    this._apply_with_args(:type, [p]);
+    n = this._apply(:string);
+    p.setName(n);});
+  return p;
+}
+instance_method type: fun() {
+  var a = null;
+  var c = null;
+  var p = this._apply(:anything);
+  return this._or([fun() {
+    this._form(fun() {
+      this._apply_with_args(:exactly, [:list]);
+      this._apply_with_args(:type, [p]);
+      p.setIsArray(true);});
+  }, fun() {
+    this._form(fun() {
+      this._apply_with_args(:exactly, [:annotations]);
+      this._apply_with_args(:type, [p]);
+      a = this._apply(:anything);
+      p.setAnnotations(a);});
+  }, fun() {
+    this._form(fun() {
+      this._apply_with_args(:exactly, [:pointer]);
+      this._apply_with_args(:type, [p]);
+      c = this._apply(:anything);
+      p.setIsPointer(c);});
+  }, fun() {
+    this._form(fun() {
+      this._apply_with_args(:exactly, [:const]);
+      this._apply_with_args(:type, [p]);
+      p.setIsConst(true);});
+  }, fun() {
+    this._form(fun() {
+      this._apply_with_args(:exactly, [:unsigned]);
+      this._apply_with_args(:type, [p]);
+      p.setIsUnsigned(true);});
+  }, fun() {
+    this._form(fun() {
+      this._apply_with_args(:exactly, [:unsigned]);
+      p.setIsUnsigned(true);
+      p.setTypeName("");});
+  }, fun() {
+    this._apply_with_args(:type0, [p]);
+  }]);
+}
+instance_method type0: fun() {
+  var t = null;
+  var p = this._apply(:anything);
+  return this._or([fun() {
+    this._form(fun() {
+      this._apply_with_args(:exactly, [:builtin]);
+      t = this._apply(:string);
+      p.setTypeName(t);});
+  }, fun() {
+    this._form(fun() {
+      this._apply_with_args(:exactly, [:struct]);
+      t = this._apply(:string);
+      p.setTypeName("struct " + t);});
+  }, fun() {
+    this._form(fun() {
+      this._apply_with_args(:exactly, [:unknown]);
+      t = this._apply(:string);
+      p.setIsUnknown(true);
+      p.setTypeName(t);});
+  }]);
+}
+
+
+end

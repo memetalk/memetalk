@@ -1,0 +1,385 @@
+meme central:memescript/0.0.1/compiler
+
+@author: Lincoln Clarete <lincoln@clarete.li>;
+@license: MIT;
+
+requires io, ometa_base
+where
+  io         = central:linux/0.0.1/io
+  ometa_base = central:memescript/0.0.1/ometa_base
+  import OMetaBase from ometa_base
+end
+
+class SyscallDefinitionsParser < OMetaBase
+
+
+instance_method start: fun() {
+  var xs = null;
+  xs = this._many(fun() {
+    this._apply(:definition);}, null);
+  return xs;
+}
+instance_method definition: fun() {
+  var t = null;
+  var f = null;
+  var i = null;
+  var s = null;
+  return this._or([fun() {
+    this._apply(:prefix);
+    t = this._apply(:typedef);
+    return t;
+  }, fun() {
+    this._apply(:prefix);
+    f = this._apply(:func);
+    return f;
+  }, fun() {
+    this._apply(:prefix);
+    i = this._apply(:include);
+    return i;
+  }, fun() {
+    this._apply(:prefix);
+    s = this._apply(:struct_def);
+    return s;
+  }]);
+}
+instance_method prefix: fun() {
+  this._apply(:spaces);
+  this._apply_with_args(:seq, ["//"]);
+  this._apply_with_args(:seq, ["sys"]);
+}
+instance_method include: fun() {
+  var fname = null;
+  return this._or([fun() {
+    this._apply_with_args(:token, ["#"]);
+    this._apply(:spaces);
+    this._apply_with_args(:token, ["include"]);
+    this._apply(:spaces);
+    this._apply_with_args(:token, ["<"]);
+    fname = this._many1(fun() {
+      this._or([fun() {
+        this._not(fun() {
+          this._apply_with_args(:token, [">"]);});
+        this._apply(:anything);
+      }]);});
+    this._apply_with_args(:token, [">"]);
+    return [:include,"<" + fname.join("") +">"];
+  }, fun() {
+    this._apply_with_args(:token, ["#"]);
+    this._apply(:spaces);
+    this._apply_with_args(:token, ["include"]);
+    this._apply(:spaces);
+    this._apply_with_args(:seq, ["\""]);
+    fname = this._many1(fun() {
+      this._or([fun() {
+        this._not(fun() {
+          this._apply_with_args(:seq, ["\""]);});
+        this._apply(:anything);
+      }]);});
+    this._apply_with_args(:seq, ["\""]);
+    return [:include,"\"" + fname.join("") +"\""];
+  }]);
+}
+instance_method typedef: fun() {
+  var r = null;
+  var id = null;
+  var p = null;
+  var t = null;
+  return this._or([fun() {
+    this._apply_with_args(:keyword,["typedef"]);
+    this._apply(:spaces);
+    r = this._apply(:rtype);
+    this._apply(:spaces);
+    this._apply_with_args(:token, ["("]);
+    this._apply(:spaces);
+    this._apply_with_args(:token, ["*"]);
+    this._apply(:spaces);
+    id = this._apply(:id);
+    this._apply(:spaces);
+    this._apply_with_args(:token, [")"]);
+    this._apply(:spaces);
+    p = this._apply(:params);
+    return [:typedef, id, [:func-pointer, p, r]];
+  }, fun() {
+    this._apply_with_args(:keyword,["typedef"]);
+    this._apply(:spaces);
+    t = this._apply(:type_only);
+    this._apply(:spaces);
+    id = this._apply(:id);
+    return [:typedef, id, t];
+  }]);
+}
+instance_method struct_def: fun() {
+  var s = null;
+  var b = null;
+  return this._or([fun() {
+    s = this._apply(:struct);
+    this._apply(:spaces);
+    b = this._apply(:struct_body);
+    s.append(b);
+    return s;
+  }, fun() {
+    s = this._apply(:struct);
+    return s;
+  }]);
+}
+instance_method struct_body: fun() {
+  var fields = null;
+  this._apply_with_args(:token, ["{"]);
+  this._apply(:spaces);
+  fields = this._many(fun() {
+    this._apply(:struct_field);}, null);
+  this._apply_with_args(:token, ["}"]);
+  return fields;
+}
+instance_method struct_field: fun() {
+  var t = null;
+  t = this._apply(:typed);
+  this._apply_with_args(:keyword,[";"]);
+  return t;
+}
+instance_method func: fun() {
+  var rp = null;
+  var funcname = null;
+  var p = null;
+  rp = this._apply(:rtype);
+  this._apply(:spaces);
+  funcname = this._apply(:id);
+  this._apply(:spaces);
+  p = this._apply(:params);
+  return [:func, funcname, p, rp];
+}
+instance_method rtype: fun() {
+  return this._or([fun() {
+    this._apply(:type_pointer);
+  }, fun() {
+    this._apply(:type);
+  }]);
+}
+instance_method params: fun() {
+  var pl = null;
+  return this._or([fun() {
+    this._apply_with_args(:token, ["(void)"]);
+    return [];
+  }, fun() {
+    this._apply_with_args(:token, ["("]);
+    pl = this._apply(:paramlist);
+    this._apply_with_args(:token, [")"]);
+    return pl;
+  }]);
+}
+instance_method paramlist: fun() {
+  var x = null;
+  var xs = null;
+  return this._or([fun() {
+    x = this._apply(:typed);
+    xs = this._many(fun() {
+      this._or([fun() {
+        this._apply_with_args(:token, [","]);
+        this._apply(:spaces);
+        this._apply(:typed);
+      }]);}, null);
+    return [x] + xs;
+  }, fun() {
+    return [];
+  }]);
+}
+instance_method typed: fun() {
+  return this._or([fun() {
+    this._apply(:type_with_annotations);
+  }, fun() {
+    this._apply(:type_list_or_id);
+  }, fun() {
+    this._apply(:varargs);
+  }]);
+}
+instance_method type_with_annotations: fun() {
+  var x = null;
+  var as = null;
+  x = this._apply(:type_list_or_id);
+  this._apply(:spaces);
+  as = this._many1(fun() {
+    this._apply(:type_annotation);});
+  return [[:annotations, x[0], as], x[1]];
+}
+instance_method type_annotation: fun() {
+  var x = null;
+  this._apply_with_args(:token, ["+"]);
+  x = this._or([fun() {
+    this._apply_with_args(:keyword,["out"]);
+  }, fun() {
+    this._apply_with_args(:keyword,["null"]);
+  }]);
+  return x;
+}
+instance_method varargs: fun() {
+  this._apply_with_args(:keyword,["..."]);
+  return [:varargs];
+}
+instance_method type_list_or_id: fun() {
+  return this._or([fun() {
+    this._apply(:type_list);
+  }, fun() {
+    this._apply(:type_id);
+  }, fun() {
+    this._apply(:type_only);
+  }]);
+}
+instance_method type_list: fun() {
+  var x = null;
+  x = this._apply(:type_id);
+  this._apply_with_args(:seq, ["[]"]);
+  return [[:list, x[0]], x[1]];
+}
+instance_method type_id: fun() {
+  var t = null;
+  var n = null;
+  t = this._or([fun() {
+    this._apply(:type_pointer);
+  }, fun() {
+    this._apply(:type);
+  }]);
+  this._apply(:spaces);
+  n = this._apply(:id);
+  return [t, n];
+}
+instance_method type_only: fun() {
+  var t = null;
+  t = this._or([fun() {
+    this._apply(:type_pointer);
+  }, fun() {
+    this._apply(:type);
+  }]);
+  return t;
+}
+instance_method type_pointer: fun() {
+  var x = null;
+  var star = null;
+  x = this._apply(:type);
+  this._apply(:spaces);
+  star = this._many1(fun() {
+    this._apply_with_args(:token, ["*"]);});
+  return [:pointer, x, star.size()];
+}
+instance_method type: fun() {
+  return this._or([fun() {
+    this._apply(:type0);
+  }, fun() {
+    this._apply(:unknown);
+  }]);
+}
+instance_method type0: fun() {
+  return this._or([fun() {
+    this._apply(:signed);
+  }, fun() {
+    this._apply(:unsigned);
+  }, fun() {
+    this._apply(:const);
+  }, fun() {
+    this._apply(:struct);
+  }, fun() {
+    this._apply(:builtins);
+  }]);
+}
+instance_method struct: fun() {
+  var x = null;
+  this._apply_with_args(:keyword,["struct"]);
+  this._apply(:spaces);
+  x = this._apply(:id);
+  return [:struct, x];
+}
+instance_method const: fun() {
+  var x = null;
+  return this._or([fun() {
+    this._apply_with_args(:keyword,["const"]);
+    this._apply(:spaces);
+    x = this._apply(:type0);
+    return [:const, x];
+  }, fun() {
+    this._apply_with_args(:keyword,["const"]);
+    this._apply(:spaces);
+    x = this._apply(:unknown);
+    return [:const, x];
+  }]);
+}
+instance_method unknown: fun() {
+  var x = null;
+  this._apply(:spaces);
+  x = this._apply(:id);
+  return [:unknown, x];
+}
+instance_method signed: fun() {
+  var x = null;
+  this._apply_with_args(:keyword,["signed"]);
+  this._apply(:spaces);
+  x = this._apply(:type0);
+  return [:signed, x];
+}
+instance_method unsigned: fun() {
+  var x = null;
+  return this._or([fun() {
+    this._apply_with_args(:keyword,["unsigned"]);
+    this._apply(:spaces);
+    x = this._apply(:type0);
+    return [:unsigned, x];
+  }, fun() {
+    this._apply_with_args(:keyword,["unsigned"]);
+    return [:unsigned];
+  }]);
+}
+instance_method builtins: fun() {
+  var x = null;
+  x = this._or([fun() {
+    this._apply_with_args(:keyword,["void"]);
+  }, fun() {
+    this._apply_with_args(:keyword,["char"]);
+  }, fun() {
+    this._apply(:numeric);
+  }]);
+  return [:builtin, x];
+}
+instance_method numeric: fun() {
+  return this._or([fun() {
+    this._apply_with_args(:keyword,["complex long double"]);
+  }, fun() {
+    this._apply_with_args(:keyword,["complex long"]);
+  }, fun() {
+    this._apply_with_args(:keyword,["complex double"]);
+  }, fun() {
+    this._apply_with_args(:keyword,["complex float"]);
+  }, fun() {
+    this._apply_with_args(:keyword,["short int"]);
+  }, fun() {
+    this._apply_with_args(:keyword,["short"]);
+  }, fun() {
+    this._apply_with_args(:keyword,["long long int"]);
+  }, fun() {
+    this._apply_with_args(:keyword,["long long"]);
+  }, fun() {
+    this._apply_with_args(:keyword,["long double"]);
+  }, fun() {
+    this._apply_with_args(:keyword,["long int"]);
+  }, fun() {
+    this._apply_with_args(:keyword,["long"]);
+  }, fun() {
+    this._apply_with_args(:keyword,["double"]);
+  }, fun() {
+    this._apply_with_args(:keyword,["float"]);
+  }, fun() {
+    this._apply_with_args(:keyword,["int"]);
+  }]);
+}
+instance_method id: fun() {
+  var x = null;
+  var xs = null;
+  x = this._or([fun() {
+    this._apply(:letter);
+  }, fun() {
+    this._apply_with_args(:seq, ["_"]);
+  }]);
+  xs = this._many(fun() {
+    this._apply(:identifier_rest);}, null);
+  return ([x] + xs).join("");
+}
+
+
+end
