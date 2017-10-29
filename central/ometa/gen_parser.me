@@ -3,12 +3,13 @@ meme central:memescript/0.0.3/compiler
 @author: Thiago Silva <thiago@memetalk.org>;
 @license: MIT;
 
-requires ometa, ometa_tr, ometa_base, io
+requires ometa, ometa_tr, ometa_base, io, ext
 where
  ometa      = central:ometa/0.0.2/ometa
  ometa_tr   = central:ometa/0.0.2/ometa_tr
  ometa_base = central:ometa/0.0.2/ometa_base
  io         = central:linux/0.0.1/io
+ ext        = central:std/0.0.3/ext
 end
 
 gen: fun(grammar_in_file_path, grammar_out_file_path, OMeta, OMetaTranslator) {
@@ -31,6 +32,6 @@ gen: fun(grammar_in_file_path, grammar_out_file_path, OMeta, OMetaTranslator) {
 }
 
 main: fun() {
-  var path = argv()[1];
+  var path = ext.argv()[1];
   gen(path, path.replace_all(".g", ".me"), ometa.OMeta, ometa_tr.OMetaTranslator);
 }
