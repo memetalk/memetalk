@@ -1,0 +1,173 @@
+meme central:memescript/0.0.3/compiler
+
+requires test, io, bindgen, types
+where
+  io = central:linux/0.0.1/io
+  bindgen = central:bindgen/0.0.1/bindgen
+  types = central:bindgen/0.0.1/types
+
+  import Param from types
+  import Fun from types
+  import Module from types
+  import Typedef from types
+end
+
+numericTypes: [
+  "complex long double",
+  "complex long",
+  "complex double",
+  "complex float",
+  "short int",
+  "short",
+  "long long int",
+  "long long",
+  "long double",
+  "long int",
+  "long",
+  "double",
+  "float",
+  "int"
+];
+
+// Value types
+testParamGenType: fun() {
+  numericTypes.each(fun(_, type) {
+    // Given a value with the type `short int`
+    var value = Param.new;
+    value.setTypeName(type);
+
+    // When the type is generated; Then the generated type should just
+    // be the same
+    test.assertEqual(value.genType(), type, "Type " + type + " doesn't work");
+  });
+}
+// function signature
+testGenFunSignature: fun() {
+  var f = Fun.new("name");
+  var r = f.newReturnType();
+  r.setTypeName("char");
+  r.setIsPointer(true);
+
+  test.assertEqual(
+    f.genFunSignature(),
+    "static int prim_name (Process* proc) {",
+    "genFunSignature()");
+}
+// Read parameter
+testGenReadParam: fun() {
+  var f = Fun.new("f");
+  var p = Param.new;
+  p.setName("arg0");
+  p.setTypeName("char");
+
+  var expected = [
+    types.c_stm(2, types.c_declare("char", "prim_arg0")),
+    types.c_if(2, types.c_eq(types.c_obj_vt("oop_arg0"), types.c_vm_prime("String")),
+               types.c_stm(2, types.c_assign("prim_arg0", types.c_cast("char", types.c_unwrap_string("oop_arg0"))))),
+    types.c_else(2, types.c_stm(2, types.c_type_error("Argument `arg0' expected String")))
+  ].join("\n");
+
+  test.assertEqual(f.genReadParam(Module.new("m"), p), expected, "genReadParam#1");
+}
+// Read nullable parameter
+testGenReadParam2: fun() {
+  var f = Fun.new("f");
+  var p = Param.new;
+  p.setName("arg0");
+  p.setTypeName("char");
+  p.setIsPointer(true);
+  p.setIsNullable(true);
+
+  var expected = [
+    types.c_stm(2, types.c_declare("char *", "prim_arg0")),
+    types.c_if(2,
+               types.c_eq(types.c_obj_vt("oop_arg0"), types.c_vm_prime("String")),
+               types.c_stm(2, types.c_assign("prim_arg0", types.c_cast("char *", types.c_unwrap_string("oop_arg0"))))),
+    types.c_elseif(2,
+                   types.c_eq("oop_arg0", "MM_NULL"),
+                   types.c_stm(2, types.c_assign("prim_arg0", "NULL"))),
+    types.c_else(2, types.c_stm(2, types.c_type_error("Argument `arg0' expected String or null")))
+  ].join("\n");
+
+  test.assertEqual(f.genReadParam(Module.new("m"), p), expected, "genReadParam#2");
+}
+// function argument check with unknown argument declared with typedef
+testGenChkArgTypedef: fun() {
+  // Given a module and a function with one parameter
+  var m = Module.new("m");
+  var f = Fun.new("myfunc");
+  var p = Param.new;
+
+  // And that a typedef was declared creating the alias `foo'
+  var t = Typedef.new("foo");
+  t.getType().setTypeName("char");
+  m.appendTypedef(t);
+
+  // And Given that the parameter doesn't have a type
+  p.setName("arg0");
+  p.setTypeName("foo");
+  p.setIsUnknown(true);
+
+  // When the argument check is generated
+  var output = f.genReadParam(m, p);
+
+  // Then it should validate with the type referenced by the alias
+  var expected = [
+    types.c_stm(2, types.c_declare("foo", "prim_arg0")),
+    types.c_if(2, types.c_eq(types.c_obj_vt("oop_arg0"), types.c_vm_prime("String")),
+               types.c_stm(2, types.c_assign("prim_arg0", types.c_cast("foo", types.c_unwrap_string("oop_arg0"))))),
+    types.c_else(2, types.c_stm(2, types.c_type_error("Argument `arg0' expected String")))
+  ].join("\n");
+  test.assertEqual(output, expected, "genReadParam#3");
+}
+// void foo();
+testGenFunCallVoid: fun() {
+  var m = Module.new("m");
+  // Given a function with a `void` return type
+  var f = Fun.new("foo");
+  var r = f.newReturnType();
+  r.setTypeName("void");
+
+  // When the call is built
+  var output = f.genFunCall(m);
+
+  // Then the output code shouldn't assign the output of the function
+  // called to any variable
+  var expected = [
+    types.c_stm(2, "foo ()"),
+    types.c_comment(2, "Push output to the stack"),
+    types.c_stm(2, types.c_return("MM_NULL"))
+  ].join("\n");
+  test.assertEqual(output, expected, "call for `void foo()`");
+}
+// int foo();
+testGenFunCallInt: fun() {
+  // Given a function with a `void` return type
+  var f = Fun.new("foo");
+  var r = f.newReturnType();
+  r.setTypeName("int");
+
+  // When the call is built
+  var output = f.genFunCall(Module.new("m"));
+
+  // Then the output code shouldn't assign the output of the function
+  // called to any variable
+  var expected = [
+    types.c_stm(2, types.c_declare("int", types.c_assign("output", "foo ()"))),
+    types.c_stm(2, types.c_declare("oop", types.c_assign("oop_output", "tag_small_int(output)"))),
+    types.c_comment(2, "Push output to the stack"),
+    types.c_stm(2, types.c_return("oop_output"))
+  ].join("\n");
+
+  test.assertEqual(output, expected, "call for `int foo()`");
+}
+// All tests
+main: fun() {
+  testParamGenType();
+  testGenFunSignature();
+  testGenReadParam();
+  testGenReadParam2();
+  testGenChkArgTypedef();
+  testGenFunCallVoid();
+  testGenFunCallInt();
+}

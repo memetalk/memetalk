@@ -76,7 +76,7 @@ define TEST_RUNNER_CMD
 endef
 
 define RUN_BINDGEN_CMD
- $(call RUN_VM_CMD,$(MM_DIR)/std/bindgen/bindgen.me $(1))
+ $(call RUN_VM_CMD,$(MM_DIR)/bindgen/bindgen.me $(1))
 endef
 
 ## Macro RUN_VM_CMD: Outputs the command to run the VM

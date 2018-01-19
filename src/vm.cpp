@@ -116,7 +116,7 @@ std::pair<Process*, oop> VM::start_debugger(Process* target) {
 
   static int debugger_id = 0;
 
-  oop imod;
+  oop imod = NULL;
   Process* dbg_proc = new (GC) Process(this, ++debugger_id);
   if (_debugger_module != MM_NULL) {
     imod = _debugger_module;
@@ -342,7 +342,7 @@ char* VM::fetch_module(Process* proc, const std::string& mod_path, int* file_siz
   boost::unordered_map<std::string, std::string>::iterator it;
   for (it = _repo_override.begin(); it != _repo_override.end(); it++) {
     DBG("looking for overriding rules: '" << it->first << "'" << endl);
-    if (repo_name == it->first) {
+    if (mod_path.find(it->first) == 0) {
       std::string local_path = it->second + mod_path.substr(it->first.length());
       DBG("translating " << mod_path << " to local path " << local_path << std::endl);
       return read_mec_file(local_path + ".mec", file_size);

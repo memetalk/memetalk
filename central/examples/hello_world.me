@@ -1,0 +1,13 @@
+meme central:memescript/0.0.3/compiler
+
+@author: Thiago Silva <thiago@memetalk.org>;
+@license: MIT;
+
+requires io
+where
+ io = central:linux/0.0.1/io
+end
+
+main: fun() {
+  io.print("hello world");
+}

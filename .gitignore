@@ -7,3 +7,7 @@ py/pyparsers/memetr.py
 py/pyparsers/parser.py
 src/qsc.moc.cpp
 meme
+/cache
+/core.img
+/lib
+*.so
